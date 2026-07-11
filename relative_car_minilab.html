@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Mini Lab : ความเร็วสัมพัทธ์ — รถคันข้าง ๆ</title>
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)'], ['$', '$']], displayMath: [['\\[','\\]']] },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+<style>
+:root{
+  --blue:#2f6fd6; --blue2:#204d7c; --sky:#eaf5ff; --line:#d7e5f5;
+  --orange:#fff1dd; --orange-border:#f2c48e; --green:#eaf8e7;
+  --gray:#eef3f8; --dark:#18324a; --red:#d94848;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Tahoma,sans-serif;color:var(--dark);background:linear-gradient(180deg,#f8fbff,#eef6ff);}
+body{padding:calc(env(safe-area-inset-top) + 12px) 12px calc(env(safe-area-inset-bottom) + 92px)}
+.wrap{max-width:1120px;margin:0 auto;}
+.header{text-align:center;margin:4px 0 10px;}
+.header h1{margin:0;color:var(--blue);font-size:clamp(24px,4vw,40px);font-weight:900;line-height:1.15}
+.header h2{margin:2px 0 0;color:var(--blue2);font-size:clamp(18px,3vw,28px);font-weight:850;line-height:1.15}
+.lab{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(280px,.9fr);gap:14px;align-items:start;}
+.card{background:#fff;border:1px solid var(--line);border-radius:24px;box-shadow:0 10px 28px rgba(42,84,132,.10);overflow:hidden;}
+.stage-card{padding:12px;}
+.stage-top{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.badge{display:inline-flex;align-items:center;gap:8px;background:var(--gray);border:1px solid var(--line);border-radius:999px;padding:8px 12px;font-weight:850;color:#2c5e90;font-size:15px;}
+.status{font-weight:850;color:#176447;background:#ecfff1;border:1px solid #bce5c6;border-radius:999px;padding:8px 12px;font-size:14px;}
+canvas{display:block;width:100%;height:auto;border-radius:18px;background:#dff3ff;border:1px solid #c9e0f6;touch-action:none;}
+.panel{padding:16px;}
+.control-title{font-size:18px;font-weight:900;color:#24547f;margin:0 0 10px;}
+.row{background:#f8fbff;border:1px solid #dce9f7;border-radius:18px;padding:12px;margin:10px 0;}
+.row label{font-weight:850;display:flex;justify-content:space-between;gap:8px;margin-bottom:8px;color:#244d73;font-size:15px;}
+.val{color:#d94848;font-weight:950;white-space:nowrap}
+input[type=range]{width:100%;accent-color:#2f6fd6;}
+.mode-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 12px;}
+.btn{border:0;border-radius:18px;padding:12px 12px;font-weight:900;font-size:15px;cursor:pointer;box-shadow:0 4px 0 rgba(0,0,0,.12);transition:.12s transform,.12s filter;white-space:nowrap;}
+.btn:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(0,0,0,.12)}
+.btn.blue{background:#56a8f5;color:white}.btn.gray{background:#e8edf3;color:#43576b}.btn.orange{background:var(--orange);color:#8b4d00;border:1px solid var(--orange-border)}.btn.green{background:#e7f8e3;color:#236a28;border:1px solid #b9dfb1}.btn.active{outline:3px solid rgba(47,111,214,.25);filter:saturate(1.1)}
+.readout{display:grid;grid-template-columns:1fr;gap:8px;margin-top:12px;}
+.info{background:#fff;border:1px solid #e2ecf8;border-radius:16px;padding:10px 12px;font-size:14px;line-height:1.55;}
+.info b{color:#1e5da6}.negative{color:#d94848;font-weight:900}.positive{color:#16804b;font-weight:900}.zero{color:#6b7280;font-weight:900}
+.formula{display:none;position:fixed;inset:0;z-index:50;background:rgba(35,54,76,.35);padding:calc(env(safe-area-inset-top) + 16px) 12px calc(env(safe-area-inset-bottom) + 16px);overflow:auto;}
+.formula.show{display:block}.formula-box{max-width:860px;margin:0 auto;background:#fff7ee;border:2px solid #efc58f;border-radius:24px;padding:18px;box-shadow:0 18px 40px rgba(0,0,0,.2);position:relative;}.close{position:sticky;top:0;margin-left:auto;display:flex;align-items:center;justify-content:center;width:48px;height:48px;border-radius:16px;border:0;background:#e7eef6;color:#45688f;font-size:28px;font-weight:900;cursor:pointer}.formula h3{margin:0 0 10px;color:#123d70;font-size:24px}.formula p,.formula li{font-size:16px;line-height:1.7}.eq{background:#fff;border:1px solid #efc58f;border-radius:16px;padding:12px;margin:10px 0;overflow-x:auto;text-align:center}.footer-link{text-align:center;margin:18px 0 0;font-weight:850}.footer-link a{color:#2f6fd6;text-decoration:underline;}
+@media(max-width:850px){body{padding-left:8px;padding-right:8px}.lab{grid-template-columns:1fr}.panel{padding:12px}.stage-card{padding:8px}.mode-grid{grid-template-columns:1fr}.btn{font-size:14px;padding:11px 10px}.status{font-size:13px}.badge{font-size:13px}.row{padding:10px}.header h1{font-size:clamp(22px,7vw,30px)}.header h2{font-size:clamp(17px,5.5vw,24px)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <h1>Mini Lab</h1>
+    <h2>ความเร็วสัมพัทธ์ — รถคันข้าง ๆ</h2>
+  </div>
+  <div class="lab">
+    <div class="card stage-card">
+      <div class="stage-top">
+        <div class="badge" id="viewBadge">👁️ มุมมองนอกรถ</div>
+        <div class="status" id="statusText">รถคันข้าง ๆ เร็วกว่า → แซงไปด้านหน้า</div>
+      </div>
+      <canvas id="scene" width="900" height="530" aria-label="relative speed car mini lab"></canvas>
+    </div>
+    <div class="card panel">
+      <p class="control-title">แผงควบคุม</p>
+      <div class="mode-grid">
+        <button class="btn blue active" id="outsideBtn">🌍 มุมมองนอกรถ</button>
+        <button class="btn blue" id="insideBtn">🚗 มุมมองในรถ</button>
+      </div>
+      <div class="row">
+        <label>ความเร็วรถผู้สังเกต <span class="val"><span id="vObsText">60</span> km/h</span></label>
+        <input id="vObs" type="range" min="0" max="120" step="5" value="60" />
+      </div>
+      <div class="row">
+        <label>ความเร็วรถคันข้าง ๆ <span class="val"><span id="vOtherText">90</span> km/h</span></label>
+        <input id="vOther" type="range" min="0" max="140" step="5" value="90" />
+      </div>
+      <div class="mode-grid">
+        <button class="btn orange" id="vectorBtn">Σ เขียนเวกเตอร์หา Vสัมพัทธ์</button>
+        <button class="btn gray" id="resetBtn">🔄 รีเซ็ต</button>
+      </div>
+      <button class="btn green" id="formulaBtn" style="width:100%;margin-top:2px">📘 สูตรสำคัญ</button>
+      <div class="readout">
+        <div class="info"><b>ความเร็วสัมพัทธ์ของรถข้าง ๆ เทียบกับผู้สังเกต</b><br><span id="relLine"></span></div>
+        <div class="info" id="explainLine"></div>
+      </div>
+    </div>
+  </div>
+  <div class="footer-link">ศึกษาเพิ่มเติมที่ <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">เพจคลายปมฟิสิกส์</a></div>
+</div>
+
+<div class="formula" id="formulaModal">
+  <div class="formula-box">
+    <button class="close" id="closeFormula">×</button>
+    <h3>📘 สูตรสำคัญ</h3>
+    <p><b>แนวคิดหลัก:</b> สิ่งที่คนในรถเห็น ไม่ได้ขึ้นกับความเร็วจริงของรถข้าง ๆ อย่างเดียว แต่ขึ้นกับ “ความเร็วของรถข้าง ๆ เทียบกับรถผู้สังเกต”</p>
+    <div class="eq">\[v_{\text{rel}} = v_{\text{other}} - v_{\text{obs}}\]</div>
+    <ul>
+      <li>ถ้า \(v_{\text{rel}} > 0\) รถคันข้าง ๆ เคลื่อนไปด้านหน้า หรือแซงผู้สังเกต</li>
+      <li>ถ้า \(v_{\text{rel}} < 0\) รถคันข้าง ๆ เคลื่อนไปด้านหลัง เมื่อมองจากรถผู้สังเกต</li>
+      <li>ถ้า \(v_{\text{rel}} = 0\) รถข้าง ๆ ดูเหมือนนิ่งเทียบกับผู้สังเกต แต่ฉากหลังยังเลื่อนไปได้</li>
+    </ul>
+    <p><b>การเขียนเวกเตอร์แบบหางต่อหัว:</b> ใช้เวกเตอร์ของรถข้าง ๆ แล้วบวกกับเวกเตอร์ตรงข้ามของรถผู้สังเกต</p>
+    <div class="eq">\[\vec v_{\text{rel}}=\vec v_{\text{other}}+(-\vec v_{\text{obs}})\]</div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('scene');
+const ctx = canvas.getContext('2d');
+const vObs = document.getElementById('vObs');
+const vOther = document.getElementById('vOther');
+const vObsText = document.getElementById('vObsText');
+const vOtherText = document.getElementById('vOtherText');
+const statusText = document.getElementById('statusText');
+const relLine = document.getElementById('relLine');
+const explainLine = document.getElementById('explainLine');
+const outsideBtn = document.getElementById('outsideBtn');
+const insideBtn = document.getElementById('insideBtn');
+const vectorBtn = document.getElementById('vectorBtn');
+const resetBtn = document.getElementById('resetBtn');
+const viewBadge = document.getElementById('viewBadge');
+let mode = 'outside';
+let showVector = false;
+let t = 0;
+
+function resizeCanvas(){
+  const rect = canvas.getBoundingClientRect();
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = Math.round(rect.width*dpr);
+  canvas.height = Math.round(rect.width*0.59*dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+window.addEventListener('resize', resizeCanvas);
+setTimeout(resizeCanvas,50);
+
+function rr(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+function arrow(x1,y1,x2,y2,color,label, labelDy=0){
+  const ang=Math.atan2(y2-y1,x2-x1); const head=13;
+  ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=4; ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(x2,y2);ctx.lineTo(x2-head*Math.cos(ang-Math.PI/6),y2-head*Math.sin(ang-Math.PI/6));ctx.lineTo(x2-head*Math.cos(ang+Math.PI/6),y2-head*Math.sin(ang+Math.PI/6));ctx.closePath();ctx.fill();
+  if(label){
+    ctx.font='800 18px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    const tx=(x1+x2)/2, ty=(y1+y2)/2-20+labelDy;
+    ctx.lineWidth=5;ctx.strokeStyle='rgba(255,255,255,.9)';ctx.strokeText(label,tx,ty);ctx.fillText(label,tx,ty);
+  }
+}
+function car(x,y,w,h,color,label){
+  ctx.save();
+  ctx.shadowColor='rgba(0,0,0,.18)';ctx.shadowBlur=8;ctx.shadowOffsetY=4;
+  ctx.fillStyle=color; rr(x,y,w,h,18); ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,.78)'; rr(x+w*.18,y+h*.12,w*.52,h*.28,10); ctx.fill();
+  ctx.fillStyle='#1f2937';
+  ctx.beginPath();ctx.arc(x+w*.22,y+h*.86,h*.16,0,Math.PI*2);ctx.arc(x+w*.78,y+h*.86,h*.16,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='white';ctx.font='900 15px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(label,x+w/2,y+h*.53);
+  ctx.restore();
+}
+function drawRoad(W,H,bgShift){
+  const sky=ctx.createLinearGradient(0,0,0,H);sky.addColorStop(0,'#bfe8ff');sky.addColorStop(.55,'#eaf8ff');sky.addColorStop(.56,'#a3d384');sky.addColorStop(1,'#74a96b');ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#7ac66d'; for(let i=-200;i<W+220;i+=170){let x=(i+bgShift)% (W+260)-160; ctx.beginPath();ctx.moveTo(x,H*.44);ctx.lineTo(x+45,H*.28);ctx.lineTo(x+92,H*.44);ctx.closePath();ctx.fill();}
+  ctx.fillStyle='#555';ctx.fillRect(0,H*.58,W,H*.30);ctx.fillStyle='#444';ctx.fillRect(0,H*.73,W,H*.16);
+  ctx.strokeStyle='rgba(255,255,255,.85)';ctx.lineWidth=5;ctx.setLineDash([34,25]);ctx.beginPath();ctx.moveTo(0,H*.70);ctx.lineTo(W,H*.70);ctx.stroke();ctx.setLineDash([]);
+  ctx.strokeStyle='#ffd65c';ctx.lineWidth=4;ctx.setLineDash([22,18]);ctx.beginPath();ctx.moveTo(0,H*.84);ctx.lineTo(W,H*.84);ctx.stroke();ctx.setLineDash([]);
+}
+function drawOutside(W,H,vO,vB,rel){
+  const bgShift=(t*vO*1.1)% (W+260); drawRoad(W,H,bgShift);
+  const scale=2.05; const obsX=W*.54 - t*vO*scale % (W+260); const otherX=W*.54 - t*vB*scale % (W+260);
+  const norm=x=>((x+240)%(W+260))-180;
+  car(norm(obsX),H*.74,115,58,'#2f6fd6','ผู้สังเกต');
+  car(norm(otherX),H*.61,115,58,'#f07167','รถข้าง ๆ');
+  arrow(W*.13,H*.52,W*.03,H*.52,'#2f6fd6','ทิศรถวิ่งจริง',0);
+  ctx.fillStyle='rgba(255,255,255,.86)';rr(16,18,310,68,18);ctx.fill();
+  ctx.fillStyle='#18324a';ctx.font='800 17px system-ui';ctx.textAlign='left';ctx.fillText('มุมมองนอกรถ: รถทั้งสองวิ่งไปทางซ้าย',34,44);ctx.font='700 14px system-ui';ctx.fillText('ฉากหลังเลื่อนไปทางขวาเพื่อให้เห็นการเคลื่อนที่',34,68);
+}
+function drawInside(W,H,vO,vB,rel){
+  const bgShift=(t*vO*2.3)% (W+260); drawRoad(W,H,bgShift);
+  // overlay car interior
+  ctx.fillStyle='#263447';ctx.fillRect(0,0,W,H);ctx.fillStyle='#f4fbff';rr(W*.08,H*.11,W*.84,H*.70,32);ctx.fill();ctx.save();ctx.beginPath();rr(W*.08,H*.11,W*.84,H*.70,32);ctx.clip();drawRoad(W,H,bgShift); 
+  const centerX=W*.49; const relScale=3.4; let x=centerX - rel*t*relScale;
+  const span=W+320; x=((x+160)%span)-160; // moving in window; positive rel moves left/front
+  car(x,H*.56,135,68,'#f07167','รถข้าง ๆ');
+  ctx.restore();
+  ctx.lineWidth=20;ctx.strokeStyle='#263447';rr(W*.08,H*.11,W*.84,H*.70,32);ctx.stroke();
+  ctx.fillStyle='#1d2939';ctx.fillRect(0,H*.80,W,H*.20);ctx.fillStyle='#0f172a';ctx.fillRect(W*.12,H*.83,W*.76,26);
+  ctx.fillStyle='rgba(255,255,255,.92)';rr(24,20,330,74,18);ctx.fill();ctx.fillStyle='#18324a';ctx.font='800 17px system-ui';ctx.textAlign='left';ctx.fillText('มุมมองในรถ: มองออกทางหน้าต่าง',42,48);ctx.font='700 14px system-ui';ctx.fillText('รถผู้สังเกตนิ่งในกรอบ แต่ฉากหลังเคลื่อนไปทางขวา',42,72);
+  if(Math.abs(rel)<0.01){ctx.fillStyle='rgba(255,255,255,.92)';rr(W*.54,H*.18,260,46,16);ctx.fill();ctx.fillStyle='#5b6270';ctx.font='900 18px system-ui';ctx.textAlign='center';ctx.fillText('รถข้าง ๆ ดูเหมือนนิ่ง',W*.54+130,H*.18+24)}
+}
+function drawVectorPanel(W,H,vO,vB,rel){
+  const bx=W*.08, by=H*.06, bw=W*.84, bh=H*.33;
+  ctx.fillStyle='rgba(255,255,255,.96)';rr(bx,by,bw,bh,22);ctx.fill();ctx.strokeStyle='#d9e7f7';ctx.lineWidth=2;ctx.stroke();
+  ctx.fillStyle='#123d70';ctx.font='900 19px system-ui';ctx.textAlign='left';ctx.fillText('เขียนเวกเตอร์แบบหางต่อหัว',bx+22,by+32);
+  ctx.font='800 15px system-ui';ctx.fillStyle='#485b70';ctx.fillText('ใช้  v_rel = v_other + (-v_obs)',bx+22,by+58);
+  const baseY=by+bh*.62; const startX=bx+42; const unit=Math.min(2.2,(bw-125)/(Math.max(vO+vB,30)));
+  const lenB=vB*unit, lenO=vO*unit;
+  arrow(startX,baseY,startX-lenB,baseY,'#f07167','v_other',-10);
+  arrow(startX-lenB,baseY+44,startX-lenB+lenO,baseY+44,'#2f6fd6','-v_obs',28);
+  arrow(startX,baseY+88,startX-rel*unit,baseY+88, rel>=0?'#16804b':'#d94848','v_rel',28);
+  ctx.fillStyle=rel>0?'#16804b':rel<0?'#d94848':'#5b6270';ctx.font='900 17px system-ui';ctx.textAlign='right';
+  const phrase=rel>0?'รถข้าง ๆ แซงไปด้านหน้า':rel<0?'รถข้าง ๆ ถอยไปด้านหลังเมื่อเทียบกับเรา':'รถข้าง ๆ นิ่งเมื่อเทียบกับเรา';
+  ctx.fillText('v_rel = '+rel.toFixed(0)+' km/h',bx+bw-24,by+36);
+  ctx.font='800 15px system-ui';ctx.fillText(phrase,bx+bw-24,by+62);
+}
+function updateText(){
+  const vo=+vObs.value, vb=+vOther.value, rel=vb-vo;
+  vObsText.textContent=vo; vOtherText.textContent=vb;
+  relLine.innerHTML = `\(v_{\\text{rel}} = ${vb} - ${vo} = ${rel}\) km/h`;
+  if(rel>0){statusText.textContent='รถคันข้าง ๆ เร็วกว่า → แซงไปด้านหน้า'; explainLine.innerHTML='<span class="positive">ผลที่เห็น:</span> รถข้าง ๆ เคลื่อนผ่านหน้าต่างไปด้านหน้า เพราะความเร็วสัมพัทธ์เป็นบวก';}
+  else if(rel<0){statusText.textContent='รถคันข้าง ๆ ช้ากว่า → เคลื่อนไปด้านหลัง'; explainLine.innerHTML='<span class="negative">ผลที่เห็น:</span> รถข้าง ๆ ถอยไปด้านหลังเมื่อเทียบกับผู้สังเกต แม้จริง ๆ ยังวิ่งไปทางซ้ายเหมือนกัน';}
+  else{statusText.textContent='ความเร็วเท่ากัน → รถข้าง ๆ ดูเหมือนนิ่ง'; explainLine.innerHTML='<span class="zero">ผลที่เห็น:</span> รถข้าง ๆ ดูเหมือนนิ่ง แต่ฉากหลังยังเลื่อนไปทางขวา แสดงว่ารถยังเคลื่อนที่จริง';}
+  if(window.MathJax) MathJax.typesetPromise([relLine]);
+}
+function loop(){
+  const W=canvas.clientWidth||900, H=(canvas.clientWidth||900)*0.59;
+  ctx.clearRect(0,0,W,H);
+  const vo=+vObs.value, vb=+vOther.value, rel=vb-vo;
+  if(mode==='outside') drawOutside(W,H,vo,vb,rel); else drawInside(W,H,vo,vb,rel);
+  if(showVector) drawVectorPanel(W,H,vo,vb,rel);
+  t += 0.016;
+  requestAnimationFrame(loop);
+}
+function setMode(m){mode=m; outsideBtn.classList.toggle('active',m==='outside'); insideBtn.classList.toggle('active',m==='inside'); viewBadge.textContent=m==='outside'?'👁️ มุมมองนอกรถ':'🚗 มุมมองในรถผ่านหน้าต่าง';}
+vObs.addEventListener('input',updateText);vOther.addEventListener('input',updateText);
+outsideBtn.onclick=()=>setMode('outside'); insideBtn.onclick=()=>setMode('inside');
+vectorBtn.onclick=()=>{showVector=!showVector; vectorBtn.classList.toggle('active',showVector);};
+resetBtn.onclick=()=>{vObs.value=60;vOther.value=90;setMode('outside');showVector=false;vectorBtn.classList.remove('active');t=0;updateText();};
+document.getElementById('formulaBtn').onclick=()=>{document.getElementById('formulaModal').classList.add('show'); if(window.MathJax) MathJax.typesetPromise([document.getElementById('formulaModal')]);};
+document.getElementById('closeFormula').onclick=()=>document.getElementById('formulaModal').classList.remove('show');
+document.getElementById('formulaModal').addEventListener('click',e=>{if(e.target.id==='formulaModal')e.currentTarget.classList.remove('show')});
+updateText(); loop();
+</script>
+</body>
+</html>
