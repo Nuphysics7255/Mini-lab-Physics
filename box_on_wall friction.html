@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ทดลอง: ดันกล่องติดผนัง (เวกเตอร์แนบผิวตามสเปก)</title>
+<style>
+  :root{ --brand:#1e40af; --bg:#ffffff; --soft:#eef2ff; --ink:#111827; --muted:#6b7280; }
+  *{box-sizing:border-box}
+  body{
+    font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,'TH Sarabun New',sans-serif;
+    background:var(--bg);color:var(--ink);margin:0;
+  }
+  header{
+    padding:16px 20px;
+    background:linear-gradient(90deg,#eff6ff,#ffffff);
+    border-bottom:1px solid #e5e7eb
+  }
+  h1{margin:0;font-size:20px;color:var(--brand)}
+  main{
+    display:grid;
+    grid-template-columns: 1fr 360px;
+    gap:16px;
+    padding:16px;
+    align-items:start;
+  }
+  #canvasWrap{
+    border:1px solid #e5e7eb;
+    background:#fff;
+    border-radius:12px;
+    padding:12px;
+  }
+  #simCanvas{
+    width:100%;
+    height:520px;
+    border-radius:8px;
+    background:#fff;
+  }
+  .panel{
+    border:1px solid #e5e7eb;
+    border-radius:12px;
+    padding:12px;
+    background:#fff;
+  }
+  .row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin:8px 0;
+  }
+  .row label{min-width:130px;color:var(--muted)}
+  input[type="range"]{width:100%}
+  .nums{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+    margin-top:8px;
+  }
+  .card{
+    border:1px solid #e5e7eb;
+    border-radius:10px;
+    padding:8px;
+    background:var(--soft);
+  }
+  .big{font-weight:700}
+  .tag{
+    display:inline-block;
+    padding:2px 8px;
+    border-radius:999px;
+    font-size:12px;
+  }
+  .tag.ok{background:#d1fae5;color:#065f46}
+  .tag.warn{background:#fef3c7;color:#92400e}
+  button{
+    border:0;
+    border-radius:10px;
+    padding:10px 14px;
+    background:var(--brand);
+    color:#fff;
+    cursor:pointer;
+  }
+  button.secondary{background:#6b7280}
+  .legend{font-size:12px;color:var(--muted)}
+  .legend a{color:var(--brand);text-decoration:underline;}
+
+  /* ส่วนของ mobile */
+  #mobileBottom{
+    display:none;
+    padding:0 16px 16px;
+  }
+  #mobileBottom .rowFmobile{display:none;}
+  #mobileBottom .chkRowMobile{display:none;}
+
+  @media (max-width: 768px){
+    body{font-size:16px;}
+    h1{font-size:18px;}
+
+    main{
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      padding:12px;
+    }
+    .panel{order:1}
+    #canvasWrap{order:2}
+
+    #simCanvas{
+      width:100%;
+      height:auto;
+      max-height:70vh;  /* ประมาณ 70% ของจอในแนวตั้ง */
+    }
+
+    .row label{font-size:15px;}
+    .card{font-size:15px;}
+
+    /* ซ่อนปุ่ม+ผลใน panel บนมือถือ */
+    .panel .btnRow,
+    .panel .nums{
+      display:none;
+    }
+    /* ซ่อนสไลเดอร์ F และช่องติ๊กใน panel บนมือถือ */
+    .panel .rowF{display:none;}
+    .panel .chkRow{display:none;}
+
+    /* แสดงส่วนล่างบนมือถือ */
+    #mobileBottom{display:block;}
+    #mobileBottom .rowFmobile{display:flex;}
+    #mobileBottom .chkRowMobile{display:flex;align-items:center;}
+    #mobileBottom .chkRowMobile label{font-size:15px;}
+  }
+
+  /* โมดัลสูตรสำคัญ */
+  .modal-backdrop{
+    position:fixed;
+    inset:0;
+    background:rgba(15,23,42,0.45);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:50;
+    padding:16px;
+  }
+  .modal-backdrop.show{display:flex;}
+  .modal-box{
+    background:#fffbeb;
+    border-radius:16px;
+    border:2px solid #facc15;
+    max-width:640px;
+    width:100%;
+    max-height:80vh;
+    overflow:auto;
+    box-shadow:0 20px 40px rgba(15,23,42,0.25);
+    padding:16px 18px 18px;
+  }
+  .modal-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:8px;
+    margin-bottom:8px;
+  }
+  .modal-header h2{
+    margin:0;
+    font-size:18px;
+    color:#b45309;
+  }
+  .modal-body p{margin:4px 0;}
+  .badge-current{
+    display:inline-block;
+    padding:2px 8px;
+    border-radius:999px;
+    background:#f97316;
+    color:#fff;
+    font-size:12px;
+    margin-left:4px;
+  }
+  .closeBtn{
+    background:#ef4444;
+    color:#fff;
+    border:0;
+    border-radius:999px;
+    padding:6px 10px;
+    font-size:13px;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .formula-section{
+    margin-bottom:10px;
+    padding:8px;
+    border-radius:10px;
+    background:#fff7ed;
+    border:1px solid #fed7aa;
+  }
+  .formula-section strong{color:#9a3412;}
+  .sub-val{font-size:14px;color:#4b5563;margin-left:4px;}
+</style>
+</head>
+<body>
+<header>
+  <h1>ทดลอง: ดันกล่องติดผนัง </h1>
+</header>
+
+<main>
+  <section id="canvasWrap">
+    <canvas id="simCanvas" width="840" height="520"></canvas>
+    <div class="legend">
+      ศึกษาต่อได้ที่เพจ
+      <a href="https://www.facebook.com/resolvephysics" target="_blank"><strong>คลายปมฟิสิกส์</strong></a>
+    </div>
+  </section>
+
+  <aside class="panel">
+    <div class="row">
+      <label>มวล m (kg)</label>
+      <input id="m" type="range" min="0.1" max="10" step="0.1" value="1.0"/>
+      <span id="mVal">1.00</span>
+    </div>
+    <div class="row rowF">
+      <label>แรงกด F (N)</label>
+      <input id="F" type="range" min="0" max="60" step="1" value="20"/>
+      <span id="FVal">20</span>
+    </div>
+    <div class="row">
+      <label>สนามโน้มถ่วง g (N/kg)</label>
+      <input id="g" type="range" min="0" max="20" step="0.1" value="9.8"/>
+      <span id="gVal">9.8</span>
+    </div>
+    <div class="row">
+      <label>μs (0–1)</label>
+      <input id="muS" type="range" min="0" max="1" step="0.01" value="0.50"/>
+      <span id="muSVal">0.50</span>
+    </div>
+    <div class="row">
+      <label>μk (อัตโนมัติ)</label>
+      <input id="muK" type="range" min="0" max="1" step="0.01" value="0.40" disabled/>
+      <span id="muKVal">0.40</span>
+    </div>
+
+    <!-- ช่องติ๊กบนเดสก์ท็อป -->
+    <div class="row chkRow">
+      <label>แสดงเวกเตอร์</label>
+      <label style="display:flex;align-items:center;gap:4px;cursor:pointer;">
+        <input type="checkbox" id="showNFMG" />
+        <span>N, f, mg</span>
+      </label>
+    </div>
+
+    <!-- ปุ่มสำหรับ desktop -->
+    <div class="row btnRow" style="gap:12px;margin-top:12px">
+      <button id="startBtn">เริ่ม</button>
+      <button id="resetBtn" class="secondary">รีเซ็ต</button>
+      <button id="formulaBtn" class="secondary">สูตรสำคัญ</button>
+    </div>
+
+    <!-- การแสดงผลสำหรับ desktop -->
+    <div class="nums">
+      <div class="card">N = <span class="big" id="NVal">20.00</span> N</div>
+      <div class="card">mg = <span class="big" id="mgVal">9.80</span> N</div>
+      <div class="card">f<sub>s,max</sub> = <span class="big" id="fsmaxVal">10.00</span> N</div>
+      <div class="card">f จริง = <span class="big" id="fVal">9.80</span> N</div>
+      <div class="card">a = <span class="big" id="aVal">0.00</span> m/s²</div>
+      <div class="card">สถานะ: <span class="tag" id="statusTag">Static</span></div>
+    </div>
+  </aside>
+</main>
+
+<!-- ชุดสำหรับมือถือใต้จอทดลอง -->
+<section id="mobileBottom">
+  <!-- แถวสไลเดอร์ F สำหรับมือถือ -->
+  <div class="row rowFmobile">
+    <label>แรงกด F (N)</label>
+    <input id="Fmobile" type="range" min="0" max="60" step="1" value="20"/>
+    <span id="FValM">20</span>
+  </div>
+
+  <!-- ช่องติ๊กแสดงเวกเตอร์สำหรับมือถือ -->
+  <div class="row chkRowMobile" style="margin-top:4px;">
+    <label style="min-width:auto;">แสดงเวกเตอร์</label>
+    <label style="display:flex;align-items:center;gap:4px;cursor:pointer;">
+      <input type="checkbox" id="showNFMG_M" />
+      <span>N, f, mg</span>
+    </label>
+  </div>
+
+  <!-- การแสดงผลบนมือถือ -->
+  <div class="nums" style="margin-top:8px">
+    <div class="card">N = <span class="big" id="NValM">20.00</span> N</div>
+    <div class="card">mg = <span class="big" id="mgValM">9.80</span> N</div>
+    <div class="card">f<sub>s,max</sub> = <span class="big" id="fsmaxValM">10.00</span> N</div>
+    <div class="card">f จริง = <span class="big" id="fValM">9.80</span> N</div>
+    <div class="card">a = <span class="big" id="aValM">0.00</span> m/s²</div>
+    <div class="card">สถานะ: <span class="tag" id="statusTagM">Static</span></div>
+  </div>
+
+  <!-- แถวปุ่มบนมือถือ -->
+  <div class="row" style="gap:12px;margin-top:8px">
+    <button id="startBtnM">เริ่ม</button>
+    <button id="resetBtnM" class="secondary">รีเซ็ต</button>
+    <button id="formulaBtnM" class="secondary">สูตรสำคัญ</button>
+  </div>
+</section>
+
+<!-- โมดัลสูตรสำคัญ -->
+<div id="formulaModal" class="modal-backdrop">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2>สูตรสำคัญ: กล่องถูกดันติดผนัง <span class="badge-current">แทนค่าปัจจุบัน</span></h2>
+      <button id="closeFormula" class="closeBtn">ปิด ✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="formula-section">
+        <p><strong>1. สมดุลแนวราบ (แกน x)</strong></p>
+        <p>\(\sum F_x = 0 \Rightarrow N = F\)</p>
+        <p class="sub-val">
+          แทนค่า: N = F = <span id="mjNnum">20.00</span> N
+        </p>
+      </div>
+
+      <div class="formula-section">
+        <p><strong>2. น้ำหนักกับแรงเสียดทาน</strong></p>
+        <p>\( mg = m g \)</p>
+        <p class="sub-val">
+          แทนค่า: \(mg = m g\) = <span id="mjMGnum">9.80</span> N
+        </p>
+        <p>\( f_s \le \mu_s N,\quad f_{s,\max} = \mu_s N\)</p>
+        <p class="sub-val">
+          แทนค่า: \( f_{s,\max} = \mu_s N \) = <span id="mjFSmaxNum">10.00</span> N
+        </p>
+        <p>\( f_k = \mu_k N \)</p>
+        <p class="sub-val">
+          แทนค่า: \( f_k = \mu_k N \) = <span id="mjFKnum">8.00</span> N
+        </p>
+      </div>
+
+      <div class="formula-section">
+        <p><strong>3. เช็คสถานะ: สมดุลหรือไถล?</strong></p>
+        <p>
+          ถ้า \( mg \le f_{s,\max} \) ⇒ กล่อง <strong>สมดุลแนวดิ่ง</strong> (ไม่ไถล) และ \( f = mg \)
+        </p>
+        <p>
+          ถ้า \( mg > f_{s,\max} \) ⇒ แรงเสียดทานสถิตไม่พอ กล่อง <strong>ไถลลง</strong> ใช้แรงเสียดทานจลน์
+          \( f = f_k = \mu_k N \)
+        </p>
+        <p class="sub-val">
+          ตอนนี้: สถานะ = <span id="mjStatusText">Static</span>,
+          \( f = \)<span id="mjFnum">9.80</span> N
+        </p>
+      </div>
+
+      <div class="formula-section">
+        <p><strong>4. ถ้าไถล: หาความเร่งจากกฎของนิวตัน</strong></p>
+        <p>
+          แกนดิ่งลงเป็นบวก: \( \sum F_y = m a \)
+        </p>
+        <p>
+          \( mg - f = m a \Rightarrow a = g - \dfrac{f}{m} \)
+        </p>
+        <p>
+          ในกรณีใช้แรงเสียดทานจลน์: \( a = g - \dfrac{\mu_k N}{m} \)
+        </p>
+        <p class="sub-val">
+          แทนค่า: \( a = \)<span id="mjAnum">0.00</span> m/s²
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const canvas = document.getElementById('simCanvas');
+  const ctx = canvas.getContext('2d');
+
+  // UI หลัก (desktop)
+  const mEl = document.getElementById('m');
+  const FEl = document.getElementById('F');
+  const gEl = document.getElementById('g');
+  const muSEl = document.getElementById('muS');
+  const muKEl = document.getElementById('muK');
+  const startBtn = document.getElementById('startBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const formulaBtn = document.getElementById('formulaBtn');
+  const showNFMG = document.getElementById('showNFMG');
+
+  // ปุ่ม / สไลเดอร์สำหรับมือถือ
+  const FMobileEl = document.getElementById('Fmobile');
+  const FValMSpan = document.getElementById('FValM');
+  const startBtnM = document.getElementById('startBtnM');
+  const resetBtnM = document.getElementById('resetBtnM');
+  const formulaBtnM = document.getElementById('formulaBtnM');
+  const showNFMG_M = document.getElementById('showNFMG_M');
+
+  // โมดัลสูตร
+  const formulaModal = document.getElementById('formulaModal');
+  const closeFormula = document.getElementById('closeFormula');
+
+  const out = {
+    m: document.getElementById('mVal'),
+    F: document.getElementById('FVal'),
+    g: document.getElementById('gVal'),
+    muS: document.getElementById('muSVal'),
+    muK: document.getElementById('muKVal'),
+    N: document.getElementById('NVal'),
+    mg: document.getElementById('mgVal'),
+    fsmax: document.getElementById('fsmaxVal'),
+    f: document.getElementById('fVal'),
+    a: document.getElementById('aVal'),
+    status: document.getElementById('statusTag'),
+  };
+
+  const outM = {
+    N: document.getElementById('NValM'),
+    mg: document.getElementById('mgValM'),
+    fsmax: document.getElementById('fsmaxValM'),
+    f: document.getElementById('fValM'),
+    a: document.getElementById('aValM'),
+    status: document.getElementById('statusTagM'),
+  };
+
+  // Geometry: ขยับไปทางขวา 200px (จาก 160 → 360)
+  const wallX = 360;
+  const box = { x: wallX, y: 180, w: 80, h: 80, vy: 0 };
+  let running = false, lastTime = 0;
+
+  function setText(id, val){
+    const el = document.getElementById(id);
+    if(el) el.textContent = val;
+  }
+
+  function showExtraVectors(){
+    const s1 = showNFMG && showNFMG.checked;
+    const s2 = showNFMG_M && showNFMG_M.checked;
+    return s1 || s2;
+  }
+
+  function syncNFMGCheckbox(from){
+    const val = from && from.checked;
+    if(showNFMG && from !== showNFMG) showNFMG.checked = val;
+    if(showNFMG_M && from !== showNFMG_M) showNFMG_M.checked = val;
+  }
+
+  function syncMobileOutputs(){
+    if(!outM.N) return;
+    outM.N.textContent     = out.N.textContent;
+    outM.mg.textContent    = out.mg.textContent;
+    outM.fsmax.textContent = out.fsmax.textContent;
+    outM.f.textContent     = out.f.textContent;
+    outM.a.textContent     = out.a.textContent;
+
+    outM.status.textContent = out.status.textContent;
+    outM.status.className   = out.status.className;
+  }
+
+  function syncPlayButtons(){
+    const label = running ? "หยุด" : "เริ่ม";
+    if(startBtn)  startBtn.textContent  = label;
+    if(startBtnM) startBtnM.textContent = label;
+  }
+
+  function updateDerived(){
+    const m = +mEl.value, F = +FEl.value, g = +gEl.value, muS = +muSEl.value;
+    const muK = 0.8*muSEl.value; muKEl.value = muK.toFixed(2); out.muK.textContent = muK.toFixed(2);
+
+    const N = F, mg = m*g, fsmax = muS*N;
+    let status="Static", friction = mg, a=0;
+    if(mg > fsmax + 1e-9){ status="Kinetic"; friction = muK*N; a = g - friction/m; }
+
+    out.m.textContent = m.toFixed(2);
+    out.F.textContent = F.toFixed(0);
+    if(FValMSpan) FValMSpan.textContent = F.toFixed(0);
+    out.g.textContent = g.toFixed(1);
+    out.muS.textContent = muS.toFixed(2);
+    out.N.textContent = N.toFixed(2);
+    out.mg.textContent = mg.toFixed(2);
+    out.fsmax.textContent = fsmax.toFixed(2);
+    out.f.textContent = friction.toFixed(2);
+    out.a.textContent = a.toFixed(2);
+    out.status.textContent = status;
+    out.status.className = "tag " + (status==="Static"?"ok":"warn");
+
+    if(FMobileEl) FMobileEl.value = FEl.value;
+
+    syncMobileOutputs();
+  }
+
+  function arrow(x1,y1,x2,y2,color){
+    ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+    const ang = Math.atan2(y2-y1, x2-x1), size=8;
+    ctx.beginPath();
+    ctx.moveTo(x2,y2);
+    ctx.lineTo(x2 - size*Math.cos(ang - Math.PI/6), y2 - size*Math.sin(ang - Math.PI/6));
+    ctx.lineTo(x2 - size*Math.cos(ang + Math.PI/6), y2 - size*Math.sin(ang + Math.PI/6));
+    ctx.closePath(); ctx.fill();
+  }
+
+  function drawLabel(text, x, y, color){
+    ctx.save();
+    ctx.font = "bold 18px sans-serif";
+    ctx.fillStyle = color || "#111111";
+    ctx.textBaseline = "middle";
+    ctx.fillText(text, x, y);
+    ctx.restore();
+  }
+
+  function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    // wall: จากขอบซ้ายจนถึงผิวกล่องซ้าย (wallX)
+    ctx.fillStyle = "#e5e7eb"; ctx.fillRect(0,0,wallX,canvas.height);
+    // box
+    ctx.fillStyle = "#f59e0b"; ctx.strokeStyle="#374151"; ctx.lineWidth=2;
+    ctx.fillRect(box.x, box.y, box.w, box.h); ctx.strokeRect(box.x, box.y, box.w, box.h);
+
+    const m = +mEl.value, F = +FEl.value, g = +gEl.value, muS = +muSEl.value, muK = 0.8*muSEl.value;
+    const N = F, mg = m*g, fsmax = muS*N;
+    const sliding = mg > fsmax + 1e-9;
+    const f = sliding ? muK*N : mg;
+    const a = sliding ? (g - (muK*N)/m) : 0;
+
+    // scale ยึดตาม mg เพื่อให้เวกเตอร์ mg ไม่เปลี่ยนเมื่อเลื่อน F
+    const scale = 140 / Math.max(mg, 1);
+
+    const cx = box.x + box.w/2, cy = box.y + box.h/2;
+
+    // F: แสดงตลอด
+    arrow(box.x + box.w + F*scale, cy, box.x + box.w, cy, "#ef4444");
+    drawLabel("F = " + F.toFixed(0) + " N", box.x + box.w + 16, cy - 12, "#ef4444");
+
+    if(showExtraVectors()){
+      // N
+      arrow(box.x - N*scale, cy, box.x, cy, "#2563eb");
+      drawLabel("N = " + N.toFixed(2) + " N", box.x - 18 - 80, cy - 12, "#2563eb");
+
+      // mg (ขยับลง 20px)
+      arrow(cx, cy, cx, cy + mg*scale, "#111111");
+      drawLabel(
+        "mg = " + mg.toFixed(2) + " N",
+        cx + 14,
+        cy + mg*scale - 14 + 20,
+        "#111111"
+      );
+
+      // f (fs หรือ fk)
+      arrow(box.x, box.y, box.x, box.y - f*scale, "#111111");
+      const fType = sliding ? "f_k" : "f_s";
+      drawLabel(fType + " = " + f.toFixed(2) + " N", box.x + 10, box.y - f*scale - 12, "#111111");
+    }
+
+    // ศูนย์กลางกล่อง
+    ctx.fillStyle="#111111";
+    ctx.beginPath();
+    ctx.arc(cx, cy, 3, 0, 2*Math.PI);
+    ctx.fill();
+
+    // ลูกศรความเร่ง (แสดงตอนกำลังเล่น) ขยับลง 20px
+    if(running && Math.abs(a) > 1e-4){
+      const aScale = 60 / Math.max(g, 1);
+      const len = a * aScale;
+      arrow(
+        cx + box.w/2 + 40,
+        cy + 20,
+        cx + box.w/2 + 40,
+        cy + len + 20,
+        "#10b981"
+      );
+      drawLabel(
+        "a = " + a.toFixed(2) + " m/s²",
+        cx + box.w/2 + 46,
+        cy + len - 10 + 20,
+        "#10b981"
+      );
+    }
+  }
+
+  const wallXConst = wallX;
+
+  function reset(){
+    box.x = wallXConst; box.y = 180; box.vy = 0; running=false; lastTime=0;
+    syncPlayButtons();
+    updateDerived(); draw();
+  }
+
+  function step(ts){
+    if(!running){ draw(); return; }
+    if(!lastTime) lastTime = ts;
+    const dt = Math.min(0.033, (ts-lastTime)/1000); lastTime = ts;
+
+    const m = +mEl.value, F = +FEl.value, g = +gEl.value, muS = +muSEl.value;
+    const muK = 0.8*muSEl.value, N = F, mg = m*g, fsmax = muS*N;
+
+    if(mg > fsmax + 1e-9){
+      const a = g - (muK*N)/m;
+      box.vy += a*dt;
+      box.y += box.vy * dt * 60;
+      out.status.textContent = "Kinetic"; out.status.className = "tag warn";
+    }else{
+      box.vy = 0; out.status.textContent = "Static"; out.status.className = "tag ok";
+    }
+    syncMobileOutputs();
+
+    const floor = canvas.height - 40 - box.h;
+    if(box.y > floor){ box.y = floor; box.vy = 0; running=false; syncPlayButtons(); }
+
+    updateDerived(); draw(); requestAnimationFrame(step);
+  }
+
+  // อัปเดตค่าจากสไลเดอร์หลัก
+  [mEl,FEl,gEl,muSEl].forEach(el=>el.addEventListener('input',()=>{ 
+    muKEl.value = (0.8*+muSEl.value).toFixed(2);
+    document.getElementById('muKVal').textContent = (0.8*+muSEl.value).toFixed(2);
+    updateDerived(); draw();
+  }));
+
+  // อัปเดตจากสไลเดอร์ F บนมือถือให้ไปที่ตัวหลัก
+  if(FMobileEl){
+    FMobileEl.addEventListener('input', ()=>{
+      FEl.value = FMobileEl.value;
+      muKEl.value = (0.8*+muSEl.value).toFixed(2);
+      document.getElementById('muKVal').textContent = (0.8*+muSEl.value).toFixed(2);
+      updateDerived(); draw();
+    });
+  }
+
+  function toggleRun(){
+    running = !running;
+    syncPlayButtons();
+    if(running){
+      lastTime = 0;
+      requestAnimationFrame(step);
+    }
+  }
+
+  [startBtn, startBtnM].forEach(btn=>{
+    if(btn) btn.addEventListener('click', toggleRun);
+  });
+
+  [resetBtn, resetBtnM].forEach(btn=>{
+    if(btn) btn.addEventListener('click', reset);
+  });
+
+  // sync ช่องติ๊ก N,f,mg
+  [showNFMG, showNFMG_M].forEach(chk=>{
+    if(chk){
+      chk.addEventListener('change', ()=>{
+        syncNFMGCheckbox(chk);
+        draw();
+      });
+    }
+  });
+
+  function updateFormulaModalValues(){
+    const m = +mEl.value, F = +FEl.value, g = +gEl.value, muS = +muSEl.value;
+    const muK = 0.8*muSEl.value;
+    const N = F;
+    const mg = m*g;
+    const fsmax = muS*N;
+    const fk = muK*N;
+    const sliding = mg > fsmax + 1e-9;
+    const f = sliding ? fk : mg;
+    const a = sliding ? (g - fk/m) : 0;
+    const statusText = sliding ? "Kinetic (ไถล)" : "Static (ไม่ไถล)";
+
+    setText("mjNnum", N.toFixed(2));
+    setText("mjMGnum", mg.toFixed(2));
+    setText("mjFSmaxNum", fsmax.toFixed(2));
+    setText("mjFKnum", fk.toFixed(2));
+    setText("mjStatusText", statusText);
+    setText("mjFnum", f.toFixed(2));
+    setText("mjAnum", a.toFixed(2));
+  }
+
+  function openFormulaModal(){
+    updateFormulaModalValues();
+    formulaModal.classList.add('show');
+    if(window.MathJax && MathJax.typesetPromise){
+      MathJax.typesetPromise();
+    }
+  }
+  function closeFormulaModal(){
+    formulaModal.classList.remove('show');
+  }
+
+  [formulaBtn, formulaBtnM].forEach(btn=>{
+    if(btn) btn.addEventListener('click', openFormulaModal);
+  });
+  if(closeFormula){
+    closeFormula.addEventListener('click', closeFormulaModal);
+  }
+  formulaModal.addEventListener('click', (e)=>{
+    if(e.target === formulaModal) closeFormulaModal();
+  });
+
+  reset();
+})();
+</script>
+
+<!-- MathJax -->
+<script id="MathJax-script" async
+  src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+</html>

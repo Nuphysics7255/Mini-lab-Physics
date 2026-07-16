@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+
+<html lang="th">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>การทดลองเกี่ยวกับกฎของนิวตัน</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+        .arrow {
+            stroke-width: 2;
+            fill: none;
+        }
+        .force-arrow {
+            stroke: #ef4444;
+        }
+        .friction-arrow {
+            stroke: #f59e0b;
+        }
+        .normal-arrow {
+            stroke: #3b82f6;
+        }
+        .weight-arrow {
+            stroke: #8b5cf6;
+        }
+        .component-arrow {
+            stroke: #10b981;
+            stroke-dasharray: 5,5;
+        }
+        .box {
+            transition: transform 0.1s ease-out;
+        }
+    
+        /* ===== Mobile tweaks (ตามคำสั่ง) ===== */
+        @media (max-width: 1023px){
+            /* ตัวอักษรในป้ายของจอทดลอง +7px (override presentation attributes) */
+            #animationSvg text{ font-size: 19px !important; }
+
+            /* จอทดลองแนวตั้งสั้นลง 50% */
+            #animationSvg{ height: 200px !important; }
+        }
+
+        /* one-line labels: hide separate value text elements */
+        #forceValueLabel,#fxValueLabel,#fyValueLabel,#weightValueLabel,#normalValueLabel,#frictionValueLabel,#netForceValueLabel,#accelerationValueLabel{display:none;}
+
+
+/* shift F label */
+.label-F { transform: translateX(-12px); }
+
+/* FORCE shift label F left 12px */
+.label-F, #label-F, [data-label="F"] {
+  transform: translateX(-12px) !important;
+}
+
+</style>
+<style>
+@media (max-width: 1023px){
+  #kineticSliderM{ display:none !important; }
+}
+</style>
+<style>
+/* Hide mobile duplicate mu_k block and helper text */
+#kineticSliderM,
+#kineticValueM,
+#kineticSliderM + span,
+.text-xs.text-gray-500 { display:none !important; }
+</style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen p-4">
+<div class="max-w-7xl mx-auto">
+<h1 class="text-3xl font-bold text-center text-blue-700 mb-6">Mini Lab : แรงเสียดทาน &amp; กฎของนิวตัน</h1>
+<!-- Mobile: แผงปรับค่า (มวล, g, μ) ไว้ด้านบนจอทดลอง -->
+<div class="lg:hidden bg-white rounded-lg shadow-lg p-4 mb-4">
+<h2 class="text-lg font-bold text-gray-800 mb-3">แผงปรับค่า</h2>
+<div class="mb-3">
+<label class="block text-sm font-medium text-gray-700 mb-1">มวล (kg)</label>
+<input class="w-full" id="massSliderM" max="20" min="1" type="range" value="5"/>
+<span class="text-sm text-gray-600" id="massValueM">5 kg</span>
+</div>
+<div class="mb-2 text-sm text-gray-700">กำหนดค่า g = 10 N/kg <span class="text-gray-500">(ใช้ค่าคงที่ในการทดลอง)</span></div>
+<div class="mb-1 text-sm text-gray-700">กำหนดค่า μₛ = 0.5 และ μₖ = 0.4</div>
+<!-- Mobile: μk display (moved from below) -->
+<div class="mt-3" id="mobileMuKSlot"></div>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<!-- Animation Area -->
+<div class="lg:col-span-2 space-y-6">
+<div class="bg-white rounded-lg shadow-lg p-6">
+<svg height="400" id="animationSvg" viewbox="0 0 600 400" width="100%">
+<!-- Ground : เรียบ ไม่มีขอบ ไม่มีเม็ด -->
+<rect fill="#9ca3af" height="100" width="100%" x="0" y="300"></rect>
+<!-- Box -->
+<g class="box" id="boxGroup">
+<rect fill="#d2b48c" height="50" id="box" rx="4" stroke="#b08968" stroke-width="2" width="60" x="200" y="250"></rect>
+<text fill="white" font-size="14" font-weight="bold" text-anchor="middle" x="230" y="280">BOX</text>
+</g>
+<!-- Force Vectors -->
+<g id="vectors">
+<!-- Applied Force F -->
+<g id="appliedForce">
+<line class="arrow force-arrow" marker-end="url(#arrowhead-red)" x1="260" x2="260" y1="275" y2="275"></line>
+<text fill="#dc2626" font-size="12" font-weight="bold" id="forceLabel" text-anchor="middle" x="260" y="260">F</text>
+<text fill="#dc2626" font-size="10" id="forceValueLabel" text-anchor="middle" x="260" y="245">20N</text>
+</g>
+<!-- Angle Arc -->
+<g id="angleDisplay">
+<path fill="none" id="angleArc" stroke="#6b7280" stroke-dasharray="2,2" stroke-width="1"></path>
+<text fill="#6b7280" font-size="12" font-weight="600" id="angleText" x="280" y="285">θ = 0°</text>
+</g>
+<!-- Force Components -->
+<g id="forceComponents">
+<line class="arrow component-arrow" marker-end="url(#arrowhead-green)" x1="260" x2="260" y1="275" y2="275"></line>
+<line class="arrow component-arrow" marker-end="url(#arrowhead-green)" x1="260" x2="260" y1="275" y2="275"></line>
+<text fill="#059669" font-size="10" font-weight="bold" id="fxLabel" text-anchor="middle" x="260" y="290">Fx</text>
+<text fill="#059669" font-size="9" id="fxValueLabel" text-anchor="middle" x="260" y="305">20N</text>
+<text fill="#059669" font-size="10" font-weight="bold" id="fyLabel" text-anchor="start" x="275" y="275">Fy</text>
+<text fill="#059669" font-size="9" id="fyValueLabel" text-anchor="start" x="290" y="275">0N</text>
+</g>
+<!-- Weight -->
+<g id="weight">
+<line class="arrow weight-arrow" marker-end="url(#arrowhead-purple)" x1="230" x2="230" y1="300" y2="340"></line>
+<text fill="#7c3aed" font-size="12" font-weight="bold" id="weightLabel" text-anchor="middle" x="215" y="355">mg</text>
+<text fill="#7c3aed" font-size="10" id="weightValueLabel" text-anchor="middle" x="215" y="370">50N</text>
+</g>
+<!-- Normal Force -->
+<g id="normal">
+<line class="arrow normal-arrow" marker-end="url(#arrowhead-blue)" x1="230" x2="230" y1="250" y2="210"></line>
+<text fill="#2563eb" font-size="12" font-weight="bold" id="normalLabel" text-anchor="middle" x="215" y="205">N</text>
+<text fill="#2563eb" font-size="10" id="normalValueLabel" text-anchor="middle" x="215" y="190">50N</text>
+</g>
+<!-- Friction Force -->
+<g id="friction">
+<line class="arrow friction-arrow" marker-end="url(#arrowhead-orange)" x1="200" x2="160" y1="275" y2="275"></line>
+<text fill="#d97706" font-size="12" font-weight="bold" id="frictionLabel" text-anchor="middle" x="150" y="270">f</text>
+<text fill="#d97706" font-size="10" id="frictionValueLabel" text-anchor="middle" x="150" y="285">20N</text>
+</g>
+<!-- Net Force -->
+<g id="netForceVector" style="display: none;">
+<line class="arrow" marker-end="url(#arrowhead-darkblue)" stroke="#1e40af" stroke-width="3" x1="390" x2="390" y1="180" y2="180"></line>
+<text fill="#1e40af" font-size="12" font-weight="bold" id="netForceLabel" text-anchor="middle" x="390" y="170">F_net</text>
+<text fill="#1e40af" font-size="10" id="netForceValueLabel" text-anchor="middle" x="390" y="155">0 N</text>
+</g>
+<!-- Acceleration -->
+<g id="accelerationVector" style="display: none;">
+<line class="arrow" marker-end="url(#arrowhead-black)" stroke="#000000" stroke-width="3" x1="450" x2="450" y1="160" y2="160"></line>
+<text fill="#000000" font-size="12" font-weight="bold" id="accelerationLabel" text-anchor="middle" x="450" y="150">a</text>
+<text fill="#000000" font-size="10" id="accelerationValueLabel" text-anchor="middle" x="450" y="135">0 m/s²</text>
+</g>
+</g>
+<!-- Arrow markers -->
+<defs>
+<marker id="arrowhead-red" markerheight="4" markerwidth="6" orient="auto" refx="5" refy="2">
+<polygon fill="#dc2626" points="0 0, 6 2, 0 4"></polygon>
+</marker>
+<marker id="arrowhead-orange" markerheight="4" markerwidth="6" orient="auto" refx="5" refy="2">
+<polygon fill="#d97706" points="0 0, 6 2, 0 4"></polygon>
+</marker>
+<marker id="arrowhead-blue" markerheight="4" markerwidth="6" orient="auto" refx="5" refy="2">
+<polygon fill="#2563eb" points="0 0, 6 2, 0 4"></polygon>
+</marker>
+<marker id="arrowhead-purple" markerheight="4" markerwidth="6" orient="auto" refx="5" refy="2">
+<polygon fill="#7c3aed" points="0 0, 6 2, 0 4"></polygon>
+</marker>
+<marker id="arrowhead-green" markerheight="4" markerwidth="6" orient="auto" refx="5" refy="2">
+<polygon fill="#059669" points="0 0, 6 2, 0 4"></polygon>
+</marker>
+<marker id="arrowhead-pink" markerheight="4" markerwidth="6" orient="auto" refx="5" refy="2">
+<polygon fill="#e11d48" points="0 0, 6 2, 0 4"></polygon>
+</marker>
+<marker id="arrowhead-darkgreen" markerheight="4" markerwidth="6" orient="auto" refx="5" refy="2">
+<polygon fill="#166534" points="0 0, 6 2, 0 4"></polygon>
+</marker>
+<marker id="arrowhead-black" markerheight="4" markerwidth="6" orient="auto" refx="5" refy="2">
+<polygon fill="#000000" points="0 0, 6 2, 0 4"></polygon>
+</marker>
+<marker id="arrowhead-darkblue" markerheight="4" markerwidth="6" orient="auto" refx="5" refy="2">
+<polygon fill="#1e40af" points="0 0, 6 2, 0 4"></polygon>
+</marker>
+</defs>
+<!-- Angle label between Fx and F -->
+<g fill="none" id="angle-label" stroke="#9ca3af">
+<!-- arc -->
+<path d="M 0 0"></path>
+</g>
+</svg>
+</div>
+<!-- Study More -->
+<div class="mt-4 p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200">
+<h3 class="font-semibold text-purple-800 mb-2">ศึกษาเพิ่มเติมที่เพจ <a href="https://www.facebook.com/resolvephysics" target="_blank">เพจคลายปมฟิสิกส์</a></h3>
+<div class="text-sm text-purple-700 mb-2"></div>
+<a class="inline-flex items-center text-sm font-medium text-purple-600 hover:text-purple-800 transition-colors" href="https://www.facebook.com/resolvephysics" target="_blank"><svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</a>
+</div>
+</div>
+<!-- Control Panel -->
+<div class="lg:col-span-1 bg-white rounded-lg shadow-lg p-6">
+<!-- Applied Force -->
+<div class="mb-4">
+<label class="block text-sm font-medium text-gray-700 mb-2">แรงดึง F (N)</label>
+<input class="w-full" id="forceSlider" max="100" min="0" type="range" value="20"/>
+<span class="text-sm text-gray-600" id="forceValue">20 N</span>
+</div>
+<!-- Force Angle -->
+<div class="mb-4">
+<label class="block text-sm font-medium text-gray-700 mb-2">มุมของแรง (องศา)</label>
+<input class="w-full" id="angleSlider" max="90" min="0" type="range" value="0"/>
+<span class="text-sm text-gray-600" id="angleValue">0°</span>
+</div>
+<!-- Mass -->
+<div class="mb-4 hidden lg:block">
+<label class="block text-sm font-medium text-gray-700 mb-2">มวล (kg)</label>
+<input class="w-full" id="massSlider" max="20" min="1" type="range" value="5"/>
+<span class="text-sm text-gray-600" id="massValue">5 kg</span>
+</div>
+<div class="mb-3 text-sm text-gray-700">
+                    กำหนดค่า g = 10 N/kg <span class="text-gray-500">(ใช้ค่าคงที่ในการทดลอง)</span>
+</div>
+<div class="mb-6 text-sm text-gray-700">
+                    กำหนดค่า μₛ = 0.5 และ μₖ = 0.4
+                </div>
+<!-- Play Button -->
+<button class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg transition-colors" id="playBtn">
+                    ▶ เล่น
+                </button>
+<button class="w-full mt-2 bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-lg transition-colors" id="resetBtn">
+                    🔄 รีเซ็ต
+                </button>
+</div>
+</div>
+<script>
+        class FrictionSimulation {
+            constructor() {
+                this.boxPosition = 200;
+                this.boxPositionY = 0;
+                this.isMoving = false;
+                this.velocity = 0;
+                this.velocityX = 0;
+                this.velocityY = 0;
+                this.lastTime = null;
+                this.animationId = null;
+                this.lastTime = null;
+                this.motionScale = 10; // px per (m) for visualization
+                
+                this.initializeElements();
+                this.setupEventListeners();
+                this.updateSimulation();
+            }
+            
+            initializeElements() {
+                this.forceSlider = document.getElementById('forceSlider');
+                this.angleSlider = document.getElementById('angleSlider');
+                this.massSlider = document.getElementById('massSlider');
+                // Mobile top params (if present)
+                this.massSliderM = document.getElementById('massSliderM');
+this.massValueM = document.getElementById('massValueM');
+this.playBtn = document.getElementById('playBtn');
+                this.resetBtn = document.getElementById('resetBtn');
+                
+                this.forceValue = document.getElementById('forceValue');
+                this.angleValue = document.getElementById('angleValue');
+                this.massValue = document.getElementById('massValue');
+                
+                
+                this.boxGroup = document.getElementById('boxGroup');
+                
+                // Get all label elements
+                this.forceLabel = document.getElementById('forceLabel');
+                this.forceValueLabel = document.getElementById('forceValueLabel');
+                this.fxLabel = document.getElementById('fxLabel');
+                this.fxValueLabel = document.getElementById('fxValueLabel');
+                this.fyLabel = document.getElementById('fyLabel');
+                this.fyValueLabel = document.getElementById('fyValueLabel');
+                this.weightLabel = document.getElementById('weightLabel');
+                this.weightValueLabel = document.getElementById('weightValueLabel');
+                this.normalLabel = document.getElementById('normalLabel');
+                this.normalValueLabel = document.getElementById('normalValueLabel');
+                this.frictionLabel = document.getElementById('frictionLabel');
+                this.frictionValueLabel = document.getElementById('frictionValueLabel');
+                this.accelerationLabel = document.getElementById('accelerationLabel');
+                this.accelerationValueLabel = document.getElementById('accelerationValueLabel');
+                this.angleText = document.getElementById('angleText');
+                this.angleArc = document.getElementById('angleArc');
+                
+            }
+            
+            setupEventListeners() {
+                this.forceSlider.addEventListener('input', () => this.updateSimulation());
+                this.angleSlider.addEventListener('input', () => this.updateSimulation());
+                this.massSlider.addEventListener('input', () => this.updateSimulation());
+
+                // Mobile duplicated sliders -> sync to main sliders
+                if (this.massSliderM) {
+                    this.massSliderM.addEventListener('input', () => {
+                        this.massSlider.value = this.massSliderM.value;
+                        this.updateSimulation();
+                    });
+                }
+
+                this.playBtn.addEventListener('click', () => this.toggleAnimation());
+                this.resetBtn.addEventListener('click', () => this.resetSimulation());
+            }
+
+            updateSimulation() {
+                const force = parseFloat(this.forceSlider.value);
+                const angle = parseFloat(this.angleSlider.value);
+                const mass = parseFloat(this.massSlider.value);
+                const gravity = 10;
+                const muStatic = 0.5;
+                const muKinetic = 0.4;
+this.showComponents = true;
+                
+                // Update display values
+                this.forceValue.textContent = `${force} N`;
+                this.angleValue.textContent = `${angle}°`;
+                const avs = document.getElementById('angleValueSpan');
+                if (avs) avs.textContent = `${angle}°`;
+                this.massValue.textContent = `${mass} kg`;
+
+                // Sync mobile top panel (if present)
+                if (this.massSliderM) {
+                    this.massSliderM.value = this.massSlider.value;
+                    if (this.massValueM) this.massValueM.textContent = `${mass} kg`;
+}
+                
+                // Calculate forces
+                const angleRad = (angle * Math.PI) / 180;
+                const fx = force * Math.cos(angleRad);
+                const fy = force * Math.sin(angleRad);
+                const weight = mass * gravity;
+                const normalForce = Math.max(0, weight - fy);
+                const maxStaticFriction = muStatic * normalForce;
+                
+                // Check if object will lift off
+                let isFloating = false;
+                let actualFrictionForce;
+                let willMove = false;
+                let netForce = 0;
+                let accelerationValue = 0;
+                let netForceX = 0;
+                let netForceY = 0;
+                
+                if (fy > weight) {
+                    // Object lifts off - no friction
+                    isFloating = true;
+                    actualFrictionForce = 0;
+                    willMove = true;
+                    netForceX = fx;
+                    netForceY = fy - weight;
+                    netForce = Math.sqrt(netForceX * netForceX + netForceY * netForceY);
+                    accelerationValue = netForce / mass;
+                } else {
+                    // Object stays on ground
+                    isFloating = false;
+                    netForceY = 0;
+                    if (fx <= maxStaticFriction) {
+                        actualFrictionForce = fx; // Static friction equals applied force
+                        willMove = false;
+                        netForce = 0;
+                        accelerationValue = 0;
+                        netForceX = 0;
+                    } else {
+                        actualFrictionForce = muKinetic * normalForce;
+                        willMove = true;
+                        netForce = fx - actualFrictionForce;
+                        netForceX = netForce;
+                        accelerationValue = netForce / mass;
+                    }
+                }
+                
+                // Compute acceleration components
+                const ax = netForceX / mass;
+                const ay = netForceY / mass;
+                const aResult = Math.sqrt(ax*ax + ay*ay);
+
+                // Update vectors
+                this.updateVectors(force, angle, fx, fy, weight, normalForce, actualFrictionForce, willMove, aResult, isFloating, netForceX, netForceY);
+                
+                // Store values for animation
+                this.currentForces = { fx, fy, actualFrictionForce, willMove, mass, acceleration: aResult, ax, ay, isFloating, netForceX, netForceY };
+            }
+            
+            updateVectors(force, angle, fx, fy, weight, normalForce, frictionForce, willMove, accelerationValue, isFloating = false, netForceX = 0, netForceY = 0) {
+                const boxCenterX = this.boxPosition + 30;
+                const boxCenterY = 275 + this.boxPositionY;
+                const rightEdgeX = this.boxPosition + 60;
+                const rightEdgeY = boxCenterY;
+                const scale = 2; // Scale factor for vector display
+                
+                // Applied force vector (hide if force is 0)
+                const appliedForceGroup = document.getElementById('appliedForce');
+                if (force > 0) {
+                    appliedForceGroup.style.display = 'block';
+                    const forceLength = force * scale;
+                    const angleRad = (angle * Math.PI) / 180;
+                    const forceEndX = rightEdgeX + forceLength * Math.cos(angleRad);
+                    const forceEndY = rightEdgeY - forceLength * Math.sin(angleRad);
+                    
+                    const appliedForceArrow = document.querySelector('#appliedForce line');
+                    appliedForceArrow.setAttribute('x1', rightEdgeX);
+                    appliedForceArrow.setAttribute('y1', rightEdgeY);
+                    appliedForceArrow.setAttribute('x2', forceEndX);
+                    appliedForceArrow.setAttribute('y2', forceEndY);
+                    
+                    // Update force label position
+                    const labelOffsetX = 15 * Math.cos(angleRad);
+                    const labelOffsetY = 15 * Math.sin(angleRad);
+                    // One-line label: F = ... N (same line)
+                    this.forceLabel.setAttribute('x', forceEndX + labelOffsetX + 45);
+                    this.forceLabel.setAttribute('y', forceEndY - labelOffsetY);
+                    this.forceLabel.textContent = `F = ${force.toFixed(1)} N`;
+                } else {
+                    appliedForceGroup.style.display = 'none';
+                }
+                // Angle arc and text (only show if angle > 0)
+                const arcPos = 'top';
+if (angle > 0) {
+                    const arcRadius = 26;
+                    const angleRad = (angle * Math.PI) / 180;
+
+                    const endX = rightEdgeX + arcRadius * Math.cos(angleRad);
+                    const endY = (rightEdgeY - arcRadius * Math.sin(angleRad));
+
+                    const arcPath = `M ${rightEdgeX + arcRadius} ${rightEdgeY} A ${arcRadius} ${arcRadius} 0 0 0 ${endX} ${endY}`;
+                    this.angleArc.setAttribute('d', arcPath);
+                    this.angleArc.setAttribute('stroke', '#9ca3af');
+                    this.angleArc.setAttribute('stroke-width', '1.5');
+                    this.angleArc.setAttribute('stroke-dasharray', '2,2');
+
+                    // place θ label near the middle of the arc
+                    const labelR = arcRadius + 14;
+                    const lx = rightEdgeX + labelR * Math.cos(angleRad/2);
+                    const ly = (rightEdgeY - labelR * Math.sin(angleRad/2));
+
+                    this.angleText.setAttribute('x', lx);
+                    this.angleText.setAttribute('y', ly);
+                    this.angleText.setAttribute('fill', '#6b7280');
+                    this.angleText.setAttribute('font-size', '12');
+                    this.angleText.setAttribute('font-weight', '600');
+                    this.angleText.textContent = `θ = ${angle.toFixed(0)}°`;
+                    this.angleText.style.display = 'block';
+                    this.angleArc.style.display = 'block';
+                } else {
+                    this.angleText.style.display = 'none';
+                    this.angleArc.style.display = 'none';
+                }
+                
+                // Force components (show if force > 0)
+                const components = document.getElementById('forceComponents');
+                if (force > 0 && this.showComponents) {
+                    components.style.display = 'block';
+                    const fxArrow = components.children[0];
+                    const fyArrow = components.children[1];
+                    
+                    // Fx component (horizontal) - show if fx > 0 and angle > 0 and angle < 90
+                    if (fx > 0 && angle > 0 && angle < 90) {
+                        fxArrow.style.display = 'block';
+                        fxArrow.setAttribute('x1', rightEdgeX);
+                        fxArrow.setAttribute('y1', rightEdgeY);
+                        fxArrow.setAttribute('x2', rightEdgeX + fx * scale);
+                        fxArrow.setAttribute('y2', rightEdgeY);
+                        
+                        let fxLabelX = rightEdgeX + fx * scale + 35;
+                        let fxLabelY = rightEdgeY - 5 + 20; // เดิม
+                        if (window.innerWidth <= 1023){ fxLabelX += 15; fxLabelY += 10; } // มือถือ: ขวา 15px, ลง 10px
+                        this.fxLabel.setAttribute('x', fxLabelX);
+                        this.fxLabel.setAttribute('y', fxLabelY);
+// ลงเพิ่มอีก 10px ตามคำสั่งล่าสุด
+                        this.fxLabel.textContent = `Fx = ${fx.toFixed(1)} N`;
+                        this.fxLabel.style.display = 'block';
+                        this.fxValueLabel.style.display = 'none';
+                    } else {
+                        fxArrow.style.display = 'none';
+                        this.fxLabel.style.display = 'none';
+                        this.fxValueLabel.style.display = 'none';
+                    }
+                    
+                    // Fy component (vertical) - show if fy > 0 and angle < 90 (not purely vertical)
+                    if (fy > 0 && angle < 90) {
+                        fyArrow.style.display = 'block';
+                        fyArrow.setAttribute('x1', rightEdgeX);
+                        fyArrow.setAttribute('y1', rightEdgeY);
+                        fyArrow.setAttribute('x2', rightEdgeX);
+                        fyArrow.setAttribute('y2', rightEdgeY - fy * scale);
+                        
+                        this.fyLabel.setAttribute('x', rightEdgeX + 10 - 20); // ซ้าย 20px ตามคำสั่ง
+                        this.fyLabel.setAttribute('y', rightEdgeY - fy * scale - 5);
+                        this.fyLabel.textContent = `Fy = ${fy.toFixed(1)} N`;
+                        this.fyLabel.style.display = 'block';
+                        this.fyValueLabel.style.display = 'none';
+                    } else {
+                        fyArrow.style.display = 'none';
+                        this.fyLabel.style.display = 'none';
+                        this.fyValueLabel.style.display = 'none';
+                    }
+                } else {
+                    components.style.display = 'none';
+                }
+                
+                // Weight vector
+                const weightArrow = document.querySelector('#weight line');
+                const weightStartY = boxCenterY;
+                weightArrow.setAttribute('x1', boxCenterX);
+                weightArrow.setAttribute('y1', weightStartY);
+                weightArrow.setAttribute('x2', boxCenterX);
+                weightArrow.setAttribute('y2', weightStartY + Math.min(weight * 0.8, 40));
+                
+                // Update weight label (one-line)
+                this.weightLabel.setAttribute('x', boxCenterX);
+                this.weightLabel.setAttribute('y', weightStartY + Math.min(weight * 0.8, 40) + 22);
+                this.weightLabel.textContent = `mg = ${weight.toFixed(1)} N`;
+                this.weightValueLabel.style.display = 'none';
+                
+                // Normal force vector (hide if floating or normal force is 0 or negative)
+                const normalArrow = document.querySelector('#normal line');
+                const normalGroup = document.getElementById('normal');
+                if (isFloating || normalForce <= 0) {
+                    normalGroup.style.display = 'none';
+                } else {
+                    normalGroup.style.display = 'block';
+                    const normalStartY = boxCenterY;
+                    normalArrow.setAttribute('x1', boxCenterX);
+                    normalArrow.setAttribute('y1', normalStartY);
+                    normalArrow.setAttribute('x2', boxCenterX);
+                    normalArrow.setAttribute('y2', normalStartY - Math.min(normalForce * 0.8, 40));
+                    
+                    // Update normal label (one-line) + shift left 40px
+                    this.normalLabel.setAttribute('x', boxCenterX - 40);
+                    this.normalLabel.setAttribute('y', normalStartY - Math.min(normalForce * 0.8, 40) - 10);
+                    this.normalLabel.textContent = `N = ${normalForce.toFixed(1)} N`;
+                    this.normalValueLabel.style.display = 'none';
+                }
+                
+                // Friction force vector (hide if floating or friction is 0 or very small)
+                const frictionArrow = document.querySelector('#friction line');
+                const frictionGroup = document.getElementById('friction');
+                if (isFloating || frictionForce <= 0.01) {
+                    frictionGroup.style.display = 'none';
+                } else {
+                    frictionGroup.style.display = 'block';
+                    const frictionLength = Math.min(frictionForce * scale, 60);
+                    frictionArrow.setAttribute('x1', this.boxPosition);
+                    const contactY = boxCenterY + 25;
+                    frictionArrow.setAttribute('y1', contactY);
+                    frictionArrow.setAttribute('x2', this.boxPosition - frictionLength);
+                    frictionArrow.setAttribute('y2', contactY);
+                    
+                    // Update friction label (one-line) + shift left 40px and down 30px
+                    this.frictionLabel.setAttribute('x', this.boxPosition - frictionLength - 10 - 40);
+                    this.frictionLabel.setAttribute('y', boxCenterY - 5 + 30);
+                    this.frictionLabel.textContent = `f = ${frictionForce.toFixed(1)} N`;
+                    this.frictionValueLabel.style.display = 'none';
+                    
+                    // Change friction arrow color based on motion
+                    frictionArrow.setAttribute('stroke', willMove ? '#dc2626' : '#d97706');
+                }
+                
+                // Net Force vector (show if there's net force and angle > 0)
+                const netForceVector = document.getElementById('netForceVector');
+                const netForce = Math.sqrt(netForceX * netForceX + netForceY * netForceY);
+                if (netForce > 0.01 && angle > 0) {
+                    netForceVector.style.display = 'block';
+                    const netForceArrow = netForceVector.children[0];
+                    
+                    const netForceLength = Math.min(netForce * 2, 60);
+                    const netForceStartX = boxCenterX + 150 + 60; // ขวาเพิ่มอีก 40px (รวม +60)
+                    const netForceStartY = boxCenterY - 95 - 50; // ขึ้นเพิ่มอีก 30px (รวม -50)
+                    
+                    if (isFloating && (netForceX !== 0 || netForceY !== 0)) {
+                        // Show net force in direction for floating object
+                        const netForceAngle = Math.atan2(netForceY, netForceX);
+                        const endX = netForceStartX + netForceLength * Math.cos(netForceAngle);
+                        const endY = netForceStartY - netForceLength * Math.sin(netForceAngle);
+                        
+                        netForceArrow.setAttribute('x1', netForceStartX);
+                        netForceArrow.setAttribute('y1', netForceStartY);
+                        netForceArrow.setAttribute('x2', endX);
+                        netForceArrow.setAttribute('y2', endY);
+                        
+                        // Update net force label (one-line)
+                        const nfLabelX = netForceStartX + (netForceLength * Math.cos(netForceAngle)) / 2;
+                        const nfLabelY = netForceStartY - (netForceLength * Math.sin(netForceAngle)) / 2 - 12;
+                        const nfLabel = document.getElementById('netForceLabel');
+                        nfLabel.setAttribute('x', nfLabelX);
+                        nfLabel.setAttribute('y', nfLabelY);
+                        nfLabel.textContent = `Fnet = ${netForce.toFixed(1)} N`;
+                        document.getElementById('netForceValueLabel').style.display = 'none';
+                    } else if (!isFloating && netForce > 0) {
+                        // Normal horizontal net force
+                        netForceArrow.setAttribute('x1', netForceStartX);
+                        netForceArrow.setAttribute('y1', netForceStartY);
+                        netForceArrow.setAttribute('x2', netForceStartX + netForceLength);
+                        netForceArrow.setAttribute('y2', netForceStartY);
+                        
+                        // Update net force label (one-line)
+                        const nfLabel = document.getElementById('netForceLabel');
+                        nfLabel.setAttribute('x', netForceStartX + netForceLength / 2);
+                        nfLabel.setAttribute('y', netForceStartY - 12);
+                        nfLabel.textContent = `Fnet = ${netForce.toFixed(1)} N`;
+                        document.getElementById('netForceValueLabel').style.display = 'none';
+                    }
+                } else {
+                    netForceVector.style.display = 'none';
+                }
+                
+                // Acceleration vector (show if there's acceleration and angle > 0)
+                const accelerationVector = document.getElementById('accelerationVector');
+                if (accelerationValue > 0.01) {
+                    accelerationVector.style.display = 'block';
+                    const accelerationArrow = accelerationVector.children[0];
+                    
+                    const accelerationLength = Math.min(accelerationValue * 10, 60);
+                    const accelerationX = boxCenterX + 200 + 60; // ขวาเพิ่มอีก 40px (รวม +60)
+                    const accelerationY = boxCenterY - 145 - 50; // ขึ้นเพิ่มอีก 30px (รวม -50)
+                    
+                    if (isFloating && (netForceX !== 0 || netForceY !== 0)) {
+                        // Show acceleration in direction of net force for floating object
+                        const netForceAngle = Math.atan2(netForceY, netForceX);
+                        const endX = accelerationX + accelerationLength * Math.cos(netForceAngle);
+                        const endY = accelerationY - accelerationLength * Math.sin(netForceAngle);
+                        
+                        accelerationArrow.setAttribute('x1', accelerationX);
+                        accelerationArrow.setAttribute('y1', accelerationY);
+                        accelerationArrow.setAttribute('x2', endX);
+                        accelerationArrow.setAttribute('y2', endY);
+                        
+                        // Update acceleration label (one-line)
+                        const aLabelX = accelerationX + (accelerationLength * Math.cos(netForceAngle)) / 2;
+                        const aLabelY = accelerationY - (accelerationLength * Math.sin(netForceAngle)) / 2 - 12;
+                        this.accelerationLabel.setAttribute('x', aLabelX);
+                        this.accelerationLabel.setAttribute('y', aLabelY);
+                        this.accelerationLabel.textContent = `a = ${accelerationValue.toFixed(1)} m/s²`;
+                        this.accelerationValueLabel.style.display = 'none';
+                    } else if (!isFloating && accelerationValue > 0) {
+                        // Normal horizontal acceleration
+                        accelerationArrow.setAttribute('x1', accelerationX);
+                        accelerationArrow.setAttribute('y1', accelerationY);
+                        accelerationArrow.setAttribute('x2', accelerationX + accelerationLength);
+                        accelerationArrow.setAttribute('y2', accelerationY);
+                        
+                        // Update acceleration label (one-line)
+                        this.accelerationLabel.setAttribute('x', accelerationX + accelerationLength / 2);
+                        this.accelerationLabel.setAttribute('y', accelerationY - 12);
+                        this.accelerationLabel.textContent = `a = ${accelerationValue.toFixed(1)} m/s²`;
+                        this.accelerationValueLabel.style.display = 'none';
+                    }
+                } else {
+                    accelerationVector.style.display = 'none';
+                }
+            }
+            
+            toggleAnimation() {
+                if (this.animationId) {
+                    this.stopAnimation();
+                } else {
+                    this.startAnimation();
+                }
+            }
+            
+            startAnimation() {
+                this.playBtn.textContent = '⏸ หยุด';
+                this.playBtn.className = 'w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-4 rounded-lg transition-colors';
+                this.lastTime = performance.now();
+                this.animate(this.lastTime);
+            }
+
+            stopAnimation() {
+                // Pause: keep the box at its current position/state
+                if (this.animationId) {
+                    cancelAnimationFrame(this.animationId);
+                    this.animationId = null;
+                }
+                this.playBtn.textContent = '▶ เล่น';
+                this.playBtn.className = 'w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg transition-colors';
+                // Reset timing so resume won't jump
+                this.lastTime = null;
+            }
+
+            resetSimulation() {
+                // Full reset back to initial state
+                if (this.animationId) {
+                    cancelAnimationFrame(this.animationId);
+                    this.animationId = null;
+                }
+                this.playBtn.textContent = '▶ เล่น';
+                this.playBtn.className = 'w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg transition-colors';
+                this.lastTime = null;
+                this.velocity = 0;
+                this.velocityX = 0;
+                this.velocityY = 0;
+                this.boxPosition = 200;
+                this.boxPositionY = 0;
+                this.boxGroup.style.transform = `translate(0px, 0px)`;
+                this.updateSimulation();
+            }
+
+            animate(now) {
+                const tNow = (typeof now === "number") ? now : performance.now();
+                if (this.lastTime == null) this.lastTime = tNow;
+                let dt = (tNow - this.lastTime) / 1000;
+                // clamp dt to avoid big jumps when tab is inactive
+                dt = Math.max(0, Math.min(dt, 0.05));
+                this.lastTime = tNow;
+
+                if (this.currentForces && this.currentForces.willMove) {
+                    if (this.currentForces.isFloating) {
+                        // Floating motion - move in direction of net force
+                        const accelerationX = this.currentForces.netForceX / this.currentForces.mass;
+                        const accelerationY = this.currentForces.netForceY / this.currentForces.mass;
+                        
+                        this.velocityX = (this.velocityX || 0) + accelerationX * dt;
+                        this.velocityY = (this.velocityY || 0) + accelerationY * dt;
+                        
+                        this.boxPosition += this.velocityX * dt * this.motionScale;
+                        this.boxPositionY = (this.boxPositionY || 0) - (this.velocityY * dt * this.motionScale); // Negative because SVG Y increases downward
+                        
+                        // Boundary checks
+                        if (this.boxPosition > 520) {
+                            this.boxPosition = 520;
+                            this.velocityX = 0;
+                        }
+                        if (this.boxPositionY < -100) {
+                            this.boxPositionY = -100;
+                            this.velocityY = 0;
+                        }
+                        
+                        this.boxGroup.style.transform = `translate(${this.boxPosition - 200}px, ${this.boxPositionY}px)`;
+                    } else {
+                        // Ground motion - horizontal only
+                        const netForce = this.currentForces.fx - this.currentForces.actualFrictionForce;
+                        const acceleration = netForce / this.currentForces.mass;
+                        
+                        this.velocity += acceleration * dt;
+                        this.boxPosition += this.velocity * dt * this.motionScale;
+                        
+                        // Boundary check
+                        if (this.boxPosition > 520) {
+                            this.boxPosition = 520;
+                            this.velocity = 0;
+                        }
+                        
+                        this.boxGroup.style.transform = `translateX(${this.boxPosition - 200}px)`;
+                    }
+                    
+                    this.updateVectors(
+                        parseFloat(this.forceSlider.value),
+                        parseFloat(this.angleSlider.value),
+                        this.currentForces.fx,
+                        this.currentForces.fy,
+                        parseFloat(this.massSlider.value) * 10,
+                        Math.max(0, parseFloat(this.massSlider.value) * 10 - this.currentForces.fy),
+                        this.currentForces.actualFrictionForce,
+                        this.currentForces.willMove,
+                        this.currentForces.acceleration,
+                        this.currentForces.isFloating,
+                        this.currentForces.netForceX,
+                        this.currentForces.netForceY
+                    );
+                }
+                
+                this.animationId = requestAnimationFrame((ts) => this.animate(ts));
+            }
+        }
+        
+        // Initialize simulation when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new FrictionSimulation();
+        });
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9762b6b9e02464f5',t:'MTc1NjM3MjYyNy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>
+<script>
+window.addEventListener('load', ()=>{
+  // find label that exactly shows 'F'
+  const labels = document.querySelectorAll('text, div, span');
+  labels.forEach(el=>{
+    if(el.textContent && el.textContent.trim()==='F'){
+      const rect = el.getBoundingClientRect();
+      el.style.transform = 'translateX(-19px)'; // total left shift 12+7 = 19px
+    }
+  });
+});
+</script>
+</body>
+</html>

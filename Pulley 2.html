@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>PulleyLab — ชุดรอก 2 ชั้น (ดึง x → กล่องขึ้น x/4)</title>
+<style>
+  :root{
+    --bg:#f6f7fb; --panel:#ffffff; --ink:#0f172a; --muted:#475569; --line:#e5e7eb;
+    --accent:#0ea5e9; --accent2:#22c55e; --blue:#2563eb; --glass:#ffffffd9;
+  }
+  *{box-sizing:border-box}
+  html,body{
+    height:100%;
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:system-ui,-apple-system,Segoe UI,Inter,Roboto,Arial
+  }
+  a{color:var(--blue);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .wrap{
+    display:grid;
+    grid-template-columns:320px 1fr;
+    gap:12px;
+    max-width:1200px;
+    margin:0 auto;
+    padding:12px;
+    height:100dvh;
+  }
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:14px;
+    box-shadow:0 6px 20px rgba(2,6,23,.06)
+  }
+  .side{
+    padding:14px;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    min-height:0;
+  }
+  .side h2{margin:0 0 6px 0;font-size:18px}
+  label{font-size:13px;color:var(--muted);display:block;margin-bottom:6px}
+  input[type="number"],input[type="range"]{width:100%}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:end}
+  .btn{
+    border:1px solid var(--line);
+    background:#fff;
+    border-radius:10px;
+    padding:10px 12px;
+    cursor:pointer;
+  }
+  .btn.primary{background:var(--accent);color:#fff;border-color:transparent}
+  .btn.green{background:var(--accent2);color:#fff;border-color:transparent}
+  .btn:active{transform:translateY(1px)}
+  .stat{
+    background:#f8fafc;
+    border:1px dashed var(--line);
+    border-radius:10px;
+    padding:10px 12px;
+    font-size:13px
+  }
+  .stat b{font-size:14px}
+  .scene{
+    position:relative;
+    overflow:hidden;
+    min-height:540px;
+  }
+  .hud{
+    position:absolute;
+    inset:8px 8px auto auto;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    z-index:20
+  }
+  .tag{
+    background:var(--glass);
+    border:1px solid var(--line);
+    backdrop-filter:saturate(1.2) blur(2px);
+    border-radius:10px;
+    padding:6px 10px;
+    font-size:12px
+  }
+  #stage{
+    width:100%;
+    height:100%;
+    display:block;
+    touch-action:none;
+    margin:0 auto;
+  }
+  .footer{
+    font-size:12px;
+    color:var(--muted);
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:8px 12px;
+    margin-top:auto
+  }
+  .footer a{font-weight:600}
+
+  #extraPanel{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+
+  /* ปรับสีปุ่มเทาอ่อนนูนสำหรับ 3 ปุ่ม */
+  #reset, #vectors, #trace{
+    background:#e5e7eb;
+    border-color:#d1d5db;
+    color:#111827;
+    box-shadow:0 2px 4px rgba(15,23,42,.18);
+  }
+
+  /* Modal */
+  .overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(2,6,23,.22);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:99;
+  }
+  .modal{
+    width:min(880px,92vw);
+    max-height:88vh;
+    overflow:auto;
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:16px;
+    box-shadow:0 20px 60px rgba(2,6,23,.25);
+  }
+  .modal .head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:14px 16px;
+    border-bottom:1px solid var(--line);
+    gap:10px
+  }
+  .modal .head h3{margin:0;font-size:18px}
+  .modal .body{padding:14px 16px}
+  .pill{
+    display:inline-block;
+    background:#eef6ff;
+    border:1px solid #dbeafe;
+    color:#1d4ed8;
+    border-radius:999px;
+    padding:4px 10px;
+    font-size:12px;
+    margin-right:6px
+  }
+  .card{
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:12px 14px;
+    margin:10px 0;
+    background:#fafafa
+  }
+  .ok{color:#10b981;font-weight:600}
+  .bad{color:#ef4444;font-weight:600}
+  .close{
+    border:1px solid var(--line);
+    background:#fff;
+    border-radius:8px;
+    padding:8px 12px;
+    cursor:pointer
+  }
+  .choices{display:grid;grid-template-columns:1fr;gap:6px;margin-top:8px}
+  .score{font-weight:700;margin-left:8px}
+
+  @media (max-width: 920px){
+    .wrap{
+      grid-template-columns:1fr;
+      height:auto;
+      min-height:100dvh
+    }
+    .scene{
+      min-height:360px; /* ไม่ให้จอยาวเกินในมือถือ */
+    }
+    #extraPanel.mobile-bottom{
+      margin-top:8px;
+    }
+  }
+</style>
+
+<!-- MathJax -->
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)'], ['$', '$']], displayMath: [['\\[','\\]']] },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+</head>
+<body>
+  <div class="wrap">
+    <aside class="panel side">
+      <h2>ตั้งค่า</h2>
+      <div>
+        <label>มวลของกล่อง m (kg)</label>
+        <input id="mass" type="number" min="1" step="1" value="20" />
+      </div>
+      <div>
+        <label>สนามโน้มถ่วง g (N/kg)</label>
+        <input id="grav" type="number" min="1" step="0.01" value="9.81" />
+      </div>
+      <div>
+        <label>ประสิทธิภาพของระบบ η (%)</label>
+        <input id="eff" type="range" min="10" max="100" step="1" value="100" />
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted)">
+          <span>10%</span><span id="effVal">100%</span><span>100%</span>
+        </div>
+      </div>
+
+      <div class="row">
+        <button id="reset" class="btn">รีเซ็ต (x=0)</button>
+        <button id="vectors" class="btn">แสดงเวกเตอร์</button>
+      </div>
+
+      <div class="row">
+        <button id="openFormula" class="btn primary">สรุปสูตร</button>
+        <button id="openQuiz" class="btn green">แบบฝึกหัด</button>
+      </div>
+
+      <!-- ส่วนที่จะย้ายทั้งก้อนในมือถือ -->
+      <div id="extraPanel">
+        <div class="row">
+          <button id="trace" class="btn">แสดงร่องรอยเดิม</button>
+        </div>
+
+        <div class="stat">
+          <div><b>สเกล:</b> 100 px = 1 m</div>
+          <div><b>ดึงเชือกระยะ x</b> → <b>กล่องเคลื่อนที่ขึ้น 0.25x</b></div>
+        </div>
+
+        <div class="stat" id="maBox">
+          <div><b>การได้เปรียบเชิงกล (MA)</b></div>
+          <div>ทฤษฎี (IMA): <b id="ima">IMA = 4.00</b></div>
+          <div>ปฏิบัติ (AMA): <b id="ama">—</b></div>
+          <div>แรงดึงเชือก T (N): <b id="tension">—</b></div>
+        </div>
+
+        <div class="footer">
+          <span>© PulleyLab</span>
+          <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">ศึกษาเพิ่มเติมที่เพจ คลายปมฟิสิกส์</a>
+        </div>
+      </div>
+    </aside>
+
+    <main class="panel scene">
+      <div class="hud">
+        <div class="tag">การทดลองนี้: <b>รอกเบา</b> • <b>เชือกเบา</b> • <b>ดึงด้วยความเร็วคงที่</b></div>
+      </div>
+      <canvas id="stage"></canvas>
+    </main>
+  </div>
+
+  <!-- Modal: สรุปสูตร -->
+  <div id="overlayFormula" class="overlay">
+    <div class="modal">
+      <div class="head">
+        <h3>สรุปสูตร — ระบบดึง x → กล่องขึ้น x/4</h3>
+        <button class="close" data-close="#overlayFormula">ปิด</button>
+      </div>
+      <div class="body">
+        <div class="pill">เงื่อนไข: รอกเบา • เชือกเบา • ดึงด้วยความเร็วคงที่</div>
+
+        <div class="card">
+          <b>1) ความสัมพันธ์ระยะทาง</b><br/>
+          \[
+            x_{\text{in}} = x,\quad x_{\text{out}} = \frac{x}{4}
+          \]
+        </div>
+
+        <div class="card">
+          <b>2) งาน–พลังงาน หาแรงดึงเชือก \(T\)</b><br/>
+          \[
+            \eta = \frac{mg(x/4)}{T x}
+                = \frac{mg}{4T}
+            \;\Rightarrow\;
+            \boxed{T = \frac{mg}{4\eta}}
+          \]
+        </div>
+
+        <div class="card">
+          <b>3) อุดมคติ (\(\eta=1\))</b><br/>
+          \[
+            4T - mg = 0 \Rightarrow T = \frac{mg}{4}
+          \]
+        </div>
+
+        <div class="card">
+          <b>4) การได้เปรียบเชิงกล</b><br/>
+          \[
+            \text{IMA} = 4,\quad \text{AMA} = \frac{mg}{T} = 4\eta
+          \]
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: แบบฝึกหัด -->
+  <div id="overlayQuiz" class="overlay">
+    <div class="modal">
+      <div class="head">
+        <h3>แบบฝึกหัด — ระบบดึง x → กล่องขึ้น x/4</h3>
+        <button class="close" data-close="#overlayQuiz">ปิด</button>
+      </div>
+      <div class="body">
+
+        <div class="card" id="q1card">
+          <b>ข้อ 1</b> กล่องมวล \(m=20\,\text{kg}\), \(\eta=0.90\), \(g=9.81\ \text{N/kg}\).
+          ระบบนี้มีความสัมพันธ์ \(T = \dfrac{mg}{4\eta}\).
+          จงหาแรงดึงเชือก \(T\).<br/>
+          <div class="choices">
+            <label><input type="radio" name="q1" value="A"> A) \(49.0\ \text{N}\)</label>
+            <label><input type="radio" name="q1" value="B"> B) \(54.5\ \text{N}\)</label><!-- correct -->
+            <label><input type="radio" name="q1" value="C"> C) \(98.1\ \text{N}\)</label>
+            <label><input type="radio" name="q1" value="D"> D) \(109.0\ \text{N}\)</label>
+          </div>
+          <div id="sol1" style="display:none;margin-top:8px">
+            <div class="ok">เฉลย</div>
+            \[
+              T=\frac{20\cdot 9.81}{4 \cdot 0.90}
+              = \frac{196.2}{3.6}
+              \approx 54.5\ \text{N}
+            \]
+          </div>
+        </div>
+
+        <div class="card" id="q2card">
+          <b>ข้อ 2</b> ใช้ค่าจากข้อ 1. \(\text{AMA}=\dfrac{mg}{T}\) ของระบบนี้มีค่าเท่าใด?<br/>
+          <div class="choices">
+            <label><input type="radio" name="q2" value="A"> A) \(4.00\)</label>
+            <label><input type="radio" name="q2" value="B"> B) \(3.60\)</label><!-- correct -->
+            <label><input type="radio" name="q2" value="C"> C) \(2.00\)</label>
+            <label><input type="radio" name="q2" value="D"> D) \(0.90\)</label>
+          </div>
+          <div id="sol2" style="display:none;margin-top:8px">
+            <div class="ok">เฉลย</div>
+            \[
+              \text{AMA} = \frac{196.2}{54.5} \approx 3.60
+              \quad\text{และ}\quad 4\eta = 4(0.90)=3.60
+            \]
+          </div>
+        </div>
+
+        <div class="card" id="q3card">
+          <b>ข้อ 3</b> วัดได้ว่าใช้แรงดึงเชือก \(T = 70\,\text{N}\) ในการยกกล่องมวล \(m = 25\,\text{kg}\).
+          จงประมาณค่าประสิทธิภาพ \(\eta\) ของระบบนี้ (ใช้ \(T = \frac{mg}{4\eta}\)).<br/>
+          <div class="choices">
+            <label><input type="radio" name="q3" value="A"> A) \(0.900\)</label>
+            <label><input type="radio" name="q3" value="B"> B) \(0.876\)</label><!-- correct -->
+            <label><input type="radio" name="q3" value="C"> C) \(0.800\)</label>
+            <label><input type="radio" name="q3" value="D"> D) \(0.700\)</label>
+          </div>
+          <div id="sol3" style="display:none;margin-top:8px">
+            <div class="ok">เฉลย</div>
+            \[
+              \eta = \frac{mg}{4T}
+              = \frac{25\cdot 9.81}{4\cdot 70}
+              = \frac{245.25}{280}
+              \approx 0.876
+            \]
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:10px">
+          <button id="checkQuiz" class="btn primary">ตรวจคำตอบ</button>
+          <div id="score" class="score"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(function(){
+  const canvas=document.getElementById('stage');
+  const ctx=canvas.getContext('2d');
+
+  function rr(x,y,w,h,r=6){
+    const rr=Math.min(r, Math.abs(w)/2, Math.abs(h)/2);
+    ctx.beginPath();
+    ctx.moveTo(x+rr,y);
+    ctx.lineTo(x+w-rr,y);
+    ctx.arcTo(x+w,y,x+w,y+rr,rr);
+    ctx.lineTo(x+w,y+h-rr);
+    ctx.arcTo(x+w,y+h,x+w-rr,y+h,rr);
+    ctx.lineTo(x+rr,y+h);
+    ctx.arcTo(x,y+h,x,y+h-rr,rr);
+    ctx.lineTo(x,y+rr);
+    ctx.arcTo(x,y,x+rr,y,rr);
+  }
+
+  let W,H;
+  let visScale = 1;
+
+  function isMobile(){
+    return window.innerWidth <= 920;
+  }
+
+  function updateScale(){
+    visScale = isMobile() ? 0.5 : 1; // มือถือให้รูปเล็กลงครึ่งหนึ่ง
+  }
+
+  const extraPanel = document.getElementById('extraPanel');
+  const side = document.querySelector('.side');
+  const scenePanel = document.querySelector('.scene');
+  let extraOnBottom = false;
+
+  // UI refs
+  const massEl=document.getElementById('mass');
+  const gravEl=document.getElementById('grav');
+  const effEl=document.getElementById('eff');
+  const effVal=document.getElementById('effVal');
+  const resetBtn=document.getElementById('reset');
+  const vectorsBtn=document.getElementById('vectors');
+  const openFormula=document.getElementById('openFormula');
+  const openQuiz=document.getElementById('openQuiz');
+  const traceBtn=document.getElementById('trace');
+
+  const imaEl=document.getElementById('ima');
+  const amaEl=document.getElementById('ama');
+  const tensionEl=document.getElementById('tension');
+  const scoreEl=document.getElementById('score');
+
+  // ย้าย extraPanel และปุ่ม reset/vectors เฉพาะมือถือ
+  function relocateExtraPanel(){
+    const mobile = isMobile();
+    const resetRow = resetBtn.parentElement;
+    const traceRow = traceBtn.parentElement;
+    const formulaRow = openFormula.parentElement;
+
+    if(mobile){
+      if(!extraOnBottom){
+        scenePanel.insertAdjacentElement('afterend', extraPanel);
+        extraPanel.classList.add('panel','mobile-bottom');
+        extraOnBottom = true;
+      }
+      // ย้ายแถว reset+vectors ไปไว้บรรทัดบน trace ภายใน extraPanel
+      if(resetRow.parentElement !== extraPanel){
+        extraPanel.insertBefore(resetRow, traceRow);
+      }
+    }else{
+      // กลับที่เดิมเมื่อไม่ใช่มือถือ
+      if(extraOnBottom){
+        extraPanel.classList.remove('panel','mobile-bottom');
+        side.appendChild(extraPanel);
+        extraOnBottom = false;
+      }
+      // ย้ายแถว reset+vectors กลับไปอยู่เหนือแถว openFormula+openQuiz
+      if(resetRow.parentElement !== side){
+        side.insertBefore(resetRow, formulaRow);
+      }
+    }
+  }
+
+  function fit(){
+    W=canvas.parentElement.clientWidth;
+    H=canvas.parentElement.clientHeight;
+    updateScale();
+    canvas.width=Math.floor(W);
+    canvas.height=Math.floor(H);
+    relocateExtraPanel();
+    updateGeometry();
+    draw();
+  }
+  window.addEventListener('resize',fit);
+
+  // ค่าระบบ
+  const PX_PER_M=100, IMA=4;
+
+  const beam={x:80,y:60,w:300,h:20};
+  const fixedPulley={r:38};
+  const movPulleyTop={r:38};
+  const movPulleyBottom={r:34};
+  const load={x:0,y:0,w:80,h:60};
+  const handle={x:0,y:0,dragging:false};
+
+  let movTopStartCy=0, movBottomStartCy=0;
+  let showVectors=false;
+  let showTrace=false;
+  let startHandleY=0, pullX_px=0, startY=0;
+  let effectivePullPx=0; // ระยะดึงที่แท้จริงหลังโดน clamp
+
+  function clamp(v,min,max){return Math.max(min,Math.min(max,v));}
+  function meters(px){return px/PX_PER_M;}
+
+  function fontSize(px){
+    // มือถือให้ตัวอักษรใหญ่ขึ้นเพื่อชดเชยการ scale
+    return isMobile() ? px*2 : px;
+  }
+
+  function computeForces(){
+    const m=Math.max(0.01,parseFloat(massEl.value)||0);
+    const g=Math.max(0.01,parseFloat(gravEl.value)||0);
+    const eta=clamp((parseFloat(effEl.value)||100)/100,0.1,1);
+    const AMA=eta*IMA;      // = 4η
+    const T=(m*g)/AMA;      // = mg/(4η)
+    effVal.textContent=Math.round(eta*100)+'%';
+    imaEl.textContent='IMA = 4.00';
+    amaEl.textContent=AMA.toFixed(2);
+    tensionEl.textContent=T.toFixed(2);
+    return {m,g,eta,AMA,T};
+  }
+
+  function shapeLoadByMass(){
+    const m=Math.max(0.01,parseFloat(massEl.value)||0);
+    load.h=clamp(40 + 0.8*m, 40, 140);
+    load.w=clamp(64 + 0.3*m, 64, 120);
+  }
+
+  function reset(){
+    pullX_px=0;
+    effectivePullPx=0;
+
+    // รอกตายตัวบนขวา
+    fixedPulley.cx=beam.x+beam.w-fixedPulley.r-30;
+    fixedPulley.cy=beam.y+beam.h+60;
+
+    shapeLoadByMass();
+
+    // รอกกลาง
+    movPulleyTop.cx=beam.x+beam.w/2;
+    movPulleyTop.cy=fixedPulley.cy+120;
+    movTopStartCy=movPulleyTop.cy;
+
+    // รอกล่าง (ซ้าย 40 px)
+    movPulleyBottom.cx=movPulleyTop.cx - 40;
+    movPulleyBottom.cy=movPulleyTop.cy + 110;
+    movBottomStartCy=movPulleyBottom.cy;
+
+    // กล่อง
+    load.x=movPulleyBottom.cx - load.w/2;
+    load.y=movPulleyBottom.cy + movPulleyBottom.r + 10;
+
+    // มือจับ
+    handle.x=fixedPulley.cx+fixedPulley.r;
+    handle.y=movPulleyTop.cy;
+    startHandleY=handle.y;
+
+    computeForces();
+    updateGeometry();
+    draw();
+  }
+
+  function maxRisePx(){ return 150; }
+
+  function updateGeometry(){
+    shapeLoadByMass();
+    const riseMax=maxRisePx();
+    // ระยะที่ผู้ใช้ลากจริง
+    pullX_px=clamp(pullX_px,0,2*riseMax);
+
+    // คำนวณตามอุดมคติก่อน
+    const topRiseIdeal = pullX_px/2;
+    let desiredTopCy = movTopStartCy - topRiseIdeal;
+
+    // ขอบบน: ห้ามสูงกว่ารอกตายตัว
+    const minTopCy = fixedPulley.cy;
+    if (desiredTopCy < minTopCy) {
+      desiredTopCy = minTopCy;
+    }
+    movPulleyTop.cy = desiredTopCy;
+
+    // ระยะขึ้นจริงของรอกกลาง (กรณีติดเพดานจะสั้นกว่าอุดมคติ)
+    const actualTopRise = movTopStartCy - movPulleyTop.cy;
+
+    // ระยะดึงที่แท้จริงของเชือกด้านขวา = 2 เท่าของระยะรอกกลาง
+    effectivePullPx = actualTopRise * 2;
+
+    // รอกล่างขึ้นครึ่งของรอกกลาง
+    const bottomRise = actualTopRise / 2;
+    movPulleyBottom.cx = movPulleyTop.cx - 40;
+    movPulleyBottom.cy = movBottomStartCy - bottomRise;
+
+    // มือจับต้องใช้ระยะดึงที่แท้จริงเท่านั้น เพื่อไม่ให้เชือกขวายืดเกิน
+    handle.y = startHandleY + effectivePullPx;
+
+    // กล่องตามรอกล่าง
+    load.x = movPulleyBottom.cx - load.w/2;
+    load.y = movPulleyBottom.cy + movPulleyBottom.r + 10;
+  }
+
+  function drawBeam(){
+    ctx.fillStyle='#111827';
+    ctx.fillRect(beam.x,beam.y,beam.w,beam.h);
+  }
+
+  function drawPulley(cx,cy,r){
+    ctx.fillStyle='#e5e7eb';
+    ctx.strokeStyle='#111827';
+    ctx.lineWidth=3;
+    ctx.beginPath();
+    ctx.arc(cx,cy,r,0,Math.PI*2);
+    ctx.fill();
+    ctx.stroke();
+  }
+
+  // เชือกหลัก (น้ำตาล)
+  function drawMainRope(){
+    ctx.lineWidth=4;
+    ctx.lineCap='round';
+    const rM=movPulleyTop.r, rF=fixedPulley.r;
+    const xR=movPulleyTop.cx + rM, yM=movPulleyTop.cy;
+    const xL=movPulleyTop.cx - rM;
+    const xFL=fixedPulley.cx - rF, xFR=fixedPulley.cx + rF, yF=fixedPulley.cy;
+    // ให้แตะพอดีที่ใต้เพดาน (ไม่จม)
+    const ceilingY = beam.y + beam.h;
+
+    ctx.strokeStyle='#a16207';
+    // ครึ่งวงรอกกลาง
+    ctx.beginPath();
+    ctx.arc(movPulleyTop.cx,yM,rM,Math.PI,0,true);
+    ctx.stroke();
+
+    // ด้านซ้ายขึ้นเพดานแบบแตะขอบล่าง
+    ctx.beginPath();
+    ctx.moveTo(xL, yM);
+    ctx.lineTo(xL, ceilingY);
+    ctx.stroke();
+
+    // ไปหารอกตายตัว
+    ctx.beginPath();
+    ctx.moveTo(xR,yM);
+    ctx.lineTo(xFL,yF);
+    ctx.stroke();
+
+    // ครึ่งวงรอกตายตัว
+    ctx.beginPath();
+    ctx.arc(fixedPulley.cx,yF,rF,Math.PI,0,false);
+    ctx.stroke();
+
+    // ไปที่มือจับ
+    ctx.beginPath();
+    ctx.moveTo(xFR,yF);
+    ctx.lineTo(handle.x,handle.y-22);
+    ctx.stroke();
+
+    drawSpringScale(handle.x,handle.y-22, 40, 22);
+  }
+
+  // เชือกดำซ้ายสุด
+  function drawSecondRope(){
+    ctx.lineWidth=4;
+    ctx.lineCap='round';
+    ctx.strokeStyle='#111827';
+
+    const anchorX = beam.x + 80;
+    const anchorY = beam.y + beam.h; // แตะขอบล่างเพดานเหมือนกัน
+
+    const rB = movPulleyBottom.r;
+    const leftPoint = {x: movPulleyBottom.cx - rB, y: movPulleyBottom.cy};
+    const rightPoint = {x: movPulleyBottom.cx + rB, y: movPulleyBottom.cy};
+
+    // เพดาน → รอกล่างซ้าย
+    ctx.beginPath();
+    ctx.moveTo(anchorX, anchorY);
+    ctx.lineTo(leftPoint.x, leftPoint.y);
+    ctx.stroke();
+
+    // ครึ่งวงรอกล่าง
+    ctx.beginPath();
+    ctx.arc(movPulleyBottom.cx, movPulleyBottom.cy, rB, Math.PI, 0, true);
+    ctx.stroke();
+
+    // จากรอกล่างไปศูนย์กลางรอกกลาง
+    ctx.beginPath();
+    ctx.moveTo(rightPoint.x, rightPoint.y);
+    ctx.lineTo(movPulleyTop.cx, movPulleyTop.cy);
+    ctx.stroke();
+  }
+
+  // เชือกดำจากรอกตายตัวไปเพดาน
+  function drawFixedToCeiling(){
+    ctx.lineWidth=4;
+    ctx.strokeStyle='#111827';
+    ctx.beginPath();
+    ctx.moveTo(fixedPulley.cx, fixedPulley.cy);
+    ctx.lineTo(fixedPulley.cx, beam.y + beam.h);
+    ctx.stroke();
+  }
+
+  function drawSpringScale(x,y,h,hookDrop){
+    ctx.fillStyle='#ffffff'; ctx.strokeStyle='#111827'; ctx.lineWidth=2;
+    rr(x-14, y, 28, h, 6); ctx.fill(); ctx.stroke();
+    // hook
+    ctx.beginPath(); ctx.moveTo(x, y+h);
+    ctx.lineTo(x, y+h+hookDrop-6);
+    ctx.arc(x, y+h+hookDrop-2, 4, Math.PI*1.1, Math.PI*0.9, true); ctx.stroke();
+    // meter
+    ctx.strokeStyle='#ef4444'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(x-8, y+h-10); ctx.lineTo(x+8, y+h-10); ctx.stroke();
+    ctx.fillStyle='#0f172a';
+    ctx.font=fontSize(11)+'px Inter, system-ui';
+    ctx.textAlign='center';
+    ctx.fillText('T', x, y+14);
+    ctx.font=fontSize(18)+'px system-ui, Apple Color Emoji, Segoe UI Emoji';
+    ctx.textAlign='center';
+    ctx.fillText('🤚', x, y+h+hookDrop+10);
+  }
+
+  function drawLoad(){
+    ctx.fillStyle='#22c55e';
+    ctx.fillRect(load.x, load.y, load.w, load.h);
+    const hx=load.x+load.w/2, hy=load.y;
+    ctx.strokeStyle='#111827'; ctx.lineWidth=2;
+    ctx.beginPath();
+    ctx.moveTo(hx, hy);
+    ctx.lineTo(hx, hy-10);
+    ctx.stroke();
+    ctx.fillStyle='#0f172a';
+    ctx.font=fontSize(12)+'px Inter, system-ui, sans-serif';
+    ctx.textAlign='left';
+    const mVal=Math.max(0.01, parseFloat(massEl.value)||0);
+    ctx.fillText('m = '+mVal.toFixed(2)+' kg', load.x+8, load.y+16);
+  }
+
+  // เส้นปะตำแหน่งเดิม
+  function drawTraceOverlay(){
+    if(!showTrace) return;
+    ctx.save();
+    ctx.setLineDash([6,6]);
+    ctx.lineWidth=2;
+    ctx.strokeStyle='#cbd5f5';
+
+    // เพดาน
+    ctx.beginPath();
+    ctx.moveTo(beam.x, beam.y+beam.h);
+    ctx.lineTo(beam.x+beam.w, beam.y+beam.h);
+    ctx.stroke();
+
+    // รอกตายตัว
+    ctx.beginPath();
+    ctx.arc(fixedPulley.cx, fixedPulley.cy, fixedPulley.r, 0, Math.PI*2);
+    ctx.stroke();
+
+    // รอกกลางตำแหน่งเริ่ม
+    ctx.beginPath();
+    ctx.arc(movPulleyTop.cx, movTopStartCy, movPulleyTop.r, 0, Math.PI*2);
+    ctx.stroke();
+
+    // รอกล่างตำแหน่งเริ่ม
+    ctx.beginPath();
+    ctx.arc(movPulleyTop.cx - 40, movBottomStartCy, movPulleyBottom.r, 0, Math.PI*2);
+    ctx.stroke();
+
+    // เชือกหลักตอนเริ่ม
+    const rM=movPulleyTop.r, rF=fixedPulley.r;
+    const xR0=movPulleyTop.cx + rM, yM0=movTopStartCy;
+    const xL0=movPulleyTop.cx - rM;
+    const xFL=fixedPulley.cx - rF, xFR=fixedPulley.cx + rF, yF=fixedPulley.cy;
+    const ceilingY = beam.y + beam.h;
+
+    // ซ้ายขึ้นเพดาน
+    ctx.beginPath();
+    ctx.moveTo(xL0, yM0);
+    ctx.lineTo(xL0, ceilingY);
+    ctx.stroke();
+
+    // โค้งรอกกลางเดิม
+    ctx.beginPath();
+    ctx.arc(movPulleyTop.cx, yM0, rM, Math.PI, 0, true);
+    ctx.stroke();
+
+    // ไปหารอกตายตัว
+    ctx.beginPath();
+    ctx.moveTo(xR0, yM0);
+    ctx.lineTo(xFL, yF);
+    ctx.stroke();
+
+    // โค้งรอกตายตัว
+    ctx.beginPath();
+    ctx.arc(fixedPulley.cx, yF, rF, Math.PI, 0, false);
+    ctx.stroke();
+
+    // มือจับเดิม
+    const handleInitX = fixedPulley.cx + fixedPulley.r;
+    const handleInitY = movTopStartCy;
+    ctx.beginPath();
+    ctx.moveTo(xFR, yF);
+    ctx.lineTo(handleInitX, handleInitY-22);
+    ctx.stroke();
+
+    // เชือกดำซ้ายสุดตอนเริ่ม
+    const anchorX = beam.x + 80;
+    const anchorY = beam.y + beam.h;
+    const rB = movPulleyBottom.r;
+    const bottomStartCx = movPulleyTop.cx - 40;
+    const leftPoint = {x: bottomStartCx - rB, y: movBottomStartCy};
+    const rightPoint = {x: bottomStartCx + rB, y: movBottomStartCy};
+
+    ctx.beginPath();
+    ctx.moveTo(anchorX, anchorY);
+    ctx.lineTo(leftPoint.x, leftPoint.y);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(bottomStartCx, movBottomStartCy, rB, Math.PI, 0, true);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(rightPoint.x, rightPoint.y);
+    ctx.lineTo(movPulleyTop.cx, movTopStartCy);
+    ctx.stroke();
+
+    // กล่องตำแหน่งเดิม
+    const loadInitX = bottomStartCx - load.w/2;
+    const loadInitY = movBottomStartCy + movPulleyBottom.r + 10;
+    ctx.strokeRect(loadInitX, loadInitY, load.w, load.h);
+
+    ctx.restore();
+  }
+
+  function drawArrows(){
+    ctx.font=fontSize(12)+'px Inter, system-ui, sans-serif';
+    ctx.textAlign='left';
+
+    // ใช้ effectivePullPx แทน เพื่อให้สัมพันธ์กับรอกที่โดน clamp
+    if(effectivePullPx>0){
+      ctx.lineWidth=2;
+      const rx=handle.x+22, rTop=startHandleY, rBot=startHandleY + effectivePullPx;
+      const x_m=meters(effectivePullPx);
+      ctx.strokeStyle='#ef4444'; ctx.fillStyle='#ef4444';
+      ctx.beginPath();ctx.moveTo(rx,rTop);ctx.lineTo(rx,rBot);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(rx-4,rBot-8);ctx.lineTo(rx,rBot);ctx.lineTo(rx+4,rBot-8);ctx.fill();
+      ctx.fillText('x = '+x_m.toFixed(3)+' m',rx+6,(rTop+rBot)/2);
+    }
+
+    // รอกกลางขึ้น (ใช้ actual)
+    const actualTopRise = movTopStartCy - movPulleyTop.cy;
+    if(actualTopRise>0){
+      const lx=movPulleyTop.cx-22;
+      const lStart=movTopStartCy;
+      const lEnd=movPulleyTop.cy;
+      const rise_m=meters(actualTopRise);
+      ctx.strokeStyle='#ef4444'; ctx.fillStyle='#ef4444'; ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(lx,lStart);ctx.lineTo(lx,lEnd);ctx.stroke();
+      const headY=lEnd, dy=(lEnd<lStart)?8:-8;
+      ctx.beginPath();ctx.moveTo(lx-4,headY+dy);ctx.lineTo(lx,headY);ctx.lineTo(lx+4,headY+dy);ctx.fill();
+      ctx.fillText('ขึ้น = '+rise_m.toFixed(3)+' m', movPulleyTop.cx+10, movPulleyTop.cy-10);
+    }
+
+    // รอกล่าง/กล่อง
+    const bottomRise_px = movBottomStartCy - movPulleyBottom.cy;
+    if(bottomRise_px>0){
+      const bx = movPulleyBottom.cx + 40;
+      const bStart = movBottomStartCy;
+      const bEnd = movPulleyBottom.cy;
+      const bottomRise_m = meters(bottomRise_px);
+      ctx.strokeStyle='#10b981'; ctx.fillStyle='#10b981'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(bx, bStart); ctx.lineTo(bx, bEnd); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(bx-4, bEnd+8); ctx.lineTo(bx, bEnd); ctx.lineTo(bx+4, bEnd+8); ctx.fill();
+      ctx.fillText('ขึ้น = '+bottomRise_m.toFixed(3)+' m', bx+6, (bStart+bEnd)/2);
+    }
+  }
+
+  function drawVectors(){
+    if(!showVectors) return;
+    const {m,g,T}=computeForces();
+    const k=0.006*PX_PER_M*0.3;
+
+    const mg=m*g, Lmg=mg*k, cx=load.x+load.w/2, cy=load.y+load.h/2;
+    ctx.strokeStyle='#065f46'; ctx.fillStyle='#065f46'; ctx.lineWidth=2.5;
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx, cy+Lmg); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx-5, cy+Lmg-10); ctx.lineTo(cx, cy+Lmg); ctx.lineTo(cx+5, cy+Lmg-10); ctx.fill();
+    ctx.font=fontSize(12)+'px Inter, system-ui, sans-serif';
+    ctx.textAlign='left';
+    ctx.fillText('mg = '+mg.toFixed(2)+' N', cx+8, cy+Math.max(16, Lmg/2));
+
+    const hx=handle.x, hy=handle.y, LT=T*k;
+    ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(hx, hy+LT); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(hx-5, hy+LT-10); ctx.lineTo(hx, hy+LT); ctx.lineTo(hx+5, hy+LT-10); ctx.fill();
+    ctx.fillText('T = '+T.toFixed(2)+' N', hx+8, hy+Math.max(16, LT/2));
+  }
+
+  function draw(){
+    ctx.setTransform(visScale,0,0,visScale,0,0);
+    ctx.clearRect(0,0,canvas.width/visScale,canvas.height/visScale);
+
+    drawBeam();
+    drawPulley(fixedPulley.cx,fixedPulley.cy,fixedPulley.r);
+    drawPulley(movPulleyTop.cx,movPulleyTop.cy,movPulleyTop.r);
+    drawPulley(movPulleyBottom.cx,movPulleyBottom.cy,movPulleyBottom.r);
+
+    drawFixedToCeiling();
+    drawSecondRope();
+    drawMainRope();
+
+    drawLoad();
+    drawArrows();
+    drawVectors();
+    drawTraceOverlay();
+    computeForces();
+  }
+
+  function hitHandle(px,py){
+    return Math.hypot(px-handle.x,py-(handle.y+22))<=26 ||
+           Math.hypot(px-handle.x,py-(handle.y+50))<=28;
+  }
+  function onPointerDown(e){
+    const rect=canvas.getBoundingClientRect();
+    const clientX = (e.clientX ?? e.touches?.[0]?.clientX);
+    const clientY = (e.clientY ?? e.touches?.[0]?.clientY);
+    const x=(clientX-rect.left)/visScale;
+    const y=(clientY-rect.top)/visScale;
+    if(hitHandle(x,y)){handle.dragging=true;startY=y;e.preventDefault();}
+  }
+  function onPointerMove(e){
+    if(!handle.dragging)return;
+    const rect=canvas.getBoundingClientRect();
+    const clientY = (e.clientY ?? e.touches?.[0]?.clientY);
+    const y=(clientY-rect.top)/visScale;
+    pullX_px=(y-startY);
+    updateGeometry();
+    draw();
+  }
+  function onPointerUp(){handle.dragging=false;}
+
+  canvas.addEventListener('mousedown',onPointerDown);
+  canvas.addEventListener('mousemove',onPointerMove);
+  window.addEventListener('mouseup',onPointerUp);
+  canvas.addEventListener('touchstart',onPointerDown,{passive:false});
+  canvas.addEventListener('touchmove',onPointerMove,{passive:false});
+  window.addEventListener('touchend',onPointerUp);
+
+  [massEl,gravEl,effEl].forEach(el=>el.addEventListener('input',()=>{computeForces();updateGeometry();draw();}));
+  resetBtn.addEventListener('click',()=>{reset();});
+  vectorsBtn.addEventListener('click',()=>{showVectors=!showVectors;vectorsBtn.textContent=showVectors?'ซ่อนเวกเตอร์':'แสดงเวกเตอร์';draw();});
+  traceBtn.addEventListener('click',()=>{showTrace=!showTrace;traceBtn.textContent=showTrace?'ซ่อนร่องรอยเดิม':'แสดงร่องรอยเดิม';draw();});
+
+  function $(s){return document.querySelector(s);}
+  function openModal(id){$(id).style.display='flex'; if(window.MathJax) MathJax.typesetPromise?.();}
+  function closeModal(id){$(id).style.display='none';}
+  openFormula.addEventListener('click',()=>openModal('#overlayFormula'));
+  openQuiz.addEventListener('click',()=>openModal('#overlayQuiz'));
+  document.querySelectorAll('.close').forEach(btn=>btn.addEventListener('click',()=>closeModal(btn.getAttribute('data-close'))));
+  ['overlayFormula','overlayQuiz'].forEach(id=>{
+    const ov=document.getElementById(id);
+    ov.addEventListener('click',e=>{ if(e.target===ov) ov.style.display='none'; });
+  });
+
+  function getVal(name){
+    const el=[...document.querySelectorAll('input[name="'+name+'"]')].find(e=>e.checked);
+    return el?.value??null;
+  }
+  document.getElementById('checkQuiz').addEventListener('click',()=>{
+    let score=0, total=3;
+    const ans={q1:'B', q2:'B', q3:'B'};
+    if(getVal('q1')===ans.q1) score++;
+    if(getVal('q2')===ans.q2) score++;
+    if(getVal('q3')===ans.q3) score++;
+    ['sol1','sol2','sol3'].forEach(id=>document.getElementById(id).style.display='block');
+    scoreEl.innerHTML = (score===total
+      ? '<span class="ok">คะแนน: '+score+'/'+total+' เยี่ยมมาก!</span>'
+      : '<span class="bad">คะแนน: '+score+'/'+total+'</span>');
+    if(window.MathJax) MathJax.typesetPromise?.();
+  });
+
+  reset();
+  fit();
+  if (window.MathJax && MathJax.typesetPromise) { MathJax.typesetPromise(); }
+})();
+</script>
+</body>
+</html>
