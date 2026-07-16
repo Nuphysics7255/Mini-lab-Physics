@@ -1,0 +1,2515 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>การทดลอง: การเคลื่อนที่แบบโพรเจกไทล์ (มาตรฐานเพจ)</title>
+
+  <!-- MathJax (มาตรฐานสมการเป็น LaTeX / MathJax) -->
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['\\(','\\)'], ['$', '$']], displayMath: [['\\[','\\]']] },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+
+  <style>
+    :root{
+      --ink:#0f172a;
+      --muted:#475569;
+      --line:#e5e7eb;
+      --bg:#ffffff;
+
+      /* มาตรฐานเพจ: สีปุ่มคงที่ */
+      --btn-play:#38bdf8;     /* ฟ้า */
+      --btn-reset:#e5e7eb;    /* เทา */
+      --btn-formula:#fed7aa;  /* ส้มอ่อน */
+      --btn-quiz:#bbf7d0;     /* เขียวอ่อน */
+
+      --shadow: 0 10px 22px rgba(2,6,23,.10);
+      --radius:16px;
+      --radius2:14px;
+
+      --sim-sky:#eaf6ff;
+      --sim-grass:#f3fff5;
+
+      --red:#ef4444;
+      --blue:#3b82f6;
+      --green:#22c55e;
+      --gray:#94a3b8;
+      --graySoft: rgba(148,163,184,.85);
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:system-ui,"Noto Sans Thai",sans-serif;
+      background:var(--bg);
+      color:var(--ink);
+      padding:12px;
+    }
+
+    .wrap{
+      max-width:1100px;
+      margin:0 auto;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+
+    .title{
+      display:flex;
+      flex-direction:column;
+      gap:2px;
+      padding:10px 12px;
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      background:#fff;
+      box-shadow:var(--shadow);
+    }
+    .title h1{
+      margin:0;
+      font-size:18px;
+      line-height:1.2;
+      color:#1d4ed8;
+    }
+    .title p{
+      margin:0;
+      color:var(--muted);
+      font-size:13px;
+    }
+
+    .layout{
+      display:grid;
+      grid-template-columns: 360px 1fr;
+      gap:10px;
+      align-items:start;
+    }
+
+    .panel{
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      background:#fff;
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+
+    .panel-head{
+      padding:10px 12px;
+      border-bottom:1px solid var(--line);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+
+    .section{
+      padding:12px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .card{
+      border:1px solid var(--line);
+      border-radius:var(--radius2);
+      padding:10px;
+      background:#fff;
+      position:relative; /* ✅ ช่วยกันส่วนอื่นมาบังการคลิก */
+      z-index:1;         /* ✅ */
+    }
+    .card h3{
+      margin:0 0 8px 0;
+      font-size:14px;
+      color:#1d4ed8;
+    }
+
+    .row{ display:grid; grid-template-columns: 1fr; gap:10px; }
+
+    /* ===== input stepper (+/-) ===== */
+    .field2{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:6px;
+    }
+    .field2 label{
+      font-size:13px;
+      color:#111827;
+      font-weight:700;
+    }
+    .stepper{
+      display:grid;
+      grid-template-columns: 44px 1fr 44px;
+      gap:8px;
+      align-items:center;
+    }
+    .stepbtn{
+      border:1px solid var(--line);
+      background:#fff;
+      border-radius:14px;
+      height:44px;
+      font-weight:900;
+      cursor:pointer;
+      box-shadow: 0 8px 16px rgba(2,6,23,.08);
+      user-select:none;
+    }
+    .stepbtn:active{ transform: translateY(1px); }
+    .num{
+      width:100%;
+      padding:10px 10px;
+      border:1px solid var(--line);
+      border-radius:14px;
+      font-size:14px;
+      text-align:center;
+      height:44px;
+    }
+    .sub{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      color:var(--muted);
+      font-size:12px;
+      margin-top:2px;
+    }
+
+    /* ====== ช่องติ๊กซ่อน/แสดงได้ ====== */
+    .cardhead{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:8px;
+      position:relative; /* ✅ */
+      z-index:2;         /* ✅ ให้ปุ่มกดได้แน่นอน */
+      pointer-events:auto;
+    }
+    .cardhead h3{ margin:0; }
+    .miniBtn{
+      border:1px solid var(--line);
+      background:#fff;
+      border-radius:999px;
+      padding:8px 10px;
+      font-weight:900;
+      cursor:pointer;
+      box-shadow: 0 6px 14px rgba(2,6,23,.06);
+      color:#0f172a;
+      display:flex;
+      align-items:center;
+      gap:8px;
+      white-space:nowrap;
+      position:relative; /* ✅ */
+      z-index:3;         /* ✅ */
+      pointer-events:auto;
+    }
+    .miniBtn:active{ transform: translateY(1px); }
+    .checksBody{ display:block; }
+    .checksBody.hidden{ display:none; }
+
+    .checks{ display:flex; flex-direction:column; gap:8px; }
+    .check{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:8px 10px;
+      border:1px solid var(--line);
+      border-radius:12px;
+      background:#fff;
+    }
+    .check input{ transform:scale(1.15); }
+    .check .t{ font-size:13px; color:#111827; font-weight:700; }
+    .check .d{ margin-left:auto; font-size:12px; color:var(--muted); white-space:nowrap; }
+
+    /* ปุ่มหลัก */
+    .btn-area{
+      border-top:1px solid var(--line);
+      background:#fff;
+      padding:10px 12px;
+    }
+    .btn-grid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:8px;
+    }
+    .btn{
+      border:none;
+      border-radius:999px;
+      padding:10px 10px;
+      font-weight:700;
+      cursor:pointer;
+      box-shadow: 0 6px 14px rgba(2,6,23,.10);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+      user-select:none;
+      min-height:44px;
+      white-space:nowrap;
+    }
+    .btn:active{ transform: translateY(1px); }
+    .btn-play{ background:var(--btn-play); color:#fff; }
+    .btn-reset{ background:var(--btn-reset); color:#111827; }
+    .btn-formula{ background:var(--btn-formula); color:#111827; }
+    .btn-quiz{ background:var(--btn-quiz); color:#065f46; }
+    .btn[disabled]{ opacity:.55; cursor:not-allowed; transform:none; }
+
+    /* ลิงก์เพจ */
+    .footer-link{
+      padding:10px 12px;
+      border-top:1px solid var(--line);
+      display:flex;
+      justify-content:center;
+      font-size:13px;
+      background:#fff;
+    }
+    .footer-link a{
+      color:#1d4ed8;
+      text-decoration:none;
+      font-weight:700;
+    }
+    .footer-link a:hover{ text-decoration:underline; }
+
+    /* พื้นที่ทดลอง */
+    .sim{
+      height:624px; /* ขนาดจอทดลองเท่าเดิม */
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      position:relative;
+      overflow:hidden;
+
+      /* ฉากหลังตารางกริดสีเทาจางๆ + ไล่สี */
+      background-image:
+        repeating-linear-gradient(to right, rgba(148,163,184,.18) 0, rgba(148,163,184,.18) 1px, transparent 1px, transparent 28px),
+        repeating-linear-gradient(to bottom, rgba(148,163,184,.18) 0, rgba(148,163,184,.18) 1px, transparent 1px, transparent 28px),
+        linear-gradient(to bottom, var(--sim-sky) 0%, var(--sim-grass) 100%);
+      background-size:auto,auto,auto;
+      background-position:0 0,0 0,0 0;
+    }
+
+    .ground{
+      position:absolute;
+      left:0; right:0; bottom:0;
+      height:67px; /* เดิม */
+      background:linear-gradient(to bottom, #bbf7d0, #86efac);
+      border-top:1px solid rgba(15,23,42,.12);
+      z-index:2;
+    }
+
+    /* ลูกบอล (ขนาดจะถูกตั้งจาก JS เพื่อสเกล 80%) */
+    .ball{
+      position:absolute;
+      border-radius:50%;
+      background: radial-gradient(circle at 30% 30%, #ffffff, #d1d5db);
+      border:1px solid rgba(15,23,42,.15);
+      box-shadow:0 3px 10px rgba(2,6,23,.18);
+      left:54px;
+      bottom:79px;
+      z-index:3;
+    }
+
+    .trail{ position:absolute; inset:0; pointer-events:none; z-index:1; }
+    .trail .dot{
+      position:absolute;
+      width:3px; height:3px;
+      border-radius:50%;
+      background:rgba(15,23,42,.25);
+    }
+
+    .vecCanvas{
+      position:absolute;
+      inset:0;
+      z-index:4;
+      pointer-events:none;
+    }
+
+    /* ป้ายผลลัพธ์: โปร่งใส 100% */
+    .impactBox{
+      position:absolute;
+      top:12px;
+      left:12px;
+      z-index:6;
+      padding:0;
+      border-radius:0;
+      background: transparent;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      border:none;
+      box-shadow: none;
+      display:none;
+      min-width: 0;
+
+      transform: scale(.8);
+      transform-origin: top left;
+      cursor: grab;
+      user-select:none;
+      touch-action:none;
+    }
+    .impactBox.dragging{ cursor: grabbing; }
+    .impactBox .h{
+      font-weight:900;
+      color:#1d4ed8;
+      margin-bottom:6px;
+      text-shadow: 0 2px 8px rgba(2,6,23,.18);
+    }
+    .impactRow{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      font-size:13px;
+      padding:4px 0;
+      border-top:none;
+      text-shadow: 0 2px 8px rgba(2,6,23,.18);
+    }
+    .impactRow b{ color:#16a34a; }
+
+    /* ป้ายโปร่งใส 100% */
+    .dragLabel{
+      position:absolute;
+      z-index:7;
+      padding:0;
+      border-radius:0;
+      background: transparent;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      border:none;
+      box-shadow:none;
+      font-size:12px;
+      font-weight:400; /* ผอมลง */
+      cursor: grab;
+      user-select:none;
+      touch-action:none;
+      display:none;
+      pointer-events:auto;
+      white-space:nowrap;
+      text-shadow: 0 2px 8px rgba(2,6,23,.18);
+    }
+
+    /* ป้ายเส้นทาง (โปร่งใส ไม่มีกรอบ) — ลากได้ */
+    .pathLabels{ position:absolute; inset:0; pointer-events:none; z-index:6; }
+    .pathLabel{
+      position:absolute;
+      font-size:12px;
+      font-weight:400;
+      color:#94a3b8;
+      background:transparent;
+      border:none;
+      padding:0;
+      cursor:grab;
+      user-select:none;
+      touch-action:none;
+      pointer-events:auto;
+      white-space:normal; /* ให้ขึ้นบรรทัดได้ */
+      line-height:1.25;
+      text-shadow: 0 2px 8px rgba(2,6,23,.18);
+    }
+    .pathLabel .plTitle{font-weight:600; margin-bottom:2px;}
+    .pathLabel .plRow{display:flex; gap:4px;}
+    .pathLabel .plK{min-width:10px;}
+    .pathLabel .plEq{min-width:6px;}
+    .pathLabel .plV{min-width:32px; text-align:right;}
+    .pathLabel .plUnit{opacity:.9;}
+    .pathLabel.dragging{ cursor:grabbing; }
+
+    .dragLabel.dragging{ cursor: grabbing; }
+    .lblV{ color:var(--blue); }
+    .lblVx,.lblVy{ color:var(--green); }
+    .lblG{ color:var(--red); }
+
+    /* ✅ u ให้เป็นสีดำตามสั่ง */
+    .lblU{ color:#000; }
+    .lblUx,.lblUy{ color: var(--graySoft); }
+
+    /* modal */
+    .modal{
+      position:fixed;
+      inset:0;
+      background:rgba(2,6,23,.55);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:14px;
+      z-index:50;
+    }
+    .modal.open{ display:flex; }
+    .modal-card{
+      width:min(920px, 100%);
+      max-height:90vh;
+      overflow:auto;
+      border-radius:20px;
+      border:1px solid rgba(255,255,255,.25);
+      background:#fff;
+      box-shadow: 0 24px 60px rgba(0,0,0,.25);
+      position:relative;
+    }
+
+    .modal-close{
+      position:sticky;
+      top:10px;
+      z-index:5;
+      padding:0 10px;
+      display:flex;
+      align-items:center;
+      justify-content:flex-end;
+      gap:8px;
+    }
+    .xbtn{
+      border:none;
+      border-radius:999px;
+      padding:10px 14px;
+      cursor:pointer;
+      font-weight:800;
+      background:#fff;
+      box-shadow: 0 8px 18px rgba(2,6,23,.15);
+      white-space:nowrap;
+    }
+
+    .modal-pill{
+      border:none;
+      border-radius:999px;
+      padding:10px 12px;
+      font-weight:900;
+      cursor:pointer;
+      box-shadow: 0 8px 18px rgba(2,6,23,.10);
+      display:flex;
+      align-items:center;
+      gap:8px;
+      white-space:nowrap;
+      background:#e2e8f0;
+      color:#0f172a;
+    }
+    .pill-formula{ background:var(--btn-formula); color:#111827; }
+    .pill-quiz{ background:var(--btn-quiz); color:#065f46; }
+    .pill-calc{ background:#e2e8f0; color:#0f172a; }
+
+    .modal-body{ padding:12px 14px 16px; }
+
+    .formula-page{
+      background: var(--btn-formula);
+      padding:14px;
+      border-radius:18px;
+      border:1px solid rgba(15,23,42,.10);
+    }
+    .formula-box{
+      background:#fff;
+      border:1px solid rgba(15,23,42,.10);
+      border-radius:16px;
+      padding:12px;
+      margin-top:10px;
+    }
+    .formula-box h4{ margin:0 0 8px 0; color:#1d4ed8; }
+
+    .quiz-page{
+      background:#f6fff8;
+      padding:14px;
+      border-radius:18px;
+      border:1px solid rgba(15,23,42,.10);
+    }
+    .quiz-head{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:10px 12px;
+      border:1px solid rgba(34,197,94,.25);
+      border-radius:16px;
+      background:var(--btn-quiz);
+      font-weight:900;
+      color:#065f46;
+      width:max-content;
+    }
+    .guide{
+      margin-top:10px;
+      font-size:13px;
+      color:#334155;
+      background:#fff;
+      border:1px solid rgba(15,23,42,.10);
+      border-radius:14px;
+      padding:10px 12px;
+    }
+
+    .qbox{
+      margin-top:12px;
+      background:#fff;
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:12px;
+    }
+    .qbox .q{
+      font-weight:800;
+      margin:0 0 8px 0;
+      color:#0f172a;
+    }
+    .opts{ display:grid; gap:8px; }
+    .opt{
+      display:flex;
+      gap:10px;
+      align-items:flex-start;
+      padding:8px 10px;
+      border:1px solid var(--line);
+      border-radius:12px;
+      background:#fff;
+    }
+    .opt input{ margin-top:3px; }
+    .ans{
+      margin-top:10px;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid rgba(239,68,68,.25);
+      background:#fff;
+      display:none;
+      color:#0f172a;
+    }
+    .ans b{ color:#ef4444; }
+
+    .checkBtnBar{
+      position:sticky;
+      bottom:10px;
+      display:flex;
+      justify-content:center;
+      margin-top:12px;
+      z-index:3;
+    }
+    .checkBtn{
+      border:none;
+      border-radius:999px;
+      padding:12px 18px;
+      background:var(--btn-quiz);
+      color:#065f46;
+      font-weight:900;
+      cursor:pointer;
+      box-shadow: 0 10px 20px rgba(2,6,23,.12);
+    }
+
+    /* ===== Scientific Calculator ===== */
+    .calc-wrap{
+      background:#fff;
+      border:1px solid rgba(15,23,42,.10);
+      border-radius:18px;
+      overflow:hidden;
+      box-shadow: 0 16px 30px rgba(2,6,23,.10);
+    }
+    .calc-head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:10px 12px;
+      border-bottom:1px solid rgba(15,23,42,.08);
+      background:linear-gradient(to bottom, #ffffff, #f8fafc);
+    }
+    .calc-head .ttl{
+      font-weight:900;
+      color:#1d4ed8;
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    .calc-display{
+      padding:12px;
+      background:#0b1220;
+      color:#e5e7eb;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+    .calc-display .expr{
+      font-size:14px;
+      opacity:.95;
+      min-height:20px;
+      word-break:break-all;
+    }
+    .calc-display .res{
+      margin-top:6px;
+      font-size:22px;
+      font-weight:900;
+      color:#fff;
+      min-height:28px;
+      word-break:break-all;
+      text-align:right;
+    }
+    .calc-pad{
+      display:grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap:8px;
+      padding:12px;
+      background:#f8fafc;
+    }
+    .ck{
+      border:none;
+      border-radius:14px;
+      padding:12px 10px;
+      font-weight:900;
+      cursor:pointer;
+      background:#fff;
+      box-shadow: 0 10px 18px rgba(2,6,23,.08);
+      user-select:none;
+      min-height:46px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:6px;
+    }
+    .ck:active{ transform: translateY(1px); }
+    .ck.op{ background:#e2e8f0; }
+    .ck.fun{ background:#eef2ff; color:#1d4ed8; }
+    .ck.eq{ background:var(--btn-quiz); color:#065f46; }
+    .ck.del{ background:#fee2e2; color:#991b1b; }
+    .ck.clr{ background:#fff7ed; color:#9a3412; }
+
+    .calcOverlay{
+      position:fixed;
+      inset:0;
+      z-index:80;
+      display:none;
+      align-items:flex-end;
+      justify-content:center;
+      padding:14px;
+      background:rgba(2,6,23,.40);
+    }
+    .calcOverlay.open{ display:flex; }
+    .calcFloat{
+      width:min(460px, calc(100vw - 24px));
+      max-height: calc(100vh - 140px);
+      overflow:auto;
+      border-radius:20px;
+    }
+
+    #mobileActionsSlot{ display:none; }
+
+    @media (max-width: 920px){
+      .layout{ grid-template-columns:1fr; }
+      .sim{ height:432px; }
+      .calcFloat{ width:min(520px, calc(100vw - 24px)); }
+      #mobileActionsSlot{ display:block; }
+    }
+
+    @media (max-width: 520px){
+      .quizToolsScale{
+        transform: scale(.7);
+        transform-origin: right top;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+
+    <div class="title">
+      <h1>โพรเจกไทล์ (Projectile Motion) — มุมยิง & ความเร็วต้น</h1>
+      <p>ปรับ \(g\), \(u\), \(\theta\) แล้วกด ▶️ เพื่อยิง • เลือกติ๊กแสดง \(u, u_x, u_y, v, v_x, v_y\) และ \(g\)</p>
+    </div>
+
+    <div class="layout">
+      <!-- CONTROL PANEL -->
+      <div class="panel" id="controlPanel">
+        <div class="panel-head">
+          <div style="font-weight:900;">แผงควบคุม</div>
+          <div style="font-size:12px;color:var(--muted);">โหมดทดลอง</div>
+        </div>
+
+        <div class="section">
+          <div class="card">
+            <div class="row">
+
+              <div class="field2">
+                <label>สนามโน้มถ่วง \(g\) (m/s\(^2\))</label>
+                <div class="stepper">
+                  <button class="stepbtn" type="button" id="gMinus">−</button>
+                  <input class="num" type="number" id="gNum" min="0" max="20" step="0.1" value="10.0" />
+                  <button class="stepbtn" type="button" id="gPlus">+</button>
+                </div>
+                <div class="sub">
+                  <span>ปรับได้ (เทียบโลก/ดวงจันทร์)</span>
+                  <span id="gShow">10.0 m/s²</span>
+                </div>
+              </div>
+
+              <div class="field2">
+                <label>ความเร็วต้น \(u\) (m/s)</label>
+                <div class="stepper">
+                  <button class="stepbtn" type="button" id="uMinus">−</button>
+                  <input class="num" type="number" id="speedNum" min="0" max="200" step="1" value="30" />
+                  <button class="stepbtn" type="button" id="uPlus">+</button>
+                </div>
+                <div class="sub">
+                  <span>ปรับด้วย + / - ได้</span>
+                  <span id="speedShow">30 m/s</span>
+                </div>
+              </div>
+
+              <div class="field2">
+                <label>มุมยิง \(\theta\) (องศา)</label>
+                <div class="stepper">
+                  <button class="stepbtn" type="button" id="thMinus">−</button>
+                  <input class="num" type="number" id="angleNum" min="0" max="90" step="1" value="60" />
+                  <button class="stepbtn" type="button" id="thPlus">+</button>
+                </div>
+                <div class="sub">
+                  <span>ปรับด้วย + / - ได้</span>
+                  <span id="angleShow">60°</span>
+                </div>
+              </div>
+
+              <!-- ช่องกรอกเวลา t -->
+              <div id="timeFieldWrap">
+                <div class="field2">
+                  <label>เวลา \(t\) (s)</label>
+                  <div class="stepper">
+                    <button class="stepbtn" type="button" id="tMinus">−</button>
+                    <input class="num" type="number" id="tNum" min="0" max="60" step="0.1" value="0.0" />
+                    <button class="stepbtn" type="button" id="tPlus">+</button>
+                  </div>
+                  <div class="sub">
+                    <span>กรอกเวลาแล้วจะแสดงตำแหน่งลูกบอล ณ เวลานั้น</span>
+                    <span id="tShow">t = 0.0 s</span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <div class="card" id="checksCard">
+            <div class="cardhead">
+              <h3>ช่องติ๊กแสดงเวกเตอร์</h3>
+              <button class="miniBtn" id="toggleChecks" type="button">
+                <span id="toggleChecksIcon">▾</span><span id="toggleChecksText">ซ่อน</span>
+              </button>
+            </div>
+
+            <div class="checksBody" id="checksBody">
+              <div class="checks">
+                <label class="check">
+                  <input type="checkbox" id="showU" />
+                  <span class="t">แสดงความเร็วต้น \(u\)</span>
+                  <span class="d" style="color:#000; font-weight:800;">สีดำ</span>
+                </label>
+
+                <label class="check">
+                  <input type="checkbox" id="showUxy" />
+                  <span class="t">แสดงองค์ประกอบ \(u_x, u_y\)</span>
+                  <span class="d" style="color:var(--gray); font-weight:800;">สีเทาอ่อน</span>
+                </label>
+
+                <label class="check">
+                  <input type="checkbox" id="showV" />
+                  <span class="t">แสดงความเร็วตามแนวเส้นสัมผัส \(v\)</span>
+                  <span class="d" style="color:var(--blue); font-weight:800;">สีน้ำเงิน</span>
+                </label>
+
+                <label class="check">
+                  <input type="checkbox" id="showVxy" />
+                  <span class="t">แสดงองค์ประกอบ \(v_x, v_y\)</span>
+                  <span class="d" style="color:var(--green); font-weight:800;">สีเขียว</span>
+                </label>
+
+                <label class="check">
+                  <input type="checkbox" id="showG" />
+                  <span class="t">แสดงความเร่ง \(g\)</span>
+                  <span class="d" style="color:var(--red); font-weight:800;">สีแดง</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="desktopActionsSlot">
+          <div id="actionsBlock">
+            <div class="btn-area">
+              <div class="btn-grid mini-btn-grid">
+                <button class="btn btn-play" id="playBtn" title="เล่น/หยุด">
+                  <span>▶️</span><span>เล่น</span>
+                </button>
+                <button class="btn btn-reset" id="resetBtn" title="รีเซ็ต">
+                  <span>🔄</span><span>รีเซ็ต</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="footer-link">
+              <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">
+                ศึกษาเพิ่มเติมที่เพจคลายปมฟิสิกส์
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SIMULATION -->
+      <div class="sim" id="sim">
+        <canvas class="vecCanvas" id="vecCanvas"></canvas>
+        <div class="trail" id="trail"></div>
+        <div class="ball" id="ball"></div>
+        <div class="pathLabels" id="pathLabels"></div>
+
+        <div class="dragLabel lblU"  id="lblU">u</div>
+        <div class="dragLabel lblUx" id="lblUx">uₓ</div>
+        <div class="dragLabel lblUy" id="lblUy">uᵧ</div>
+
+        <div class="dragLabel lblV"  id="lblV">v</div>
+        <div class="dragLabel lblVx" id="lblVx">vₓ</div>
+        <div class="dragLabel lblVy" id="lblVy">vᵧ</div>
+        <div class="dragLabel lblG"  id="lblG">g</div>
+
+        <div class="impactBox" id="impactBox">
+          <div class="h">ผลลัพธ์</div>
+          <div class="impactRow"><span>การกระจัดแนวราบ \((S_x)\)</span><b id="impactSx">0.0 m</b></div>
+          <div class="impactRow"><span>ความสูงสูงสุด \((S_y(\max))\)</span><b id="impactSy">0.0 m</b></div>
+          <div class="impactRow"><span>เวลาที่ใช้ทั้งหมด \((t)\)</span><b id="impactT">0.00 s</b></div>
+        </div>
+
+        <div class="ground"></div>
+      </div>
+
+      <div id="mobileActionsSlot"></div>
+    </div>
+
+  </div>
+
+  <!-- MODAL: FORMULA -->
+  <div class="modal" id="formulaModal" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-close">
+        <button class="modal-pill pill-quiz" id="goQuizFromFormula">
+          <span>📝</span><span>ไปหน้าแบบฝึกหัด</span>
+        </button>
+        <button class="xbtn" id="formulaClose">❌ ปิด</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="formula-page">
+          <div style="font-weight:900; font-size:18px; color:#1d4ed8;">📘 สูตรสำคัญ: โพรเจกไทล์</div>
+
+          <div class="formula-box">
+            <h4>โพรเจกไทล์คืออะไร</h4>
+            <div style="color:#0f172a; font-size:13px; line-height:1.6;">
+              <div style="display:grid; gap:8px;">
+                <div><b>โพรเจกไทล์</b> คือการเคลื่อนที่ของวัตถุที่ถูก “ขว้าง/ยิง” แล้วลอยอยู่ในอากาศ โดย <b>ไม่คิดแรงต้านอากาศ</b>.</div>
+                <div>ระหว่างลอยอยู่ในอากาศ แรงที่กระทำมีเพียง <b>แรงโน้มถ่วง</b> \((mg)\) ⇒ \(|\vec a|=g\) ชี้ลงตลอดเวลา.</div>
+                <div>แนวราบ: \(\Sigma F_x=0 \Rightarrow a_x=0 \Rightarrow v_x=\text{คงที่}\).</div>
+                <div>จุดสูงสุด: \(v_y=0\) แต่ \(|\vec v|_{\min}=v_x\) (ไม่เป็นศูนย์).</div>
+                <div>ใช้เวลา \(t\) เป็นตัวเชื่อมการคำนวณสองแกน.</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="formula-box">
+            <h4>แยกความเร็วต้น</h4>
+            <div>\[
+              u_x = u\cos\theta,\qquad
+              u_y = u\sin\theta
+            \]</div>
+          </div>
+
+          <div class="formula-box">
+            <h4>สมการการเคลื่อนที่(ยิงขึ้นแทน a=-g)</h4>
+            <div>\[
+              S_x(t)=u_x t,
+            \]</div>
+            <div>\[
+              S_y(t)=u_y t-\frac12 g t^2
+            \]</div>
+          </div>
+
+          <div class="formula-box">
+            <h4>กรณีตกสู่พื้นเดิม: จุดสูงสุด / เวลาทั้งหมด / การกระจัดแนวราบ</h4>
+            <div>\[
+              t_\text{total}=\frac{2u_y}{g}
+            \]</div>
+            <div>\[
+              S_y(\max)=\frac{u_y^2}{2g}
+            \]</div>
+            <div>\[
+              S_x=\frac{u^2\sin(2\theta)}{g}
+            \]</div>
+          </div>
+
+          <div style="margin-top:10px; color:#334155; font-size:13px;">
+            หมายเหตุ: ในการทดลองนี้ไม่คิดแรงต้านอากาศ
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: QUIZ (คงเดิม โค้ดข้อสอบเหมือนเดิม) -->
+  <div class="modal" id="quizModal" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-close">
+        <div class="quizToolsScale" style="display:flex; gap:8px; align-items:center;">
+          <button class="modal-pill pill-calc" id="toggleCalc">
+            <span>🧮</span><span>เครื่องคิดเลข</span>
+          </button>
+          <button class="modal-pill pill-formula" id="goFormulaFromQuiz">
+            <span>Σ</span><span>ไปหน้าสูตรสำคัญ</span>
+          </button>
+        </div>
+        <button class="xbtn" id="quizClose">❌ ปิด</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="quiz-page">
+          <div class="quiz-head">📝 แบบฝึกหัด</div>
+
+          <div class="guide">
+            เลือกคำตอบ <b>A–E</b> แล้วกด <b>“ตรวจคำตอบ”</b> เพื่อดูเฉลย (แสดงเฉพาะข้อที่เลือกแล้ว) • ตัวอักษรเฉลยเป็น <b style="color:#ef4444">สีแดง</b>
+          </div>
+
+          <!-- (คงเดิม: 10 ข้อ) -->
+          <div class="qbox" data-q="1">
+            <p class="q">ข้อ 1) ถ้าโยนวัตถุออกไปทางหน้าต่างและไม่คิดแรงต้านของอากาศ ปริมาณใด “เป็นศูนย์” ขณะที่วัตถุยังลอยอยู่ในอากาศ?</p>
+            <div class="opts">
+              <label class="opt"><input type="radio" name="q1" value="A"> A) ความเร่งในแนวระดับ</label>
+              <label class="opt"><input type="radio" name="q1" value="B"> B) ความเร็วในแนวระดับ</label>
+              <label class="opt"><input type="radio" name="q1" value="C"> C) ความเร่งในแนวดิ่ง</label>
+              <label class="opt"><input type="radio" name="q1" value="D"> D) ความเร็วในแนวดิ่ง</label>
+              <label class="opt"><input type="radio" name="q1" value="E"> E) แรงลัพธ์ที่กระทำต่อวัตถุ</label>
+            </div>
+            <div class="ans" id="ans1">เฉลย: <b>A</b> เพราะไม่คิดแรงต้านอากาศ ⇒ \(a_x=0\)</div>
+          </div>
+
+          <div class="qbox" data-q="2">
+            <p class="q">ข้อ 2) การเคลื่อนที่แบบโพรเจกไทล์ เมื่อวัตถุเคลื่อนที่ไปถึงตำแหน่งสูงสุด “ขนาดของความเร็ว” ของวัตถุเป็นอย่างไร (ไม่คิดแรงต้านอากาศ)?</p>
+            <div class="opts">
+              <label class="opt"><input type="radio" name="q2" value="A"> A) มีค่าเป็นศูนย์</label>
+              <label class="opt"><input type="radio" name="q2" value="B"> B) มีความเร็วในแนวราบเป็นศูนย์</label>
+              <label class="opt"><input type="radio" name="q2" value="C"> C) มีค่าเท่ากับความเร็วในแนวราบเมื่อเริ่มเคลื่อนที่</label>
+              <label class="opt"><input type="radio" name="q2" value="D"> D) มีค่าเท่ากับความเร็วเมื่อเริ่มเคลื่อนที่</label>
+              <label class="opt"><input type="radio" name="q2" value="E"> E) มีค่าความเร็วสูงสุด</label>
+            </div>
+            <div class="ans" id="ans2">เฉลย: <b>C</b> ที่จุดสูงสุด \(v_y=0\) แต่ \(v_x\) คงที่ ⇒ \(|\vec v| = v_x\)</div>
+          </div>
+
+          <div class="qbox" data-q="3">
+            <p class="q">ข้อ 3) ยิง/ขว้างวัตถุในแนวระดับ (ไม่คิดแรงต้านอากาศ) ตอนที่กำลังจะกระทบพื้น ข้อใด “ถูกต้องที่สุด” เกี่ยวกับความเร็วในแนวระดับ?</p>
+            <div class="opts">
+              <label class="opt"><input type="radio" name="q3" value="A"> A) ความเร็วในแนวระดับเป็นศูนย์</label>
+              <label class="opt"><input type="radio" name="q3" value="B"> B) ความเร็วในแนวระดับเท่ากับความเร็วตอนต้นที่ถูกยิง/ขว้างออกมา</label>
+              <label class="opt"><input type="radio" name="q3" value="C"> C) ความเร็วในแนวระดับมีขนาดมากกว่าตอนต้น</label>
+              <label class="opt"><input type="radio" name="q3" value="D"> D) ความเร็วในแนวระดับมีขนาดน้อยกว่าตอนต้นแต่ไม่เป็นศูนย์</label>
+              <label class="opt"><input type="radio" name="q3" value="E"> E) ความเร็วในแนวดิ่งเป็นศูนย์</label>
+            </div>
+            <div class="ans" id="ans3">เฉลย: <b>B</b> เพราะ \(a_x=0\) ⇒ \(v_x\) คงที่</div>
+          </div>
+
+          <div class="qbox" data-q="4">
+            <p class="q">ข้อ 4) ถ้าต้องการขว้างวัตถุจากพื้นสู่พื้นให้ไปได้ “ไกลที่สุด” โดยใช้ความเร็วต้น \(u\) เท่าเดิม (ไม่คิดแรงต้านอากาศ) ควรขว้างทำมุมใดกับแนวระดับ?</p>
+            <div class="opts">
+              <label class="opt"><input type="radio" name="q4" value="A"> A) \(30^\circ\)</label>
+              <label class="opt"><input type="radio" name="q4" value="B"> B) \(45^\circ\)</label>
+              <label class="opt"><input type="radio" name="q4" value="C"> C) \(60^\circ\)</label>
+              <label class="opt"><input type="radio" name="q4" value="D"> D) \(90^\circ\)</label>
+              <label class="opt"><input type="radio" name="q4" value="E"> E) ขึ้นกับมวลวัตถุ</label>
+            </div>
+            <div class="ans" id="ans4">เฉลย: <b>B</b> เพราะ \(S_x=\dfrac{u^2\sin(2\theta)}{g}\) มากสุดเมื่อ \(\theta=45^\circ\)</div>
+          </div>
+
+          <div class="qbox" data-q="5">
+            <p class="q">ข้อ 5) เกี่ยวกับการเคลื่อนที่แบบโพรเจกไทล์ (ไม่คิดแรงต้านอากาศ) ข้อใด “ถูกต้อง”?</p>
+            <div class="opts">
+              <label class="opt"><input type="radio" name="q5" value="A"> A) ความเร็วแนวราบคงที่ และความเร็วแนวดิ่งคงที่</label>
+              <label class="opt"><input type="radio" name="q5" value="B"> B) ที่จุดสูงสุด ความเร่งเป็นศูนย์ และแรงลัพธ์เป็นศูนย์</label>
+              <label class="opt"><input type="radio" name="q5" value="C"> C) ความเร็วแนวราบจะลดลงตลอดเวลา</label>
+              <label class="opt"><input type="radio" name="q5" value="D"> D) ความเร่งมีค่าเท่ากับ \(g\) ตลอดเวลาและชี้ลง</label>
+              <label class="opt"><input type="radio" name="q5" value="E"> E) ความเร็วแนวดิ่งมีค่าเป็นศูนย์ตลอดเวลา</label>
+            </div>
+            <div class="ans" id="ans5">เฉลย: <b>D</b> เพราะมีแรงเดียวคือ \(mg\) ⇒ \(\vec a\) ชี้ลงคงที่</div>
+          </div>
+
+          <div class="qbox" data-q="6">
+            <p class="q">ข้อ 6) ขว้างวัตถุบนโลกและบนดวงจันทร์ โดย \(g_\text{moon}=g/6\) ถ้าขว้างด้วยความเร็วต้น \(u\) เท่ากัน และมุมเท่ากัน (ไม่คิดแรงต้านอากาศ) ข้อความใดถูกต้อง?</p>
+            <div class="opts">
+              <label class="opt"><input type="radio" name="q6" value="A"> A) การกระจัดแนวราบบนดวงจันทร์น้อยกว่าบนโลก 6 เท่า</label>
+              <label class="opt"><input type="radio" name="q6" value="B"> B) เวลาทั้งหมดบนดวงจันทร์น้อยกว่าบนโลก 6 เท่า</label>
+              <label class="opt"><input type="radio" name="q6" value="C"> C) \(S_y(\max)\) บนดวงจันทร์มากกว่าบนโลก 6 เท่า</label>
+              <label class="opt"><input type="radio" name="q6" value="D"> D) การกระจัดแนวราบบนดวงจันทร์มากกว่าบนโลก 6 เท่า</label>
+              <label class="opt"><input type="radio" name="q6" value="E"> E) \(v_x\) บนดวงจันทร์มากกว่าบนโลก 6 เท่า</label>
+            </div>
+            <div class="ans" id="ans6">เฉลย: <b>D</b> เพราะ \(S_x\propto 1/g\) ⇒ ลด \(g\) เหลือ \(g/6\) ระยะเพิ่ม 6 เท่า</div>
+          </div>
+
+          <div class="qbox" data-q="7">
+            <p class="q">ข้อ 7) ขว้างด้วย \(u=20\,\text{m/s}\) ที่มุม \(30^\circ\) บนโลก \(g=10\,\text{m/s}^2\) เวลาทั้งหมดเท่าไร?</p>
+            <div class="opts">
+              <label class="opt"><input type="radio" name="q7" value="A"> A) \(1.0\,\text{s}\)</label>
+              <label class="opt"><input type="radio" name="q7" value="B"> B) \(2.0\,\text{s}\)</label>
+              <label class="opt"><input type="radio" name="q7" value="C"> C) \(3.0\,\text{s}\)</label>
+              <label class="opt"><input type="radio" name="q7" value="D"> D) \(4.0\,\text{s}\)</label>
+              <label class="opt"><input type="radio" name="q7" value="E"> E) \(5.0\,\text{s}\)</label>
+            </div>
+            <div class="ans" id="ans7">เฉลย: <b>B</b> \(\;t_\text{total}=\dfrac{2u\sin\theta}{g}=2.0\,\text{s}\)</div>
+          </div>
+
+          <div class="qbox" data-q="8">
+            <p class="q">ข้อ 8) ถ้าขว้างด้วย \(u=30\,\text{m/s}\), \(\theta=45^\circ\), \(g=10\,\text{m/s}^2\) การกระจัดแนวราบ \(S_x\) เท่าไร?</p>
+            <div class="opts">
+              <label class="opt"><input type="radio" name="q8" value="A"> A) \(45\,\text{m}\)</label>
+              <label class="opt"><input type="radio" name="q8" value="B"> B) \(60\,\text{m}\)</label>
+              <label class="opt"><input type="radio" name="q8" value="C"> C) \(90\,\text{m}\)</label>
+              <label class="opt"><input type="radio" name="q8" value="D"> D) \(120\,\text{m}\)</label>
+              <label class="opt"><input type="radio" name="q8" value="E"> E) \(180\,\text{m}\)</label>
+            </div>
+            <div class="ans" id="ans8">เฉลย: <b>C</b> \(\;S_x=\dfrac{u^2\sin(2\theta)}{g}=90\,\text{m}\)</div>
+          </div>
+
+          <div class="qbox" data-q="9">
+            <p class="q">ข้อ 9) ขว้างด้วย \(u=25\,\text{m/s}\), \(\theta=53^\circ\), ใช้ \(\sin53^\circ\approx0.8\), \(g=10\,\text{m/s}^2\) ความสูงสูงสุด \(S_y(\max)\) ใกล้เคียงเท่าไร?</p>
+            <div class="opts">
+              <label class="opt"><input type="radio" name="q9" value="A"> A) \(4.0\,\text{m}\)</label>
+              <label class="opt"><input type="radio" name="q9" value="B"> B) \(8.0\,\text{m}\)</label>
+              <label class="opt"><input type="radio" name="q9" value="C"> C) \(12.5\,\text{m}\)</label>
+              <label class="opt"><input type="radio" name="q9" value="D"> D) \(20.0\,\text{m}\)</label>
+              <label class="opt"><input type="radio" name="q9" value="E"> E) \(25.0\,\text{m}\)</label>
+            </div>
+            <div class="ans" id="ans9">เฉลย: <b>D</b> \(u_y\approx20\Rightarrow S_y(\max)=\dfrac{u_y^2}{2g}=20\,\text{m}\)</div>
+          </div>
+
+          <div class="qbox" data-q="10">
+            <p class="q">ข้อ 10) ที่ตำแหน่งสูงสุดของโพรเจกไทล์ (ไม่คิดแรงต้านอากาศ) ปริมาณใด “เป็นศูนย์” แน่นอน?</p>
+            <div class="opts">
+              <label class="opt"><input type="radio" name="q10" value="A"> A) \(v_x\)</label>
+              <label class="opt"><input type="radio" name="q10" value="B"> B) \(v_y\)</label>
+              <label class="opt"><input type="radio" name="q10" value="C"> C) ความเร่ง \(a\)</label>
+              <label class="opt"><input type="radio" name="q10" value="D"> D) แรงลัพธ์</label>
+              <label class="opt"><input type="radio" name="q10" value="E"> E) ความเร็วรวม \(|\vec v|\)</label>
+            </div>
+            <div class="ans" id="ans10">เฉลย: <b>B</b> ที่จุดสูงสุด \(v_y=0\)</div>
+          </div>
+
+          <div class="checkBtnBar">
+            <button class="checkBtn" id="checkAnsBtn">ตรวจคำตอบ</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Calculator Floating Overlay -->
+    <div class="calcOverlay" id="calcOverlay" aria-hidden="true">
+      <div class="calc-wrap calcFloat" role="dialog" aria-label="เครื่องคิดเลขวิทยาศาสตร์">
+        <div class="calc-head">
+          <div class="ttl"><span>🧮</span><span>เครื่องคิดเลขวิทยาศาสตร์</span></div>
+          <button class="modal-pill pill-calc" id="calcHide" style="padding:8px 10px;">
+            <span>❌</span><span>ปิด</span>
+          </button>
+        </div>
+        <div class="calc-display">
+          <div class="expr" id="calcExpr">0</div>
+          <div class="res" id="calcRes">0</div>
+        </div>
+        <div class="calc-pad" id="calcPad">
+          <button class="ck fun" data-k="sin(">sin</button>
+          <button class="ck fun" data-k="cos(">cos</button>
+          <button class="ck fun" data-k="tan(">tan</button>
+          <button class="ck fun" data-k="ln(">ln</button>
+          <button class="ck del" data-act="del">DEL</button>
+
+          <button class="ck fun" data-k="log(">log</button>
+          <button class="ck fun" data-k="sqrt(">√</button>
+          <button class="ck fun" data-k="^">xʸ</button>
+          <button class="ck fun" data-k="pi">π</button>
+          <button class="ck clr" data-act="ac">AC</button>
+
+          <button class="ck op" data-k="(">(</button>
+          <button class="ck op" data-k=")">)</button>
+          <button class="ck op" data-k="%">%</button>
+          <button class="ck op" data-k="/">÷</button>
+          <button class="ck op" data-k="*">×</button>
+
+          <button class="ck" data-k="7">7</button>
+          <button class="ck" data-k="8">8</button>
+          <button class="ck" data-k="9">9</button>
+          <button class="ck op" data-k="-">−</button>
+          <button class="ck fun" data-act="pm">±</button>
+
+          <button class="ck" data-k="4">4</button>
+          <button class="ck" data-k="5">5</button>
+          <button class="ck" data-k="6">6</button>
+          <button class="ck op" data-k="+">+</button>
+          <button class="ck fun" data-k="e">e</button>
+
+          <button class="ck" data-k="1">1</button>
+          <button class="ck" data-k="2">2</button>
+          <button class="ck" data-k="3">3</button>
+          <button class="ck" data-k=".">.</button>
+          <button class="ck eq" data-act="eq">=</button>
+
+          <button class="ck" style="grid-column: span 3;" data-k="0">0</button>
+          <button class="ck op" data-k=",">,</button>
+          <button class="ck fun" data-k="ans">ANS</button>
+        </div>
+        <div style="padding:10px 12px; font-size:12px; color:#334155;">
+          *ฟังก์ชัน <b>sin/cos/tan</b> ใช้ <b>องศา</b> (degree)
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+    const css = (name)=> getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+    // Move actions + time field below sim on mobile
+    const actionsBlock = document.getElementById('actionsBlock');
+    const desktopActionsSlot = document.getElementById('desktopActionsSlot');
+    const mobileActionsSlot  = document.getElementById('mobileActionsSlot');
+    const timeFieldWrap = document.getElementById('timeFieldWrap');
+
+    function placeActions(){
+      const isMobile = window.matchMedia('(max-width: 920px)').matches;
+
+      if(isMobile){
+        if(timeFieldWrap && mobileActionsSlot && timeFieldWrap.parentElement !== mobileActionsSlot){
+          mobileActionsSlot.appendChild(timeFieldWrap);
+        }
+        if(actionsBlock && mobileActionsSlot && actionsBlock.parentElement !== mobileActionsSlot){
+          mobileActionsSlot.appendChild(actionsBlock);
+        }
+      }else{
+        const row = document.querySelector('#controlPanel .card .row');
+        if(timeFieldWrap && row && timeFieldWrap.parentElement !== row){
+          row.appendChild(timeFieldWrap);
+        }
+        if(actionsBlock && desktopActionsSlot && actionsBlock.parentElement !== desktopActionsSlot){
+          desktopActionsSlot.appendChild(actionsBlock);
+        }
+      }
+    }
+
+    // Modals
+    const modals = {
+      formula: document.getElementById('formulaModal'),
+      quiz: document.getElementById('quizModal')
+    };
+    function closeAllModals(){
+      Object.values(modals).forEach(m => m.classList.remove('open'));
+    }
+    function openModal(key){
+      closeAllModals();
+      modals[key].classList.add('open');
+      closeCalc();
+    }
+
+    // Scientific Calculator
+    const Calc = (() => {
+      let expr = "0";
+      let ans = 0;
+
+      const exprEl = () => document.getElementById('calcExpr');
+      const resEl  = () => document.getElementById('calcRes');
+
+      const setExpr = (s) => {
+        expr = s.length ? s : "0";
+        exprEl().textContent = expr;
+      };
+      const setRes = (s) => { resEl().textContent = s; };
+
+      const deg2rad = (d) => d * Math.PI / 180;
+      const sind = (x)=> Math.sin(deg2rad(x));
+      const cosd = (x)=> Math.cos(deg2rad(x));
+      const tand = (x)=> Math.tan(deg2rad(x));
+      const ln = (x)=> Math.log(x);
+      const log = (x)=> Math.log10 ? Math.log10(x) : (Math.log(x)/Math.LN10);
+      const sqrt = (x)=> Math.sqrt(x);
+
+      function normalize(raw){
+        let s = raw;
+        s = s.replace(/π/g, "pi");
+        s = s.replace(/×/g, "*").replace(/÷/g, "/").replace(/−/g, "-");
+        s = s.replace(/%/g, "/100");
+        s = s.replace(/\^/g, "**");
+        s = s.replace(/\bpi\b/g, "Math.PI");
+        s = s.replace(/\be\b/g, "Math.E");
+        s = s.replace(/\bANS\b/g, String(ans));
+        s = s.replace(/\bans\b/g, String(ans));
+        s = s.replace(/\bsin\(/g, "sind(");
+        s = s.replace(/\bcos\(/g, "cosd(");
+        s = s.replace(/\btan\(/g, "tand(");
+        s = s.replace(/\bln\(/g, "ln(");
+        s = s.replace(/\blog\(/g, "log(");
+        s = s.replace(/\bsqrt\(/g, "sqrt(");
+        if(!/^[0-9+\-*/().,\sA-Za-z_]*$/.test(s)) return null;
+        return s;
+      }
+
+      function evaluate(){
+        const s = normalize(expr);
+        if(s === null){ setRes("ERROR"); return; }
+        try{
+          const val = Function("Math","sind","cosd","tand","ln","log","sqrt", `"use strict"; return (${s});`)
+            (Math, sind, cosd, tand, ln, log, sqrt);
+          if(Number.isFinite(val)){
+            ans = val;
+            setRes(String(val));
+          }else setRes("ERROR");
+        }catch(e){ setRes("ERROR"); }
+      }
+
+      function append(token){
+        if(expr === "0" && /^[0-9.]/.test(token)) setExpr(token);
+        else if(expr === "0" && token === "pi") setExpr("pi");
+        else if(expr === "0" && token === "e") setExpr("e");
+        else setExpr(expr + token);
+      }
+      function del(){ if(expr.length <= 1) setExpr("0"); else setExpr(expr.slice(0,-1)); }
+      function ac(){ setExpr("0"); setRes("0"); }
+      function pm(){
+        const m = expr.match(/(.*?)(-?\d+(\.\d+)?)(?!.*\d)/);
+        if(!m) return;
+        const head = m[1], num = m[2];
+        setExpr(head + (num.startsWith("-") ? num.slice(1) : "-" + num));
+      }
+      function render(){ exprEl().textContent = expr; resEl().textContent = "0"; }
+
+      return { render, append, del, ac, pm, evaluate };
+    })();
+
+    const calcOverlay = document.getElementById('calcOverlay');
+    function openCalc(){ calcOverlay.classList.add('open'); Calc.render(); }
+    function closeCalc(){ calcOverlay.classList.remove('open'); }
+    calcOverlay.addEventListener('click', (e)=>{ if(e.target === calcOverlay) closeCalc(); });
+
+    // ===== Projectile Lab =====
+    class ProjectileLab {
+      constructor(){
+        this.sim = document.getElementById('sim');
+        this.ball = document.getElementById('ball');
+        this.trail = document.getElementById('trail');
+        this.pathLabels = document.getElementById('pathLabels');
+        this.shots = [];
+        this.maxShots = 3;
+        this.shotCounter = 0;
+
+        this.vecCanvas = document.getElementById('vecCanvas');
+        this.ctx = this.vecCanvas.getContext('2d');
+
+        this.impactBox = document.getElementById('impactBox');
+        this.impactSx = document.getElementById('impactSx');
+        this.impactSy = document.getElementById('impactSy');
+        this.impactT  = document.getElementById('impactT');
+
+        this.angleNum   = document.getElementById('angleNum');
+        this.speedNum   = document.getElementById('speedNum');
+        this.gNum       = document.getElementById('gNum');
+
+        this.tNum       = document.getElementById('tNum');
+        this.tShow      = document.getElementById('tShow');
+
+        this.angleShow = document.getElementById('angleShow');
+        this.speedShow = document.getElementById('speedShow');
+        this.gShow     = document.getElementById('gShow');
+
+        // checkboxes
+        this.showU = document.getElementById('showU');
+        this.showUxy = document.getElementById('showUxy');
+        this.showV = document.getElementById('showV');
+        this.showVxy = document.getElementById('showVxy');
+        this.showG = document.getElementById('showG');
+
+        this.playBtn = document.getElementById('playBtn');
+        this.resetBtn = document.getElementById('resetBtn');
+
+        // draggable labels
+        this.lblU  = document.getElementById('lblU');
+        this.lblUx = document.getElementById('lblUx');
+        this.lblUy = document.getElementById('lblUy');
+
+        this.lblV  = document.getElementById('lblV');
+        this.lblVx = document.getElementById('lblVx');
+        this.lblVy = document.getElementById('lblVy');
+        this.lblG  = document.getElementById('lblG');
+
+        this.dragged = { U:false, UX:false, UY:false, V:false, VX:false, VY:false, G:false };
+
+        this.isAnimating = false;
+        this.isPaused = false;
+        this.raf = null;
+
+        this.thetaDeg = 30;
+        this.u = 40;
+        this.g = 10.0;
+
+        this.dt = 0.016;
+
+        // ✅ ลดสเกล “รูปการทดลอง/ลูกศร/ระยะการเคลื่อนที่” เหลือ 80% โดยขนาดจอเท่าเดิม
+        this.visualScale = 0.8;
+
+        // pixel-per-meter (คำนวณทีหลัง)
+        this.pxPerM = 4.0;
+
+        this.groundH = 67;
+
+        // ball size (ตั้งจาก JS ตาม visualScale)
+        this.ballRBase = 12; // เดิม 12 (เส้นผ่านศูนย์กลาง 24)
+        this.ballR = this.ballRBase * this.visualScale;
+
+        // ✅ สถานะ: กด “เล่น” แล้วหรือยัง (ใช้บังคับไม่แสดง v ก่อนกดเล่น)
+        this.hasFired = false;
+
+        // ปรับ ball element ให้ตรงกับ radius ใหม่
+        this.applyBallStyle();
+
+        this.points = [];
+        this.i = 0;
+        this.maxY = 0;
+        this.maxX = 0;
+        this.lastStats = null;
+
+        this.timeMarks = [];
+
+        // ✅ เก็บเวลาชนพื้น เพื่อ clamp t และใช้บังคับค่า v=u, vy=-uy
+        this.impactTime = 0;
+
+        this.syncUIFromState();
+        this.resizeCanvas();
+        this.bind();
+        this.renderOverlay(null);
+
+        this.enableDragImpactBox();
+        this.enableDragLabel(this.lblU,  'U');
+        this.enableDragLabel(this.lblUx, 'UX');
+        this.enableDragLabel(this.lblUy, 'UY');
+        this.enableDragLabel(this.lblV,  'V');
+        this.enableDragLabel(this.lblVx, 'VX');
+        this.enableDragLabel(this.lblVy, 'VY');
+        this.enableDragLabel(this.lblG,  'G');
+      }
+
+      applyBallStyle(){
+        const d = (this.ballR * 2);
+        this.ball.style.width = `${d}px`;
+        this.ball.style.height = `${d}px`;
+        this.ball.style.transform = `translate(${-this.ballR}px, ${this.ballR}px)`;
+      }
+
+      baseBottomPx(){ return this.groundH + this.ballR; }
+
+      bind(){
+        const syncG = (v)=>{
+          this.g = clamp(parseFloat(v || 0), 0, 20);
+          this.gNum.value = this.g.toFixed(1);
+          this.gShow.textContent = `${this.g.toFixed(1)} m/s²`;
+          this.refreshStaticByT(false);
+        };
+        const syncU = (v)=>{
+          this.u = clamp(parseFloat(v || 0), 0, 200);
+          this.speedNum.value = String(this.u);
+          this.speedShow.textContent = `${this.u} m/s`;
+          this.refreshStaticByT(false);
+        };
+        const syncTheta = (v)=>{
+          this.thetaDeg = clamp(parseFloat(v || 0), 0, 90);
+          this.angleNum.value = String(this.thetaDeg);
+          this.angleShow.textContent = `${this.thetaDeg}°`;
+          this.refreshStaticByT(false);
+        };
+
+        const syncT = (v, fromButtons=false)=>{
+          let tv = clamp(parseFloat(v || 0), 0, 60);
+
+          // ✅ ถ้ายิง/คำนวณแล้วมี impactTime ให้ clamp ที่เวลาชนพื้น
+          if(this.impactTime > 0) tv = Math.min(tv, this.impactTime);
+
+          this.tNum.value = tv.toFixed(1);
+          this.tShow.textContent = `t = ${tv.toFixed(1)} s`;
+
+          if(fromButtons){
+            const key = tv.toFixed(1);
+            if(!this.timeMarks.includes(key)) this.timeMarks.push(key);
+          }
+          this.gotoTime(tv);
+        };
+
+        this.gNum.addEventListener('input', e => syncG(e.target.value));
+        this.speedNum.addEventListener('input', e => syncU(e.target.value));
+        this.angleNum.addEventListener('input', e => syncTheta(e.target.value));
+
+        this.tNum.addEventListener('input', e => syncT(e.target.value, false));
+
+        const step = (idMinus, idPlus, getter, setter, delta, mark=false)=>{
+          document.getElementById(idMinus).addEventListener('click', ()=> setter(getter() - delta, mark));
+          document.getElementById(idPlus).addEventListener('click',  ()=> setter(getter() + delta, mark));
+        };
+
+        step('gMinus','gPlus', ()=>this.g, (v)=>syncG(v), 0.1);
+        step('uMinus','uPlus', ()=>this.u, (v)=>syncU(v), 1);
+        step('thMinus','thPlus', ()=>this.thetaDeg, (v)=>syncTheta(v), 1);
+
+        // ✅ เวลากด +/- เปลี่ยนทีละ 1 วินาที + บันทึกร่องรอย
+        step('tMinus','tPlus', ()=>parseFloat(this.tNum.value||0), (v,mark)=>syncT(v,mark), 1.0, true);
+
+        this.playBtn.addEventListener('click', () => this.togglePlay());
+        this.resetBtn.addEventListener('click', () => this.reset(true));
+
+        [this.showU, this.showUxy, this.showV, this.showVxy, this.showG].forEach(cb=>{
+          cb.addEventListener('change', () => this.refreshStaticByT(false));
+        });
+
+        window.addEventListener('resize', () => {
+          placeActions();
+          this.resizeCanvas();
+          this.refreshStaticByT(false);
+        });
+
+        document.getElementById('formulaBtn').addEventListener('click', ()=> openModal('formula'));
+        document.getElementById('quizBtn').addEventListener('click', ()=> openModal('quiz'));
+
+        document.getElementById('formulaClose').addEventListener('click', ()=> { modals.formula.classList.remove('open'); closeCalc(); });
+        document.getElementById('quizClose').addEventListener('click', ()=> { modals.quiz.classList.remove('open'); closeCalc(); });
+
+        document.getElementById('goQuizFromFormula').addEventListener('click', ()=> openModal('quiz'));
+        document.getElementById('goFormulaFromQuiz').addEventListener('click', ()=> openModal('formula'));
+
+        document.getElementById('checkAnsBtn').addEventListener('click', ()=>{
+          for(let k=1;k<=10;k++){
+            const picked = document.querySelector(`input[name="q${k}"]:checked`);
+            const ans = document.getElementById(`ans${k}`);
+            if(ans) ans.style.display = picked ? 'block' : 'none';
+          }
+        });
+
+        document.getElementById('toggleCalc').addEventListener('click', ()=>{
+          if(!modals.quiz.classList.contains('open')) return;
+          openCalc();
+        });
+        document.getElementById('calcHide').addEventListener('click', closeCalc);
+
+        document.getElementById('calcPad').addEventListener('click', (e)=>{
+          const btn = e.target.closest('button');
+          if(!btn) return;
+          const act = btn.getAttribute('data-act');
+          const k = btn.getAttribute('data-k');
+
+          if(act === 'del'){ Calc.del(); return; }
+          if(act === 'ac'){ Calc.ac(); return; }
+          if(act === 'pm'){ Calc.pm(); return; }
+          if(act === 'eq'){ Calc.evaluate(); return; }
+
+          if(k){
+            if(k === 'pi') Calc.append('pi');
+            else if(k === 'e') Calc.append('e');
+            else if(k === 'ans') Calc.append('ANS');
+            else Calc.append(k);
+          }
+        });
+
+        // ✅ ช่องติ๊กซ่อน/แสดง (ทำให้แน่นอนว่ากดได้)
+        const toggleBtn = document.getElementById('toggleChecks');
+        const body = document.getElementById('checksBody');
+        const ico = document.getElementById('toggleChecksIcon');
+        const txt = document.getElementById('toggleChecksText');
+
+        const doToggle = (e)=>{
+          e.preventDefault();
+          e.stopPropagation();
+          const hidden = body.classList.toggle('hidden');
+          ico.textContent = hidden ? '▸' : '▾';
+          txt.textContent = hidden ? 'แสดง' : 'ซ่อน';
+          toggleBtn.setAttribute('aria-expanded', (!hidden).toString());
+        };
+
+        toggleBtn.addEventListener('click', doToggle);
+        toggleBtn.addEventListener('pointerup', (e)=>{ /* กันบางเครื่องคลิกไม่ติด */ }, {passive:true});
+      }
+
+      refreshStaticByT(){
+        const tv0 = clamp(parseFloat(this.tNum.value || 0), 0, 60);
+        const tv = (this.impactTime>0) ? Math.min(tv0, this.impactTime) : tv0;
+        this.tNum.value = tv.toFixed(1);
+        this.tShow.textContent = `t = ${tv.toFixed(1)} s`;
+        this.gotoTime(tv);
+      }
+
+      enableDragImpactBox(){
+        const box = this.impactBox;
+        let dragging = false;
+        let startX=0, startY=0, startL=0, startT=0;
+
+        const getPoint = (e)=>{
+          const p = e.touches ? e.touches[0] : e;
+          return { x: p.clientX, y: p.clientY };
+        };
+
+        const onDown = (e)=>{
+          if(box.style.display === 'none') return;
+          dragging = true;
+          box.classList.add('dragging');
+
+          const pt = getPoint(e);
+          startX = pt.x; startY = pt.y;
+
+          const rect = box.getBoundingClientRect();
+          const simRect = this.sim.getBoundingClientRect();
+
+          startL = rect.left - simRect.left;
+          startT = rect.top  - simRect.top;
+
+          box.setPointerCapture?.(e.pointerId);
+          e.preventDefault();
+        };
+
+        const onMove = (e)=>{
+          if(!dragging) return;
+          const pt = getPoint(e);
+          const dx = pt.x - startX;
+          const dy = pt.y - startY;
+
+          let newL = startL + dx;
+          let newT = startT + dy;
+
+          const simRect = this.sim.getBoundingClientRect();
+          const boxRect = box.getBoundingClientRect();
+
+          const maxL = simRect.width - (boxRect.width * 0.8) - 6;
+          const maxT = simRect.height - (boxRect.height * 0.8) - 6;
+
+          newL = clamp(newL, 6, Math.max(6, maxL));
+          newT = clamp(newT, 6, Math.max(6, maxT));
+
+          box.style.left = `${newL}px`;
+          box.style.top  = `${newT}px`;
+          e.preventDefault();
+        };
+
+        const onUp = (e)=>{
+          if(!dragging) return;
+          dragging = false;
+          box.classList.remove('dragging');
+          e.preventDefault();
+        };
+
+        box.addEventListener('pointerdown', onDown);
+        window.addEventListener('pointermove', onMove, {passive:false});
+        window.addEventListener('pointerup', onUp, {passive:false});
+        box.addEventListener('touchstart', onDown, {passive:false});
+        window.addEventListener('touchmove', onMove, {passive:false});
+        window.addEventListener('touchend', onUp, {passive:false});
+      }
+
+      enable(dep){ return dep; }
+
+      enableDragLabel(el, key){
+        let dragging = false;
+        let startX=0, startY=0, startL=0, startT=0;
+
+        const getPoint = (e)=>{
+          const p = e.touches ? e.touches[0] : e;
+          return { x: p.clientX, y: p.clientY };
+        };
+
+        const onDown = (e)=>{
+          if(el.style.display === 'none') return;
+          dragging = true;
+          el.classList.add('dragging');
+          this.dragged[key] = true;
+
+          const pt = getPoint(e);
+          startX = pt.x; startY = pt.y;
+
+          const rect = el.getBoundingClientRect();
+          const simRect = this.sim.getBoundingClientRect();
+
+          startL = rect.left - simRect.left;
+          startT = rect.top  - simRect.top;
+
+          el.setPointerCapture?.(e.pointerId);
+          e.preventDefault();
+        };
+
+        const onMove = (e)=>{
+          if(!dragging) return;
+          const pt = getPoint(e);
+          const dx = pt.x - startX;
+          const dy = pt.y - startY;
+
+          let newL = startL + dx;
+          let newT = startT + dy;
+
+          const simRect = this.sim.getBoundingClientRect();
+          const rect = el.getBoundingClientRect();
+
+          const maxL = simRect.width - rect.width - 6;
+          const maxT = simRect.height - rect.height - 6;
+
+          newL = clamp(newL, 6, Math.max(6, maxL));
+          newT = clamp(newT, 6, Math.max(6, maxT));
+
+          el.style.left = `${newL}px`;
+          el.style.top  = `${newT}px`;
+          e.preventDefault();
+        };
+
+        const onUp = (e)=>{
+          if(!dragging) return;
+          dragging = false;
+          el.classList.remove('dragging');
+          e.preventDefault();
+        };
+
+        el.addEventListener('pointerdown', onDown);
+        window.addEventListener('pointermove', onMove, {passive:false});
+        window.addEventListener('pointerup', onUp, {passive:false});
+        el.addEventListener('touchstart', onDown, {passive:false});
+        window.addEventListener('touchmove', onMove, {passive:false});
+        window.addEventListener('touchend', onUp, {passive:false});
+      }
+
+      
+      // ✅ ป้ายเส้นทาง: ลากอิสระ (โปร่งใส ไม่มีกรอบ)
+      enableFreeDrag(el){
+        let dragging=false, sx=0, sy=0, sl=0, st=0;
+
+        const getPoint = (e)=>{
+          const p = e.touches ? e.touches[0] : e;
+          return { x: p.clientX, y: p.clientY };
+        };
+
+        const onDown = (e)=>{
+          dragging = true;
+          el.classList.add('dragging');
+
+          const pt = getPoint(e);
+          sx = pt.x; sy = pt.y;
+
+          const rect = el.getBoundingClientRect();
+          const simRect = this.sim.getBoundingClientRect();
+
+          sl = rect.left - simRect.left;
+          st = rect.top  - simRect.top;
+
+          el.setPointerCapture?.(e.pointerId);
+          e.preventDefault();
+        };
+
+        const onMove = (e)=>{
+          if(!dragging) return;
+          const pt = getPoint(e);
+          const dx = pt.x - sx;
+          const dy = pt.y - sy;
+
+          let newL = sl + dx;
+          let newT = st + dy;
+
+          // clamp ในกรอบจอทดลอง
+          const simRect = this.sim.getBoundingClientRect();
+          const rect = el.getBoundingClientRect();
+          const maxL = simRect.width - rect.width - 6;
+          const maxT = simRect.height - rect.height - 6;
+
+          newL = clamp(newL, 6, Math.max(6, maxL));
+          newT = clamp(newT, 6, Math.max(6, maxT));
+
+          el.style.left = `${newL}px`;
+          el.style.top  = `${newT}px`;
+          e.preventDefault();
+        };
+
+        const onUp = (e)=>{
+          if(!dragging) return;
+          dragging = false;
+          el.classList.remove('dragging');
+          e.preventDefault();
+        };
+
+        el.addEventListener('pointerdown', onDown);
+        window.addEventListener('pointermove', onMove, {passive:false});
+        window.addEventListener('pointerup', onUp, {passive:false});
+        el.addEventListener('touchstart', onDown, {passive:false});
+        window.addEventListener('touchmove', onMove, {passive:false});
+        window.addEventListener('touchend', onUp, {passive:false});
+      }
+
+      // 🎨 สีเส้นทาง (1 อ่อน → 3 เข้ม) ใช้ทั้งเส้นปะและตัวอักษรป้าย
+      getShotColor(idx){
+        const colors = ['#cbd5e1', '#94a3b8', '#64748b']; // 1,2,3
+        return colors[Math.max(0, Math.min(2, idx|0))];
+      }
+
+      createPathLabel(){
+  if(!this.pathLabels) return null;
+  const el = document.createElement('div');
+  el.className = 'pathLabel';
+
+  // โครงป้าย: โปร่งใส ไม่มีกรอบ (ลากได้)
+  el.innerHTML = `
+    <div class="plTitle">ยิงครั้งที่</div>
+    <div class="plRow"><span class="plK">u</span><span class="plEq">=</span><span class="plV">--</span><span class="plUnit"> m/s</span></div>
+    <div class="plRow"><span class="plK">θ</span><span class="plEq">=</span><span class="plV">--</span><span class="plUnit">°</span></div>
+    <div class="plRow"><span class="plK">t</span><span class="plEq">=</span><span class="plV">--</span><span class="plUnit"> s</span></div>
+  `;
+
+  this.pathLabels.appendChild(el);
+  this.enableFreeDrag(el);
+  return el;
+}
+
+      normalizeShotLabels(){
+  // ให้ชื่อเป็น 1,2,3 ตามลำดับที่แสดง (เมื่อเกิน 3 ให้เลื่อน)
+  this.shots.forEach((s, idx)=>{
+    const n = idx + 1;
+    s.n = n;
+
+    const col = this.getShotColor(idx);
+    s.color = col;
+
+    if(s.labelEl){
+      s.labelEl.style.color = (idx===0 ? this.getShotColor(1) : col);
+    }
+
+    if(s.labelEl){
+      const title = s.labelEl.querySelector('.plTitle');
+      if(title) title.textContent = `ยิงครั้งที่ ${n}`;
+
+      // อัปเดตค่า u, θ, t ของเส้นทางนั้น ๆ
+      const vals = s.labelEl.querySelectorAll('.plV');
+      if(vals && vals.length>=3){
+        if(typeof s.u === 'number') vals[0].textContent = s.u.toFixed(1);
+        if(typeof s.thetaDeg === 'number') vals[1].textContent = s.thetaDeg.toFixed(0);
+        if(typeof s.T === 'number') vals[2].textContent = s.T.toFixed(2);
+      }
+    }
+  });
+}
+
+      placePathLabelNearEnd(shot){
+        if(!shot || !shot.labelEl || !shot.points || !shot.points.length) return;
+        const last = shot.points[shot.points.length - 1];
+        const w = this.sim.clientWidth;
+        const h = this.sim.clientHeight;
+
+        const x = 54 + last.x * this.pxPerM + 10;
+        const baseBottom = this.baseBottomPx();
+        const yCanvas = (h - (baseBottom + last.y * this.pxPerM)) + 10;
+
+        shot.labelEl.style.left = `${clamp(x, 6, w - 80)}px`;
+        shot.labelEl.style.top  = `${clamp(yCanvas, 6, h - 20)}px`;
+      }
+
+syncUIFromState(){
+        this.gNum.value = this.g.toFixed(1);
+        this.gShow.textContent = `${this.g.toFixed(1)} m/s²`;
+
+        this.speedNum.value = String(this.u);
+        this.speedShow.textContent = `${this.u} m/s`;
+
+        this.angleNum.value = String(this.thetaDeg);
+        this.angleShow.textContent = `${this.thetaDeg}°`;
+
+        this.tNum.value = (parseFloat(this.tNum.value||0) || 0).toFixed(1);
+        this.tShow.textContent = `t = ${parseFloat(this.tNum.value||0).toFixed(1)} s`;
+      }
+
+      resizeCanvas(){
+        const rect = this.sim.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        this.vecCanvas.width = Math.floor(rect.width * dpr);
+        this.vecCanvas.height = Math.floor(rect.height * dpr);
+        this.vecCanvas.style.width = rect.width + 'px';
+        this.vecCanvas.style.height = rect.height + 'px';
+        this.ctx.setTransform(dpr,0,0,dpr,0,0);
+      }
+
+      togglePlay(){
+        if(!this.isAnimating){ this.fire(); return; }
+        this.isPaused = !this.isPaused;
+        if(this.isPaused){
+          this.playBtn.innerHTML = `<span>▶️</span><span>เล่นต่อ</span>`;
+          if(this.raf) cancelAnimationFrame(this.raf);
+          this.raf = null;
+        }else{
+          this.playBtn.innerHTML = `<span>⏸</span><span>หยุด</span>`;
+          this.loop();
+        }
+      }
+
+      autoFitScale(){
+        const w = this.sim.clientWidth;
+        const h = this.sim.clientHeight;
+
+        const leftPad = 54;
+        const bottomPad = this.baseBottomPx();
+        const rightPad = 30;
+        const topPad = 20;
+        const extra = 30;
+
+        const availW = Math.max(120, w - leftPad - rightPad - extra);
+        const availH = Math.max(120, h - bottomPad - topPad - extra);
+
+        const maxX = Math.max(0.1, this.maxX);
+        const maxY = Math.max(0.1, this.maxY);
+
+        const sx = availW / maxX;
+        const sy = availH / maxY;
+
+        // ✅ คำนวณ scale ปกติแล้วคูณ visualScale = 0.8 เพื่อย่อภาพรวมในจอ
+        const base = clamp(Math.min(sx, sy), 0.8, 7.0);
+        this.pxPerM = base * this.visualScale;
+      }
+
+      // ✅ ฟังก์ชันให้ค่า “ที่ชนพื้น” ถูกต้องเสมอ: v=u และ vy=-uy (กรณีเริ่ม-จบระดับเดียวกัน)
+      makeImpactConsistent(p){
+        const th = this.thetaDeg * Math.PI/180;
+        const ux0 = this.u * Math.cos(th);
+        const uy0 = this.u * Math.sin(th);
+        return { ...p, y:0, vx: ux0, vy: -uy0 };
+      }
+
+      calculateTrajectory(){
+        const th = this.thetaDeg * Math.PI/180;
+        const ux = this.u * Math.cos(th);
+        const uy = this.u * Math.sin(th);
+
+        let x=0, y=0, vx=ux, vy=uy, t=0;
+        const pts = [];
+        let maxY=0, maxX=0;
+
+        for(let k=0;k<25000;k++){
+          pts.push({x,y,vx,vy,t});
+          if(y>maxY) maxY=y;
+          if(x>maxX) maxX=x;
+
+          vy += (-this.g) * this.dt;
+          x += vx * this.dt;
+          y += vy * this.dt;
+          t += this.dt;
+
+          if(y <= 0 && t > this.dt){
+            const prev = pts[pts.length-1];
+            const y0 = prev.y;
+            const y1 = y;
+            const ratio = y0/(y0 - y1);
+
+            const xImpact = prev.x + ratio*(x - prev.x);
+            const tImpact = prev.t + ratio*(t - prev.t);
+
+            // ✅ บังคับให้ค่าที่กระทบพื้น “ตรงทฤษฎี” เสมอ
+            const impact = this.makeImpactConsistent({
+              x: xImpact, y:0,
+              vx: ux, vy: -uy,
+              t: tImpact
+            });
+
+            pts.push(impact);
+            if(impact.x>maxX) maxX=impact.x;
+
+            // ✅ เก็บเวลา impact
+            this.impactTime = impact.t;
+
+            break;
+          }
+          if(t > 60) break;
+        }
+
+        if(pts.length){
+          const last = pts[pts.length-1];
+          if(last.y === 0) this.impactTime = last.t;
+        }
+
+        return { pts, maxY, maxX };
+      }
+
+      fire(){
+        // ✅ ยิงซ้ำแล้วสะสมเส้นทางเดิม (จำกัด 3 เส้นทาง)
+        // หยุดแอนิเมชันเดิม แต่ "ไม่ล้าง" เส้นทางที่สะสมไว้
+        if(this.raf) cancelAnimationFrame(this.raf);
+        this.raf = null;
+
+        this.isAnimating = false;
+        this.isPaused = false;
+
+        this.i = 0;
+        this.points = [];
+        this.maxY = 0;
+        this.maxX = 0;
+
+        this.impactBox.style.display = 'none';
+        this.timeMarks = [];
+        this.impactTime = 0;
+
+        this.clearTrail();
+
+        this.isAnimating = true;
+        this.isPaused = false;
+        this.hasFired = true; // ✅ กดเล่นครั้งแรกแล้ว
+        this.playBtn.innerHTML = `<span>⏸</span><span>หยุด</span>`;
+
+        const traj = this.calculateTrajectory();
+        this.points = traj.pts;
+        this.maxY = traj.maxY;
+        this.maxX = traj.maxX;
+
+        // 🔒 ล็อกสเกลหลังมีเส้นทางแรก เพื่อไม่ให้เส้นทางเดิมขยับ
+        if(this.shots.length===0){
+          this.autoFitScale();
+        }
+
+        // ✅ เก็บเส้นทาง (ลบเส้นทางเก่าสุดถ้าเกิน 3)
+        if(this.shots.length >= this.maxShots){
+          const old = this.shots.shift();
+          if(old && old.labelEl) old.labelEl.remove();
+        }
+
+        const labelEl = this.createPathLabel();
+
+        // ค่าพารามิเตอร์ของ “เส้นทางนี้” (คงค่าไว้ ไม่ผูกกับสไลเดอร์ในอนาคต)
+        const uNow = this.u; // m/s
+        const thetaNow = this.thetaDeg; // deg
+
+        const lastPoint0 = this.points[this.points.length-1] || null;
+        const lastPoint = (lastPoint0 && lastPoint0.y===0) ? this.makeImpactConsistent(lastPoint0) : lastPoint0;
+        const TNow = (lastPoint && typeof lastPoint.t === 'number') ? lastPoint.t : 0;
+
+        const shot = { points: this.points.slice(), labelEl, u:uNow, thetaDeg:thetaNow, T:TNow, revealN: 0 };
+        this.activeShot = shot;
+        this.shots.push(shot);
+        this.normalizeShotLabels();
+        this.placePathLabelNearEnd(shot);
+
+        const last0 = this.points[this.points.length-1];
+        const last = (last0 && last0.y === 0) ? this.makeImpactConsistent(last0) : last0;
+
+        this.lastStats = { Sx:last.x, Sy:this.maxY, T:last.t };
+
+        this.i = 0;
+        this.loop();
+      }
+
+      loop(){
+        const step = ()=>{
+          if(this.isPaused) return;
+
+          if(this.i >= this.points.length){
+            this.isAnimating = false;
+            this.isPaused = false;
+            this.playBtn.innerHTML = `<span>▶️</span><span>เล่น</span>`;
+
+            // จบการเคลื่อนที่: ให้เส้นทางนี้แสดงครบทั้งเส้น
+            if(this.activeShot && this.activeShot.points){
+              this.activeShot.revealN = this.activeShot.points.length;
+            }
+
+            if(this.lastStats){
+              this.impactSx.textContent = `${this.lastStats.Sx.toFixed(1)} m`;
+              this.impactSy.textContent = `${this.lastStats.Sy.toFixed(1)} m`;
+              this.impactT.textContent  = `${this.lastStats.T.toFixed(2)} s`;
+              this.impactBox.style.display = 'block';
+            }
+
+            const p0 = this.points[this.points.length-1] || null;
+            const p = (p0 && p0.y===0) ? this.makeImpactConsistent(p0) : p0;
+            this.renderOverlay(p, true);
+            return;
+          }
+
+          let p = this.points[this.i];
+
+          // ✅ ถ้าเป็นจุดสุดท้ายที่ชนพื้น ให้บังคับค่า v=u และ vy=-uy
+          if(p && p.y === 0) p = this.makeImpactConsistent(p);
+
+          this.setBall(p.x, p.y);
+
+          // แสดงเส้นปะแบบค่อย ๆ โผล่ตามการเคลื่อนที่ (ไม่วาดก่อนเริ่ม)
+          if(this.activeShot){
+            const want = this.i + 1;
+            if(!Number.isFinite(this.activeShot.revealN)) this.activeShot.revealN = 0;
+            this.activeShot.revealN = Math.max(this.activeShot.revealN, want);
+          }
+
+          if(this.i % 3 === 0) this.addDot(p.x, p.y);
+
+          this.renderOverlay(p, true);
+
+          this.i++;
+          this.raf = requestAnimationFrame(step);
+        };
+        step();
+      }
+
+      gotoTime(t){
+        // แสดงตำแหน่งลูกบอลที่เวลา t (โหมดพรีวิว) — ไม่กระทบเส้นทางที่สะสมไว้
+        if(this.raf) cancelAnimationFrame(this.raf);
+        this.raf = null;
+
+        this.isAnimating = false;
+        this.isPaused = false;
+        this.playBtn.innerHTML = `<span>▶️</span><span>เล่น</span>`;
+        this.impactBox.style.display = 'none';
+
+        const traj = this.calculateTrajectory();
+        this.points = traj.pts;
+        this.maxY = traj.maxY;
+        this.maxX = traj.maxX;
+
+        // หมายเหตุ: ไม่ autoFit ในโหมดพรีวิวหลังจากเคยยิงแล้ว
+        // เพื่อให้เส้นทางเดิมบนจอ “คงเดิม” ตามที่พี่ต้องการ
+        if(this.shots.length === 0){
+          this.autoFitScale();
+        }
+
+        const tClamped = (this.impactTime>0) ? Math.min(t, this.impactTime) : t;
+
+        let p = this.sampleAtTime(this.points, tClamped);
+        if(!p){
+          // fallback: วางที่จุดเริ่มต้น
+          this.setBall(0,0);
+          this.renderOverlay(null, false);
+          return;
+        }
+
+        // ถ้าเวลาชนพื้น ให้บังคับค่า v=u และ vy=-uy ให้สวยสม่ำเสมอ
+        if(this.impactTime>0 && Math.abs(tClamped - this.impactTime) < 1e-6){
+          p = this.makeImpactConsistent(p);
+        }
+
+        this.clearTrail();
+        this.setBall(p.x, p.y);
+
+        // showStartGhost = (t>0) เพื่อไม่โชว์เวกเตอร์ตอนยังไม่เริ่ม ตามที่พี่เคยสั่ง
+        this.renderOverlay(p, tClamped > 0);
+      }
+
+
+      sampleAtTime(pts, t){
+        if(!pts || !pts.length) return null;
+        if(t <= pts[0].t) return pts[0];
+        const last = pts[pts.length-1];
+        if(t >= last.t) return last;
+
+        let lo=0, hi=pts.length-1;
+        while(hi-lo>1){
+          const mid = (lo+hi)>>1;
+          if(pts[mid].t < t) lo=mid; else hi=mid;
+        }
+        const a = pts[lo], b = pts[hi];
+        const dt = (b.t - a.t) || 1e-9;
+        const r = (t - a.t) / dt;
+
+        return {
+          t,
+          x: a.x + r*(b.x - a.x),
+          y: a.y + r*(b.y - a.y),
+          vx: a.vx + r*(b.vx - a.vx),
+          vy: a.vy + r*(b.vy - a.vy),
+        };
+      }
+
+      setBall(xm, ym){
+        const px = 54 + xm * this.pxPerM;
+        const py = this.baseBottomPx() + ym * this.pxPerM;
+        this.ball.style.left = `${px}px`;
+        this.ball.style.bottom = `${py}px`;
+        this.ball.style.display = 'block';
+      }
+
+      addDot(xm, ym){
+        const px = 54 + xm * this.pxPerM;
+        const py = this.baseBottomPx() + ym * this.pxPerM;
+        const d = document.createElement('div');
+        d.className = 'dot';
+        d.style.left = `${px}px`;
+        d.style.bottom = `${py}px`;
+        this.trail.appendChild(d);
+        if(this.trail.childElementCount > 900) this.trail.removeChild(this.trail.firstChild);
+      }
+
+      clearTrail(){ this.trail.innerHTML = ''; }
+
+      reset(clearStats=true){
+        if(this.raf) cancelAnimationFrame(this.raf);
+        this.raf = null;
+
+        this.isAnimating = false;
+        this.isPaused = false;
+
+        this.i = 0;
+        this.points = [];
+        this.maxY = 0;
+        this.maxX = 0;
+
+        this.timeMarks = [];
+        this.impactTime = 0;
+
+        this.impactBox.style.display = 'none';
+        if(clearStats) this.lastStats = null;
+
+        this.hasFired = false; // ยังไม่กดเล่น
+
+        // ซ่อนป้ายเวกเตอร์ (ตามเดิม)
+        this.lblU.style.display  = 'none';
+        this.lblUx.style.display = 'none';
+        this.lblUy.style.display = 'none';
+        this.lblV.style.display = 'none';
+        this.lblVx.style.display = 'none';
+        this.lblVy.style.display = 'none';
+        this.lblG.style.display  = 'none';
+
+        this.dragged = { U:false, UX:false, UY:false, V:false, VX:false, VY:false, G:false };
+
+        // ✅ ล้างเส้นทางสะสมทั้งหมด + ลบป้ายกำกับ
+        if(this.shots && this.shots.length){
+          for(const s of this.shots){
+            if(s && s.labelEl) s.labelEl.remove();
+          }
+        }
+        this.shots = [];
+
+        this.clearTrail();
+
+        // วางลูกบอลกลับจุดเริ่มต้น
+        this.ball.style.left = '54px';
+        this.ball.style.bottom = `${this.baseBottomPx()}px`;
+        this.ball.style.display = 'block';
+
+        this.renderOverlay(null, false);
+
+        this.playBtn.innerHTML = `<span>▶️</span><span>เล่น</span>`;
+      }
+
+
+      placeLabel(el, key, x, y){
+        if(this.dragged[key]) return;
+        const w = this.sim.clientWidth;
+        const h = this.sim.clientHeight;
+
+        const rect = el.getBoundingClientRect();
+        const elW = rect.width || 90;
+        const elH = rect.height || 20;
+
+        const clampedX = clamp(x, 6, w - elW - 6);
+        const clampedY = clamp(y, 6, h - elH - 6);
+
+        el.style.left = `${clampedX}px`;
+        el.style.top  = `${clampedY}px`;
+      }
+
+      renderOverlay(p, showStartGhost){
+        const ctx = this.ctx;
+        const w = this.sim.clientWidth;
+        const h = this.sim.clientHeight;
+        ctx.clearRect(0,0,w,h);
+
+        const toCanvasY = (bottomPx)=> h - bottomPx;
+
+        const baseBottom = this.baseBottomPx();
+        const baseLineY = toCanvasY(baseBottom);
+
+        // เส้นปะแนวอ้างอิง (ศูนย์กลาง)
+        ctx.save();
+        ctx.strokeStyle = 'rgba(148,163,184,.55)';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([7,7]);
+        ctx.beginPath();
+        ctx.moveTo(0, baseLineY);
+        ctx.lineTo(w, baseLineY);
+        ctx.stroke();
+        ctx.restore();
+
+        // วงกลมเส้นปะตำแหน่งเริ่มต้น (ตอนเคลื่อนที่)
+        if(showStartGhost){
+          const startX = 54;
+          const startY = baseLineY;
+          ctx.save();
+          ctx.strokeStyle = 'rgba(148,163,184,.70)';
+          ctx.lineWidth = 2;
+          ctx.setLineDash([6,6]);
+          ctx.beginPath();
+          ctx.arc(startX, startY, this.ballR, 0, Math.PI*2);
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        // วงกลมเส้นปะ “ร่องรอยตามเวลา” (จากการกด +/-)
+        if(this.timeMarks && this.timeMarks.length && this.points && this.points.length){
+          ctx.save();
+          ctx.strokeStyle = 'rgba(148,163,184,.85)';
+          ctx.lineWidth = 2;
+          ctx.setLineDash([5,6]);
+          for(const ts of this.timeMarks){
+            const t = parseFloat(ts);
+            const mp = this.sampleAtTime(this.points, t);
+            if(!mp) continue;
+            const x = 54 + mp.x * this.pxPerM;
+            const y = toCanvasY(baseBottom + mp.y * this.pxPerM);
+            ctx.beginPath();
+            ctx.arc(x, y, this.ballR, 0, Math.PI*2);
+            ctx.stroke();
+          }
+          ctx.restore();
+        }
+
+
+        // ✅ เส้นทางการยิงที่สะสม (เส้นปะ) — แสดงค้าง 1–3 เส้นทาง
+        if(this.shots && this.shots.length){
+          ctx.save();
+          ctx.lineWidth = 2;
+          ctx.setLineDash([6,6]);
+
+          this.shots.forEach((shot, idx)=>{
+            const pts = shot.points || [];
+            const lim = Number.isFinite(shot.revealN) ? Math.min(pts.length, Math.max(0, Math.floor(shot.revealN))) : pts.length;
+            if(lim < 2) return;
+
+            ctx.strokeStyle = shot.color || this.getShotColor(idx);
+
+            ctx.beginPath();
+            for(let i=0;i<lim;i++){
+              const pp = pts[i];
+              const x = 54 + pp.x * this.pxPerM;
+              const y = toCanvasY(baseBottom + pp.y * this.pxPerM);
+              if(i===0) ctx.moveTo(x,y);
+              else ctx.lineTo(x,y);
+            }
+            ctx.stroke();
+          });
+
+          ctx.restore();
+        }
+
+        const drawText = (ctx, x, y, text, color)=>{
+          ctx.save();
+          ctx.font = '12px system-ui, "Noto Sans Thai", sans-serif';
+          ctx.fillStyle = color;
+          ctx.shadowColor = 'rgba(0,0,0,.18)';
+          ctx.shadowBlur = 6;
+          ctx.shadowOffsetX = 0;
+          ctx.shadowOffsetY = 2;
+          ctx.fillText(text, x, y);
+          ctx.restore();
+        };
+
+        const drawArrow = (x,y,dx,dy,color)=>{
+          const len = Math.hypot(dx,dy);
+          if(len < 0.001) return null;
+
+          const toX = x + dx;
+          const toY = y + dy;
+
+          ctx.save();
+          ctx.strokeStyle = color;
+          ctx.fillStyle = color;
+          ctx.lineWidth = 2;
+          ctx.lineCap = 'round';
+
+          ctx.beginPath();
+          ctx.moveTo(x,y);
+          ctx.lineTo(toX,toY);
+          ctx.stroke();
+
+          const ang = Math.atan2(dy,dx);
+          const head = 10;
+          ctx.beginPath();
+          ctx.moveTo(toX,toY);
+          ctx.lineTo(toX - head*Math.cos(ang - Math.PI/6), toY - head*Math.sin(ang - Math.PI/6));
+          ctx.lineTo(toX - head*Math.cos(ang + Math.PI/6), toY - head*Math.sin(ang + Math.PI/6));
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
+
+          return {toX, toY};
+        };
+
+        // ✅ ลูกศรย่อด้วย visualScale เช่นกัน (รวมถึง u/v และองค์ประกอบ)
+        const vScale = (1.35 * 2) * this.visualScale;
+        const uScale = (1.35 * 2) * this.visualScale;
+        const aScale = 6.0 * this.visualScale;
+
+        const th = this.thetaDeg * Math.PI/180;
+        const ux0 = this.u * Math.cos(th);
+        const uy0 = this.u * Math.sin(th);
+        const u0  = Math.hypot(ux0, uy0);
+
+        const launchX = 54;
+        const launchY = toCanvasY(baseBottom);
+        drawText(ctx, launchX + 10, launchY - 10, `θ = ${this.thetaDeg}°`, 'rgba(29,78,216,.95)');
+
+        // ✅ กติกา: ถ้ายังไม่กดเล่น (hasFired=false) ให้ “ไม่แสดง v, vx, vy” แม้ติ๊กไว้
+        const allowV = this.hasFired;
+
+        if(!p){
+          this.lblV.style.display = 'none';
+          this.lblVx.style.display = 'none';
+          this.lblVy.style.display = 'none';
+          this.lblG.style.display  = 'none';
+
+          if(this.showU.checked){
+            const endU = drawArrow(launchX, launchY, ux0*uScale, -uy0*uScale, '#000');
+            this.lblU.textContent = `u = ${u0.toFixed(1)} m/s`;
+            this.lblU.style.display = 'block';
+            if(endU) this.placeLabel(this.lblU, 'U', endU.toX + 10, endU.toY - 18);
+          }else{
+            this.lblU.style.display = 'none';
+            this.dragged.U = false;
+          }
+
+          if(this.showUxy.checked){
+            const endUx = drawArrow(launchX, launchY, ux0*uScale, 0, css('--gray'));
+            this.lblUx.textContent = `uₓ = ${ux0.toFixed(1)} m/s`;
+            this.lblUx.style.display = 'block';
+            if(endUx) this.placeLabel(this.lblUx, 'UX', endUx.toX + 10, endUx.toY - 18);
+
+            const endUy = drawArrow(launchX, launchY, 0, -uy0*uScale, css('--gray'));
+            this.lblUy.textContent = `uᵧ = ${uy0.toFixed(1)} m/s`;
+            this.lblUy.style.display = 'block';
+            if(endUy) this.placeLabel(this.lblUy, 'UY', endUy.toX - 90, endUy.toY - 18);
+          }else{
+            this.lblUx.style.display = 'none';
+            this.lblUy.style.display = 'none';
+            this.dragged.UX = false;
+            this.dragged.UY = false;
+          }
+
+          ctx.save();
+          ctx.fillStyle = 'rgba(15,23,42,.25)';
+          ctx.beginPath();
+          ctx.arc(launchX, launchY, 3, 0, Math.PI*2);
+          ctx.fill();
+          ctx.restore();
+          return;
+        }
+
+        // ✅ ถ้า p อยู่ที่ชนพื้น ให้บังคับค่าก่อนแสดงผล (กันหลุดจากการ sample)
+        if(p.y === 0) p = this.makeImpactConsistent(p);
+
+        const x0 = 54 + p.x * this.pxPerM;
+        const y0 = toCanvasY(baseBottom + p.y * this.pxPerM);
+
+        if(this.showU.checked){
+          const endU = drawArrow(launchX, launchY, ux0*uScale, -uy0*uScale, '#000');
+          this.lblU.textContent = `u = ${u0.toFixed(1)} m/s`;
+          this.lblU.style.display = 'block';
+          if(endU) this.placeLabel(this.lblU, 'U', endU.toX + 10, endU.toY - 18);
+        }else{
+          this.lblU.style.display = 'none';
+          this.dragged.U = false;
+        }
+
+        if(this.showUxy.checked){
+          const endUx = drawArrow(launchX, launchY, ux0*uScale, 0, css('--gray'));
+          this.lblUx.textContent = `uₓ = ${ux0.toFixed(1)} m/s`;
+          this.lblUx.style.display = 'block';
+          if(endUx) this.placeLabel(this.lblUx, 'UX', endUx.toX + 10, endUx.toY - 18);
+
+          const endUy = drawArrow(launchX, launchY, 0, -uy0*uScale, css('--gray'));
+          this.lblUy.textContent = `uᵧ = ${uy0.toFixed(1)} m/s`;
+          this.lblUy.style.display = 'block';
+          if(endUy) this.placeLabel(this.lblUy, 'UY', endUy.toX - 90, endUy.toY - 18);
+        }else{
+          this.lblUx.style.display = 'none';
+          this.lblUy.style.display = 'none';
+          this.dragged.UX = false;
+          this.dragged.UY = false;
+        }
+
+        const vx = p.vx, vy = p.vy;
+
+        // ✅ บังคับตัวเลขให้ตรงทฤษฎีตอนชนพื้น:
+        // v = u และ vy = -uy (ดังนั้น |vy| = uy)
+        const isImpact = (p.y === 0);
+        const v = isImpact ? this.u : Math.hypot(vx, vy);
+        const vyShow = isImpact ? (-uy0) : vy;
+        const vxShow = isImpact ? (ux0) : vx;
+
+        // ✅ ถ้ายังไม่กดเล่น: ซ่อน v, vx, vy ต่อให้ติ๊กไว้
+        if(!allowV){
+          this.lblV.style.display = 'none';
+          this.lblVx.style.display = 'none';
+          this.lblVy.style.display = 'none';
+          this.dragged.V = false;
+          this.dragged.VX = false;
+          this.dragged.VY = false;
+        }else{
+          if(this.hasFired && this.showV.checked){
+            const end = drawArrow(x0, y0, vxShow*vScale, -vyShow*vScale, css('--blue'));
+            this.lblV.textContent = `v = ${v.toFixed(1)} m/s`;
+            this.lblV.style.display = 'block';
+            if(end) this.placeLabel(this.lblV, 'V', end.toX +15, end.toY - 22);
+          }else{
+            this.lblV.style.display = 'none';
+            this.dragged.V = false;
+          }
+
+          if(this.hasFired && this.showVxy.checked){
+            const endx = drawArrow(x0, y0, vxShow*vScale, 0, css('--green'));
+            this.lblVx.textContent = `vₓ = ${vxShow.toFixed(1)} m/s`;
+            this.lblVx.style.display = 'block';
+            if(endx) this.placeLabel(this.lblVx, 'VX', endx.toX + 10, endx.toY - 22);
+
+            const endy = drawArrow(x0, y0, 0, -vyShow*vScale, css('--green'));
+            // ✅ vy แสดง “ขนาด” เป็นบวกเสมอ
+            this.lblVy.textContent = `vᵧ = ${Math.abs(vyShow).toFixed(1)} m/s`;
+            this.lblVy.style.display = 'block';
+            if(endy) this.placeLabel(this.lblVy, 'VY', endy.toX -90, endy.toY - 22);
+          }else{
+            this.lblVx.style.display = 'none';
+            this.lblVy.style.display = 'none';
+            this.dragged.VX = false;
+            this.dragged.VY = false;
+          }
+        }
+
+        if(this.showG.checked){
+          const endg = drawArrow(x0, y0, 0, (this.g*aScale), css('--red'));
+          this.lblG.textContent = `g = ${this.g.toFixed(1)} m/s²`;
+          this.lblG.style.display = 'block';
+          if(endg) this.placeLabel(this.lblG, 'G', endg.toX + 10, endg.toY - 22);
+        }else{
+          this.lblG.style.display = 'none';
+          this.dragged.G = false;
+        }
+
+        ctx.save();
+        ctx.fillStyle = 'rgba(15,23,42,.25)';
+        ctx.beginPath();
+        ctx.arc(x0, y0, 3, 0, Math.PI*2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      placeActions();
+      const lab = new ProjectileLab();
+      Calc.render();
+      lab.gotoTime(parseFloat(document.getElementById('tNum').value||0));
+    });
+
+    // UI glue (คงเดิม)
+    document.getElementById('formulaBtn').addEventListener('click', ()=> openModal('formula'));
+    document.getElementById('quizBtn').addEventListener('click', ()=> openModal('quiz'));
+    document.getElementById('formulaClose').addEventListener('click', ()=> { modals.formula.classList.remove('open'); closeCalc(); });
+    document.getElementById('quizClose').addEventListener('click', ()=> { modals.quiz.classList.remove('open'); closeCalc(); });
+    document.getElementById('goQuizFromFormula').addEventListener('click', ()=> openModal('quiz'));
+    document.getElementById('goFormulaFromQuiz').addEventListener('click', ()=> openModal('formula'));
+
+    document.getElementById('toggleCalc').addEventListener('click', ()=> openCalc());
+    document.getElementById('calcHide').addEventListener('click', closeCalc);
+
+    document.getElementById('checkAnsBtn').addEventListener('click', ()=>{
+      for(let k=1;k<=10;k++){
+        const picked = document.querySelector(`input[name="q${k}"]:checked`);
+        const ans = document.getElementById(`ans${k}`);
+        if(ans) ans.style.display = picked ? 'block' : 'none';
+      }
+    });
+
+    document.getElementById('calcPad').addEventListener('click', (e)=>{
+      const btn = e.target.closest('button');
+      if(!btn) return;
+      const act = btn.getAttribute('data-act');
+      const k = btn.getAttribute('data-k');
+
+      if(act === 'del'){ Calc.del(); return; }
+      if(act === 'ac'){ Calc.ac(); return; }
+      if(act === 'pm'){ Calc.pm(); return; }
+      if(act === 'eq'){ Calc.evaluate(); return; }
+
+      if(k){
+        if(k === 'pi') Calc.append('pi');
+        else if(k === 'e') Calc.append('e');
+        else if(k === 'ans') Calc.append('ANS');
+        else Calc.append(k);
+      }
+    });
+
+    window.addEventListener('resize', placeActions);
+  </script>
+</body>
+</html>
