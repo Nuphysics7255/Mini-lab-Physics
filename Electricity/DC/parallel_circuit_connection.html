@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>การทดลอง: หลอดไฟ 2 หลอดขนาน — layout ตามรูป + r ภายใน</title>
+<style>
+  :root{--outline:#d4d8e1;--accent:#2563eb}
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    background:#f7fafc;
+    color:#0f172a;
+  }
+  h1.title{
+    text-align:center;
+    font-size:20px;
+    margin:12px 0 0;
+  }
+  .wrap{
+    display:flex;
+    gap:16px;
+    padding:12px 16px 16px;
+    align-items:flex-start;
+  }
+  .panel{
+    order:2; /* เดสก์ท็อป: แผงควบคุมอยู่ขวา */
+    width:460px;
+    max-width:100%;
+    background:#fff;
+    border:1px solid var(--outline);
+    border-radius:14px;
+    padding:12px;
+    box-shadow:0 2px 8px rgba(0,0,0,.05);
+  }
+  .board{
+    order:1; /* เดสก์ท็อป: จอทดลองอยู่ซ้าย */
+    flex:1;
+    position:relative;
+    min-height:700px;
+    background:#fff;
+    border:1px solid var(--outline);
+    border-radius:16px;
+  }
+  svg{width:100%;height:700px}
+  .field{margin-bottom:10px}
+  .field label{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    font-size:14px;
+    gap:8px;
+  }
+  input[type=range]{width:100%}
+  .switchArea{cursor:pointer}
+  button{
+    margin-top:8px;
+    display:block;
+    width:100%;
+    padding:10px;
+    border-radius:10px;
+    border:1px solid var(--outline);
+    background:#f8fafc;
+    cursor:pointer;
+  }
+  /* ปุ่มเปิด/ปิดให้เป็นสีฟ้า */
+  #switchBtn{
+    background:var(--accent);
+    color:#ffffff;
+    border-color:var(--accent);
+    font-weight:600;
+  }
+  #switchBtn:hover{
+    filter:brightness(1.05);
+  }
+
+  #modeLabel{font-size:12px;fill:#111;font-weight:bold}
+  .muted{color:#64748b;font-size:12px;margin-top:8px}
+  .inline-val{font-weight:600}
+  .err{fill:#ef4444 !important; color:#ef4444 !important; font-weight:700}
+  .howbox{
+    margin-top:10px;
+    border:1px dashed var(--outline);
+    border-radius:12px;
+    padding:10px;
+    background:#f9fafb;
+    display:none;
+  }
+  .howbox h3{margin:0 0 8px 0;font-size:16px}
+  .mono{
+    font-family:ui-monospace, Menlo, Consolas, monospace;
+    font-size:13.5px;
+    white-space:pre-wrap;
+    line-height:1.45;
+  }
+  .hl-in{background:#e0f2fe;border:1px solid #bae6fd;border-radius:6px;padding:0 4px;font-weight:700}
+  .hl-out{background:#fef3c7;border:1px solid #fde68a;border-radius:6px;padding:0 4px;font-weight:700}
+  .charge{fill:#2563eb;opacity:0.9}
+  .electron{fill:orange;opacity:0.9}
+  .wireHot{
+    stroke:#ef4444;
+    stroke-width:10;
+    fill:none;
+    opacity:0;
+    filter:drop-shadow(0 0 6px rgba(239,68,68,.9));
+  }
+  .batteryGlow{filter:drop-shadow(0 0 10px rgba(239,68,68,.7))}
+  @keyframes pulseHot{0%{opacity:.25}100%{opacity:.9}}
+  .isShort .wireHot{animation:pulseHot .6s ease-in-out infinite alternate}
+  .isShort #battery>.shell{animation:pulseHot .7s ease-in-out infinite alternate}
+  .smoke{opacity:0}
+  .isShort .smoke{opacity:.9}
+  .dirArrow{stroke:#0f172a;stroke-width:3;opacity:.35}
+  .hlPath{stroke:var(--accent);stroke-width:10;opacity:.28;fill:none;display:none}
+  .hlPath.show{display:block}
+  .nope{pointer-events:none}
+
+  /* === มือถือ: ให้จอทดลองอยู่บนสุด เตี้ยลง และกว้างเท่ากับแผงควบคุม === */
+  @media (max-width:768px){
+    .wrap{
+      flex-direction:column;
+    }
+    .board{
+      order:1;
+      min-height:300px;
+      width:100%; /* ให้กว้างเท่ากับแผงควบคุม */
+    }
+    .panel{
+      order:2;
+      width:100%;
+    }
+    svg{
+      height:300px;
+    }
+  }
+</style>
+</head>
+<body>
+<h1 class="title">การต่อวงจรไฟฟ้าแบบขนาน</h1>
+<div class="wrap">
+  <div class="panel">
+    <div class="field">
+      <label>ความต้านทานหลอดไฟ 1 (R1) <span id="R1val">10.00 Ω</span></label>
+      <input id="R1" type="range" min="0" max="100" step="0.1" value="10">
+    </div>
+    <div class="field">
+      <label>ความต้านทานหลอดไฟ 2 (R2) <span id="R2val">5.00 Ω</span></label>
+      <input id="R2" type="range" min="0" max="100" step="0.1" value="5">
+    </div>
+    <div class="field">
+      <label>แรงเคลื่อนไฟฟ้า (E) <span id="Eval">6.00 V</span></label>
+      <input id="E" type="range" min="0" max="24" step="0.1" value="6">
+    </div>
+    <div class="field">
+      <label>ความต้านทานภายใน (r) <span id="rval">1.00 Ω</span></label>
+      <input id="r" type="range" min="0" max="20" step="0.1" value="1">
+    </div>
+
+    <div class="field">
+      <label>
+        <span>แสดงค่าทางไฟฟ้า (V, I, P, Vcell)</span>
+        <input id="showValues" type="checkbox">
+      </label>
+    </div>
+
+    <button id="switchBtn">🔌 กดเพื่อปิด/เปิด</button>
+    <button id="toggleCurrentBtn">แสดงทิศ: อิเล็กตรอน</button>
+    <button id="howBtn">📘 แสดงวิธีคำนวณ</button>
+
+    <div class="howbox" id="howBox">
+      <h3>สูตรสำคัญที่ใช้ในการคำนวณ</h3>
+      <div class="mono" id="howText"></div>
+    </div>
+    <div class="tagline" style="font-size:12px;color:#334155;margin-top:6px">
+      ศึกษาเพิ่มเติมที่
+      <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">
+        เพจคลายปมฟิสิกส์
+      </a>
+    </div>
+  </div>
+
+  <div class="board">
+    <svg id="circuit" viewBox="0 0 480 560">
+      <defs>
+        <radialGradient id="bulbGlowGrad" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#ffff99" stop-opacity="1"/>
+          <stop offset="60%" stop-color="#ffcc33" stop-opacity="0.6"/>
+          <stop offset="100%" stop-color="#ffcc00" stop-opacity="0"/>
+        </radialGradient>
+        <!-- หัวลูกศรสำหรับแสดงทิศ -->
+        <marker id="arrowF" markerWidth="10" markerHeight="10" refX="8" refY="3.5" orient="auto">
+          <path d="M0,0 L8,3.5 L0,7 Z" fill="#0f172a" fill-opacity=".35"/>
+        </marker>
+      </defs>
+
+      <!-- ===== สายลวดหลัก: กรอบ + คานกลาง ===== -->
+      <g id="wires" fill="none" stroke="#1f2f55" stroke-linecap="round" stroke-linejoin="round" stroke-width="7">
+        <!-- บน -->
+        <path id="wireTop" d="M120 120 H360" />
+        <!-- ขวา -->
+        <path id="wireRight" d="M360 120 V420" />
+        <!-- ซ้าย (เว้นช่องสวิตช์) -->
+        <path id="wireLeftTop" d="M120 120 V300" />
+        <path id="wireLeftBottom" d="M120 300 V420" />
+        <!-- คานกลาง (ขนานกิ่ง 2) -->
+        <path id="wireMid" d="M120 250 H360" />
+        <!-- ล่าง (เว้นที่สำหรับแบตเตอรี่สี่เหลี่ยมกลางล่าง) -->
+        <path id="wireBottomLeft" d="M120 420 H180" />
+        <path id="wireBottomRight" d="M300 420 H360" />
+        <path id="wireBattery" d="M300 420 H180" fill="none" stroke="none"/>
+        <!-- สร้างเส้นทางปิดรอบสำหรับแต่ละกิ่งเพื่อใช้แอนิเมชัน -->
+        <path id="branch1Path" d="M120 250 V120 H360 V420 H300 H180 H120 V250 Z" fill="none" stroke="none"/>
+        <path id="branch2Path" d="M120 250 H360 V420 H300 H180 H120 V250 Z" fill="none" stroke="none"/>
+      </g>
+
+      <!-- ลวดแดงวูบวาบเมื่อ Rรวม=0 -->
+      <path id="wireHot" class="wireHot" d="M120 120 H360 V420 H120 V120"/>
+
+      <!-- เส้นไฮไลต์กิ่ง (ซ่อนเริ่มต้น) -->
+      <path id="branch1HL" class="hlPath" d="M120 250 V120 H360 V420 H300 H180 H120 V250 Z"/>
+      <path id="branch2HL" class="hlPath" d="M120 250 H360 V420 H300 H180 H120 V250 Z"/>
+
+      <!-- ลูกศรแสดงทิศกระแส: ไฟฟ้า (ตามเข็มนาฬิกา) -->
+      <g id="arrowsCurr" class="nope" style="display:none">
+        <!-- บน → ขวา -->
+        <line x1="180" y1="120" x2="206" y2="120" class="dirArrow" marker-end="url(#arrowF)"/>
+        <line x1="240" y1="120" x2="266" y2="120" class="dirArrow" marker-end="url(#arrowF)"/>
+        <line x1="300" y1="120" x2="326" y2="120" class="dirArrow" marker-end="url(#arrowF)"/>
+        <!-- คานกลาง → ขวา -->
+        <line x1="180" y1="250" x2="206" y2="250" class="dirArrow" marker-end="url(#arrowF)"/>
+        <line x1="240" y1="250" x2="266" y2="250" class="dirArrow" marker-end="url(#arrowF)"/>
+        <line x1="300" y1="250" x2="326" y2="250" class="dirArrow" marker-end="url(#arrowF)"/>
+        <!-- ซ้ายล่าง ↑ ขึ้นสวิตช์ -->
+        <line x1="120" y1="360" x2="120" y2="340" class="dirArrow" marker-end="url(#arrowF)"/>
+        <line x1="120" y1="320" x2="120" y2="300" class="dirArrow" marker-end="url(#arrowF)"/>
+        <!-- ขวา ลง -->
+        <line x1="360" y1="160" x2="360" y2="180" class="dirArrow" marker-end="url(#arrowF)"/>
+        <line x1="360" y1="300" x2="360" y2="320" class="dirArrow" marker-end="url(#arrowF)"/>
+        <!-- ล่าง ← ซ้าย -->
+        <line x1="176" y1="420" x2="152" y2="420" class="dirArrow" marker-end="url(#arrowF)"/>
+        <line x1="304" y1="420" x2="280" y2="420" class="dirArrow" marker-end="url(#arrowF)"/>
+      </g>
+
+      <!-- ลูกศรแสดงทิศอิเล็กตรอน (ทวนเข็มนาฬิกา) -->
+      <g id="arrowsElec" class="nope" style="display:none">
+        <!-- บน ← ซ้าย -->
+        <line x1="206" y1="120" x2="180" y2="120" class="dirArrow" marker-end="url(#arrowF)"/>
+        <line x1="266" y1="120" x2="240" y2="120" class="dirArrow" marker-end="url(#arrowF)"/>
+        <line x1="326" y1="120" x2="300" y2="120" class="dirArrow" marker-end="url(#arrowF)"/>
+        <!-- คานกลาง ← ซ้าย -->
+        <line x1="206" y1="250" x2="180" y2="250" class="dirArrow" marker-end="url(#arrowF)"/>
+        <line x1="266" y1="250" x2="240" y2="250" class="dirArrow" marker-end="url(#arrowF)"/>
+        <line x1="326" y1="250" x2="300" y2="250" class="dirArrow" marker-end="url(#arrowF)"/>
+        <!-- ซ้ายบน ↓ ลง -->
+        <line x1="120" y1="340" x2="120" y2="360" class="dirArrow" marker-end="url(#arrowF)"/>
+        <line x1="120" y1="300" x2="120" y2="320" class="dirArrow" marker-end="url(#arrowF)"/>
+        <!-- ขวา ขึ้น -->
+        <line x1="360" y1="320" x2="360" y2="300" class="dirArrow" marker-end="url(#arrowF)"/>
+        <line x1="360" y1="180" x2="360" y2="160" class="dirArrow" marker-end="url(#arrowF)"/>
+        <!-- ล่าง → ขวา -->
+        <line x1="152" y1="420" x2="176" y2="420" class="dirArrow" marker-end="url(#arrowF)"/>
+        <line x1="280" y1="420" x2="304" y2="420" class="dirArrow" marker-end="url(#arrowF)"/>
+      </g>
+
+      <!-- ===== สวิตช์: ซ้ายล่าง (เริ่มต้นเอียง = วงจรเปิด) ===== -->
+      <g id="switch" class="switchArea">
+        <!-- hit area โปร่งใสให้กดง่ายขึ้น -->
+        <rect x="80" y="260" width="80" height="80" fill="transparent" pointer-events="all"/>
+        <circle cx="120" cy="300" r="5" fill="#1f2f55"/>
+        <line id="switchBlade" x1="120" y1="300" x2="96" y2="268" stroke="#ff9f1a" stroke-width="7" stroke-linecap="round"/>
+        <text x="78" y="314" font-size="14" fill="#1f2f55">สวิตช์</text>
+        <text id="InearSwitch" x="132" y="318" font-size="14" font-weight="bold">I = 0.00 A</text>
+      </g>
+
+      <!-- ===== แบตเตอรี่: สี่เหลี่ยมกลางล่าง ===== -->
+      <g id="battery" transform="translate(180,398)">
+        <rect class="shell" x="0" y="0" width="120" height="44" rx="8"
+              fill="#dbeafe" stroke="#1f2f55" stroke-width="7"/>
+        <g transform="translate(12,6)" stroke="#1f2f55" stroke-width="7" stroke-linecap="round">
+          <line x1="24" y1="4" x2="24" y2="32"/>
+          <line x1="76" y1="10" x2="76" y2="26"/>
+        </g>
+        <text x="10" y="-6" font-size="16" fill="#ef4444" font-weight="900">+</text>
+        <text x="102" y="-6" font-size="16" fill="#ef4444" font-weight="900">−</text>
+        <!-- แสดงค่า E, r และ V(cell) -->
+        <text id="E_r_top" x="0" y="-14" font-size="11">
+          <tspan id="Epart">E = 6.00 V</tspan>
+          <tspan dx="16" id="rpart">r = 1.00 Ω</tspan>
+        </text>
+        <text id="Vcell_bottom" x="4" y="62" font-size="11">V(cell) = 6.00 V</text>
+        <!-- ควันเตือนลัดวงจรอุดมคติ -->
+        <g id="smoke" class="smoke">
+          <circle cx="-20" cy="-10" r="6" fill="rgba(148,163,184,.8)">
+            <animate attributeName="r" values="6;12" dur="3.0s" repeatCount="indefinite"/>
+            <animate attributeName="cy" values="-10;-120" dur="3.0s" repeatCount="indefinite"/>
+            <animate attributeName="opacity" values="0;0.6;0" dur="3.0s" repeatCount="indefinite"/>
+          </circle>
+          <circle cx="10" cy="-10" r="5" fill="rgba(148,163,184,.7)">
+            <animate attributeName="r" values="5;11" dur="2.8s" begin="0.5s" repeatCount="indefinite"/>
+            <animate attributeName="cy" values="-10;-115" dur="2.8s" begin="0.5s" repeatCount="indefinite"/>
+            <animate attributeName="opacity" values="0;0.55;0" dur="2.8s" begin="0.5s" repeatCount="indefinite"/>
+          </circle>
+          <circle cx="34" cy="-10" r="6" fill="rgba(148,163,184,.75)">
+            <animate attributeName="r" values="6;13" dur="3.4s" begin="1.0s" repeatCount="indefinite"/>
+            <animate attributeName="cy" values="-10;-125" dur="3.4s" begin="1.0s" repeatCount="indefinite"/>
+            <animate attributeName="opacity" values="0;0.5;0" dur="3.4s" begin="1.0s" repeatCount="indefinite"/>
+          </circle>
+        </g>
+      </g>
+
+      <!-- ===== หลอดไฟ (วางทับเส้น) ===== -->
+      <g id="lamp1" transform="translate(240,120)">
+        <circle id="bulbGlow1" cx="0" cy="0" r="70" fill="url(#bulbGlowGrad)" opacity="0"/>
+        <circle id="lampBody1" cx="0" cy="0" r="28" fill="#ffffff" stroke="#374151" stroke-width="4"/>
+        <rect x="-16" y="18" width="32" height="16" rx="6" fill="#6b7280"/>
+        <path d="M-10,4 q10,-16 20,0" fill="none" stroke="#f59e0b" stroke-width="4" stroke-linecap="round"/>
+        <text id="lamp1Label" x="42" y="-10" font-size="11">หลอดไฟ 1</text>
+        <text id="R1line" x="42" y="14" font-size="11">R₁=<tspan id="R1txt" class="inline-val">0.00 Ω</tspan></text>
+        <text id="V1line" x="42" y="30" font-size="11">V₁=<tspan id="V1txt" class="inline-val">0.00 V</tspan></text>
+        <text id="I1line" x="42" y="46" font-size="11">I₁=<tspan id="I1txt" class="inline-val">0.00 A</tspan></text>
+        <text id="P1line" x="42" y="62" font-size="11">P₁=<tspan id="P1txt" class="inline-val">0.00 W</tspan></text>
+        <rect id="infoHit1" x="36" y="-18" width="120" height="82" fill="transparent" pointer-events="all"/>
+      </g>
+
+      <g id="lamp2" transform="translate(240,250)">
+        <circle id="bulbGlow2" cx="0" cy="0" r="70" fill="url(#bulbGlowGrad)" opacity="0"/>
+        <circle id="lampBody2" cx="0" cy="0" r="28" fill="#ffffff" stroke="#374151" stroke-width="4"/>
+        <rect x="-16" y="18" width="32" height="16" rx="6" fill="#6b7280"/>
+        <path d="M-10,4 q10,-16 20,0" fill="none" stroke="#f59e0b" stroke-width="4" stroke-linecap="round"/>
+        <text id="lamp2Label" x="42" y="-10" font-size="11">หลอดไฟ 2</text>
+        <text id="R2line" x="42" y="14" font-size="11">R₂=<tspan id="R2txt" class="inline-val">0.00 Ω</tspan></text>
+        <text id="V2line" x="42" y="30" font-size="11">V₂=<tspan id="V2txt" class="inline-val">0.00 V</tspan></text>
+        <text id="I2line" x="42" y="46" font-size="11">I₂=<tspan id="I2txt" class="inline-val">0.00 A</tspan></text>
+        <text id="P2line" x="42" y="62" font-size="11">P₂=<tspan id="P2txt" class="inline-val">0.00 W</tspan></text>
+        <rect id="infoHit2" x="36" y="-18" width="120" height="82" fill="transparent" pointer-events="all"/>
+      </g>
+
+      <text id="modeLabel" x="260" y="80">แสดงการไหลของกระแสไฟฟ้า(I)</text>
+
+      <!-- เม็ดกระแส / อิเล็กตรอน: แยกกิ่งบน/กลาง -->
+      <g id="chargesB1"></g>
+      <g id="chargesB2"></g>
+      <g id="electronsB1"></g>
+      <g id="electronsB2"></g>
+    </svg>
+  </div>
+</div>
+
+<script>
+/* ===== DOM ===== */
+const R1=document.getElementById('R1'),
+      R2=document.getElementById('R2'),
+      E=document.getElementById('E'),
+      r=document.getElementById('r'),
+      showValues=document.getElementById('showValues');
+
+const R1val=document.getElementById('R1val'),
+      R2val=document.getElementById('R2val'),
+      Eval=document.getElementById('Eval'),
+      rval=document.getElementById('rval');
+
+const bulbGlow1=document.getElementById('bulbGlow1'),
+      lampBody1=document.getElementById('lampBody1');
+const bulbGlow2=document.getElementById('bulbGlow2'),
+      lampBody2=document.getElementById('lampBody2');
+
+const R1txt=document.getElementById('R1txt'),
+      V1txt=document.getElementById('V1txt'),
+      I1txt=document.getElementById('I1txt'),
+      P1txt=document.getElementById('P1txt');
+const R2txt=document.getElementById('R2txt'),
+      V2txt=document.getElementById('V2txt'),
+      I2txt=document.getElementById('I2txt'),
+      P2txt=document.getElementById('P2txt');
+
+const V1line=document.getElementById('V1line'),
+      I1line=document.getElementById('I1line'),
+      P1line=document.getElementById('P1line'),
+      V2line=document.getElementById('V2line'),
+      I2line=document.getElementById('I2line'),
+      P2line=document.getElementById('P2line');
+
+const switchBtn=document.getElementById('switchBtn');
+const toggleCurrentBtn=document.getElementById('toggleCurrentBtn');
+const modeLabel=document.getElementById('modeLabel');
+const InearSwitch=document.getElementById('InearSwitch');
+const howBtn=document.getElementById('howBtn');
+const howBox=document.getElementById('howBox');
+const howText=document.getElementById('howText');
+const branch1Path=document.getElementById('branch1Path');
+const branch2Path=document.getElementById('branch2Path');
+const chargesB1=document.getElementById('chargesB1');
+const chargesB2=document.getElementById('chargesB2');
+const electronsB1=document.getElementById('electronsB1');
+const electronsB2=document.getElementById('electronsB2');
+const branch1HL=document.getElementById('branch1HL');
+const branch2HL=document.getElementById('branch2HL');
+const arrowsCurr=document.getElementById('arrowsCurr');
+const arrowsElec=document.getElementById('arrowsElec');
+const infoHit1=document.getElementById('infoHit1');
+const infoHit2=document.getElementById('infoHit2');
+const wireLeftTop=document.getElementById('wireLeftTop');
+const wireLeftBottom=document.getElementById('wireLeftBottom');
+const switchBlade=document.getElementById('switchBlade');
+const Epart=document.getElementById('Epart');
+const rpart=document.getElementById('rpart');
+const Vcell_bottom=document.getElementById('Vcell_bottom');
+const circuitSvg=document.getElementById('circuit');
+
+/* ===== State ===== */
+let switchClosed=false; // เริ่มต้น: วงจรเปิด (ใบมีดเอียง)
+let mode="current"; // current or electron
+let I_total=0, I1=0, I2=0, Vbranch=0;
+let isShort=false;
+
+/* ===== Helpers ===== */
+function fmt(x){return (+x).toFixed(2);}
+function powerToLevel(P){return Math.min(1, Math.max(0, Math.abs(P)/6));}
+function setErrText(el, isError, textOk){
+  if(isError){
+    el.textContent='Error';
+    el.classList.add('err');
+  }else{
+    el.textContent=textOk;
+    el.classList.remove('err');
+  }
+}
+
+/* แสดง/ซ่อนค่าทางไฟฟ้า (V, I, P, Vcell) ตามช่องติ๊ก */
+function applyValueVisibility(){
+  const show = showValues.checked;
+  const disp = show ? 'block' : 'none';
+  [V1line, I1line, P1line, V2line, I2line, P2line, InearSwitch, Vcell_bottom]
+    .forEach(el => { if(el) el.style.display = disp; });
+}
+
+/* ===== ฟิสิกส์: ขนาน + r ภายใน ===== */
+function parallelReq(Ra,Rb){
+  if(Ra===0 || Rb===0) return 0;
+  if(!isFinite(Ra)) return Rb;
+  if(!isFinite(Rb)) return Ra;
+  return (Ra*Rb)/(Ra+Rb);
+}
+
+function update(){
+  R1val.textContent=fmt(R1.value)+' Ω';
+  R2val.textContent=fmt(R2.value)+' Ω';
+  Eval.textContent=fmt(E.value)+' V';
+  rval.textContent=fmt(r.value)+' Ω';
+
+  const R1v=+R1.value,
+        R2v=+R2.value,
+        rr=+r.value,
+        Ee=+E.value;
+
+  let Vcell=Ee;
+  I_total=0; I1=0; I2=0; Vbranch=0;
+
+  const Rp = parallelReq(R1v, R2v);
+  const Rt = (switchClosed ? rr + (isFinite(Rp)? Rp : 0) : Infinity);
+  const idealShort = switchClosed && rr===0 && (R1v===0 || R2v===0);
+
+  if(switchClosed){
+    if(idealShort){
+      I_total = Infinity;
+      Vbranch=0; I1=0; I2=0; Vcell=Ee;
+    }else if(!isFinite(Rt) || Rt<=0){
+      I_total=0; Vbranch=0; Vcell=Ee;
+    }else{
+      I_total = Ee / Rt;
+      Vcell = Ee - I_total*rr;
+      Vbranch = Vcell;
+
+      if(Vbranch===0 && rr>0 && (R1v===0 || R2v===0)){
+        if(R1v===0 && R2v>0){ I1 = I_total; I2 = 0; }
+        else if(R2v===0 && R1v>0){ I1 = 0; I2 = I_total; }
+        else { I1 = I_total/2; I2 = I_total/2; }
+      }else{
+        I1 = (R1v>0)? Vbranch / R1v : (Vbranch>0? Infinity : I_total);
+        I2 = (R2v>0)? Vbranch / R2v : (Vbranch>0? Infinity : (isFinite(I1)? (I_total - I1) : I_total));
+      }
+    }
+  }
+
+  const P1 = (isFinite(I1)? (Vbranch*Vbranch)/Math.max(R1v,1e-9) : Infinity);
+  const P2 = (isFinite(I2)? (Vbranch*Vbranch)/Math.max(R2v,1e-9) : Infinity);
+
+  InearSwitch.textContent = 'I = ' + (idealShort ? '∞' : fmt(I_total)) + ' A';
+
+  // อัปเดตฉลากแบตเตอรี่
+  Epart.textContent = 'E = ' + fmt(Ee) + ' V';
+  rpart.textContent = 'r = ' + fmt(rr) + ' Ω';
+  Vcell_bottom.textContent = 'V(cell) = ' + (idealShort ? fmt(Ee) : fmt(Vcell)) + ' V';
+
+  R1txt.textContent = fmt(R1v)+' Ω';
+  setErrText(V1txt, idealShort, fmt(Vbranch)+' V');
+  setErrText(I1txt, idealShort || !isFinite(I1), isFinite(I1)? fmt(I1)+' A' : '∞');
+  setErrText(P1txt, idealShort || !isFinite(P1), isFinite(P1)? fmt(P1)+' W' : '∞');
+
+  R2txt.textContent = fmt(R2v)+' Ω';
+  setErrText(V2txt, idealShort, fmt(Vbranch)+' V');
+  setErrText(I2txt, idealShort || !isFinite(I2), isFinite(I2)? fmt(I2)+' A' : '∞');
+  setErrText(P2txt, idealShort || !isFinite(P2), isFinite(P2)? fmt(P2)+' W' : '∞');
+
+  // ความสว่างตามกำลัง (ใช้ P=V^2/R ในกรณีขนาน)
+  const level1 = (idealShort || !isFinite(P1))? 0 : powerToLevel(P1);
+  bulbGlow1.setAttribute('opacity', level1);
+  lampBody1.setAttribute('fill', level1>0?`rgba(255,232,176,${0.25+0.5*level1})`:'#ffffff');
+
+  const level2 = (idealShort || !isFinite(P2))? 0 : powerToLevel(P2);
+  bulbGlow2.setAttribute('opacity', level2);
+  lampBody2.setAttribute('fill', level2>0?`rgba(255,232,176,${0.25+0.5*level2})`:'#ffffff');
+
+  isShort = idealShort;
+  applyShortEffects();
+  refreshVisibility();
+  applyModeLabel();
+
+  // สูตรสำคัญที่ใช้ (แสดงเมื่อเปิดกล่อง)
+  if(howBox.style.display==='block'){
+    const RpTxt = isFinite(Rp)? fmt(Rp)+" Ω" : '∞';
+    const ItTxt = (isFinite(I_total)? fmt(I_total) : '∞') + ' A';
+    const VcTxt = (isFinite(Vcell)? fmt(Vcell) : '∞') + ' V';
+    const I1Txt = (isFinite(I1)? fmt(I1) : '∞') + ' A';
+    const I2Txt = (isFinite(I2)? fmt(I2) : '∞') + ' A';
+    const P1Txt = (isFinite(P1)? fmt(P1) : '∞') + ' W';
+    const P2Txt = (isFinite(P2)? fmt(P2) : '∞') + ' W';
+
+    howText.innerHTML = [
+      `R₁,₂ = (R₁·R₂)/(R₁+R₂)`,
+      `R₁,₂ = (${fmt(R1v)}·${fmt(R2v)})/(${fmt(R1v)}+${fmt(R2v)}) = ${RpTxt}`,
+      ``,
+      `Iรวม = E/(r+R₁,₂)`,
+      `Iรวม = ${fmt(Ee)}/(${fmt(rr)}+${isFinite(Rp)?fmt(Rp):'∞'}) = ${ItTxt}`,
+      ``,
+      `V(cell) = E − I·r`,
+      `V(cell) = ${fmt(Ee)} − ${isFinite(I_total)?fmt(I_total):'∞'}×${fmt(rr)} = ${VcTxt}`,
+      ``,
+      `I₁ = V₁/R₁`,
+      `I₁ = ${fmt(Vbranch)} / ${fmt(R1v)} = ${I1Txt}`,
+      ``,
+      `I₂ = V₂/R₂`,
+      `I₂ = ${fmt(Vbranch)} / ${fmt(R2v)} = ${I2Txt}`,
+      ``,
+      `P₁ = V²/R₁`,
+      `P₁ = ${fmt(Vbranch)}² / ${fmt(R1v)} = ${P1Txt}`,
+      ``,
+      `P₂ = V²/R₂`,
+      `P₂ = ${fmt(Vbranch)}² / ${fmt(R2v)} = ${P2Txt}`
+    ].join('<br>');
+  }
+}
+
+function setSwitchVisual(){
+  if(switchClosed){
+    // ปิดวงจร: ต่อเส้นชนจุดดำ และใบมีดแตะจุด
+    wireLeftTop.setAttribute('d', 'M120 120 V300');
+    wireLeftBottom.setAttribute('d', 'M120 300 V420');
+    switchBlade.setAttribute('x2','120');
+    switchBlade.setAttribute('y2','300');
+  }else{
+    // เปิดวงจร: สร้างช่องว่างรอบจุดดำให้เห็นชัด
+    const g=12; // ช่องว่าง 12px
+    wireLeftTop.setAttribute('d', `M120 120 V${300-g}`);
+    wireLeftBottom.setAttribute('d', `M120 ${300+g} V420`);
+    switchBlade.setAttribute('x2','96');
+    switchBlade.setAttribute('y2','268');
+  }
+}
+
+function refreshVisibility(){
+  const show = switchClosed && I_total>0 && !isShort;
+  const showCurrent = (mode==='current') && show;
+  const showElectron = (mode==='electron') && show;
+  Array.from(chargesB1.children).forEach(el=>el.style.display = showCurrent? 'block':'none');
+  Array.from(chargesB2.children).forEach(el=>el.style.display = showCurrent? 'block':'none');
+  Array.from(electronsB1.children).forEach(el=>el.style.display = showElectron? 'block':'none');
+  Array.from(electronsB2.children).forEach(el=>el.style.display = showElectron? 'block':'none');
+}
+
+function applyShortEffects(){
+  if(isShort){ circuitSvg.classList.add('isShort'); }
+  else { circuitSvg.classList.remove('isShort'); }
+}
+
+// ===== เม็ดประจุ =====
+const Nseg=22; let dotsB1=[], dotsB2=[], edotsB1=[], edotsB2=[];
+const lenB1=branch1Path.getTotalLength();
+const lenB2=branch2Path.getTotalLength();
+
+function createDots(group,n,cls){
+  const arr=[];
+  for(let i=0;i<n;i++){
+    const c=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c.setAttribute('r',3.5);
+    c.setAttribute('class',cls);
+    c.style.display='none';
+    group.appendChild(c);
+    arr.push({el:c,t:i/n});
+  }
+  return arr;
+}
+
+function initParticles(){
+  dotsB1 = createDots(chargesB1,Nseg,'charge');
+  dotsB2 = createDots(chargesB2,Nseg,'charge');
+  edotsB1 = createDots(electronsB1,Nseg,'electron');
+  edotsB2 = createDots(electronsB2,Nseg,'electron');
+}
+
+function animate(){
+  // ความเร็วเม็ดกระแสอิงสัดส่วน I₁/I₂
+  const Imax = Math.max(Math.abs(I1), Math.abs(I2), 1e-6);
+  const base = 0.006;
+  const s1 = base * (Math.abs(I1)/Imax);
+  const s2 = base * (Math.abs(I2)/Imax);
+
+  // กระแสไฟฟ้า (ตามเข็มนาฬิกา): เดินไปข้างหน้าเสมอ
+  dotsB1.forEach(d=>{
+    d.t=(d.t+ s1 + 1)%1;
+    const p=branch1Path.getPointAtLength(d.t*lenB1);
+    d.el.setAttribute('cx',p.x);
+    d.el.setAttribute('cy',p.y);
+  });
+  dotsB2.forEach(d=>{
+    d.t=(d.t+ s2 + 1)%1;
+    const p=branch2Path.getPointAtLength(d.t*lenB2);
+    d.el.setAttribute('cx',p.x);
+    d.el.setAttribute('cy',p.y);
+  });
+
+  // อิเล็กตรอน (ทวนเข็มนาฬิกา): เดินย้อนเสมอ (ตรงข้ามกระแส)
+  edotsB1.forEach(e=>{
+    e.t=(e.t- s1 + 1)%1;
+    const p=branch1Path.getPointAtLength(e.t*lenB1);
+    e.el.setAttribute('cx',p.x);
+    e.el.setAttribute('cy',p.y);
+  });
+  edotsB2.forEach(e=>{
+    e.t=(e.t- s2 + 1)%1;
+    const p=branch2Path.getPointAtLength(e.t*lenB2);
+    e.el.setAttribute('cx',p.x);
+    e.el.setAttribute('cy',p.y);
+  });
+
+  requestAnimationFrame(animate);
+}
+
+function applyModeLabel(){
+  if(mode==="current"){
+    modeLabel.textContent = "แสดงการไหลของกระแสไฟฟ้า(I)";
+    toggleCurrentBtn.textContent = "แสดงทิศ: อิเล็กตรอน";
+    modeLabel.setAttribute('font-size','12');
+  }else{
+    modeLabel.textContent = "แสดงการไหลของอิเล็กตรอน";
+    toggleCurrentBtn.textContent = "แสดงทิศ: ไฟฟ้า";
+    modeLabel.setAttribute('font-size','11');
+  }
+  const show = switchClosed && I_total>0 && !isShort;
+  arrowsCurr.style.display = (mode==="current" && show) ? 'block' : 'none';
+  arrowsElec.style.display = (mode!=="current" && show) ? 'block' : 'none';
+}
+
+function toggleSwitch(){
+  switchClosed = !switchClosed;
+  setSwitchVisual();
+  update();
+  refreshVisibility();
+  applyModeLabel();
+}
+
+switchBtn.addEventListener('click', toggleSwitch);
+document.getElementById('switch').addEventListener('click', toggleSwitch);
+
+toggleCurrentBtn.addEventListener('click',()=>{
+  mode = (mode==="current") ? "electron" : "current";
+  applyModeLabel();
+  refreshVisibility();
+});
+
+[R1,R2,E,r].forEach(inp=>inp.addEventListener('input',()=>{
+  update();
+  applyValueVisibility();
+  applyModeLabel();
+}));
+
+howBtn.addEventListener('click',()=>{
+  const show = howBox.style.display!=='block';
+  howBox.style.display = show ? 'block' : 'none';
+  howBtn.textContent = show ? '📕 ซ่อนวิธีคำนวณ' : '📘 แสดงวิธีคำนวณ';
+  update();
+});
+
+showValues.addEventListener('change', applyValueVisibility);
+
+// ไฮไลต์เส้นทางเมื่อโฮเวอร์กล่องค่าของหลอด
+if(infoHit1){
+  infoHit1.addEventListener('pointerenter',()=>branch1HL.classList.add('show'));
+  infoHit1.addEventListener('pointerleave',()=>branch1HL.classList.remove('show'));
+}
+if(infoHit2){
+  infoHit2.addEventListener('pointerenter',()=>branch2HL.classList.add('show'));
+  infoHit2.addEventListener('pointerleave',()=>branch2HL.classList.remove('show'));
+}
+
+function setInitial(){
+  setSwitchVisual();
+  initParticles();
+  update();
+  applyValueVisibility(); // เริ่มต้นยังไม่ติ๊ก → ซ่อน V,I,P,Vcell
+  refreshVisibility();
+  applyModeLabel();
+  animate();
+}
+setInitial();
+</script>
+</body>
+</html>

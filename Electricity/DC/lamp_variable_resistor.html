@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>แอนนิเมชันต่อวงจรไฟฟ้าอย่างง่าย — ทิศทางคงที่ & วิธีคำนวณ</title>
+<style>
+  :root{--outline:#d4d8e1;--accent:#2563eb}
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    background:#f7fafc;
+    color:#0f172a;
+  }
+  .title{
+    text-align:center;
+    margin:12px 0 0;
+    font-size:22px;
+    font-weight:700;
+  }
+  .wrap{
+    display:flex;
+    gap:16px;
+    padding:16px;
+    align-items:flex-start;
+  }
+  .panel{
+    width:380px;
+    background:#fff;
+    border:1px solid var(--outline);
+    border-radius:14px;
+    padding:14px;
+    box-shadow:0 2px 8px rgba(15,23,42,.05);
+    order:2; /* จอคอม: แผงควบคุมอยู่ขวา */
+  }
+  .board{
+    flex:1;
+    position:relative;
+    min-height:700px;
+    background:#fff;
+    border:1px solid var(--outline);
+    border-radius:16px;
+    box-shadow:0 2px 10px rgba(15,23,42,.06);
+    order:1; /* จอคอม: จอทดลองอยู่ซ้าย */
+  }
+  svg{width:100%;height:700px;display:block}
+  .field{margin-bottom:10px}
+  .field label{display:flex;justify-content:space-between;gap:8px;font-weight:600}
+  input[type=range]{width:100%}
+  .switchArea{cursor:pointer}
+  .charge{fill:#2563eb;opacity:0.95}
+  .electron{fill:orange;opacity:0.95}
+  button{
+    margin-top:8px;
+    display:block;
+    width:100%;
+    padding:11px 12px;
+    border-radius:12px;
+    border:1px solid #60a5fa;
+    background:#dbeafe;   /* ปุ่มสีฟ้า */
+    cursor:pointer;
+    font-weight:600;
+    color:#1e3a8a;
+  }
+  button:hover{background:#bfdbfe}
+  #modeLabel{font-size:18px;font-weight:bold}
+  .annot {font-size:14px;fill:#111}
+  .hint{font-size:12px;color:#6b7280;margin-top:8px;text-align:center}
+  .hint a{color:#2563eb;text-decoration:underline}
+
+  .steps{font-size:14px;line-height:1.6}
+  .steps .eq{margin:10px 0 18px;}
+
+  /* Modal */
+  .modal{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.25);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:16px;
+    z-index:50;
+  }
+  .modal.open{display:flex}
+  .card{
+    max-width:880px;
+    width:100%;
+    background:#fff;
+    border:1px solid var(--outline);
+    border-radius:16px;
+    padding:16px;
+    max-height:90vh;
+    overflow:auto;
+    box-shadow:0 10px 30px rgba(0,0,0,.15);
+  }
+  .card h2{margin:0 0 10px 0}
+  .toolbar{
+    display:flex;
+    gap:8px;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:8px;
+  }
+  .close{
+    padding:8px 12px;
+    border-radius:8px;
+    border:1px solid var(--outline);
+    background:#f1f5f9;
+    cursor:pointer;
+  }
+
+  /* มือถือ */
+  @media (max-width:768px){
+    .wrap{
+      flex-direction:column;
+      align-items:stretch;
+    }
+    .board,.panel{
+      width:100%;
+    }
+    .board{
+      order:1;          /* จอทดลองอยู่บนสุด */
+      min-height:auto;
+      overflow:hidden;  /* กันไม่ให้ส่วนที่ scale ล้นมาทับแผงสไลเดอร์ */
+    }
+    .panel{
+      order:2;
+    }
+    svg{
+      height:40vh;      /* ความสูงจอทดลองเท่าเดิม */
+    }
+    /* ขยายรูปการทดลอง + ป้าย + ตัวอักษร ในจอทดลองให้โตขึ้น ~30% */
+    .board svg{
+      transform:scale(1.3);
+      transform-origin:top center;
+    }
+  }
+</style>
+</head>
+<body>
+<h1 class="title">ต่อหลอดไฟอนุกรมกับ Rปรับค่าได้</h1>
+
+<div class="wrap">
+  <div class="panel">
+    <div class="field">
+      <label>ความต้านทาน Rp <span id="Rpval">5.0 Ω</span></label>
+      <input id="Rp" type="range" min="0" max="50" step="0.1" value="5">
+    </div>
+    <div class="field">
+      <label>ความต้านทานของหลอดไฟ R <span id="Rval">10.0 Ω</span></label>
+      <input id="R" type="range" min="0" max="100" step="0.1" value="10">
+    </div>
+    <div class="field">
+      <label>แรงเคลื่อนไฟฟ้า E <span id="Eval">6.0 V</span></label>
+      <input id="E" type="range" min="0" max="24" step="0.1" value="6">
+    </div>
+    <div class="field">
+      <label>ความต้านทานภายใน r <span id="rval">1.0 Ω</span></label>
+      <input id="r" type="range" min="0" max="20" step="0.1" value="1">
+    </div>
+
+    <div class="field">
+      <label style="font-weight:500;gap:6px;justify-content:flex-start">
+        <input type="checkbox" id="showValues" />
+        แสดงค่าทางไฟฟ้า (V, I, P, Vcell)
+      </label>
+    </div>
+
+    <button id="switchBtn">🔌 สวิตซ์: เปิด</button>
+    <button id="toggleCurrentBtn">แสดงทิศทาง</button>
+    <button id="calcBtn">📘 แสดงวิธีคำนวณ</button>
+
+    <div class="hint">
+      ศึกษาเพิ่มเติมที่
+      <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">เพจคลายปมฟิสิกส์</a>
+    </div>
+  </div>
+
+  <div class="board">
+    <svg id="circuit" viewBox="0 0 900 700" aria-label="circuit animation">
+      <defs>
+        <radialGradient id="bulbGlowGrad" cx="50%" cy="50%" r="50%">
+          <stop offset="0%"  stop-color="#ffff99" stop-opacity="1"/>
+          <stop offset="60%" stop-color="#ffcc33" stop-opacity="0.6"/>
+          <stop offset="100%" stop-color="#ffcc00" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+
+      <!-- เส้นลวดหลัก -->
+      <path id="pathWire"
+            d="M150,100 H330 M390,100 H530 M590,100 H750 V420 H150 V100"
+            stroke="#000" stroke-width="8" fill="none"
+            stroke-linejoin="round" stroke-linecap="round"/>
+
+      <!-- เส้นไกด์ทิศทางคงที่: CW และ CCW -->
+      <path id="pathGuideCW"
+            d="M390,100 H530 H590 H750 V420 H150 V100 H330 H390 Z"
+            fill="none" stroke="none"/>
+      <path id="pathGuideCCW"
+            d="M390,100 H330 H150 V420 H750 V100 H590 H530 H390 Z"
+            fill="none" stroke="none"/>
+
+      <!-- หลอดไฟ -->
+      <g id="lamp" transform="translate(360,100)">
+        <circle id="bulbGlowSvg" cx="0" cy="0" r="85"
+                fill="url(#bulbGlowGrad)" opacity="0"/>
+        <circle id="lampBody" cx="0" cy="0" r="35"
+                fill="#fff" stroke="#475569" stroke-width="3"/>
+        <!-- ขดลวดสื่อถึงไส้หลอด -->
+        <line x1="-10" y1="0" x2="-4" y2="-6"
+              stroke="#ff6600" stroke-width="2"/>
+        <line x1="-4"  y1="-6" x2="4"  y2="6"
+              stroke="#ff6600" stroke-width="2"/>
+        <line x1="4"   y1="6"  x2="10" y2="0"
+              stroke="#ff6600" stroke-width="2"/>
+
+        <text x="-70" y="-46">หลอดไฟ</text>
+        <!-- ขยับลง 20px -->
+        <text id="annotR" x="-40" y="64" class="annot">R = 10.0 Ω</text>
+        <text id="annotVR" x="-40" y="80" class="annot">
+          V<tspan baseline-shift="sub" font-size="10">R</tspan> = 0.0 V
+        </text>
+        <text id="annotPower" x="-40" y="102" class="annot">P = 0.0 W</text>
+      </g>
+
+      <!-- ตัวต้านทาน Rp (สีน้ำตาล) -->
+      <g id="resistorP" transform="translate(560,100)">
+        <rect x="-30" y="-20" width="60" height="40" rx="6"
+              fill="#a0522d" stroke="#000" stroke-width="3"/>
+        <text x="-25" y="5" fill="#fff">Rp</text>
+        <!-- บรรทัดบน: แสดงค่า Rp ตลอด -->
+        <text id="annotRp" x="-25" y="44" class="annot">Rp = 5.0 Ω</text>
+        <!-- บรรทัดล่าง: V_Rp -->
+        <text id="annotVRp" x="-25" y="60" class="annot">
+          V<tspan baseline-shift="sub" font-size="10">Rp</tspan> = 0.0 V
+        </text>
+      </g>
+
+      <!-- สวิตซ์ทางซ้าย -->
+      <g id="switch" class="switchArea">
+        <line id="switchTop"    x1="150" y1="100" x2="150" y2="200"
+              stroke="#000" stroke-width="8"/>
+        <line id="switchBottom" x1="150" y1="300" x2="150" y2="420"
+              stroke="#000" stroke-width="8"/>
+        <!-- ใบมีดสีส้ม -->
+        <line id="switchBlade"  x1="150" y1="200" x2="150" y2="300"
+              stroke="#ff8c1a" stroke-width="10" stroke-linecap="round"/>
+        <!-- ช่องว่างสีขาวเมื่อเปิดสวิตซ์ พร้อมปมดำ -->
+        <line   id="switchGapLine"
+                x1="150" y1="235" x2="150" y2="265"
+                stroke="#fff" stroke-width="14"
+                stroke-linecap="round" opacity="0"/>
+        <circle id="gapDotTop" cx="150" cy="235" r="6" fill="#000" opacity="0"/>
+        <circle id="gapDotBottom" cx="150" cy="265" r="6" fill="#000" opacity="0"/>
+
+        <text x="160" y="178">สวิตซ์</text>
+        <text id="annotI" x="180" y="260" class="annot">I = 0.0 A</text>
+
+        <!-- พื้นที่กดสวิตซ์ให้ใหญ่ขึ้น -->
+        <rect x="120" y="150" width="80" height="290" fill="transparent"></rect>
+      </g>
+
+      <!-- แบตเตอรี่ (กล่องเส้นเต็มสีฟ้า) -->
+      <g id="battery" transform="translate(450,420)">
+        <rect x="-90" y="-42" width="180" height="84" rx="12"
+              fill="#e0f2fe" stroke="#2563eb" stroke-width="2"/>
+        <!-- ขั้วบวก/ลบ -->
+        <line x1="-18" y1="-28" x2="-18" y2="28"
+              stroke="#111" stroke-width="6"/>
+        <line x1="18"  y1="-16" x2="18"  y2="16"
+              stroke="#111" stroke-width="6"/>
+        <!-- ขยับ + - ลงมาอีก 20px -->
+        <text x="-50" y="-14" font-size="30" fill="red" font-weight="bold">+</text>
+        <text x="14"  y="-14" font-size="30" fill="red" font-weight="bold">−</text>
+        <text id="annotVcell" x="-30" y="60" class="annot">Vcell = 0.0 V</text>
+        <text id="annotE" x="-70" y="-60" class="annot">E = 0.0 V</text>
+        <text id="annotr" x="30"  y="-60" class="annot">r = 0.0 Ω</text>
+      </g>
+
+      <!-- ป้ายโหมด -->
+      <text id="modeLabel" x="560" y="30"
+            class="annot" style="font-weight:bold; fill:black">
+        ยังไม่แสดงการไหล
+      </text>
+
+      <!-- กลุ่มเม็ดเคลื่อนที่ -->
+      <g id="charges"></g>
+      <g id="electrons"></g>
+    </svg>
+  </div>
+</div>
+
+<!-- Modal วิธีคำนวณ -->
+<div id="calcModal" class="modal" aria-hidden="true">
+  <div class="card">
+    <div class="toolbar">
+      <h2>วิธีคำนวณ (อัปเดตตามค่าปัจจุบัน)</h2>
+      <button id="closeCalc" class="close">ปิด</button>
+    </div>
+    <div id="calcSteps" class="steps"></div>
+    <div class="hint">
+      ศึกษาเพิ่มเติมที่
+      <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">
+        เพจคลายปมฟิสิกส์
+      </a>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== อ้างอิง DOM =====
+const Rp=document.getElementById('Rp'),
+      R=document.getElementById('R'),
+      E=document.getElementById('E'),
+      r=document.getElementById('r');
+
+const Rpval=document.getElementById('Rpval'),
+      Rval=document.getElementById('Rval'),
+      Eval=document.getElementById('Eval'),
+      rval=document.getElementById('rval');
+
+const annotI=document.getElementById('annotI'),
+      annotVR=document.getElementById('annotVR'),
+      annotVRp=document.getElementById('annotVRp'),
+      annotVcell=document.getElementById('annotVcell'),
+      annotE=document.getElementById('annotE'),
+      annotr=document.getElementById('annotr'),
+      annotPower=document.getElementById('annotPower'),
+      annotR=document.getElementById('annotR'),
+      annotRp=document.getElementById('annotRp');
+
+const charges=document.getElementById('charges');
+const electrons=document.getElementById('electrons');
+const switchBtn=document.getElementById('switchBtn');
+const switchBlade=document.getElementById('switchBlade');
+const switchGapLine=document.getElementById('switchGapLine');
+const gapDotTop=document.getElementById('gapDotTop');
+const gapDotBottom=document.getElementById('gapDotBottom');
+
+const bulbGlowSvg=document.getElementById('bulbGlowSvg');
+const lampBody=document.getElementById('lampBody');
+const toggleCurrentBtn=document.getElementById('toggleCurrentBtn');
+const modeLabel=document.getElementById('modeLabel');
+const calcBtn=document.getElementById('calcBtn');
+const calcModal=document.getElementById('calcModal');
+const closeCalc=document.getElementById('closeCalc');
+const calcSteps=document.getElementById('calcSteps');
+
+const pathCW=document.getElementById('pathGuideCW');
+const pathCCW=document.getElementById('pathGuideCCW');
+const Lcw=pathCW.getTotalLength();
+const Lccw=pathCCW.getTotalLength();
+
+const showValuesCheckbox=document.getElementById('showValues');
+const valueRows=document.querySelectorAll('.valueRow'); // ตอนนี้จะว่าง แต่ไม่เป็นไร
+
+// ===== สถานะ =====
+let switchClosed=true;  // เริ่มวงจรปิด
+let mode='none';        // ยังไม่แสดงการไหล
+let currentI=0;         // เก็บ I ไว้ปรับความสว่างเท่านั้น
+
+// ===== เครื่องมือ =====
+const fmt = x => (+x).toFixed(1);
+
+// ===== คำนวณ
+function compute(){
+  let I=0, VR=0, VRp=0, Vcell=0, P=0;
+  if(switchClosed){
+    const Rt = (+R.value) + (+Rp.value) + (+r.value);
+    if(Rt>0){
+      I = (+E.value) / Rt;
+      VR = I * (+R.value);
+      VRp= I * (+Rp.value);
+      Vcell = (+E.value) - I*(+r.value);
+      P = I*I*(+R.value);
+    }
+  }
+  return {I,VR,VRp,Vcell,P};
+}
+
+// ===== อัปเดตค่าแสดงผล (เฉพาะป้ายในรูป + modal)
+function update(){
+  Rpval.textContent = fmt(Rp.value)+' Ω';
+  Rval.textContent  = fmt(R.value)+' Ω';
+  Eval.textContent  = fmt(E.value)+' V';
+  rval.textContent  = fmt(r.value)+' Ω';
+
+  const {I,VR,VRp,Vcell,P} = compute();
+
+  annotI.textContent       = `I = ${fmt(I)} A`;
+  annotVR.innerHTML        = `V<tspan baseline-shift='sub' font-size='10'>R</tspan> = ${fmt(VR)} V`;
+  annotVRp.innerHTML       = `V<tspan baseline-shift='sub' font-size='10'>Rp</tspan> = ${fmt(VRp)} V`;
+  annotVcell.textContent   = `Vcell = ${fmt(Vcell)} V`;
+  annotE.textContent       = `E = ${fmt(E.value)} V`;
+  annotr.textContent       = `r = ${fmt(r.value)} Ω`;
+  annotPower.textContent   = `P = ${fmt(P)} W`;
+
+  // บรรทัด R และ Rp แสดงตลอด
+  annotR.textContent       = `R = ${fmt(R.value)} Ω`;
+  annotRp.textContent      = `Rp = ${fmt(Rp.value)} Ω`;
+
+  // ความสว่างของหลอดสัมพันธ์กับ |I| (แต่ความเร็วของเม็ดคงที่)
+  currentI = I;
+  const level = Math.min(1, Math.abs(I)*2.0);
+  bulbGlowSvg.setAttribute('opacity', level);
+  lampBody.setAttribute('fill', level>0 ? `rgba(255,255,150,${0.3+0.5*level})` : '#fff');
+}
+
+// ===== ซ่อน/แสดงค่าทางไฟฟ้าในรูป =====
+function refreshValueVisibility(){
+  const show = showValuesCheckbox.checked;
+  valueRows.forEach(d=> d.style.display = show ? 'block':'none'); // ไม่มี element ก็ไม่ error
+  const vis = show ? 'visible' : 'hidden';
+  // ไม่แตะต้อง R และ Rp ให้แสดงตลอด
+  [annotI,annotVR,annotVRp,annotVcell,annotPower].forEach(el=>{
+    el.style.visibility = vis;
+  });
+}
+
+// ===== สวิตซ์ =====
+function toggleSwitch(){
+  switchClosed = !switchClosed;
+  if(switchClosed){
+    switchBtn.textContent='🔌 สวิตซ์: เปิด';
+    switchBlade.setAttribute('x2','150');
+    switchBlade.setAttribute('y2','300');
+    switchGapLine.setAttribute('opacity','0');
+    gapDotTop.setAttribute('opacity','0');
+    gapDotBottom.setAttribute('opacity','0');
+  }else{
+    switchBtn.textContent='🔌 สวิตซ์: ปิด';
+    switchBlade.setAttribute('x2','190');
+    switchBlade.setAttribute('y2','260');
+    switchGapLine.setAttribute('opacity','1');
+    gapDotTop.setAttribute('opacity','1');
+    gapDotBottom.setAttribute('opacity','1');
+  }
+  update();
+  refreshVisibility();
+}
+
+// ===== โหมดแสดงทิศทาง =====
+function setMode(newMode){
+  mode=newMode;
+  if(mode==='current'){
+    modeLabel.textContent='แสดงการไหลของกระแสไฟฟ้า (I)';
+    modeLabel.setAttribute('fill','blue');
+    toggleCurrentBtn.textContent='แสดงทิศทาง: กระแสไฟฟ้า (I)';
+  }else if(mode==='electron'){
+    modeLabel.textContent='แสดงการไหลของอิเล็กตรอน';
+    modeLabel.setAttribute('fill','orange');
+    toggleCurrentBtn.textContent='แสดงทิศทาง: อิเล็กตรอน';
+  }else{
+    modeLabel.textContent='ยังไม่แสดงการไหล';
+    modeLabel.setAttribute('fill','black');
+    toggleCurrentBtn.textContent='แสดงทิศทาง';
+  }
+  refreshVisibility();
+}
+function toggleMode(){
+  if(mode==='none') setMode('current');
+  else if(mode==='current') setMode('electron');
+  else setMode('none');
+}
+
+// ===== อนุภาควิ่งตามเส้นไกด์คงทิศ ด้วยความเร็วคงที่ =====
+const N=28, SPEED=0.02; let dots=[], edots=[];
+function createCharges(){
+  for(let i=0;i<N;i++){
+    const c=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c.setAttribute('r',4);
+    c.setAttribute('class','charge');
+    c.style.display='none';
+    charges.appendChild(c);
+    dots.push({el:c,t:i/N});
+
+    const e=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    e.setAttribute('r',4);
+    e.setAttribute('class','electron');
+    e.style.display='none';
+    electrons.appendChild(e);
+    edots.push({el:e,t:i/N});
+  }
+}
+function refreshVisibility(){
+  const showI = (switchClosed && mode==='current');
+  const showE = (switchClosed && mode==='electron');
+  dots.forEach(d=> d.el.style.display = showI ? 'block':'none');
+  edots.forEach(e=> e.el.style.display = showE ? 'block':'none');
+}
+function animate(){
+  // กระแสไฟฟ้า: ตามเข็มนาฬิกาเสมอ
+  dots.forEach(d=>{
+    d.t = (d.t + SPEED) % 1;
+    const p = pathCW.getPointAtLength(d.t * Lcw);
+    d.el.setAttribute('cx',p.x);
+    d.el.setAttribute('cy',p.y);
+  });
+  // อิเล็กตรอน: ทวนเข็มนาฬิกาเสมอ
+  edots.forEach(e=>{
+    e.t = (e.t + SPEED) % 1;
+    const p = pathCCW.getPointAtLength(e.t * Lccw);
+    e.el.setAttribute('cx',p.x);
+    e.el.setAttribute('cy',p.y);
+  });
+  requestAnimationFrame(animate);
+}
+
+// ===== Modal วิธีคำนวณ =====
+function renderSteps(){
+  const {I,VR,VRp,Vcell,P} = compute();
+  calcSteps.innerHTML = `
+    <div class="eq">
+      1) กระแสไฟฟ้า I:<br>
+      สูตร: I = E / (R + Rp + r)<br>
+      แทนค่า: I = ${fmt(E.value)} / (${fmt(R.value)} + ${fmt(Rp.value)} + ${fmt(r.value)}) = ${fmt(I)} A
+    </div>
+
+    <div class="eq">
+      2) ความต่างศักย์คร่อมหลอด V<sub>R</sub>:<br>
+      สูตร: V<sub>R</sub> = I · R<br>
+      แทนค่า: V<sub>R</sub> = ${fmt(I)} × ${fmt(R.value)} = ${fmt(VR)} V
+    </div>
+
+    <div class="eq">
+      3) ความต่างศักย์คร่อมตัวต้านทาน Rp:<br>
+      สูตร: V<sub>Rp</sub> = I · Rp<br>
+      แทนค่า: V<sub>Rp</sub> = ${fmt(I)} × ${fmt(Rp.value)} = ${fmt(VRp)} V
+    </div>
+
+    <div class="eq">
+      4) ความต่างศักย์ระหว่างขั้วเซลล์:<br>
+      สูตร: V<sub>cell</sub> = E − I · r<br>
+      แทนค่า: V<sub>cell</sub> = ${fmt(E.value)} − ${fmt(I)} × ${fmt(r.value)} = ${fmt(Vcell)} V
+    </div>
+
+    <div class="eq">
+      5) กำลังไฟฟ้าที่สูญเสียในหลอด:<br>
+      สูตร: P = I<sup>2</sup> · R<br>
+      แทนค่า: P = (${fmt(I)})<sup>2</sup> × ${fmt(R.value)} = ${fmt(P)} W
+    </div>
+  `;
+}
+function openCalc(){
+  renderSteps();
+  calcModal.classList.add('open');
+  calcModal.setAttribute('aria-hidden','false');
+}
+function closeCalcModal(){
+  calcModal.classList.remove('open');
+  calcModal.setAttribute('aria-hidden','true');
+}
+
+// ===== Hook events =====
+[Rp,R,E,r].forEach(inp=>inp.addEventListener('input',()=>{
+  update();
+  if(calcModal.classList.contains('open')) renderSteps();
+}));
+switchBtn.addEventListener('click',toggleSwitch);
+document.getElementById('switch').addEventListener('click',toggleSwitch);
+toggleCurrentBtn.addEventListener('click',toggleMode);
+calcBtn.addEventListener('click',openCalc);
+closeCalc.addEventListener('click',closeCalcModal);
+calcModal.addEventListener('click',e=>{
+  if(e.target===calcModal) closeCalcModal();
+});
+showValuesCheckbox.addEventListener('change',refreshValueVisibility);
+
+// ===== เริ่มทำงาน =====
+createCharges();
+update();
+setMode('none');
+refreshVisibility();
+refreshValueVisibility(); // เริ่มต้นยังไม่ติ๊ก -> ซ่อนค่าในรูป
+requestAnimationFrame(animate);
+</script>
+</body>
+</html>

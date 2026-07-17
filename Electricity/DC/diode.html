@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ทดลองไดโอด (กระแสไหลทางเดียว)</title>
+<style>
+  :root{
+    --bg-grad: linear-gradient(135deg,#ffffff 0%,#f5f7fb 70%);
+    --panel:#ffffff; --outline:#d4d8e1;
+    --text:#0f172a; --muted:#475569; --accent:#2563eb;
+    --good:#16a34a; --warn:#f59e0b;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    background:var(--bg-grad);
+    color:var(--text);
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Noto Sans Thai",sans-serif
+  }
+  .wrap{max-width:1100px;margin:24px auto;padding:16px}
+  .title-main{
+    font-size:22px;
+    font-weight:700;
+    color:var(--accent);
+    text-align:center;
+    margin-bottom:12px;
+  }
+  .grid{
+    display:grid;
+    grid-template-columns:1fr 260px; /* บอร์ดซ้าย แผงควบคุมขวา */
+    gap:16px;
+  }
+  .panel{
+    background:#fff;
+    border:1px solid var(--outline);
+    border-radius:16px;
+    padding:14px;
+  }
+  .btn{
+    width:100%;
+    background:#f8fafc;
+    border:1px solid var(--outline);
+    border-radius:12px;
+    padding:10px 12px;
+    margin:6px 0;
+    cursor:pointer;
+    text-align:left;
+    font-size:15px;
+    line-height:1.4;
+  }
+  .btn b{color:var(--accent)}
+  .btn.active{outline:2px solid var(--accent)}
+
+  .board{
+    position:relative;
+    min-height:480px;
+    background:#fff;
+    border:1px solid var(--outline);
+    border-radius:16px;
+  }
+  svg{width:100%;height:480px}
+
+  .bulb-glow{
+    position:absolute;
+    width:100px;
+    height:100px;
+    border-radius:50%;
+    pointer-events:none;
+    mix-blend-mode:multiply;
+    opacity:0;
+    transition:opacity .25s;
+    background:radial-gradient(circle at 50% 50%,
+      rgba(255,252,190,1) 0%,
+      rgba(255,210,60,0.95) 35%,
+      rgba(255,170,20,0.6) 60%,
+      rgba(255,170,20,0) 80%);
+  }
+  .glow-weak{opacity:.45}
+  .glow-mid{opacity:.75}
+  .glow-strong{opacity:1}
+
+  /* panel อธิบายเนื้อหา */
+  .explainWrap{
+    max-width:1100px;
+    margin:16px auto 0;
+  }
+  .explainPanel{
+    display:none;
+    position:relative;
+    background:#ffffff;
+    border:2px solid var(--accent);
+    border-radius:16px;
+    box-shadow:0 12px 30px rgba(37,99,235,0.15);
+    padding:16px 20px 20px;
+    color:var(--text);
+    line-height:1.5;
+    font-size:15px;
+  }
+  .explainPanel.show{display:block;}
+  .explainCloseBtn{
+    position:absolute;
+    top:8px;right:10px;
+    background:#eef2ff;
+    border:1px solid var(--accent);
+    border-radius:8px;
+    padding:4px 8px;
+    font-size:13px;
+    color:var(--accent);
+    cursor:pointer;
+  }
+  .explainPanel h2{
+    margin:0 32px 8px 0;
+    font-size:16px;
+    color:var(--accent);
+  }
+  .explainPanel .block{
+    background:#f8fafc;
+    border:1px solid var(--outline);
+    border-radius:12px;
+    padding:10px 12px;
+    margin:8px 0;
+  }
+  .explainPanel .tt{
+    font-weight:600;
+    color:var(--accent);
+    margin-bottom:4px;
+  }
+
+  /* footer */
+  .footer-link{
+    text-align:center;
+    margin:20px 0;
+    font-size:14px;
+    color:var(--muted);
+  }
+  .footer-link a{color:var(--accent);text-decoration:underline}
+
+  /* มือถือ */
+  @media(max-width:700px){
+    .grid{grid-template-columns:1fr}
+    .board{min-height:280px}
+    svg{height:280px}
+    svg text{font-size:19px}
+    #bulbGlow{top:20px !important}
+  }
+</style>
+</head>
+
+<body>
+<div class="wrap">
+
+<h1 class="title-main">การทำงานของไดโอด</h1>
+
+<div class="grid">
+
+  <!-- ================= BOARD ================= -->
+  <div class="board">
+
+    <!-- วงสว่าง: ตำแหน่งล่าสุด (ซ้าย 50px จากกลาง) -->
+    <div class="bulb-glow" id="bulbGlow"
+         style="left:calc(50% - 50px); top:70px;"></div>
+
+    <svg viewBox="0 0 900 480">
+
+      <!-- สายไฟหลัก -->
+      <polyline points="150,100 750,100" stroke="black" stroke-width="8" fill="none"/>
+      <polyline points="750,100 750,360" stroke="black" stroke-width="8" fill="none"/>
+      <polyline points="750,360 540,360" stroke="black" stroke-width="8" fill="none"/>
+      <polyline points="360,360 150,360" stroke="black" stroke-width="8" fill="none"/>
+
+      <!-- หลอดไฟ -->
+      <g id="lamp" transform="translate(450,100)">
+        <line x1="-50" y1="0" x2="-38" y2="0" stroke="#4b5563" stroke-width="6"/>
+        <line x1="38"  y1="0" x2="50"  y2="0" stroke="#4b5563" stroke-width="6"/>
+        <circle cx="0" cy="0" r="35" fill="#fff" stroke="#475569" stroke-width="3"/>
+        <text x="-70" y="-46" font-size="16" fill="#334155">หลอดไฟ R=10Ω</text>
+      </g>
+
+      <!-- สวิตช์ -->
+      <g id="switch" style="cursor:pointer">
+        <!-- hit area -->
+        <rect x="120" y="120" width="80" height="260" fill="transparent"></rect>
+
+        <line x1="150" y1="100" x2="150" y2="180" stroke="black" stroke-width="8"/>
+        <line x1="150" y1="260" x2="150" y2="360" stroke="black" stroke-width="8"/>
+        <line id="switchBlade" x1="150" y1="180" x2="172" y2="220"
+              stroke="#f59e0b" stroke-width="8"/>
+        <text x="160" y="168" fill="#334155" font-size="14">สวิตช์</text>
+      </g>
+
+      <!-- ไดโอด -->
+      <g id="diodeGrp" transform="translate(250,100)">
+        <g id="diodeSymbol">
+          <polygon points="-30,-25 10,0 -30,25"
+                   fill="#2563eb" stroke="#1e3a8a" stroke-width="3"/>
+          <line x1="10" y1="-25" x2="10" y2="25"
+                stroke="#1e3a8a" stroke-width="6"/>
+        </g>
+        <text x="-32" y="-36" fill="#1e3a8a" font-size="16">ไดโอด</text>
+      </g>
+
+      <!-- แบตเตอรี่ -->
+      <g id="battery" transform="translate(450,360)">
+        <rect x="-90" y="-42" width="180" height="84" rx="12"
+              fill="#e0f2fe" stroke="#2563eb" stroke-width="2"/>
+        <line x1="-18" y1="-28" x2="-18" y2="28" stroke="#111827" stroke-width="6"/>
+        <line x1="18" y1="-16" x2="18" y2="16" stroke="#111827" stroke-width="6"/>
+        <text x="-50" y="-14" fill="#16a34a" font-size="30" font-weight="800">+</text>
+        <text x="14" y="-14" fill="#ef4444" font-size="30" font-weight="800">−</text>
+        <text x="-38" y="62" font-size="14">แบตเตอรี่</text>
+        <text x="-84" y="82" font-size="13">E = 6.0 V</text>
+        <text x="20"  y="82" font-size="13">r = 1.0 Ω</text>
+      </g>
+
+      <!-- ป้ายทิศทางกระแสไฟฟ้า (ตำแหน่งล่าสุด) -->
+      <text id="labelI" x="118" y="88" fill="#2563eb" font-size="16">
+        กระแสไฟฟ้า
+      </text>
+
+      <!-- จุดประจุ -->
+      <g id="charges"></g>
+
+    </svg>
+  </div>
+
+  <!-- ============== CONTROL PANEL ============== -->
+  <div class="panel">
+    <button class="btn" id="switchBtn">
+      🔌 สวิตช์: <b>ปิดวงจร</b><br>
+      <span style="font-size:13px;color:#475569">กดเพื่อเปิด/ปิดวงจร</span>
+    </button>
+
+    <button class="btn" id="dioBtn">
+      ไดโอด: <b>→</b> ยอมให้ไหล<br>
+      <span style="font-size:13px;color:#475569">กดเพื่อสลับทิศไดโอด</span>
+    </button>
+
+    <button class="btn" id="explainBtn">
+      📘 อธิบายเนื้อหา<br>
+      <span style="font-size:13px;color:#475569">ไดโอดคืออะไร ใช้ทำอะไรในชีวิตจริง?</span>
+    </button>
+  </div>
+
+</div>
+</div>
+
+<!-- ===== Panel อธิบายเนื้อหา (เวอร์ชันเดิม) ===== -->
+<div class="explainWrap">
+  <div class="explainPanel" id="explainPanel">
+    <button class="explainCloseBtn" id="explainCloseBtn">ปิด ✕</button>
+    <h2>ไดโอดคืออะไร?</h2>
+
+    <div class="block">
+      <div class="tt">ไดโอด = วาล์วไฟฟ้าทางเดียว</div>
+      ไดโอดเป็นอุปกรณ์อิเล็กทรอนิกส์ที่ยอมให้กระแสไหลผ่านได้ "ทางเดียว"
+      ถ้าเราวางถูกขั้ว (forward) กระแสไหล → หลอดไฟติด
+      ถ้ากลับขั้ว (reverse) กระแสถูกบล็อก → หลอดไม่ติด
+    </div>
+
+    <div class="block">
+      <div class="tt">ทำงานยังไง (ม.ปลายข้ามได้)</div>
+      ภายในไดโอดคือรอยต่อ P-N
+      ด้านหนึ่งมีส่วนที่อิเล็กตรอนเยอะ = (N-type)
+      อีกด้านมีรูว่างของอิเล็กตรอนหรือโฮล (P-type)
+      ถ้าต่อให้ P อยู่กับขั้วบวกของแบตเตอรี่ และ N อยู่กับขั้วลบ
+      รอยต่อนี้จะ "เปิดทาง" ให้ประจุวิ่งได้
+      แต่ถ้าสลับ จะเกิดการกั้น (barrier) ไม่ให้ไหล
+    </div>
+
+    <div class="block">
+      <div class="tt">เจอไดโอดที่ไหนในชีวิตจริง?</div>
+      • วงจรชาร์จแบต / เพาเวอร์ซัพพลาย:
+      ใช้ไดโอดแปลงไฟสลับ (AC) ให้กลายเป็นไฟตรง (DC)  <br>
+      • ป้องกันไฟย้อน:
+      ถ้าเสียบถ่านกลับขั้ว อุปกรณ์จะไม่พัง เพราะไดโอดบล็อกกระแสย้อน  <br>
+      • LED (หลอดไฟ LED):
+      LED ก็คือไดโอดชนิดหนึ่งที่เปล่งแสงเมื่อกระแสไหลทิศที่ถูกต้อง
+    </div>
+
+    <div class="block">
+      <div class="tt">สรุปสำหรับการทดลองนี้</div>
+      - ถ้าไดโอด "→" (forward) และสวิตช์ปิดวงจร
+      กระแสไหลครบวงจร หลอดไฟติด <br>
+      - ถ้าไดโอด "←" (reverse)
+      ถึงแม้จะปิดสวิตช์ แต่กระแสก็ถูกบล็อกด้วยไดโอด หลอดดับ 
+    </div>
+  </div>
+</div>
+
+<div class="footer-link">
+  ศึกษาเพิ่มเติมได้ที่เพจ
+  <a href="https://www.facebook.com/resolvephysics" target="_blank">คลายปมฟิสิกส์</a>
+</div>
+
+<script>
+// ========== ฟิสิกส์พื้นฐาน ==========
+const R_fixed=10, E_fixed=6, r_fixed=1;
+
+const els={
+  switchBtn:document.getElementById("switchBtn"),
+  dioBtn:document.getElementById("dioBtn"),
+  switchBlade:document.getElementById("switchBlade"),
+  switchGrp:document.getElementById("switch"),
+  diodeSymbol:document.getElementById("diodeSymbol"),
+  bulbGlow:document.getElementById("bulbGlow"),
+  charges:document.getElementById("charges"),
+  explainBtn:document.getElementById("explainBtn"),
+  explainPanel:document.getElementById("explainPanel"),
+  explainCloseBtn:document.getElementById("explainCloseBtn")
+};
+
+let isClosed=false, diodeForward=true;
+
+function calcCurrent(){
+  return (isClosed && diodeForward)? E_fixed/(R_fixed+r_fixed) : 0;
+}
+
+function updateLamp(I){
+  const P=I*I*R_fixed;
+  const lv=Math.min(1,P/4);
+  const g=els.bulbGlow;
+  g.className="bulb-glow";
+  if(lv>0.66) g.classList.add("glow-strong");
+  else if(lv>0.33) g.classList.add("glow-mid");
+  else if(lv>0.05) g.classList.add("glow-weak");
+}
+
+function renderSwitch(){
+  if(isClosed){
+    els.switchBtn.innerHTML='🔌 สวิตช์: <b>ต่อวงจร</b><br><span style="font-size:13px;color:#475569">กดเพื่อเปิดวงจร</span>';
+    els.switchBlade.setAttribute("x2","150");
+    els.switchBlade.setAttribute("y2","260");
+  }else{
+    els.switchBtn.innerHTML='🔌 สวิตช์: <b>ปิดวงจร</b><br><span style="font-size:13px;color:#475569">กดเพื่อปิดวงจร</span>';
+    els.switchBlade.setAttribute("x2","181");
+    els.switchBlade.setAttribute("y2","236");
+  }
+}
+
+function renderDiode(){
+  if(diodeForward){
+    els.dioBtn.innerHTML='ไดโอด: <b>→</b> ยอมให้ไหล<br><span style="font-size:13px;color:#475569">กดเพื่อสลับทิศไดโอด</span>';
+    els.diodeSymbol.setAttribute("transform","rotate(0)");
+  }else{
+    els.dioBtn.innerHTML='ไดโอด: <b>←</b> บล็อกกระแส<br><span style="font-size:13px;color:#475569">กดเพื่อสลับทิศไดโอด</span>';
+    els.diodeSymbol.setAttribute("transform","rotate(180)");
+  }
+}
+
+// จุดประจุ
+const path=[
+  {x:150,y:360},{x:150,y:100},
+  {x:750,y:100},{x:750,y:360},
+  {x:150,y:360}
+];
+let seg=[],total=0;
+function prep(){
+  seg=[],total=0;
+  for(let i=0;i<path.length-1;i++){
+    const dx=path[i+1].x-path[i].x;
+    const dy=path[i+1].y-path[i].y;
+    const L=Math.hypot(dx,dy);
+    seg.push(L); total+=L;
+  }
+}
+const dots=[];
+function createDots(){
+  els.charges.innerHTML="";
+  for(let i=0;i<24;i++){
+    const c=document.createElementNS("http://www.w3.org/2000/svg","circle");
+    c.setAttribute("r","4"); c.setAttribute("fill","#2563eb");
+    dots.push({el:c,t:i/24});
+    els.charges.appendChild(c);
+  }
+}
+function pos(s){
+  for(let i=0;i<seg.length;i++){
+    if(s<=seg[i]){
+      const u=s/seg[i];
+      const a=path[i], b=path[i+1];
+      return {x:a.x+(b.x-a.x)*u, y:a.y+(b.y-a.y)*u};
+    }
+    s-=seg[i];
+  }
+  return path[0];
+}
+
+let last=performance.now();
+function anim(now){
+  const dt=Math.min(0.05,(now-last)/1000); last=now;
+  const I=calcCurrent(); updateLamp(I);
+  const v = I>0? Math.min(260, 60+I*260):0;
+
+  dots.forEach(d=>{
+    d.t=(d.t+(v*dt)/total)%1;
+    const p=pos(d.t*total);
+    d.el.setAttribute("cx",p.x);
+    d.el.setAttribute("cy",p.y);
+    d.el.setAttribute("opacity",I>0?0.95:0.15);
+  });
+
+  requestAnimationFrame(anim);
+}
+
+// events
+els.switchBtn.onclick=els.switchGrp.onclick=()=>{
+  isClosed=!isClosed; renderSwitch();
+};
+els.dioBtn.onclick=()=>{
+  diodeForward=!diodeForward; renderDiode();
+};
+els.explainBtn.onclick=()=>els.explainPanel.classList.add("show");
+els.explainCloseBtn.onclick=()=>els.explainPanel.classList.remove("show");
+
+// init
+prep(); createDots();
+renderSwitch(); renderDiode();
+requestAnimationFrame(anim);
+</script>
+
+</body>
+</html>

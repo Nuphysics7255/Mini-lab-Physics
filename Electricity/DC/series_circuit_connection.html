@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>วงจรไฟฟ้า — Error mode + ควัน/ลวดแดง</title>
+<style>
+  :root{--outline:#d4d8e1;--accent:#2563eb}
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    background:#f7fafc;
+    color:#0f172a;
+  }
+  .titleMain{
+    text-align:center;
+    font-size:20px;
+    font-weight:700;
+    margin:10px 0 4px;
+  }
+  .wrap{
+    display:flex;
+    gap:16px;
+    padding:16px;
+    align-items:flex-start;
+    flex-direction:row-reverse; /* จอคอม: แผงควบคุมอยู่ขวา */
+  }
+  .panel{
+    width:440px;
+    max-width:100%;
+    background:#fff;
+    border:1px solid var(--outline);
+    border-radius:14px;
+    padding:12px;
+    box-shadow:0 2px 8px rgba(0,0,0,.05);
+  }
+  .board{
+    flex:1;
+    position:relative;
+    min-height:700px;
+    background:#fff;
+    border:1px solid var(--outline);
+    border-radius:16px;
+  }
+  svg{width:100%;height:700px}
+  .field{margin-bottom:10px}
+  .field label{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    font-size:14px;
+    gap:8px;
+  }
+  .field-toggle label{
+    justify-content:flex-start;
+    gap:6px;
+  }
+  .field-toggle input[type=checkbox]{transform:scale(1.1)}
+  input[type=range]{width:100%}
+  .switchArea{cursor:pointer}
+  button{
+    margin-top:8px;
+    display:block;
+    padding:10px;
+    border-radius:10px;
+    border:1px solid var(--outline);
+    background:#f8fafc;
+  }
+  .panel button{width:100%}
+  /* ปุ่มสวิตช์สีฟ้า */
+  #switchBtn{
+    background:#2563eb;
+    color:#fff;
+    border-color:#2563eb;
+  }
+  #switchBtn:hover{filter:brightness(1.05);}
+
+  #modeLabel{font-size:18px;fill:#111;font-weight:bold}
+  .muted{color:#64748b;font-size:12px;margin-top:8px}
+  .tagline{margin-top:8px;font-size:14px}
+  .tagline a{color:#2563eb;text-decoration:underline}
+  .inline-val{font-weight:600}
+  .err{fill:#ef4444 !important; color:#ef4444 !important; font-weight:700}
+  .howbox{
+    margin-top:10px;
+    border:1px dashed var(--outline);
+    border-radius:12px;
+    padding:10px;
+    background:#f9fafb;
+    display:none;
+  }
+  .howbox h3{margin:0 0 8px 0;font-size:16px}
+  .mono{
+    font-family:ui-monospace, Menlo, Consolas, monospace;
+    font-size:13.5px;
+    white-space:pre-wrap;
+    line-height:1.45;
+  }
+
+  .hl-in{}
+  .hl-out{}
+
+  .charge{fill:#2563eb;opacity:0.9}
+  .electron{fill:orange;opacity:0.9}
+
+  /* เอฟเฟกต์ลวดแดง/ควันเมื่อ short */
+  .wireHot{stroke:#ef4444;stroke-width:10;fill:none;opacity:0;filter:drop-shadow(0 0 6px rgba(239,68,68,.9))}
+  .batteryGlow{filter:drop-shadow(0 0 10px rgba(239,68,68,.7))}
+  @keyframes pulseHot{0%{opacity:.25}100%{opacity:.9}}
+  .isShort .wireHot{animation:pulseHot .6s ease-in-out infinite alternate}
+  .isShort #battery>.shell{animation:pulseHot .7s ease-in-out infinite alternate}
+  .smoke{opacity:0}
+  .isShort .smoke{opacity:.9}
+
+  .overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(15,23,42,.6);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:16px;
+    z-index:50;
+  }
+  .graphCard{
+    width:min(960px,95vw);
+    background:#fff;
+    border-radius:16px;
+    border:1px solid var(--outline);
+    box-shadow:0 10px 30px rgba(0,0,0,.2);
+    padding:14px;
+  }
+  .graphHeader{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    margin-bottom:8px;
+  }
+  .graphTitle{font-weight:700}
+  .closeBtn{
+    padding:8px 12px;
+    border-radius:10px;
+    border:1px solid var(--outline);
+    background:#f8fafc;
+    cursor:pointer;
+  }
+  .graphWrap{
+    width:100%;
+    height:min(64vh,540px);
+    border:1px solid var(--outline);
+    border-radius:12px;
+    overflow:hidden;
+  }
+  #graphSvg{width:100%;height:100%}
+  .axis{stroke:#0f172a;stroke-width:1}
+  .grid{stroke:#cbd5e1;stroke-width:1;opacity:.6}
+  .lineV{stroke:#2563eb;stroke-width:2.5;fill:none}
+  .guide{stroke:#475569;stroke-dasharray:6 6;stroke-width:1.5}
+  .units{font-size:12px;fill:#334155}
+  .note{font-size:13px;color:#334155;margin-top:8px}
+  .bubble text{font-size:12px;fill:#0f172a}
+  .bubble rect{fill:#ffffff;fill-opacity:.85;stroke:#94a3b8;stroke-width:1;rx:7}
+  .bubble{filter:drop-shadow(0 1px 1.5px rgba(0,0,0,.15))}
+  .nope{pointer-events:none}
+  .tooltip rect{fill:#ffffff;fill-opacity:.92;stroke:#94a3b8;rx:6}
+  .tooltip text{font-size:12px;fill:#0f172a}
+
+  /* มือถือ */
+  @media (max-width: 900px){
+    .wrap{
+      flex-direction:column-reverse; /* จอทดลองบน แผงควบคุมล่าง */
+      padding:12px;
+    }
+    .board{
+      height:calc(60vh - 270px);
+      min-height:auto;
+      max-height:none;
+      overflow:hidden;
+      width:100%;
+    }
+    svg{
+      height:calc(60vh - 270px);
+    }
+    .panel{width:100%;}
+    .panel button{
+      width:calc(50% - 6px);
+      display:inline-block;
+    }
+    .panel button:nth-of-type(odd){margin-right:4px;}
+    .panel button:nth-of-type(even){margin-left:4px;}
+
+    /* ตัวอักษรในป้ายโตขึ้น 5px */
+    #R1line,#V1line,#P1line,#W1line,
+    #R2line,#V2line,#P2line,#W2line,
+    #Vcell_bottom{
+      font-size:18px;
+    }
+
+    /* ขยายรูปการทดลอง + ป้าย + ตัวอักษรในจอทดลอง 30% และเลื่อนลงรวม 80px */
+    #scene{
+      transform:translateY(80px) scale(1.3);
+      transform-origin:450px 350px;
+    }
+  }
+</style>
+</head>
+<body>
+<h1 class="titleMain"> การต่อวงจรไฟฟ้าแบบอนุกรม</h1>
+
+<div class="wrap">
+  <div class="panel">
+    <div class="field field-toggle">
+      <label>
+        <input id="showValuesChk" type="checkbox" />
+        <span>แสดงค่าทางไฟฟ้าในป้าย (R, V, P, W, V<sub>cell</sub>)</span>
+      </label>
+    </div>
+    <div class="field">
+      <label>ความต้านทานของหลอดไฟ 1 (R1) <span id="Rval">10.00 Ω</span></label>
+      <input id="R" type="range" min="0" max="100" step="0.1" value="10">
+    </div>
+    <div class="field">
+      <label>ความต้านทานของหลอดไฟ 2 (R2) <span id="Rpval">5.00 Ω</span></label>
+      <input id="Rp" type="range" min="0" max="50" step="0.1" value="5">
+    </div>
+    <div class="field">
+      <label>แรงเคลื่อนไฟฟ้า (E) <span id="Eval">6.00 V</span></label>
+      <input id="E" type="range" min="0" max="24" step="0.1" value="6">
+    </div>
+    <div class="field">
+      <label>ความต้านทานภายใน (r) <span id="rval">1.00 Ω</span></label>
+      <input id="r" type="range" min="0" max="20" step="0.1" value="1">
+    </div>
+    <div class="field">
+      <label>ช่วงเวลาที่ใช้ในการหาพลังงาน (t) <span id="Tval">10.00 s</span></label>
+      <input id="T" type="range" min="0" max="120" step="0.1" value="10">
+    </div>
+
+    <button id="switchBtn">🔌 กดเพื่อปิด/เปิด</button>
+    <button id="toggleCurrentBtn">แสดงทิศ: อิเล็กตรอน</button>
+    <button id="howBtn">📘 แสดงวิธีคำนวณ</button>
+    <button id="graphBtn">📈 กราฟ Vcell–I</button>
+
+    <div class="howbox" id="howBox">
+      <h3>วิธีคำนวณ (อิงสูตร V=IR, P=I²R, W=Pt)</h3>
+      <div class="mono" id="howText"></div>
+    </div>
+
+    <div class="muted">ความสว่างของหลอดไฟขึ้นกับกำลังไฟฟ้าที่สูญเสียบนหลอดไฟ (P = I²R)</div>
+    <div class="tagline">ศึกษาเพิ่มเติมที่ <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">เพจคลายปมฟิสิกส์</a></div>
+  </div>
+
+  <div class="board">
+    <svg id="circuit" viewBox="0 0 900 700">
+      <defs>
+        <radialGradient id="bulbGlowGrad" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#ffff99" stop-opacity="1"/>
+          <stop offset="60%" stop-color="#ffcc33" stop-opacity="0.6"/>
+          <stop offset="100%" stop-color="#ffcc00" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+
+      <!-- กลุ่มฉากทดลอง -->
+      <g id="scene">
+        <!-- สายไฟหลัก -->
+        <path id="pathWire" d="M150,100 H330 M390,100 H530 M590,100 H750 V440 H150 V100"
+              stroke="#000" stroke-width="8" fill="none" stroke-linejoin="round" stroke-linecap="round"/>
+        <!-- ลวดแดงวูบวาบ -->
+        <path id="wireHot" class="wireHot" d="M150,100 H330 M390,100 H530 M590,100 H750 V440 H150 V100"/>
+
+        <!-- หลอดไฟ 1 -->
+        <g id="lampR" transform="translate(360,100)">
+          <circle id="bulbGlowR" cx="0" cy="0" r="85" fill="url(#bulbGlowGrad)" opacity="0"/>
+          <circle id="lampBodyR" cx="0" cy="0" r="35" fill="#fff" stroke="#475569" stroke-width="3"/>
+          <text x="-40" y="-46" font-size="14" fill="#2563eb">หลอดไฟ 1</text>
+          <text id="R1line" x="-50" y="76"  font-size="13">R₁=<tspan id="R1txt" class="inline-val">0.00 Ω</tspan></text>
+          <text id="V1line" x="-50" y="96"  font-size="13">V₁=<tspan id="V1txt" class="inline-val">0.00 V</tspan></text>
+          <text id="P1line" x="-50" y="116" font-size="13">P₁=<tspan id="P1txt" class="inline-val">0.00 W</tspan></text>
+          <text id="W1line" x="-50" y="136" font-size="13">W₁=<tspan id="W1txt" class="inline-val">0.00 J</tspan></text>
+        </g>
+
+        <!-- หลอดไฟ 2 -->
+        <g id="lampRp" transform="translate(560,100)">
+          <circle id="bulbGlowRp" cx="0" cy="0" r="85" fill="url(#bulbGlowGrad)" opacity="0"/>
+          <circle id="lampBodyRp" cx="0" cy="0" r="35" fill="#fff" stroke="#475569" stroke-width="3"/>
+          <text x="-40" y="-46" font-size="14" fill="#2563eb">หลอดไฟ 2</text>
+          <text id="R2line" x="-50" y="76"  font-size="13">R₂=<tspan id="R2txt" class="inline-val">0.00 Ω</tspan></text>
+          <text id="V2line" x="-50" y="96"  font-size="13">V₂=<tspan id="V2txt" class="inline-val">0.00 V</tspan></text>
+          <text id="P2line" x="-50" y="116" font-size="13">P₂=<tspan id="P2txt" class="inline-val">0.00 W</tspan></text>
+          <text id="W2line" x="-50" y="136" font-size="13">W₂=<tspan id="W2txt" class="inline-val">0.00 J</tspan></text>
+        </g>
+
+        <!-- สวิตช์ -->
+        <g id="switch" class="switchArea">
+          <line x1="150" y1="100" x2="150" y2="200" stroke="#000" stroke-width="8"/>
+          <line x1="150" y1="300" x2="150" y2="440" stroke="#000" stroke-width="8"/>
+          <line id="switchBlade" x1="150" y1="200" x2="172" y2="250" stroke="#ff8c1a" stroke-width="10" stroke-linecap="round"/>
+          <line id="switchGapLine" x1="150" y1="210" x2="150" y2="290" stroke="#ffffff" stroke-width="10" stroke-linecap="round" opacity="1"/>
+          <circle id="gapDotTop" cx="150" cy="210" r="6" fill="#000" opacity="1"/>
+          <circle id="gapDotBottom" cx="150" cy="290" r="6" fill="#000" opacity="1"/>
+          <text id="InearSwitch" x="185" y="250" font-size="16" font-weight="bold">I = 0.00 A</text>
+        </g>
+
+        <!-- แบตเตอรี่ -->
+        <g id="battery" transform="translate(450,440)">
+          <rect class="shell" x="-90" y="-42" width="180" height="84" rx="12"
+                fill="#e0f2fe" stroke="#2563eb" stroke-width="2"/>
+          <line x1="-18" y1="-28" x2="-18" y2="28" stroke="#111" stroke-width="6"/>
+          <line x1="18"  y1="-16" x2="18"  y2="16" stroke="#111" stroke-width="6"/>
+          <text x="-50" y="-14" font-size="34" fill="red" font-weight="900">+</text>
+          <text x="14"  y="-14" font-size="34" fill="red" font-weight="900">−</text>
+          <text id="E_r_top" x="-82" y="-64" font-size="19">
+            <tspan id="Epart">E = 6.00 V</tspan>
+            <tspan dx="26" id="rpart">r = 1.00 Ω</tspan>
+          </text>
+          <text id="Vcell_bottom" x="-78" y="82" font-size="14">V(cell) = 6.00 V</text>
+          <text id="batteryLabel" x="-38" y="60" font-size="19">แบตเตอรี่</text>
+
+          <!-- ควัน -->
+          <g id="smoke" class="smoke">
+            <circle cx="-40" cy="-10" r="8" fill="rgba(148,163,184,.8)">
+              <animate attributeName="r" values="8;12" dur="3.2s" repeatCount="indefinite"/>
+              <animate attributeName="cy" values="-10;-130" dur="3.2s" repeatCount="indefinite"/>
+              <animate attributeName="opacity" values="0;0.6;0" dur="3.2s" repeatCount="indefinite"/>
+            </circle>
+            <circle cx="-10" cy="-10" r="6" fill="rgba(148,163,184,.75)">
+              <animate attributeName="r" values="6;10" dur="3.0s" begin=".6s" repeatCount="indefinite"/>
+              <animate attributeName="cy" values="-10;-120" dur="3.0s" begin=".6s" repeatCount="indefinite"/>
+              <animate attributeName="opacity" values="0;0.55;0" dur="3.0s" begin=".6s" repeatCount="indefinite"/>
+            </circle>
+            <circle cx="16" cy="-10" r="7" fill="rgba(148,163,184,.7)">
+              <animate attributeName="r" values="7;11" dur="2.8s" begin="1.2s" repeatCount="indefinite"/>
+              <animate attributeName="cy" values="-10;-115" dur="2.8s" begin="1.2s" repeatCount="indefinite"/>
+              <animate attributeName="opacity" values="0;0.5;0" dur="2.8s" begin="1.2s" repeatCount="indefinite"/>
+            </circle>
+          </g>
+        </g>
+
+        <text id="modeLabel" x="600" y="60">แสดงการไหลของกระแสไฟฟ้า(I)</text>
+
+        <!-- เม็ดกระแส / อิเล็กตรอน -->
+        <g id="charges"></g>
+        <g id="electrons"></g>
+      </g>
+    </svg>
+  </div>
+</div>
+
+<!-- Overlay กราฟ -->
+<div class="overlay" id="graphOverlay">
+  <div class="graphCard">
+    <div class="graphHeader">
+      <div class="graphTitle">กราฟความสัมพันธ์ V<sub>cell</sub> กับ I  (เส้นตรง: Slope = −r, Intercept = E)</div>
+      <button class="closeBtn" id="closeGraphBtn">กลับสู่การทดลอง</button>
+    </div>
+    <div class="graphWrap">
+      <svg id="graphSvg" viewBox="0 0 900 540" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="note" id="graphNote"></div>
+  </div>
+</div>
+
+<script>
+/* ===== DOM ===== */
+const Rp=document.getElementById('Rp'),R=document.getElementById('R'),E=document.getElementById('E'),r=document.getElementById('r'),T=document.getElementById('T');
+const Rpval=document.getElementById('Rpval'),Rval=document.getElementById('Rval'),Eval=document.getElementById('Eval'),rval=document.getElementById('rval'),Tval=document.getElementById('Tval');
+const bulbGlowR=document.getElementById('bulbGlowR'), lampBodyR=document.getElementById('lampBodyR');
+const bulbGlowRp=document.getElementById('bulbGlowRp'), lampBodyRp=document.getElementById('lampBodyRp');
+const R1txt=document.getElementById('R1txt'),V1txt=document.getElementById('V1txt'),P1txt=document.getElementById('P1txt'),W1txt=document.getElementById('W1txt');
+const R2txt=document.getElementById('R2txt'),V2txt=document.getElementById('V2txt'),P2txt=document.getElementById('P2txt'),W2txt=document.getElementById('W2txt');
+const R1line=document.getElementById('R1line'),V1line=document.getElementById('V1line'),P1line=document.getElementById('P1line'),W1line=document.getElementById('W1line');
+const R2line=document.getElementById('R2line'),V2line=document.getElementById('V2line'),P2line=document.getElementById('P2line'),W2line=document.getElementById('W2line');
+const Epart=document.getElementById('Epart'),rpart=document.getElementById('rpart'),Vcell_bottom=document.getElementById('Vcell_bottom');
+const InearSwitch=document.getElementById('InearSwitch');
+const switchBtn=document.getElementById('switchBtn');
+const toggleCurrentBtn=document.getElementById('toggleCurrentBtn');
+const switchBlade=document.getElementById('switchBlade');
+const switchGapLine=document.getElementById('switchGapLine');
+const gapDotTop=document.getElementById('gapDotTop');
+const gapDotBottom=document.getElementById('gapDotBottom');
+const modeLabel=document.getElementById('modeLabel');
+const charges=document.getElementById('charges');
+const electrons=document.getElementById('electrons');
+const path=document.getElementById('pathWire');
+const pathLen=path.getTotalLength();
+const howBtn=document.getElementById('howBtn');
+const howBox=document.getElementById('howBox');
+const howText=document.getElementById('howText');
+const graphBtn=document.getElementById('graphBtn');
+const graphOverlay=document.getElementById('graphOverlay');
+const closeGraphBtn=document.getElementById('closeGraphBtn');
+const graphSvg=document.getElementById('graphSvg');
+const graphNote=document.getElementById('graphNote');
+const wireHot=document.getElementById('wireHot');
+const circuitSvg=document.getElementById('circuit');
+const battery=document.getElementById('battery');
+const showValuesChk=document.getElementById('showValuesChk');
+
+/* ===== State ===== */
+let switchClosed=false;
+let mode="current";
+let currentI=0;
+let isShort=false;
+
+/* Helpers */
+function fmt(x){return (+x).toFixed(2);}
+function hIn(x,unit=""){ return fmt(x)+(unit?(" "+unit):""); }
+function hOut(x,unit=""){ return fmt(x)+(unit?(" "+unit):""); }
+
+function powerToLevel(P){return Math.min(1,Math.max(0,Math.abs(P)/5));}
+function setErrText(el,isError,textOk){
+  if(isError){el.textContent='Error';el.classList.add('err');}
+  else{el.textContent=textOk;el.classList.remove('err');}
+}
+
+/* ซ่อน/แสดงค่าป้าย */
+function applyValueVisibility(){
+  const show=showValuesChk.checked;
+  const d=show?'block':'none';
+  R1line.style.display=d;V1line.style.display=d;P1line.style.display=d;W1line.style.display=d;
+  R2line.style.display=d;V2line.style.display=d;P2line.style.display=d;W2line.style.display=d;
+  Vcell_bottom.style.display=d;
+}
+
+/* ===== Physics + UI ===== */
+function update(){
+  Rpval.textContent=fmt(Rp.value)+' Ω';
+  Rval.textContent=fmt(R.value)+' Ω';
+  Eval.textContent=fmt(E.value)+' V';
+  rval.textContent=fmt(r.value)+' Ω';
+  Tval.textContent=fmt(T.value)+' s';
+
+  const R1=+R.value,R2=+Rp.value,rr=+r.value,Ee=+E.value,tt=+T.value;
+  const Rt=R1+R2+rr;
+
+  let I=0,V1=0,V2=0,Vcell=Ee,P1=0,P2=0,W1=0,W2=0;
+  let idealShort=false;
+
+  if(switchClosed){
+    if(Rt===0){
+      idealShort=true;
+      I=Infinity;
+      V1=V2=P1=P2=W1=W2=0;
+      Vcell=Ee;
+    }else{
+      I=Ee/Rt;
+      V1=I*R1;V2=I*R2;
+      Vcell=Ee-I*rr;
+      P1=I*I*R1;P2=I*I*R2;
+      W1=P1*tt;W2=P2*tt;
+    }
+  }
+
+  InearSwitch.textContent='I = '+(idealShort?'∞':fmt(I))+' A';
+
+  R1txt.textContent=fmt(R1)+' Ω';
+  setErrText(V1txt,idealShort,fmt(V1)+' V');
+  setErrText(P1txt,idealShort,fmt(P1)+' W');
+  setErrText(W1txt,idealShort,fmt(W1)+' J');
+
+  R2txt.textContent=fmt(R2)+' Ω';
+  setErrText(V2txt,idealShort,fmt(V2)+' V');
+  setErrText(P2txt,idealShort,fmt(P2)+' W');
+  setErrText(W2txt,idealShort,fmt(W2)+' J');
+
+  Epart.textContent='E = '+fmt(Ee)+' V';
+  rpart.textContent='r = '+fmt(rr)+' Ω';
+  Vcell_bottom.textContent=idealShort?('V(cell) = '+fmt(Ee)+' V  (อุดมคติ)'):('V(cell) = '+fmt(Vcell)+' V');
+
+  const levelR=idealShort?0:powerToLevel(P1);
+  bulbGlowR.setAttribute('opacity',levelR);
+  lampBodyR.setAttribute('fill',levelR>0?`rgba(255,255,150,${0.3+0.5*levelR})`:'#fff');
+
+  const levelRp=idealShort?0:powerToLevel(P2);
+  bulbGlowRp.setAttribute('opacity',levelRp);
+  lampBodyRp.setAttribute('fill',levelRp>0?`rgba(255,255,150,${0.3+0.5*levelRp})`:'#fff');
+
+  currentI=idealShort?0:I;
+  isShort=idealShort;
+  applyShortEffects();
+
+  /* ===== วิธีคำนวณ: สูตรบน / แทนค่าล่าง + เว้น 1 บรรทัด ===== */
+  if(howBox.style.display==='block'){
+    if(!switchClosed){
+      howText.innerHTML = [
+        `วงจรเปิด: I = 0 A`,
+        ``,
+        `V(cell) = E − I·r`,
+        `V(cell) = ${hIn(Ee,'V')} − 0 A × ${hIn(rr,'Ω')} = ${hOut(Ee,'V')}`
+      ].join('<br>');
+    }else if(idealShort){
+      howText.innerHTML = [
+        `R<sub>รวม</sub> = R<sub>1</sub> + R<sub>2</sub> + r`,
+        `R<sub>รวม</sub> = 0 Ω  ⇒  I → ∞`,
+        ``,
+        `V(cell) = E`,
+        `V(cell) = ${hIn(Ee,'V')}`
+      ].join('<br>');
+    }else{
+      const Rt2=R1+R2+rr;
+      howText.innerHTML = [
+        `R<sub>รวม</sub> = R<sub>1</sub> + R<sub>2</sub> + r`,
+        `R<sub>รวม</sub> = ${hIn(R1,'Ω')} + ${hIn(R2,'Ω')} + ${hIn(rr,'Ω')} = ${hIn(Rt2,'Ω')}`,
+        ``,
+        `I = E / R<sub>รวม</sub>`,
+        `I = ${hIn(Ee,'V')} / ${hIn(Rt2,'Ω')} = ${hOut(I,'A')}`,
+        ``,
+        `V₁ = I·R<sub>1</sub>`,
+        `V₁ = ${hOut(I,'A')} × ${hIn(R1,'Ω')} = ${hOut(V1,'V')}`,
+        ``,
+        `V₂ = I·R<sub>2</sub>`,
+        `V₂ = ${hOut(I,'A')} × ${hIn(R2,'Ω')} = ${hOut(V2,'V')}`,
+        ``,
+        `P₁ = I²·R<sub>1</sub>`,
+        `P₁ = (${hOut(I,'A')})² × ${hIn(R1,'Ω')} = ${hOut(P1,'W')}`,
+        ``,
+        `P₂ = I²·R<sub>2</sub>`,
+        `P₂ = (${hOut(I,'A')})² × ${hIn(R2,'Ω')} = ${hOut(P2,'W')}`,
+        ``,
+        `W₁ = P₁·t`,
+        `W₁ = ${hOut(P1,'W')} × ${hIn(tt,'s')} = ${hOut(W1,'J')}`,
+        ``,
+        `W₂ = P₂·t`,
+        `W₂ = ${hOut(P2,'W')} × ${hIn(tt,'s')} = ${hOut(W2,'J')}`,
+        ``,
+        `V(cell) = E − I·r`,
+        `V(cell) = ${hIn(Ee,'V')} − ${hOut(I,'A')} × ${hIn(rr,'Ω')} = ${hOut(Vcell,'V')}`
+      ].join('<br>');
+    }
+  }
+
+  if(graphOverlay.style.display==='flex'){drawGraph();}
+  applyValueVisibility();
+}
+
+/* short effects */
+function applyShortEffects(){
+  if(isShort){
+    circuitSvg.classList.add('isShort');
+    battery.classList.add('batteryGlow');
+    wireHot.style.opacity='1';
+  }else{
+    circuitSvg.classList.remove('isShort');
+    battery.classList.remove('batteryGlow');
+    wireHot.style.opacity='0';
+  }
+}
+
+/* Switch visuals */
+function setSwitchVisual(){
+  if(switchClosed){
+    switchBlade.setAttribute('x2','150');switchBlade.setAttribute('y2','300');
+    switchGapLine.setAttribute('opacity','0');gapDotTop.setAttribute('opacity','0');gapDotBottom.setAttribute('opacity','0');
+  }else{
+    switchBlade.setAttribute('x2','190');switchBlade.setAttribute('y2','260');
+    switchGapLine.setAttribute('opacity','1');gapDotTop.setAttribute('opacity','1');gapDotBottom.setAttribute('opacity','1');
+  }
+}
+function toggleSwitch(){
+  switchClosed=!switchClosed;
+  setSwitchVisual();
+  update();
+  refreshVisibility();
+}
+switchBtn.addEventListener('click',toggleSwitch);
+document.getElementById('switch').addEventListener('click',toggleSwitch);
+
+/* Direction toggle */
+function applyModeLabel(){
+  if(mode==="current"){
+    modeLabel.textContent="แสดงการไหลของกระแสไฟฟ้า(I)";
+    toggleCurrentBtn.textContent="แสดงทิศ: อิเล็กตรอน";
+  }else{
+    modeLabel.textContent="แสดงการไหลของอิเล็กตรอน";
+    toggleCurrentBtn.textContent="แสดงทิศ: ไฟฟ้า";
+  }
+  refreshVisibility();
+}
+toggleCurrentBtn.addEventListener('click',()=>{
+  mode=(mode==="current")?"electron":"current";
+  applyModeLabel();
+});
+applyModeLabel();
+
+/* charges visibility */
+function refreshVisibility(){
+  const showCurrent=switchClosed&&mode==="current"&&currentI>0&&!isShort;
+  const showElectron=switchClosed&&mode==="electron"&&currentI>0&&!isShort;
+  Array.from(charges.children).forEach(el=>el.style.display=showCurrent?'block':'none');
+  Array.from(electrons.children).forEach(el=>el.style.display=showElectron?'block':'none');
+}
+
+/* moving particles */
+const N=24;let dots=[],edots=[];
+function createCharges(){
+  for(let i=0;i<N;i++){
+    const c=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c.setAttribute('r',4);c.setAttribute('class','charge');
+    charges.appendChild(c);dots.push({el:c,t:i/N});
+    const e=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    e.setAttribute('r',4);e.setAttribute('class','electron');
+    electrons.appendChild(e);edots.push({el:e,t:i/N});
+  }
+}
+function animate(){
+  const speed=Math.max(0,currentI)*0.002;
+  dots.forEach(d=>{
+    d.t=(d.t+speed)%1;
+    const p=path.getPointAtLength(d.t*pathLen);
+    d.el.setAttribute('cx',p.x);d.el.setAttribute('cy',p.y);
+  });
+  edots.forEach(e=>{
+    e.t=(e.t-speed+1)%1;
+    const p=path.getPointAtLength(e.t*pathLen);
+    e.el.setAttribute('cx',p.x);e.el.setAttribute('cy',p.y);
+  });
+  requestAnimationFrame(animate);
+}
+
+/* Graph */
+graphBtn.addEventListener('click',()=>{graphOverlay.style.display='flex';drawGraph();});
+closeGraphBtn.addEventListener('click',()=>{graphOverlay.style.display='none';});
+
+function drawGraph(){
+  const Ee=+E.value,rr=+r.value,R1=+R.value,R2=+Rp.value;
+  const Rt=R1+R2+rr;
+  const idealShort=(switchClosed&&Rt===0);
+  const Iop=Rt>0?Ee/Rt:0;
+  const Vcell_op=Ee-Iop*rr;
+
+  const Iint=rr>0?Ee/rr:(Iop>0?Iop*1.2:1);
+  const Imax=Math.max(Iint,Iop)*1.1||1;
+  const Vmax=Math.max(Ee*1.1,1);
+
+  const W=900,H=540,padL=70,padR=28,padB=56,padT=24;
+  const x0=padL,x1=W-padR,y0=H-padB,y1=padT;
+  const x=I=>x0+(I/Imax)*(x1-x0);
+  const y=V=>y0-(V/Vmax)*(y0-y1);
+  const invX=X=>((X-x0)/(x1-x0))*Imax;
+
+  graphSvg.innerHTML='';
+
+  const defs=svgEl('defs');
+  const arrow=svgEl('marker');
+  arrow.setAttribute('id','arrow');
+  arrow.setAttribute('markerWidth','10');
+  arrow.setAttribute('markerHeight','10');
+  arrow.setAttribute('refX','6');
+  arrow.setAttribute('refY','3');
+  arrow.setAttribute('orient','auto');
+  const arrowPath=svgEl('path');
+  arrowPath.setAttribute('d','M0,0 L6,3 L0,6 Z');
+  arrowPath.setAttribute('fill','#0f172a');
+  arrow.appendChild(arrowPath);
+  defs.appendChild(arrow);
+  graphSvg.appendChild(defs);
+
+  function line(x1_,y1_,x2_,y2_,cls){
+    const L=svgEl('line');
+    L.setAttribute('x1',x1_);L.setAttribute('y1',y1_);
+    L.setAttribute('x2',x2_);L.setAttribute('y2',y2_);
+    L.setAttribute('class',cls);return L;
+  }
+  function lbl(x_,y_,str,anchor='start',transform=''){
+    const T=svgEl('text');
+    T.setAttribute('x',x_);T.setAttribute('y',y_);
+    T.setAttribute('text-anchor',anchor);
+    if(transform)T.setAttribute('transform',transform);
+    T.textContent=str;return T;
+  }
+  function circle(cx,cy,r=4,fill='#111',strokeBold=false){
+    const C=svgEl('circle');
+    C.setAttribute('cx',cx);C.setAttribute('cy',cy);
+    C.setAttribute('r',r);C.setAttribute('fill',fill);
+    if(strokeBold){C.setAttribute('stroke','#111');C.setAttribute('stroke-width','1');}
+    return C;
+  }
+  function bubble(x_,y_,text,anchor='start'){
+    const G=svgEl('g');
+    G.setAttribute('class','bubble nope');
+    const T=svgEl('text');
+    T.setAttribute('x',x_);T.setAttribute('y',y_);
+    T.setAttribute('text-anchor',anchor);
+    T.textContent=text;G.appendChild(T);graphSvg.appendChild(G);
+    const bbox=T.getBBox(),padX=6,padY=4;
+    const Rr=svgEl('rect');
+    Rr.setAttribute('x',bbox.x-padX);
+    Rr.setAttribute('y',bbox.y-padY);
+    Rr.setAttribute('width',bbox.width+padX*2);
+    Rr.setAttribute('height',bbox.height+padY*2);
+    Rr.setAttribute('rx',7);
+    G.insertBefore(Rr,T);
+    return G;
+  }
+  function svgEl(n){return document.createElementNS('http://www.w3.org/2000/svg',n);}
+
+  for(let i=0;i<=5;i++){
+    const Ii=(Imax/5)*i,X=x(Ii);
+    graphSvg.appendChild(line(X,y0,X,y1,'grid'));
+    graphSvg.appendChild(line(X,y0,X,y0+6,'axis'));
+    graphSvg.appendChild(lbl(X,H-30,fmt(Ii),'middle'));
+  }
+  for(let j=0;j<=5;j++){
+    const Vj=(Vmax/5)*j,Y=y(Vj);
+    graphSvg.appendChild(line(x0,Y,x1,Y,'grid'));
+    graphSvg.appendChild(line(x0-6,Y,x0,Y,'axis'));
+    graphSvg.appendChild(lbl(x0-12,Y+4,fmt(Vj),'end'));
+  }
+
+  const xAxis=line(x0,y0,x1,y0,'axis');xAxis.setAttribute('marker-end','url(#arrow)');graphSvg.appendChild(xAxis);
+  const yAxis=line(x0,y0,x0,y1,'axis');yAxis.setAttribute('marker-end','url(#arrow)');graphSvg.appendChild(yAxis);
+  graphSvg.appendChild(lbl((x0+x1)/2,H-8,'I (A)','middle'));
+  graphSvg.appendChild(lbl(18,(y0+y1)/2,'Vcell (V)','middle','rotate(-90 18 '+(y0+y1)/2+')'));
+  const unitsLbl=lbl(x1-6,y1+16,'หน่วย: Vcell (V), I (A)','end');unitsLbl.setAttribute('class','units');graphSvg.appendChild(unitsLbl);
+
+  const pathLine=svgEl('path');pathLine.setAttribute('class','lineV');
+  if(rr===0){pathLine.setAttribute('d',`M ${x(0)} ${y(Ee)} L ${x(Imax)} ${y(Ee)}`);}
+  else{pathLine.setAttribute('d',`M ${x(0)} ${y(Ee)} L ${x(Imax)} ${y(Math.max(Ee-rr*Imax,0))}`);}
+  graphSvg.appendChild(pathLine);
+
+  graphSvg.appendChild(circle(x(0),y(Ee),4));
+  graphSvg.appendChild(lbl(x(0)+8,y(Ee)-8,`Intercept = E = ${fmt(Ee)} V`,'start'));
+  if(rr>0){
+    const Iint2=Ee/rr;
+    graphSvg.appendChild(circle(x(Iint2),y(0),4));
+    graphSvg.appendChild(lbl(x(Iint2)-8,y(0)-8,`I = E/r = ${fmt(Iint2)} A`,'end'));
+  }else{
+    graphSvg.appendChild(lbl(x1-6,y(Ee)-8,`r = 0 ⇒ เส้นแนวนอน`,'end'));
+  }
+
+  if(!(switchClosed&&Rt===0)){
+    graphSvg.appendChild(circle(x(Iop),y(Vcell_op),5,'#111',true));
+    graphSvg.appendChild(lbl(x(Iop)+8,y(Vcell_op)-8,`จุดทำงาน: I = ${fmt(Iop)} A , Vcell = ${fmt(Vcell_op)} V`,'start'));
+    graphSvg.appendChild(line(x(Iop),y(0),x(Iop),y(Vcell_op),'guide nope'));
+    graphSvg.appendChild(line(x(0),y(Vcell_op),x(Iop),y(Vcell_op),'guide nope'));
+    graphSvg.appendChild(bubble(x(Iop)+8,y(0)-8,`Iₒₚ = ${fmt(Iop)} A`,'start'));
+  }
+
+  const hit=svgEl('rect');
+  hit.setAttribute('x',x0);hit.setAttribute('y',y1);
+  hit.setAttribute('width',x1-x0);hit.setAttribute('height',y0-y1);
+  hit.setAttribute('fill','transparent');hit.style.cursor='crosshair';
+  graphSvg.appendChild(hit);
+
+  const followDot=circle(0,0,4,'#111',true);graphSvg.appendChild(followDot);
+  const vGuideDyn=line(0,y(0),0,0,'guide');graphSvg.appendChild(vGuideDyn);
+  const hGuideDyn=line(x0,0,0,0,'guide');graphSvg.appendChild(hGuideDyn);
+
+  const tip=svgEl('g');tip.setAttribute('class','tooltip nope');
+  const tipRect=svgEl('rect');const tipText=svgEl('text');
+  tipText.setAttribute('x',0);tipText.setAttribute('y',0);
+  tip.appendChild(tipRect);tip.appendChild(tipText);graphSvg.appendChild(tip);
+  let tipLocked=false;
+
+  function moveTipTo(Iq){
+    const Vq=Math.max(0,Ee-rr*Iq);
+    const Px=x(Iq),Py=y(Vq);
+    followDot.setAttribute('cx',Px);followDot.setAttribute('cy',Py);
+    vGuideDyn.setAttribute('x1',Px);vGuideDyn.setAttribute('x2',Px);
+    vGuideDyn.setAttribute('y1',y(0));vGuideDyn.setAttribute('y2',Py);
+    hGuideDyn.setAttribute('x1',x0);hGuideDyn.setAttribute('x2',Px);
+    hGuideDyn.setAttribute('y1',Py);hGuideDyn.setAttribute('y2',Py);
+
+    tipText.textContent=`I = ${fmt(Iq)} A\nVcell = ${fmt(Vq)} V`;
+    const bbox=tipText.getBBox(),padX=8,padY=6;
+    tipRect.setAttribute('x',bbox.x-padX);
+    tipRect.setAttribute('y',bbox.y-padY);
+    tipRect.setAttribute('width',bbox.width+padX*2);
+    tipRect.setAttribute('height',bbox.height+padY*2);
+    tipRect.setAttribute('rx',6);
+    const tx=Math.min(x1-(bbox.width+padX*2)-6,Math.max(x0+6,Px+10));
+    const ty=Math.min(y0-(bbox.height+padY*2)-6,Math.max(y1+18,Py-10));
+    tip.setAttribute('transform',`translate(${tx},${ty})`);
+
+    followDot.style.display=vGuideDyn.style.display=hGuideDyn.style.display='';
+    tip.style.display='';
+  }
+  function showAtClient(clientX){
+    const inv=graphSvg.getScreenCTM().inverse();
+    const Xsvg=(new DOMPoint(clientX,0)).matrixTransform(inv).x;
+    const Xc=Math.max(x0,Math.min(x1,Xsvg));
+    const Iq=Math.max(0,Math.min(Imax,invX(Xc)));
+    moveTipTo(Iq);
+  }
+  function hideTip(){
+    followDot.style.display='none';
+    vGuideDyn.style.display='none';
+    hGuideDyn.style.display='none';
+    tip.style.display='none';
+  }
+
+  hit.addEventListener('pointermove',e=>{if(!tipLocked)showAtClient(e.clientX);});
+  hit.addEventListener('pointerenter',e=>{if(!tipLocked)showAtClient(e.clientX);});
+  hit.addEventListener('pointerleave',()=>{if(!tipLocked)hideTip();});
+  hit.addEventListener('pointerdown',e=>{
+    if(!tipLocked){showAtClient(e.clientX);tipLocked=true;}
+    else{tipLocked=false;hideTip();}
+  });
+  hit.addEventListener('touchstart',e=>{
+    if(e.touches.length){
+      const x=e.touches[0].clientX;
+      if(!tipLocked){showAtClient(x);tipLocked=true;}
+      else{tipLocked=false;hideTip();}
+    }
+  });
+
+  graphNote.innerHTML=
+    `เส้นตรง: <b>V<sub>cell</sub> = E − r·I</b> &nbsp; | &nbsp; <b>Slope</b> = −r = −${fmt(rr)} Ω &nbsp; | &nbsp; <b>Intercept</b> = E = ${fmt(Ee)} V`;
+}
+
+/* Listeners & Init */
+[R,Rp,E,r,T].forEach(inp=>inp.addEventListener('input',()=>{update();applyModeLabel();}));
+howBtn.addEventListener('click',()=>{
+  const show=howBox.style.display!=='block';
+  howBox.style.display=show?'block':'none';
+  howBtn.textContent=show?'📕 ซ่อนวิธีคำนวณ':'📘 แสดงวิธีคำนวณ';
+  update();
+});
+window.addEventListener('resize',update);
+showValuesChk.addEventListener('change',applyValueVisibility);
+
+function setInitialUI(){
+  setSwitchVisual();
+  applyModeLabel();
+  update();
+  refreshVisibility();
+}
+createCharges();
+setInitialUI();
+animate();
+</script>
+</body>
+</html>
