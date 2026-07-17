@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Mini Lab : โพรเจกไทล์ — ยิงลิง</title>
+<style>
+:root{
+  --blue:#2f6fd6; --deep:#204d7c; --soft:#edf3fb; --line:#d9e4ef;
+  --orange:#fff2df; --orange-line:#efc58f; --green:#e9f7e5; --green-line:#a7d79c;
+  --gray:#f5f7fa; --red:#d62828;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;font-family:system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;background:linear-gradient(#f7fbff,#ffffff);color:#1d2b3a;overflow-x:hidden}
+body{padding:16px 16px calc(120px + env(safe-area-inset-bottom))}
+.wrap{max-width:1180px;margin:0 auto}
+.header{display:flex;align-items:center;gap:14px;justify-content:center;margin:6px 0 12px;text-align:center}
+.icon{font-size:52px;line-height:1}.title .t1{font-size:clamp(25px,3.4vw,42px);font-weight:900;color:var(--blue);line-height:1.05}.title .t2{font-size:clamp(20px,2.6vw,32px);font-weight:900;color:var(--deep);line-height:1.15}
+.lab{display:grid;grid-template-columns:1fr 315px;gap:14px;align-items:start}.stageCard,.panel{background:white;border:1px solid var(--line);border-radius:22px;box-shadow:0 10px 28px rgba(40,80,120,.08);overflow:hidden}.stageTop{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--line);background:#fbfdff;gap:10px;flex-wrap:wrap}.badge{background:var(--soft);color:#2e5f93;border-radius:999px;padding:8px 13px;font-weight:800}.success{font-weight:900;color:#8b008b;font-size:26px;display:none}.canvasWrap{position:relative;width:100%;height:min(66vh,620px);min-height:430px;background:linear-gradient(#fbfdff 0%,#fff 65%,#fbf8f2 100%);touch-action:none}.canvasWrap canvas{width:100%;height:100%;display:block}.hintBox{position:absolute;left:14px;top:14px;max-width:330px;background:rgba(255,255,255,.92);border:1px solid var(--line);border-radius:16px;padding:12px 38px 10px 12px;font-size:14px;line-height:1.5;box-shadow:0 8px 20px rgba(0,0,0,.08)}.hintClose{position:absolute;right:8px;top:6px;width:26px;height:26px;border:0;border-radius:9px;background:#e7eef6;color:#45688f;font-size:19px;font-weight:900;line-height:1;cursor:pointer}
+.panel{padding:14px;position:sticky;top:12px}.panel h3{margin:0 0 10px;color:var(--deep);font-size:20px}.row{background:#f8fbff;border:1px solid var(--line);border-radius:16px;padding:10px;margin:10px 0}.row label{display:flex;justify-content:space-between;font-weight:800;color:#284d70;margin-bottom:8px;gap:8px}.row input[type=range]{width:100%;accent-color:#36a852}.check{display:flex;align-items:center;gap:10px;font-weight:800;color:#284d70}.check input{width:22px;height:22px}.modeSelect{width:100%;border:1px solid var(--line);border-radius:14px;padding:10px 12px;font-weight:900;color:#284d70;background:white;font-size:15px}.btns{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}.btn{border:0;border-radius:16px;padding:12px 10px;font-weight:900;font-size:15px;cursor:pointer;box-shadow:0 4px 0 rgba(0,0,0,.14);transition:.12s transform}.btn:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(0,0,0,.14)}.play{background:#6fb5ee;color:white}.reset{background:#e7ebef;color:#3b4650}.formula{background:#ffe4c4;color:#8b4d00}.mission{background:#eaf8e6;color:#1f6f35}.full{grid-column:1/-1}.readout{font-size:14px;line-height:1.65;color:#40556b}.note{margin-top:10px;font-size:13px;line-height:1.5;color:#607080}.link{display:block;text-align:center;margin-top:14px;color:#1f6fe5;font-weight:900;text-decoration:underline}.modal{position:fixed;inset:0;background:rgba(20,32,45,.45);display:none;z-index:50;padding:calc(22px + env(safe-area-inset-top)) 14px calc(22px + env(safe-area-inset-bottom));overflow:auto}.modal.show{display:block}.modalCard{max-width:880px;margin:auto;background:white;border-radius:24px;border:1px solid var(--line);padding:18px;box-shadow:0 20px 60px rgba(0,0,0,.24)}.modalTop{display:flex;justify-content:space-between;align-items:center;gap:10px;position:sticky;top:0;background:white;padding-bottom:10px}.modalTop h2{margin:0;color:#204d7c}.close{width:48px;height:48px;border:0;border-radius:16px;background:#e7eef6;color:#45688f;font-size:28px;font-weight:900;cursor:pointer}.formulaPage{background:#fff7ee;border:1px solid var(--orange-line);border-radius:18px;padding:14px;line-height:1.75}.formulaCard{background:white;border:1px solid #f1c999;border-radius:16px;padding:13px;margin:12px 0}.formulaCard h3{margin:0 0 8px;color:#123d70}.eq{font-size:22px;font-weight:900;color:#123d70;background:#f8fbff;border:1px solid #d9e4ef;border-radius:14px;padding:10px 12px;margin:8px 0;overflow-x:auto;white-space:nowrap}.missionPage{background:#f4fff1;border:1px solid var(--green-line);border-radius:18px;padding:14px;line-height:1.75}.pill{display:inline-block;background:#edf3fb;color:#2e5f93;border-radius:999px;padding:5px 10px;font-weight:900;margin:3px}
+@media(max-width:920px){body{padding:10px 10px calc(130px + env(safe-area-inset-bottom))}.header{gap:8px}.icon{font-size:44px}.lab{grid-template-columns:1fr}.panel{position:static}.canvasWrap{height:58vh;min-height:390px}.hintBox{font-size:12px;max-width:270px}.stageTop{font-size:13px}.success{font-size:20px}.btns{position:fixed;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom));z-index:20;background:rgba(235,241,247,.72);backdrop-filter:blur(8px);border:1px solid #d8e3ef;border-radius:22px;padding:8px;grid-template-columns:repeat(4,1fr)}.btn{padding:10px 5px;font-size:12px;border-radius:14px}.panel .btns .full{grid-column:auto}.row{padding:9px}.canvasWrap{border-radius:0}.link{margin-bottom:8px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header"><div class="icon">🐒</div><div class="title"><div class="t1">Mini Lab</div><div class="t2">โพรเจกไทล์ — ยิงลิง</div></div></div>
+  <div class="lab">
+    <section class="stageCard">
+      <div class="stageTop"><span class="badge" id="status">เล็งตรงไปที่ลิง แล้วกด ▶️ ยิง</span><span class="badge" id="timeBadge">t = 0.00 s</span><span class="success" id="success">สำเร็จ !</span></div>
+      <div class="canvasWrap" id="canvasWrap">
+        <canvas id="c"></canvas>
+        <div class="hintBox" id="hintBox"><button class="hintClose" id="hintClose" aria-label="ปิดป้ายแนวคิด">×</button>แนวคิดหลัก: ลากลูกศรสีเขียวเพื่อปรับทิศทางยิง เลือกโหมด “ลิงปล่อยมือ” หรือ “ลิงไม่ปล่อยมือ” แล้วลากลูกศรสีเขียวเพื่อปรับทิศทางยิง</div>
+      </div>
+    </section>
+    <aside class="panel">
+      <h3>แผงควบคุม</h3>
+      <div class="row"><label>ตำแหน่งลิงแนวนอน <span id="xVal">56 m</span></label><input id="monkeyX" type="range" min="30" max="75" value="56" step="1"></div>
+      <div class="row"><label>ตำแหน่งลิงแนวดิ่ง <span id="yVal">34 m</span></label><input id="monkeyY" type="range" min="18" max="52" value="34" step="1"></div>
+      <div class="row"><label>อัตราเร็วต้น <span id="vVal">30 m/s</span></label><input id="speed" type="range" min="18" max="45" value="30" step="1"></div>
+      <div class="row"><label>ความโน้มถ่วง <span id="gVal">9.8 m/s²</span></label><input id="grav" type="range" min="2" max="12" value="9.8" step="0.1"></div>
+      <div class="row"><label>โหมดลิง <span id="modeVal">ปล่อยมือ</span></label><select id="monkeyMode" class="modeSelect"><option value="release" selected>ลิงปล่อยมือ</option><option value="hold">ลิงไม่ปล่อยมือ</option></select></div>
+      <div class="row check"><input type="checkbox" id="showVec"><span>แสดงเวกเตอร์ตำแหน่ง</span></div>
+      <div class="readout" id="readout"></div>
+      <div class="btns">
+        <button class="btn play" id="fire">▶️ ยิง</button><button class="btn play" id="pause">⏸ หยุด</button>
+        <button class="btn reset" id="reset">🔄 รีเซ็ต</button><button class="btn formula" id="formulaBtn">Σ สูตรสำคัญ</button>
+        <button class="btn mission full" id="missionBtn">🎯 ภารกิจ</button>
+      </div>
+      <div class="note">ลองเปลี่ยนค่า g จะเห็นว่า “ยิงโดน” ยังเกิดได้ถ้าเล็งตรง แต่เวลาและรูปร่างวิถีเปลี่ยนไป</div>
+      <a class="link" href="https://www.facebook.com/resolvephysics" target="_blank">ศึกษาเพิ่มเติมที่ เพจคลายปมฟิสิกส์</a>
+    </aside>
+  </div>
+</div>
+<div class="modal" id="formulaModal"><div class="modalCard"><div class="modalTop"><h2>Σ สูตรสำคัญ</h2><button class="close" onclick="closeModal('formulaModal')">×</button></div><div class="formulaPage">
+  <div class="formulaCard"><h3>1) การเล็งยิงลิง</h3><p>ให้เล็งไปที่ตำแหน่งเริ่มต้นของลิงโดยตรง มุมยิงคือ</p><p>\[\theta=\tan^{-1}\left(\frac{y_m-y_0}{x_m-x_0}\right)\]</p></div>
+  <div class="formulaCard"><h3>2) การเคลื่อนที่ของลูกดอก</h3><p>แนวราบ</p><p>\[x=x_0+v_0\cos\theta\,t\]</p><p>แนวดิ่ง</p><p>\[y=y_0+v_0\sin\theta\,t-\frac{1}{2}gt^2\]</p></div>
+  <div class="formulaCard"><h3>3) การตกของลิง</h3><p>เมื่อลิงปล่อยมือพร้อมกับการยิง</p><p>\[y_{monkey}=y_m-\frac{1}{2}gt^2\]</p></div>
+  <div class="formulaCard"><h3>4) เปรียบเทียบสองโหมด</h3><p><b>ลิงปล่อยมือ:</b> ลิงและลูกดอกตกลงด้วยความเร่งเดียวกัน จึงยังยิงโดนเมื่อเล็งตรงไปที่ตำแหน่งเริ่มต้น</p><p><b>ลิงไม่ปล่อยมือ:</b> ลิงยังอยู่ที่เดิม แต่ลูกดอกตกต่ำลงจากแนวเล็ง จึงมักยิงไม่โดนถ้าเล็งตรง</p></div>
+  <div class="formulaCard"><h3>จุดที่ต้องระวัง</h3><p>ลูกดอกและลิงมีพจน์ \(-\frac{1}{2}gt^2\) เหมือนกัน จึง “ตกลงพร้อมกัน” จากแนวเล็งเดิม ไม่ใช่ยิงแล้วลูกดอกต้องเล็งต่ำกว่าลิง</p></div>
+</div></div></div>
+<div class="modal" id="missionModal"><div class="modalCard"><div class="modalTop"><h2>🎯 ภารกิจ</h2><button class="close" onclick="closeModal('missionModal')">×</button></div><div class="missionPage">
+  <p><span class="pill">ภารกิจที่ 1</span> กด ▶️ ยิง โดยไม่เปลี่ยนค่าใด ๆ แล้วสังเกตว่าลูกดอกกับลิงพบกันตรงไหน</p>
+  <p><span class="pill">ภารกิจที่ 2</span> เพิ่มหรือลดความโน้มถ่วง แล้วลองยิงอีกครั้ง สังเกตว่ายังยิงโดนหรือไม่</p>
+  <p><span class="pill">ภารกิจที่ 3</span> ลดอัตราเร็วต้นมาก ๆ แล้วดูว่าเงื่อนไขใดทำให้ลูกดอกไปไม่ถึงลิง</p>
+  <p><span class="pill">คำถามชวนคิด</span> ถ้าลิงไม่ตก แต่ยังเกาะกิ่งไม้เหมือนเดิม ควรเล็งแบบเดิมหรือไม่?</p>
+</div></div></div>
+<script>
+const canvas=document.getElementById('c'), ctx=canvas.getContext('2d'), wrap=document.getElementById('canvasWrap');
+const el=id=>document.getElementById(id); const controls=['monkeyX','monkeyY','speed','grav'].map(el);
+let W,H, scale, ox, oy, anim=null, running=false, t=0, hit=false, paused=false, trail=[];
+let aimTheta=null, draggingAim=false;
+const dart0={x:0,y:0};
+function resize(){ const r=wrap.getBoundingClientRect(); canvas.width=Math.floor(r.width*devicePixelRatio); canvas.height=Math.floor(r.height*devicePixelRatio); ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0); W=r.width; H=r.height; ox=70; oy=H-70; scale=Math.min((W-110)/85,(H-105)/58); draw(); }
+window.addEventListener('resize', resize);
+function params(){return {mx:+el('monkeyX').value,my:+el('monkeyY').value,v:+el('speed').value,g:+el('grav').value};}
+function isReleaseMode(){return el('monkeyMode').value==='release';}
+function sx(x){return ox+x*scale} function sy(y){return oy-y*scale}
+function autoAngle(){const p=params();return Math.atan2(p.my-dart0.y,p.mx-dart0.x)}
+function angle(){return aimTheta==null?autoAngle():aimTheta}
+function updateLabels(){const p=params(), th=angle()*180/Math.PI; el('xVal').textContent=p.mx+' m'; el('yVal').textContent=p.my+' m'; el('vVal').textContent=p.v+' m/s'; el('gVal').textContent=p.g.toFixed(1)+' m/s²'; el('modeVal').textContent=isReleaseMode()?'ปล่อยมือ':'ไม่ปล่อยมือ'; const cos=Math.cos(angle()); const time=cos>0.05? p.mx/(p.v*cos) : Infinity; el('readout').innerHTML=`มุมเล็ง θ = <b>${th.toFixed(1)}°</b><br>เวลาไปถึงแนวลิงโดยประมาณ<br><b>t = xₘ ÷ (v₀ cosθ) = ${isFinite(time)?time.toFixed(2):'—'} s</b><br>โหมดปัจจุบัน: <b>${isReleaseMode()?'ลิงปล่อยมือ':'ลิงไม่ปล่อยมือ'}</b>`;}
+function drawPalm(){
+ const x=sx(70), base=sy(0); ctx.save(); ctx.lineCap='round';
+ ctx.strokeStyle='#5b2e12'; ctx.lineWidth=14; ctx.beginPath(); ctx.moveTo(x,base); ctx.bezierCurveTo(x+8,sy(15),x-2,sy(34),x-22,sy(48)); ctx.stroke();
+ const crownX=x-45, crownY=sy(50); ctx.fillStyle='#148a36';
+ for(let i=0;i<7;i++){ctx.save(); ctx.translate(crownX,crownY); ctx.rotate((-110+i*34)*Math.PI/180); ctx.beginPath(); ctx.ellipse(0,-28,16,52,0,0,Math.PI*2); ctx.fill(); ctx.restore();}
+ ctx.fillStyle='#b88755'; ctx.beginPath(); ctx.ellipse(x-3,base+6,55,9,0,0,Math.PI*2); ctx.ellipse(x+55,base+4,46,7,0,0,Math.PI*2); ctx.fill(); ctx.restore();
+}
+function trunkCenterAtPixelY(targetY){
+ const x=sx(70), base=sy(0);
+ const p0={x:x,y:base}, p1={x:x+8,y:sy(15)}, p2={x:x-2,y:sy(34)}, p3={x:x-22,y:sy(48)};
+ let best={x:p3.x,y:p3.y,d:Infinity};
+ for(let i=0;i<=160;i++){
+   const t=i/160, u=1-t;
+   const px=u*u*u*p0.x+3*u*u*t*p1.x+3*u*t*t*p2.x+t*t*t*p3.x;
+   const py=u*u*u*p0.y+3*u*u*t*p1.y+3*u*t*t*p2.y+t*t*t*p3.y;
+   const d=Math.abs(py-targetY);
+   if(d<best.d) best={x:px,y:py,d};
+ }
+ return best;
+}
+function drawBranchToMonkey(mx,my){
+ // กิ่งไม้หลัก: ปลายขวาเสียบเข้าไปในลำต้นเสมอ ไม่เว้นช่องว่าง
+ // ปลายซ้ายอยู่ระดับมือของลิง และมีใบไม้สีเขียวติดปลายกิ่ง
+ const monkeyEndX=sx(mx);
+ const monkeyEndY=sy(my)-47;
+ const trunkPoint=trunkCenterAtPixelY(monkeyEndY);
+ const treeEndX=trunkPoint.x+4; // ให้กิ่งซ้อนเข้าไปในลำต้นเล็กน้อยเพื่อไม่ให้เห็นช่องว่าง
+ const treeEndY=trunkPoint.y;
+ const midX=(treeEndX+monkeyEndX)/2;
+ const midY=Math.min(treeEndY,monkeyEndY)-8;
+ ctx.save();ctx.lineCap='round';ctx.lineJoin='round';
+ // เงากิ่งหลัก
+ ctx.strokeStyle='#4b260e';ctx.lineWidth=13;ctx.beginPath();
+ ctx.moveTo(monkeyEndX,monkeyEndY);
+ ctx.quadraticCurveTo(midX,midY,treeEndX,treeEndY);
+ ctx.stroke();
+ // ผิวกิ่งสีน้ำตาล
+ ctx.strokeStyle='#7a431d';ctx.lineWidth=9;ctx.beginPath();
+ ctx.moveTo(monkeyEndX,monkeyEndY);
+ ctx.quadraticCurveTo(midX,midY,treeEndX,treeEndY);
+ ctx.stroke();
+ ctx.strokeStyle='#b77a3a';ctx.lineWidth=2;ctx.beginPath();
+ ctx.moveTo(monkeyEndX+2,monkeyEndY-2);
+ ctx.quadraticCurveTo(midX,midY-3,treeEndX-2,treeEndY-2);
+ ctx.stroke();
+ // ใบไม้สีเขียวที่ปลายซ้ายของกิ่ง ใกล้ตำแหน่งลิง
+ const leafX=monkeyEndX-8, leafY=monkeyEndY-4;
+ const leafAngles=[-140,-105,-70,-35,5,35];
+ ctx.fillStyle='#198c3a';
+ leafAngles.forEach((deg)=>{ctx.save();ctx.translate(leafX,leafY);ctx.rotate(deg*Math.PI/180);ctx.beginPath();ctx.ellipse(0,-16,8,25,0,0,Math.PI*2);ctx.fill();ctx.restore();});
+ ctx.fillStyle='#38a852';
+ [-118,-82,-45].forEach(deg=>{ctx.save();ctx.translate(leafX-2,leafY+2);ctx.rotate(deg*Math.PI/180);ctx.beginPath();ctx.ellipse(0,-12,6,20,0,0,Math.PI*2);ctx.fill();ctx.restore();});
+ ctx.restore();
+}
+function drawMonkey(x,y,hanging=true){
+ ctx.save(); ctx.translate(sx(x),sy(y)); ctx.lineWidth=3; ctx.lineCap='round'; ctx.strokeStyle='#5c321b';
+ // หัวและลำตัว
+ ctx.fillStyle='#f0bb7b'; ctx.beginPath(); ctx.arc(0,0,7,0,Math.PI*2); ctx.fill(); ctx.stroke();
+ ctx.fillStyle='#6b3a1c'; ctx.beginPath(); ctx.arc(0,11,8,0,Math.PI*2); ctx.fill(); ctx.stroke();
+ // แขน: ตอนห้อยให้ชูขึ้นจับกิ่งไม้สีน้ำตาลทั้งสองข้าง
+ if(hanging){
+   ctx.beginPath(); ctx.moveTo(-6,8); ctx.quadraticCurveTo(-12,-18,-8,-47); ctx.stroke();
+   ctx.beginPath(); ctx.moveTo(6,8); ctx.quadraticCurveTo(12,-18,8,-47); ctx.stroke();
+   ctx.fillStyle='#5c321b'; ctx.beginPath(); ctx.arc(-8,-47,3,0,Math.PI*2); ctx.arc(8,-47,3,0,Math.PI*2); ctx.fill();
+ }else{
+   ctx.beginPath(); ctx.moveTo(-7,9); ctx.lineTo(-19,19); ctx.stroke();
+   ctx.beginPath(); ctx.moveTo(7,9); ctx.lineTo(19,18); ctx.stroke();
+ }
+ // ขา
+ ctx.strokeStyle='#5c321b';
+ ctx.beginPath(); ctx.moveTo(-4,18); ctx.lineTo(-10,31); ctx.stroke();
+ ctx.beginPath(); ctx.moveTo(5,18); ctx.lineTo(12,30); ctx.stroke();
+ // หางและหน้า
+ ctx.beginPath(); ctx.arc(8,-12,11,Math.PI*.8,Math.PI*1.75);ctx.stroke();
+ ctx.fillStyle='#111'; ctx.beginPath();ctx.arc(-2,-1,1.5,0,7);ctx.arc(3,-1,1.5,0,7);ctx.fill();
+ ctx.restore();
+}
+function drawDart(x,y,th){ctx.save();ctx.translate(sx(x),sy(y));ctx.rotate(-th);ctx.strokeStyle='#d71920';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(-13,0);ctx.lineTo(13,0);ctx.stroke();ctx.fillStyle='#222';ctx.beginPath();ctx.moveTo(17,0);ctx.lineTo(7,-5);ctx.lineTo(7,5);ctx.closePath();ctx.fill();ctx.fillStyle='#0b7a20';ctx.beginPath();ctx.moveTo(-14,0);ctx.lineTo(-24,-7);ctx.lineTo(-22,0);ctx.lineTo(-24,7);ctx.closePath();ctx.fill();ctx.restore();}
+function axes(){ctx.strokeStyle='#222';ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(ox,20);ctx.lineTo(ox,oy);ctx.lineTo(W-18,oy);ctx.stroke();ctx.fillStyle='#333';ctx.font='12px system-ui';for(let x=0;x<=80;x+=10){ctx.fillText(x,sx(x)-4,oy+18);ctx.beginPath();ctx.moveTo(sx(x),oy-3);ctx.lineTo(sx(x),oy+3);ctx.stroke()}for(let y=10;y<=55;y+=10){ctx.fillText(y,ox-26,sy(y)+4);ctx.beginPath();ctx.moveTo(ox-3,sy(y));ctx.lineTo(ox+3,sy(y));ctx.stroke()}}
+function drawArrow(x0,y0,th,len=9){const x1=x0+len*Math.cos(th), y1=y0+len*Math.sin(th);ctx.strokeStyle='#006b16';ctx.fillStyle='#006b16';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(sx(x0),sy(y0));ctx.lineTo(sx(x1),sy(y1));ctx.stroke();ctx.save();ctx.translate(sx(x1),sy(y1));ctx.rotate(-th);ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-12,-6);ctx.lineTo(-12,6);ctx.closePath();ctx.fill();ctx.restore();}
+function draw(){
+ updateLabels();
+ const p=params(), th=angle(), release=isReleaseMode();
+ ctx.clearRect(0,0,W,H);
+ axes(); drawPalm(); drawBranchToMonkey(p.mx,p.my);
+ const mt=running||paused||hit?t:0;
+ const mx=p.mx;
+ const my=release ? p.my-.5*p.g*mt*mt : p.my;
+ const dx=p.v*Math.cos(th)*mt, dy=p.v*Math.sin(th)*mt-.5*p.g*mt*mt;
+ // show dashed projectile path only after motion starts
+ if((running||paused||hit) && trail.length>1){ctx.strokeStyle='#111';ctx.setLineDash([7,5]);ctx.lineWidth=1.5;ctx.beginPath();trail.forEach((q,i)=>i?ctx.lineTo(sx(q.x),sy(q.y)):ctx.moveTo(sx(q.x),sy(q.y)));ctx.stroke();ctx.setLineDash([])}
+ // aiming line, visible before and after
+ ctx.strokeStyle='#999';ctx.setLineDash([3,5]);ctx.beginPath();ctx.moveTo(sx(0),sy(0));ctx.lineTo(sx(85),sy(85*Math.tan(th)));ctx.stroke();ctx.setLineDash([]);
+ drawArrow(0,0,th,8.5);
+ ctx.beginPath();ctx.arc(sx(0),sy(0),4,0,7);ctx.fillStyle='red';ctx.fill();
+ ctx.strokeStyle='#006b16';ctx.lineWidth=3;ctx.beginPath();ctx.arc(sx(0),sy(0),8, -th, 0, false);ctx.stroke();
+ ctx.fillStyle='#087022';ctx.font='14px system-ui';ctx.fillText((th*180/Math.PI).toFixed(1)+'°',sx(9),sy(1));
+ if(el('showVec').checked){ctx.strokeStyle='rgba(47,111,214,.65)';ctx.lineWidth=2;ctx.setLineDash([5,4]);ctx.beginPath();ctx.moveTo(sx(0),sy(0));ctx.lineTo(sx(mx),sy(Math.max(0,my)));ctx.stroke();ctx.setLineDash([])}
+ if((running||paused||hit) && release){
+   ctx.save();ctx.globalAlpha=0.25;drawMonkey(p.mx,p.my,true);ctx.restore();
+   ctx.strokeStyle='#888';ctx.setLineDash([5,5]);ctx.beginPath();ctx.moveTo(sx(p.mx),sy(p.my));ctx.lineTo(sx(mx),sy(Math.max(my,0)));ctx.stroke();ctx.setLineDash([]);
+ }
+ drawMonkey(mx,Math.max(my,0), !release || !(running||paused||hit));
+ // จุดเล็งกลางตัวลิง
+ ctx.fillStyle='red';ctx.beginPath();ctx.arc(sx(mx),sy(Math.max(my,0))+11,4.5,0,Math.PI*2);ctx.fill();
+ drawDart(dx,Math.max(dy,0),Math.atan2(p.v*Math.sin(th)-p.g*mt,p.v*Math.cos(th)));
+ el('timeBadge').textContent='t = '+mt.toFixed(2)+' s';
+ el('success').style.display=hit?'inline':'none';
+}
+function step(){ if(!running) return; t+=0.016; const p=params(), th=angle(), release=isReleaseMode(); const dx=p.v*Math.cos(th)*t, dy=p.v*Math.sin(th)*t-.5*p.g*t*t; const my=release ? p.my-.5*p.g*t*t : p.my; trail.push({x:dx,y:dy}); const dartAngle=Math.atan2(p.v*Math.sin(th)-p.g*t,p.v*Math.cos(th));
+ const dartPoints=[
+   {x:sx(dx),y:sy(dy)},
+   {x:sx(dx)+17*Math.cos(-dartAngle),y:sy(dy)+17*Math.sin(-dartAngle)}
+ ];
+ const headCenter={x:sx(p.mx),y:sy(my)};
+ const bodyCenter={x:sx(p.mx),y:sy(my)+11};
+ const hitMonkey=dartPoints.some(pt =>
+   Math.hypot(pt.x-headCenter.x,pt.y-headCenter.y)<=13 ||
+   Math.hypot(pt.x-bodyCenter.x,pt.y-bodyCenter.y)<=18
+ );
+ if(hitMonkey){hit=true;running=false;paused=false;el('status').textContent=release?'ยิงโดน เพราะลูกดอกชนหัว/ตัวลิง และลิงตกด้วยความเร่งเดียวกัน':'ยิงโดนหัว/ตัวลิงในโหมดลิงไม่ปล่อยมือ';draw();return;} if(dy<0||dx>90||my<0){running=false;el('status').textContent=hit?'สำเร็จ !':(release?'พลาด/ไปไม่ถึง ลองเล็งใหม่หรือเพิ่มอัตราเร็วต้น':'พลาด เพราะลิงไม่ปล่อยมือจึงยังอยู่สูงกว่าแนวตกของลูกดอก');} draw(); anim=requestAnimationFrame(step);}
+function fire(){cancelAnimationFrame(anim); running=true; paused=false; hit=false; t=0; trail=[{x:0,y:0}]; el('status').textContent=isReleaseMode()?'กำลังเคลื่อนที่... ลิงเริ่มตกพร้อมลูกดอก':'กำลังเคลื่อนที่... ลิงยังจับกิ่งไม้ไม่ปล่อยมือ'; anim=requestAnimationFrame(step)}
+function pause(){ if(running){running=false;paused=true;el('status').textContent='หยุดชั่วคราว';} else if(paused){running=true;paused=false;el('status').textContent='กำลังเคลื่อนที่...'; anim=requestAnimationFrame(step);} }
+function reset(){cancelAnimationFrame(anim);running=false;paused=false;hit=false;t=0;trail=[];el('status').textContent=isReleaseMode()?'เล็งตรงไปที่ลิง แล้วกด ▶️ ยิง':'โหมดลิงไม่ปล่อยมือ: เล็งตรงมักยิงไม่โดน';draw()}
+function canvasPoint(e){const r=canvas.getBoundingClientRect(); const touch=e.touches?e.touches[0]:e; return {x:touch.clientX-r.left,y:touch.clientY-r.top};}
+function setAimFromEvent(e){const p=canvasPoint(e); const wx=(p.x-ox)/scale, wy=(oy-p.y)/scale; if(wx>0){aimTheta=Math.max(-0.05,Math.min(1.35,Math.atan2(wy,wx))); reset();}}
+canvas.addEventListener('pointerdown',e=>{const p=canvasPoint(e); const th=angle(); const ax=sx(8.5*Math.cos(th)), ay=sy(8.5*Math.sin(th)); if(Math.hypot(p.x-ax,p.y-ay)<35 || p.x<180){draggingAim=true; canvas.setPointerCapture(e.pointerId); setAimFromEvent(e);}});
+canvas.addEventListener('pointermove',e=>{if(draggingAim) setAimFromEvent(e);});
+canvas.addEventListener('pointerup',e=>{draggingAim=false;}); canvas.addEventListener('pointercancel',e=>{draggingAim=false;});
+controls.forEach(e=>e.addEventListener('input',()=>{ if(e.id==='monkeyX'||e.id==='monkeyY') aimTheta=null; reset(); })); el('hintClose').onclick=(ev)=>{ev.stopPropagation(); el('hintBox').style.display='none';}; el('monkeyMode').addEventListener('change',reset); el('showVec').addEventListener('change',draw); el('fire').onclick=fire; el('pause').onclick=pause; el('reset').onclick=reset; el('formulaBtn').onclick=()=>openModal('formulaModal'); el('missionBtn').onclick=()=>openModal('missionModal');
+function openModal(id){el(id).classList.add('show');} function closeModal(id){el(id).classList.remove('show')}
+resize(); updateLabels();
+</script>
+</body></html>

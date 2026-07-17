@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>การทดลอง: ลูกบอลโพรเจกไทล์บนรถบรรทุก</title>
+<style>
+  :root{
+    --ink:#0f172a;
+    --muted:#64748b;
+    --bed:#6b7280;
+    --cabin:#e5e7eb;
+    --person:#0f172a;
+    --ball:#f97316;
+  }
+  body{
+    margin:0;
+    padding:14px;
+    font-family:system-ui,"Noto Sans Thai",sans-serif;
+    background:#fff;
+    color:var(--ink);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:10px;
+  }
+  h2{margin:0 0 6px 0;text-align:center}
+
+  /* layout blocks */
+  .settings-panel, .controls-panel{
+    width:min(100%, 920px);
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    justify-content:center;
+    align-items:flex-start;
+  }
+
+  #vp{
+    width:min(100%, 920px);
+    overflow-x:auto;
+    overflow-y:hidden;
+    border-radius:12px;
+    border:1px solid #e5e7eb;
+    background:#f6fbff;
+  }
+  canvas{
+    border-radius:12px;
+    touch-action:pan-x;
+    display:block;
+  }
+
+  .card{
+    border:1px solid #e5e7eb;
+    border-radius:12px;
+    padding:10px 12px;
+    background:#f9fafb;
+    min-width:230px;
+    font-size:14px;
+    box-sizing:border-box;
+  }
+  label{display:flex;align-items:center;gap:6px;margin:2px 0}
+  .num{min-width:56px;text-align:right;display:inline-block;font-variant-numeric:tabular-nums}
+  input[type="range"]{width:150px}
+  input[type="number"]{width:70px}
+  button{
+    padding:8px 14px;
+    border:none;
+    border-radius:10px;
+    background:#2563eb;
+    color:#fff;
+    cursor:pointer;
+    font-size:15px;
+  }
+  button.ghost{
+    background:#e5e7eb;
+    color:#111827;
+  }
+  #status{font-size:13px}
+  small.muted{color:var(--muted)}
+  a.resolve-link{color:#2563eb;font-weight:600;text-decoration:none}
+  a.resolve-link:hover{text-decoration:underline}
+
+  .modal-backdrop{
+    position:fixed;
+    inset:0;
+    background:rgba(15,23,42,0.45);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:50;
+  }
+  .modal-box{
+    background:#ffffff;
+    border-radius:14px;
+    border:1px solid #e5e7eb;
+    max-width:min(720px,96vw);
+    width:96vw;
+    padding:14px 16px;
+    box-shadow:0 18px 40px rgba(15,23,42,0.35);
+  }
+  .modal-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:6px;
+  }
+  .modal-title{
+    font-size:18px;
+    font-weight:600;
+  }
+  .modal-content{
+    background:#eff6ff;
+    border-radius:10px;
+    border:1px solid #bfdbfe;
+    padding:10px 12px;
+    font-size:14px;
+  }
+  .modal-content b{color:#0f172a}
+  .modal-highlight{
+    margin-top:8px;
+    background:#fef3c7;
+    border-radius:10px;
+    border:1px solid #facc15;
+    padding:8px 10px;
+    font-size:13px;
+  }
+  .modal-footer{
+    display:flex;
+    justify-content:flex-end;
+    margin-top:10px;
+  }
+  .modal-footer button{
+    background:#e5e7eb;
+    color:#111827;
+  }
+  .modal-footer button:hover{
+    background:#d1d5db;
+  }
+
+  /* มือถือ: เรียง = ตั้งค่า -> จอทดลอง -> ปุ่ม -> ช่องติ๊ก และไม่ล้นจอ */
+  @media (max-width: 640px){
+    .settings-panel, .controls-panel{
+      width:100%;
+      justify-content:stretch;
+    }
+    .card{
+      width:100%;
+      min-width:unset;
+    }
+    input[type="range"]{width:min(56vw, 220px)}
+    input[type="number"]{width:78px}
+
+    /* ให้รูปการทดลองเล็กลง 60% แต่กรอบจอเท่าเดิม */
+    canvas{
+      transform:scale(0.6);
+      transform-origin: top left;
+    }
+  }
+</style>
+</head>
+<body>
+<h2>การทดลอง: ลูกบอลโพรเจกไทล์บนรถบรรทุก</h2>
+
+<!-- ตั้งค่า (มือถือ: อยู่บนจอทดลองตามที่สั่ง) -->
+<div class="settings-panel">
+  <div class="card">
+    <b>ตั้งค่ารถบรรทุก</b><br>
+    <label>
+      v<sub>รถ</sub> (เริ่มต้น)
+      <input type="range" id="vTruckRange" min="0" max="20" step="0.5" value="5">
+      <input type="number" id="vTruckNum" min="0" max="20" step="0.5" value="5">
+      <span class="num">m/s</span>
+    </label>
+    <label>
+      a<sub>รถ</sub>
+      <input type="range" id="aTruckRange" min="-5" max="5" step="0.1" value="0">
+      <input type="number" id="aTruckNum" min="-5" max="5" step="0.1" value="0">
+      <span class="num">m/s²</span>
+    </label>
+    <small class="muted">ค่า a<sub>รถ</sub> บวก = เร่งไปขวา, ลบ = เบรก/เร่งไปซ้าย</small>
+  </div>
+
+  <div class="card">
+    <b>ตั้งค่าการขว้างลูกบอล</b><br>
+    <label>
+      v<sub>บอล</sub> (ขว้าง)
+      <input type="range" id="vBallRange" min="0" max="20" step="0.5" value="8">
+      <input type="number" id="vBallNum" min="0" max="20" step="0.5" value="8">
+      <span class="num">m/s</span>
+    </label>
+    <label>
+      มุมการขว้าง θ
+      <input type="range" id="angleRange" min="0" max="90" step="1" value="90">
+      <input type="number" id="angleNum" min="0" max="90" step="1" value="90">
+      <span class="num">°</span>
+    </label>
+    <small class="muted">0° = ขวางแนวราบไปทางขวา, 90° = โยนขึ้นตรง (v แนวราบจากการขว้าง = 0)</small>
+  </div>
+</div>
+
+<!-- จอทดลอง (ตัดส่วนล่างใต้พื้นถนนให้สั้นลงแล้ว) -->
+<div id="vp">
+  <canvas id="cv" width="3200" height="450"></canvas>
+</div>
+
+<!-- ปุ่ม -->
+<div class="controls-panel">
+  <div class="card" style="display:flex;flex-direction:column;gap:6px;align-items:flex-start">
+    <b>ควบคุมการทดลอง</b>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <button id="playBtn">▶ เล่น</button>
+      <button id="resetBtn" class="ghost">↺ รีเซ็ต</button>
+      <button id="explainBtn" class="ghost">ℹ อธิบาย</button>
+    </div>
+
+    <!-- ช่องติ๊ก -->
+    <label style="margin-top:4px">
+      <input type="checkbox" id="showVOnly">
+      แสดงความเร็ว v ของวัตถุ
+    </label>
+    <label>
+      <input type="checkbox" id="showCompOnly">
+      แสดงองค์ประกอบความเร็ว v<sub>x</sub>, v<sub>y</sub>
+    </label>
+    <label>
+      <input type="checkbox" id="showDecomp">
+      แสดงความเร็วในการขว้าง + ความเร็วของรถ
+    </label>
+    <small class="muted">ภาพจะหยุดอัตโนมัติเมื่อบอลกระทบรถ, พื้นดิน หรือกลับมาที่ระดับมือ (กรณีพิเศษ)</small>
+  </div>
+</div>
+
+<div id="status" class="card" style="width:min(100%,920px)"></div>
+
+<p style="margin:0 8px 4px 8px;font-size:13px">
+  หมายเหตุ : การทดลองนี้ไม่คิดแรงต้านของอากาศ
+</p>
+
+<p style="margin:0 8px 8px 8px;font-size:14px">
+  ศึกษาเพิ่มเติมที่เพจ
+  <a class="resolve-link" href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">คลายปมฟิสิกส์</a>
+</p>
+
+<script>
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+
+const g = 9.81;
+const SCALE = 40;
+const ORIGIN_X = 80;
+const GROUND_Y = 430;
+
+const truck = { X:0, v:5, a:0, L:4.5, H:1.2 };
+
+const person = {
+  offsetFromBack: 1.2,
+  bodyH: 0.7,
+  legH: 0.5,
+  headR: 0.18,
+  armLen: 0.6,
+  armAngleDeg: 60
+};
+
+const ball = { X:0, Y:0, vX:0, vY:0, r:0.15, hit:false };
+
+let t = 0;
+let running = false;
+let lastTime = 0;
+
+let launch = { X:0, Y:0, vX:0, vY:0, vThrowX:0, vThrowY:0, vTruck0:0 };
+let trailsBall = [];
+let trailsTruck = [];
+let collisionInfo = "";
+let specialCaseReturnToHand = false;
+let ballHasMoved = false;
+
+let showVOnly = false;
+let showCompOnly = false;
+let showDecomp = false;
+
+// --- UI ---
+const vTruckRange = document.getElementById('vTruckRange');
+const vTruckNum   = document.getElementById('vTruckNum');
+const aTruckRange = document.getElementById('aTruckRange');
+const aTruckNum   = document.getElementById('aTruckNum');
+const vBallRange  = document.getElementById('vBallRange');
+const vBallNum    = document.getElementById('vBallNum');
+const angleRange  = document.getElementById('angleRange');
+const angleNum    = document.getElementById('angleNum');
+const playBtn     = document.getElementById('playBtn');
+const resetBtn    = document.getElementById('resetBtn');
+const explainBtn  = document.getElementById('explainBtn');
+const showVOnlyEl = document.getElementById('showVOnly');
+const showCompOnlyEl = document.getElementById('showCompOnly');
+const showDecompEl= document.getElementById('showDecomp');
+const statusEl    = document.getElementById('status');
+
+function wx(xm){ return ORIGIN_X + xm * SCALE; }
+function wy(ym){ return GROUND_Y - ym * SCALE; }
+
+function bindPair(range, num, onChange){
+  function syncFromRange(){ num.value = range.value; onChange(+range.value); }
+  function syncFromNum(){ range.value = num.value; onChange(+num.value); }
+  range.addEventListener('input', syncFromRange);
+  num.addEventListener('input', syncFromNum);
+  onChange(+range.value);
+}
+
+bindPair(vTruckRange, vTruckNum, v => { truck.v = v; resetSimulation(false); });
+bindPair(aTruckRange, aTruckNum, v => { truck.a = v; resetSimulation(false); });
+bindPair(vBallRange,  vBallNum,  v => { resetSimulation(false); });
+bindPair(angleRange,  angleNum,  v => { resetSimulation(false); });
+
+showVOnlyEl.addEventListener('change', ()=>{ showVOnly = showVOnlyEl.checked; draw(); });
+showCompOnlyEl.addEventListener('change', ()=>{ showCompOnly = showCompOnlyEl.checked; draw(); });
+showDecompEl.addEventListener('change', ()=>{ showDecomp = showDecompEl.checked; draw(); });
+
+function getHandWorldPosition(){
+  const backX = truck.X;
+  const baseY = truck.H;
+  const px = backX + person.offsetFromBack;
+  const footY = baseY;
+  const kneeY = footY + person.legH;
+  const bodyTopY = kneeY + person.bodyH;
+  const shoulderY = (kneeY + bodyTopY) * 0.5;
+  const shoulderXRight = px + 0.05;
+
+  const armLen = person.armLen;
+  const armAngleRad = person.armAngleDeg * Math.PI / 180;
+
+  const handX = shoulderXRight + armLen * Math.cos(armAngleRad);
+  const handY = shoulderY + armLen * Math.sin(armAngleRad);
+  return { x: handX, y: handY };
+}
+
+function computeLaunch(){
+  truck.X = 0;
+  const vTruck0 = +vTruckNum.value || 0;
+  const aTruck0 = +aTruckNum.value || 0;
+  truck.v = vTruck0;
+  truck.a = aTruck0;
+
+  const hand = getHandWorldPosition();
+  const vBall0 = +vBallNum.value || 0;
+  const angleDeg = +angleNum.value || 0;
+  const angleRad = angleDeg * Math.PI / 180;
+
+  const vThrowX = vBall0 * Math.cos(angleRad);
+  const vThrowY = vBall0 * Math.sin(angleRad);
+
+  const vBallX_world = vTruck0 + vThrowX;
+  const vBallY_world = vThrowY;
+
+  launch = { X:hand.x, Y:hand.y, vX:vBallX_world, vY:vBallY_world, vThrowX, vThrowY, vTruck0 };
+
+  ball.X  = hand.x;
+  ball.Y  = hand.y;
+  ball.vX = vBallX_world;
+  ball.vY = vBallY_world;
+  ball.hit = false;
+  ballHasMoved = false;
+
+  specialCaseReturnToHand = (Math.abs(aTruck0) < 1e-6 && Math.abs(angleDeg - 90) < 1e-6 && vBall0 > 0);
+
+  trailsBall  = [{X:ball.X, Y:ball.Y}];
+  trailsTruck = [{X:truck.X}];
+  collisionInfo = "";
+}
+
+function resetSimulation(){
+  t = 0;
+  running = false;
+  playBtn.textContent = '▶ เล่น';
+  lastTime = 0;
+  computeLaunch();
+  draw();
+  updateStatus();
+}
+
+function step(dt){
+  t += dt;
+
+  truck.v += truck.a * dt;
+  truck.X += truck.v * dt;
+
+  if(!ball.hit){
+    const prevY = ball.Y;
+
+    ball.vY += -g * dt;
+    ball.X  += ball.vX * dt;
+    ball.Y  += ball.vY * dt;
+
+    if(!ballHasMoved){
+      if(Math.abs(ball.X - launch.X) > 1e-6 || Math.abs(ball.Y - launch.Y) > 1e-6) ballHasMoved = true;
+    }
+
+    if(specialCaseReturnToHand){
+      if(prevY > launch.Y && ball.Y <= launch.Y && ball.vY < 0){
+        ball.Y = launch.Y;
+        ball.hit = true;
+        collisionInfo = "บอลตกกลับลงมาที่ระดับเดิม (ระดับมือ)";
+        running = false;
+        playBtn.textContent = '▶ เล่น';
+      }
+    }
+
+    trailsBall.push({X:ball.X, Y:ball.Y});
+    trailsTruck.push({X:truck.X});
+    if(trailsBall.length > 800) trailsBall.shift();
+    if(trailsTruck.length > 800) trailsTruck.shift();
+
+    if(!ball.hit && ball.Y - ball.r <= 0){
+      ball.Y = ball.r;
+      ball.hit = true;
+      collisionInfo = "บอลกระทบพื้นดิน";
+      running = false;
+      playBtn.textContent = '▶ เล่น';
+    }
+
+    if(!ball.hit){
+      const truckLeft  = truck.X;
+      const truckRight = truck.X + truck.L;
+      const bedTopY    = truck.H + 0.05;
+      if(ball.X + ball.r >= truckLeft &&
+         ball.X - ball.r <= truckRight &&
+         ball.Y - ball.r <= bedTopY &&
+         ball.Y >= 0){
+        ball.hit = true;
+        collisionInfo = "บอลกระทบรถบรรทุก";
+        running = false;
+        playBtn.textContent = '▶ เล่น';
+      }
+    }
+  }
+
+  updateStatus();
+}
+
+function drawGrid(){
+  ctx.save();
+  ctx.strokeStyle = 'rgba(148,163,184,0.20)';
+  ctx.lineWidth = 1;
+  const step = 40;
+  for(let x=0; x<=cv.width; x+=step){
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, GROUND_Y); ctx.stroke();
+  }
+  for(let y=0; y<=GROUND_Y; y+=step){
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(cv.width, y); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawTruck(){
+  const xPx = wx(truck.X);
+  const bedTopPx = wy(truck.H);
+  const bedH_px = truck.H * SCALE;
+
+  ctx.fillStyle = getCSS('--bed') || '#6b7280';
+  ctx.fillRect(xPx, bedTopPx, truck.L*SCALE, bedH_px);
+
+  ctx.save();
+  const cabL = 1.4;
+  const cabH = 1.0;
+  const cabX = truck.X + truck.L - cabL;
+  const cabX_px = wx(cabX);
+  const cabBottomPx = wy(truck.H + cabH);
+  ctx.beginPath();
+  ctx.moveTo(cabX_px, bedTopPx);
+  ctx.lineTo(wx(cabX+cabL), bedTopPx);
+  ctx.lineTo(wx(cabX+cabL*0.7), cabBottomPx);
+  ctx.lineTo(cabX_px, cabBottomPx);
+  ctx.closePath();
+  ctx.fillStyle = getCSS('--cabin') || '#e5e7eb';
+  ctx.fill();
+  ctx.strokeStyle = '#1f2933';
+  ctx.stroke();
+  ctx.restore();
+
+  const wheelR_px = 0.35 * SCALE;
+  const wheelY_px = GROUND_Y;
+  drawWheel(wx(truck.X+0.8), wheelY_px, wheelR_px);
+  drawWheel(wx(truck.X+truck.L-0.8), wheelY_px, wheelR_px);
+}
+
+function drawWheel(cx, cy, r){
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI*2);
+  ctx.fillStyle = '#111827';
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(cx, cy, r*0.4, 0, Math.PI*2);
+  ctx.fillStyle = '#e5e7eb';
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawPerson(){
+  const backX = truck.X;
+  const baseY = truck.H;
+  const px = backX + person.offsetFromBack;
+  const footY = baseY;
+  const kneeY = footY + person.legH;
+  const bodyTopY = kneeY + person.bodyH;
+  const headCenterY = bodyTopY + person.headR*1.2;
+
+  ctx.save();
+  ctx.strokeStyle = '#0f172a';
+  ctx.fillStyle   = '#0f172a';
+
+  const px_px = wx(px);
+
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(px_px-4, wy(footY));
+  ctx.lineTo(px_px-4, wy(kneeY));
+  ctx.moveTo(px_px+4, wy(footY));
+  ctx.lineTo(px_px+4, wy(kneeY));
+  ctx.stroke();
+
+  ctx.lineWidth = 7;
+  ctx.beginPath();
+  ctx.moveTo(px_px, wy(kneeY));
+  ctx.lineTo(px_px, wy(bodyTopY));
+  ctx.stroke();
+
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(px_px, wy(headCenterY), person.headR*SCALE, 0, Math.PI*2);
+  ctx.stroke();
+
+  const headR_px = person.headR * SCALE;
+  let headY_px = wy(headCenterY);
+  const hatOffsetUp = 3;
+  headY_px -= hatOffsetUp;
+  ctx.fillStyle = '#ef4444';
+  ctx.fillRect(px_px - headR_px*1.2, headY_px - headR_px*0.5, headR_px*2.4, headR_px*0.3);
+  ctx.beginPath();
+  ctx.moveTo(px_px - headR_px*1.0, headY_px - headR_px*0.5);
+  ctx.lineTo(px_px + headR_px*1.0, headY_px - headR_px*0.5);
+  ctx.lineTo(px_px + headR_px*0.5, headY_px - headR_px*1.4);
+  ctx.lineTo(px_px - headR_px*0.5, headY_px - headR_px*1.4);
+  ctx.closePath();
+  ctx.fill();
+
+  const eyeR = 0.05 * SCALE;
+  const eyeDX = 0.09 * SCALE;
+  ctx.strokeStyle = '#0f172a';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(px_px-eyeDX, headY_px+hatOffsetUp, eyeR, 0, Math.PI*2);
+  ctx.arc(px_px+eyeDX, headY_px+hatOffsetUp, eyeR, 0, Math.PI*2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(px_px-eyeDX+eyeR, headY_px+hatOffsetUp);
+  ctx.lineTo(px_px+eyeDX-eyeR, headY_px+hatOffsetUp);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(px_px, headY_px+hatOffsetUp+0.11*SCALE, 0.09*SCALE, 0, Math.PI, false);
+  ctx.stroke();
+
+  const armAngleRad = person.armAngleDeg * Math.PI/180;
+  const shoulderY = (kneeY + bodyTopY)*0.5;
+  const shoulderXRight = px + 0.05;
+  const shoulderXLeft  = px - 0.05;
+  const armLen = person.armLen;
+
+  const handX = shoulderXRight + armLen * Math.cos(armAngleRad);
+  const handY = shoulderY + armLen * Math.sin(armAngleRad);
+
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(wx(shoulderXRight), wy(shoulderY));
+  ctx.lineTo(wx(handX), wy(handY));
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(wx(shoulderXLeft), wy(shoulderY));
+  ctx.lineTo(wx(handX), wy(handY));
+  ctx.stroke();
+
+  const ballR_px = ball.r * SCALE;
+  ctx.beginPath();
+  ctx.fillStyle = ballHasMoved ? '#d1d5db' : (getCSS('--ball') || '#f97316');
+  ctx.arc(wx(launch.X), wy(launch.Y), ballR_px, 0, Math.PI*2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+/* --- arrows / vectors --- */
+function drawArrowWithValue(ox, oy, Lx, Ly, color, sym, value, labelDy=0){
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.fillStyle   = color;
+  ctx.lineWidth = 2.2;
+
+  ctx.beginPath();
+  ctx.moveTo(ox, oy);
+  ctx.lineTo(ox+Lx, oy+Ly);
+  ctx.stroke();
+
+  const len = Math.hypot(Lx, Ly) || 1;
+  const ux = Lx/len, uy = Ly/len;
+  const ah = 8;
+
+  ctx.beginPath();
+  ctx.moveTo(ox+Lx, oy+Ly);
+  ctx.lineTo(ox+Lx - ux*ah + uy*ah*0.5, oy+Ly - uy*ah - ux*ah*0.5);
+  ctx.lineTo(ox+Lx - ux*ah - uy*ah*0.5, oy+Ly - uy*ah + ux*ah*0.5);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.font = '12px system-ui';
+  ctx.fillText(`${sym} = ${value.toFixed(2)} m/s`, ox+Lx+8, oy+Ly-4+labelDy);
+  ctx.restore();
+}
+
+function drawHead(ox, oy, Lx, Ly, ah, color){
+  const len = Math.hypot(Lx, Ly) || 1;
+  const ux = Lx/len, uy = Ly/len;
+  ctx.beginPath();
+  ctx.moveTo(ox+Lx, oy+Ly);
+  ctx.lineTo(ox+Lx - ux*ah + uy*ah*0.5, oy+Ly - uy*ah - ux*ah*0.5);
+  ctx.lineTo(ox+Lx - ux*ah - uy*ah*0.5, oy+Ly - uy*ah + ux*ah*0.5);
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.fill();
+}
+
+function drawInitialDecompositionFixedTruck(){
+  const ox = wx(launch.X);
+  const oy = wy(launch.Y);
+
+  const uMag = Math.hypot(launch.vThrowX, launch.vThrowY);
+  const vTruckFixed = launch.vTruck0;
+
+  const scale = 1.2 * SCALE / 10;
+  drawArrowWithValue(ox, oy, launch.vThrowX*scale, -launch.vThrowY*scale, '#2563eb', 'u', uMag, -20);
+  drawArrowWithValue(ox, oy, vTruckFixed*scale, 0, '#16a34a', 'vรถ', Math.abs(vTruckFixed), +20);
+}
+
+function drawFrontTruckVelocityArrowDynamic(){
+  const frontX = truck.X + truck.L + 0.15;
+  const y = truck.H + 0.85;
+  const ox = wx(frontX);
+  const oy = wy(y);
+
+  const vTruckNow = truck.v;
+  const scale = 1.2 * SCALE / 10;
+
+  drawArrowWithValue(ox, oy, vTruckNow*scale, 0, '#111827', 'vรถ', Math.abs(vTruckNow), 0);
+}
+
+function drawVelocityUI(cx, cy, vx, vy, showV, showComp){
+  const colorV = '#ef4444';
+  const colorComp = '#fb923c'; // เข้มขึ้นนิด
+
+  const scaleMain = 1.2 * SCALE / 10;
+
+  if(showV){
+    const Lx = vx * scaleMain;
+    const Ly = -vy * scaleMain;
+    const vMag = Math.hypot(vx, vy);
+
+    ctx.save();
+    ctx.strokeStyle = colorV;
+    ctx.fillStyle   = colorV;
+    ctx.lineWidth = 2.8;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx+Lx, cy+Ly);
+    ctx.stroke();
+    drawHead(cx, cy, Lx, Ly, 8, colorV);
+
+    ctx.font = '13px system-ui';
+    ctx.fillText('v', cx+Lx+6, cy+Ly-6);
+    ctx.font = '12px system-ui';
+    ctx.fillText(`v = ${vMag.toFixed(2)} m/s`, cx+Lx+22, cy+Ly-6);
+    ctx.restore();
+  }
+
+  if(showComp){
+    // ให้ vx vy สัมพันธ์กับ v ด้วยสเกลเดียวกัน (หลักการแยกเวกเตอร์)
+    const LxComp = vx * scaleMain;
+    const LyComp = -vy * scaleMain;
+
+    ctx.save();
+    ctx.strokeStyle = colorComp;
+    ctx.fillStyle   = colorComp;
+    ctx.lineWidth = 2.3;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx+LxComp, cy);
+    ctx.stroke();
+    drawHead(cx, cy, LxComp, 0, 7, colorComp);
+
+    ctx.font = '12px system-ui';
+    ctx.fillText('vₓ', cx+LxComp+6*(LxComp>=0?1:-1), cy-6);
+    ctx.fillText(`= ${vx.toFixed(2)} m/s`, cx+LxComp+26*(LxComp>=0?1:-1), cy-6);
+    ctx.restore();
+
+    const shiftVyLeft = -100;
+
+    ctx.save();
+    ctx.strokeStyle = colorComp;
+    ctx.fillStyle   = colorComp;
+    ctx.lineWidth = 2.3;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx, cy+LyComp);
+    ctx.stroke();
+    drawHead(cx, cy, 0, LyComp, 7, colorComp);
+
+    // ✅ แสดงค่า v_y เป็น “บวกเสมอ” (ไม่ใส่เครื่องหมายลบตอนขาลง)
+    const vyAbs = Math.abs(vy);
+
+    ctx.font = '12px system-ui';
+    ctx.fillText('vᵧ', cx+6+shiftVyLeft, cy+LyComp - 6);
+    ctx.fillText(`= ${vyAbs.toFixed(2)} m/s`, cx+26+shiftVyLeft, cy+LyComp - 6);
+    ctx.restore();
+  }
+}
+
+/* --- main draw --- */
+function draw(){
+  ctx.clearRect(0,0,cv.width,cv.height);
+
+  ctx.fillStyle = '#f6fbff';
+  ctx.fillRect(0,0,cv.width,GROUND_Y);
+  drawGrid();
+
+  // พื้นถนน + ตัดส่วนล่างให้สั้น (cv.height=450)
+  ctx.fillStyle = '#eef2f7';
+  ctx.fillRect(0,GROUND_Y,cv.width,cv.height-GROUND_Y);
+  ctx.fillStyle = '#cbd5e1';
+  ctx.fillRect(0,GROUND_Y,cv.width,6);
+
+  // เส้นทางลูกบอล: ให้เส้นเล็กลง + เส้นปะ
+  if(trailsBall.length > 1){
+    ctx.save();
+    ctx.setLineDash([6,6]);
+    ctx.strokeStyle = '#d1d5db';
+    ctx.lineWidth = 1.0;  // เล็กลง
+    ctx.beginPath();
+    ctx.moveTo(wx(trailsBall[0].X), wy(trailsBall[0].Y));
+    for(let i=1;i<trailsBall.length;i++) ctx.lineTo(wx(trailsBall[i].X), wy(trailsBall[i].Y));
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // ร่องรอยรถ: ให้จางลง
+  ctx.save();
+  ctx.fillStyle = 'rgba(148,163,184,0.10)'; // จางลงจากเดิม
+  for(const tr of trailsTruck){
+    const xPx = wx(tr.X);
+    const yPx = wy(truck.H);
+    ctx.fillRect(xPx, yPx, truck.L * SCALE, truck.H * SCALE);
+  }
+  ctx.restore();
+
+  // จุดรอยลูกบอลเดิม (คงเดิม)
+  ctx.save();
+  ctx.fillStyle = 'rgba(209,213,219,0.85)';
+  for(const pb of trailsBall){
+    ctx.beginPath();
+    ctx.arc(wx(pb.X), wy(pb.Y), 3, 0, Math.PI*2);
+    ctx.fill();
+  }
+  ctx.restore();
+
+  drawTruck();
+  drawPerson();
+
+  ctx.save();
+  ctx.fillStyle = getCSS('--ball') || '#f97316';
+  ctx.beginPath();
+  ctx.arc(wx(ball.X), wy(ball.Y), ball.r * SCALE, 0, Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+
+  drawFrontTruckVelocityArrowDynamic();
+
+  if(showDecomp) drawInitialDecompositionFixedTruck();
+
+  if(showVOnly || showCompOnly){
+    drawVelocityUI(wx(ball.X), wy(ball.Y), ball.vX, ball.vY, showVOnly, showCompOnly);
+  }
+}
+
+function updateStatus(){
+  const vTruck = truck.v;
+  const vBall = Math.sqrt(ball.vX*ball.vX + ball.vY*ball.vY);
+  const angleNow = Math.atan2(ball.vY, ball.vX) * 180 / Math.PI;
+
+  let text = `เวลา t = ${t.toFixed(2)} s<br>
+  v<sub>รถ</sub> ปัจจุบัน = ${vTruck.toFixed(2)} m/s, a<sub>รถ</sub> = ${truck.a.toFixed(2)} m/s²<br>
+  v<sub>บอล</sub> (โลก) ≈ ${vBall.toFixed(2)} m/s, มุม ≈ ${angleNow.toFixed(1)}° จากแนวราบไปขวา<br>
+  `;
+
+  if(collisionInfo){
+    text += `<b>สถานะ:</b> ${collisionInfo}`;
+  }else if(!running){
+    text += `<b>สถานะ:</b> หยุดชั่วคราว (กด ▶ เล่น เพื่อเริ่ม/เล่นต่อ)`;
+  }else{
+    text += `<b>สถานะ:</b> กำลังจำลองการเคลื่อนที่โพรเจกไทล์ของลูกบอล`;
+  }
+
+  statusEl.innerHTML = text;
+}
+
+function getCSS(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+
+function loop(ts){
+  if(!running) return;
+  if(!lastTime) lastTime = ts;
+  const dt = Math.min(0.033, (ts - lastTime)/1000);
+  lastTime = ts;
+
+  step(dt);
+  draw();
+
+  if(t < 20 && running){
+    requestAnimationFrame(loop);
+  }else{
+    running = false;
+    playBtn.textContent = '▶ เล่น';
+  }
+}
+
+function openExplainModal(){
+  const vTruck0 = +vTruckNum.value || 0;
+  const vBall0  = +vBallNum.value  || 0;
+  const angleDeg= +angleNum.value  || 0;
+  const angleRad= angleDeg * Math.PI / 180;
+
+  const vThrowX = vBall0 * Math.cos(angleRad);
+  const vThrowY = vBall0 * Math.sin(angleRad);
+
+  const vx0 = vTruck0 + vThrowX;
+  const vy0 = vThrowY;
+  const dirAngleDeg = Math.atan2(vy0, vx0) * 180 / Math.PI;
+
+  const html = `
+    <div class="modal-backdrop" id="expBack">
+      <div class="modal-box">
+        <div class="modal-header">
+          <div class="modal-title">อธิบายหลักการคำนวณการขว้างลูกบอลบนรถ</div>
+        </div>
+        <div class="modal-content">
+          <p><b>1. ความเร็วต้นแนวราบของลูกบอลในกรอบโลก</b></p>
+          <p style="margin-left:8px">
+            คนยืนอยู่บนรถแล้วขว้างลูกบอลไปข้างหน้า<br>
+            ความเร็วต้นแนวราบของลูกบอลในกรอบอ้างอิงโลก =
+            <br>ความเร็วต้นแนวราบจากการขว้าง + ความเร็วของรถ
+          </p>
+          <p style="margin-left:14px">
+            v<sub>x0</sub> = v<sub>รถ</sub> + u · cos(θ)<br>
+            v<sub>y0</sub> = u · sin(θ)
+          </p>
+          <p><b>2. ค่าจากการตั้งตอนนี้</b></p>
+          <p style="margin-left:14px">
+            v<sub>รถ</sub> = ${vTruck0.toFixed(2)} m/s<br>
+            u = v<sub>ขว้าง</sub> = ${vBall0.toFixed(2)} m/s, θ = ${angleDeg.toFixed(1)}°<br>
+            ⇒ v<sub>x0</sub> ≈ ${vx0.toFixed(2)} m/s<br>
+            ⇒ v<sub>y0</sub> ≈ ${vy0.toFixed(2)} m/s
+          </p>
+          <p><b>3. ทิศทางและมุมของความเร็วต้น</b></p>
+          <p style="margin-left:14px">
+            ทิศของเวกเตอร์ความเร็วต้นคือทิศของ (v<sub>x0</sub>, v<sub>y0</sub>)<br>
+            มุมที่เวกเตอร์ทำกับแนวราบไปทางขวา = φ โดยใช้<br>
+            φ = arctan( v<sub>y0</sub> / v<sub>x0</sub> )
+          </p>
+          <p style="margin-left:14px">
+            สำหรับค่าปัจจุบัน<br>
+            φ ≈ ${dirAngleDeg.toFixed(1)}° จากแนวราบไปทางขวา
+          </p>
+          <p><b>4. การเคลื่อนที่แบบโพรเจกไทล์</b></p>
+          <p style="margin-left:14px">
+            หลังจากปล่อยลูกบอล การเคลื่อนที่ในกรอบโลกคิดแบบโพรเจกไทล์ปกติ:<br>
+            x(t) = x<sub>0</sub> + v<sub>x0</sub> · t<br>
+            y(t) = y<sub>0</sub> + v<sub>y0</sub> · t - (1/2) g t²
+          </p>
+          <div class="modal-highlight">
+            จุดสำคัญ: กรณีวัตถุเคลื่อนที่ไปกับรถแบบนี้<br>
+            <b>ความเร็วต้นแนวราบของลูกบอล = ความเร็วต้นแนวราบในการขว้าง + ความเร็วของรถ</b><br>
+            ถ้าลืมบวกส่วนของรถเข้าไป การวาดวิถีและหามุมการเคลื่อนที่ตอนเริ่มต้นจะผิดทันที
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="expClose">ปิด</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML('beforeend', html);
+  document.getElementById('expClose').onclick = closeExplainModal;
+  document.getElementById('expBack').onclick = (e)=>{
+    if(e.target && e.target.id === 'expBack') closeExplainModal();
+  };
+}
+
+function closeExplainModal(){
+  const el = document.getElementById('expBack');
+  if(el) el.remove();
+}
+
+playBtn.addEventListener('click', ()=>{
+  if(!running){
+    running = true;
+    playBtn.textContent = '⏸ หยุด';
+    lastTime = 0;
+    requestAnimationFrame(loop);
+  }else{
+    running = false;
+    playBtn.textContent = '▶ เล่น';
+  }
+});
+resetBtn.addEventListener('click', ()=> resetSimulation());
+explainBtn.addEventListener('click', openExplainModal);
+
+resetSimulation();
+</script>
+</body>
+</html>

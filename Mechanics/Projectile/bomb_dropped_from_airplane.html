@@ -1,0 +1,1650 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>ระเบิดจากเครื่องบิน — คลายปมฟิสิกส์</title>
+
+<!-- MathJax (มาตรฐานสมการเป็น LaTeX / MathJax) -->
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath: [['\\(','\\)'], ['$', '$']],
+      displayMath: [['\\[','\\]']],
+      processEscapes: true
+    },
+    svg: { fontCache: 'global' }
+  };
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+
+<style>
+  :root{
+    --bg:#ffffff;
+    --panel:#ffffff;
+    --soft:#f3f6fb;
+    --line:#e5e7eb;
+    --ink:#0f172a;
+    --muted:#64748b;
+
+    /* เพจมาตรฐาน (สีความหมาย) */
+    --blue:#38bdf8;     /* ควบคุม */
+    --gray:#e5e7eb;     /* รีเซ็ต/โครง */
+    --orange:#ffedd5;   /* สูตรสำคัญ */
+    --orange2:#fb923c;  /* ขอบสูตร */
+    --green:#dcfce7;    /* แบบฝึกหัด */
+    --green2:#86efac;   /* เส้น/เน้นฝึก */
+    --red:#ef4444;
+
+    /* พื้นดิน */
+    --ground:#f3d8b6;        /* น้ำตาลอ่อน */
+    --groundLine:#b45309;    /* น้ำตาลเส้นเต็ม */
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font:16px/1.5 system-ui,"Noto Sans Thai",Segoe UI,Roboto,Arial;
+  }
+
+  header{
+    padding:14px 18px;
+    border-bottom:1px solid var(--line);
+    background:#fff;
+    position:sticky;top:0;z-index:5;
+  }
+  header h1{margin:0;font-size:18px;letter-spacing:.2px}
+
+  .wrap{
+    display:grid;
+    grid-template-columns:380px 1fr;
+    gap:16px;
+    padding:16px;
+    max-width:1400px;
+    margin:0 auto;
+    align-items:start;
+  }
+
+  .card{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:16px;
+    box-shadow:0 10px 30px rgba(2,6,23,.08);
+    overflow:hidden;
+  }
+
+  .controls{padding:14px}
+  .row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;margin:10px 0}
+  .row label{font-size:14px;color:var(--ink)}
+  .row input[type=range]{width:100%}
+  .numb{display:flex;gap:6px;align-items:center}
+  .numb input{
+    width:130px;
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:7px 10px;
+    color:var(--ink);
+    font-weight:700;
+  }
+  .hint{font-size:12px;color:var(--muted);margin-top:-6px}
+
+  /* action box */
+  .actionBox{
+    margin-top:12px;
+    padding:12px;
+    border:1px solid var(--line);
+    border-radius:14px;
+    background:var(--soft);
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+
+  /* two rows of buttons */
+  .btnRow{
+    display:flex;
+    gap:10px;
+    flex-wrap:nowrap;
+    align-items:center;
+  }
+  .btnRow.wrap{flex-wrap:wrap}
+  .btnRow.two{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+  }
+
+  /* pill buttons (มาตรฐาน) */
+  .pill{
+    cursor:pointer;
+    border:1px solid var(--line);
+    background:#fff;
+    color:var(--ink);
+    padding:10px 14px;
+    border-radius:999px;
+    font-weight:900;
+    box-shadow:0 6px 16px rgba(2,6,23,.06);
+    display:flex;
+    align-items:center;
+    gap:8px;
+    justify-content:center;
+    width:100%;
+  }
+  .pill .ico{width:20px;text-align:center}
+  .pill.play{background:var(--blue);border-color:rgba(14,165,233,.25);color:#fff}
+  .pill.reset{background:#f1f5f9}
+  .pill.formula{background:var(--orange);border-color:#fed7aa}
+  .pill.quiz{background:var(--green);border-color:#bbf7d0}
+  .pill:disabled{opacity:.6;cursor:not-allowed}
+
+  .checks{
+    display:flex;
+    gap:10px 14px;
+    flex-wrap:wrap;
+    align-items:center;
+  }
+  .chk{
+    display:flex;
+    gap:8px;
+    align-items:center;
+    padding:8px 10px;
+    border:1px solid var(--line);
+    border-radius:999px;
+    background:#fff;
+    user-select:none;
+  }
+  .chk input{width:18px;height:18px}
+  .chk span{font-weight:800;color:var(--ink);font-size:14px}
+
+  .footerLink{
+    display:flex;
+    gap:6px;
+    align-items:center;
+    color:var(--muted);
+    font-size:13px;
+    flex-wrap:wrap;
+  }
+  .footerLink a{
+    color:#0b5aa6;
+    font-weight:900;
+    text-decoration:none;
+  }
+  .footerLink a:hover{text-decoration:underline}
+
+  /* Canvas */
+  .canvasWrap{position:relative}
+  canvas{
+    display:block;
+    width:80%;
+    height:auto;
+    aspect-ratio: 1100 / 672;
+    background:#fff;
+    margin:0 auto;
+  }
+
+  @media (max-width:1000px){
+    header{position:static}
+    .wrap{grid-template-columns:1fr;padding:12px}
+    canvas{
+      width:100%;
+      max-height:72vh;
+    }
+  }
+
+  .mobileAction{display:none}
+  @media (max-width:1000px){
+    .desktopAction{display:none}
+    .mobileAction{display:block;border-top:1px solid var(--line);background:#fff;padding:12px}
+    .mobileAction .actionInner{display:flex;flex-direction:column;gap:10px}
+  }
+
+  /* ===== Modals (มาตรฐานเพจ) ===== */
+  .overlay{
+    position:fixed;
+    inset:0;
+    z-index:9999;
+    display:none;
+    background:rgba(15,23,42,.35);
+    backdrop-filter: blur(6px);
+  }
+  .overlay.show{display:block}
+
+  .sheet{
+    position:absolute;
+    inset:0;
+    background:#fff;
+    overflow:auto;
+  }
+
+  .modalTop{
+    position:sticky;
+    top:0;
+    z-index:3;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:12px;
+    border-bottom:1px solid var(--line);
+    background:#fff;
+  }
+  .modalTop .spacer{flex:1}
+  .closeX{
+    position:fixed;
+    right:14px;
+    top:14px;
+    z-index:5;
+    width:44px;height:44px;
+    border-radius:999px;
+    border:1px solid var(--line);
+    background:#fff;
+    cursor:pointer;
+    font-weight:900;
+  }
+
+  /* Formula page */
+  .formulaSheet{
+    background:var(--orange);
+    min-height:100%;
+  }
+  .formulaBody{
+    max-width:1000px;
+    margin:80px auto 30px;
+    padding:0 14px 24px;
+  }
+  .formulaCard{
+    background:#fff7ed;
+    border:2px solid var(--orange2);
+    border-radius:16px;
+    padding:14px;
+    box-shadow:0 10px 24px rgba(2,6,23,.10);
+  }
+  .formulaTitle{
+    font-weight:1000;
+    color:#1d4ed8;
+    font-size:20px;
+    margin:0 0 10px;
+  }
+  .note{
+    color:#7c2d12;
+    font-weight:800;
+    margin:0 0 10px;
+  }
+
+  /* Exercise page */
+  .quizSheet{
+    background: #f7fff9;
+    min-height:100%;
+  }
+  .quizBody{
+    max-width:1000px;
+    margin:80px auto 90px;
+    padding:0 14px 24px;
+  }
+  .quizHeader{
+    background:var(--green);
+    border:1px solid #bbf7d0;
+    border-radius:16px;
+    padding:12px 14px;
+    font-weight:1000;
+    color:#166534;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:12px;
+  }
+  .quizIntro{
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:12px;
+    color:var(--muted);
+    font-weight:700;
+    margin-bottom:12px;
+  }
+  .qcard{
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:12px;
+    margin:12px 0;
+  }
+  .qtitle{font-weight:1000;margin:0 0 8px;color:#1d4ed8}
+  .choices{display:grid;gap:8px}
+  .choice{
+    display:flex;gap:10px;align-items:flex-start;
+    padding:10px;
+    border:1px solid var(--line);
+    border-radius:12px;
+    background:#fafafa;
+  }
+  .choice input{margin-top:3px}
+  .sol{
+    margin-top:10px;
+    padding:10px;
+    border-radius:12px;
+    background:#f8fafc;
+    border:1px dashed #cbd5e1;
+    display:none;
+    overflow-x:auto;
+  }
+  .sol.show{display:block}
+  .ansRed{color:var(--red);font-weight:1000}
+
+  .checkBtnFixed{
+    position:fixed;
+    left:50%;
+    transform:translateX(-50%);
+    bottom:14px;
+    z-index:6;
+    width:min(520px, calc(100% - 24px));
+  }
+  .checkBtnFixed button{
+    width:100%;
+    border-radius:999px;
+    border:1px solid #bbf7d0;
+    background:var(--green);
+    padding:12px 14px;
+    font-weight:1000;
+    cursor:pointer;
+    box-shadow:0 14px 30px rgba(2,6,23,.15);
+  }
+
+  /* ===== MathJax readability (กันสมการอ่านไม่ออก/เล็กเกิน) ===== */
+  .formulaCard mjx-container,
+  .sol mjx-container{
+    font-size: 125% !important;
+  }
+  mjx-container[display="true"]{
+    overflow-x:auto;
+    overflow-y:hidden;
+    max-width:100%;
+    padding-bottom:2px;
+  }
+  mjx-container svg{
+    max-width:100%;
+    height:auto;
+  }
+
+  /* Calculator overlay (centered) */
+  .calcOverlay{
+    position:fixed;
+    inset:0;
+    z-index:10010;
+    display:none;
+    background:rgba(15,23,42,.35);
+    backdrop-filter: blur(6px);
+  }
+  .calcOverlay.show{display:block}
+  .calcBox{
+    position:absolute;
+    left:50%;
+    top:50%;
+    transform:translate(-50%,-50%);
+    width:min(420px, calc(100% - 28px));
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:16px;
+    box-shadow:0 18px 50px rgba(2,6,23,.25);
+    overflow:hidden;
+  }
+  .calcTop{
+    padding:10px 12px;
+    background:#f8fafc;
+    border-bottom:1px solid var(--line);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    font-weight:1000;
+    color:#0f172a;
+  }
+  .calcDisp{
+    padding:10px 12px;
+    font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    font-size:18px;
+    border-bottom:1px solid var(--line);
+    min-height:44px;
+    overflow:auto;
+    white-space:nowrap;
+  }
+  .calcKeys{
+    display:grid;
+    grid-template-columns:repeat(5,1fr);
+    gap:8px;
+    padding:10px;
+    background:#fff;
+  }
+  .ck{
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:12px 0;
+    font-weight:900;
+    cursor:pointer;
+    background:#fff;
+  }
+  .ck.op{background:#f1f5f9}
+  .ck.eq{background:var(--blue);color:#fff;border-color:rgba(14,165,233,.25)}
+</style>
+</head>
+
+<body>
+<header>
+  <h1>แอนิเมชัน: เครื่องบินทิ้งลูกระเบิด (แนวระดับ + ปรับแรงต้านอากาศได้)</h1>
+</header>
+
+<div class="wrap">
+
+  <!-- LEFT -->
+  <section class="card controls" aria-label="ตั้งค่า">
+    <div class="row">
+      <label>ความเร็วเครื่องบิน v<sub>plane</sub> (<b>m/s</b>)</label>
+      <div class="numb"><input id="vPlaneNum" type="number" min="0" max="350" step="1" value="120"/></div>
+      <input id="vPlane" type="range" min="0" max="350" step="1" value="120"/>
+    </div>
+
+    <div class="row">
+      <label>ความสูง (m)</label>
+      <div class="numb"><input id="heightNum" type="number" min="20" max="4000" step="10" value="800"/></div>
+      <input id="height" type="range" min="20" max="4000" step="10" value="800"/>
+    </div>
+
+    <div class="row">
+      <label>มวลลูกระเบิด m (kg)</label>
+      <div class="numb"><input id="massNum" type="number" min="1" max="500" step="1" value="50"/></div>
+      <input id="mass" type="range" min="1" max="500" step="1" value="50"/>
+    </div>
+
+    <div class="row">
+      <label>แรงต้านอากาศ (ค่าสัมประสิทธิ์ k, kg/m)<br><span class="hint">ใช้แบบกำลังสอง v²: F<sub>d</sub> = -k v|v| (เลื่อนเป็น 0 เพื่อปิดแรงต้าน)</span></label>
+      <div class="numb"><input id="dragNum" type="number" min="0" max="0.06" step="0.001" value="0.000"/></div>
+      <input id="drag" type="range" min="0" max="0.06" step="0.001" value="0.000"/>
+    </div>
+
+    <div class="row">
+      <label>ความเร่งโน้มถ่วง g (<b>m/s²</b>)</label>
+      <div class="numb"><input id="gravNum" type="number" min="1" max="20" step="0.01" value="9.81"/></div>
+      <input id="grav" type="range" min="1" max="20" step="0.01" value="9.81"/>
+    </div>
+
+    <div class="hint" style="margin-top:8px">ค่าเริ่มต้นแรงต้านอากาศ = <b>0</b></div>
+
+    <div class="actionBox desktopAction">
+      <!-- row 1: เล่น/รีเซ็ต -->
+      <div class="btnRow two">
+        <button class="pill play" id="playBtnA"><span class="ico">▶️</span><span>เล่น</span></button>
+        <button class="pill reset" id="resetBtnA"><span class="ico">🔄</span><span>รีเซ็ต</span></button>
+      </div>
+
+      <!-- row 2: สูตรสำคัญ (ซ้าย) + แบบฝึกหัด (ขวา) -->
+      <div class="btnRow two">
+        <button class="pill formula" id="formulaBtnA"><span class="ico">Σ</span><span>สูตรสำคัญ</span></button>
+        <button class="pill quiz" id="quizBtnA"><span class="ico">📝</span><span>แบบฝึกหัด</span></button>
+      </div>
+
+      <div class="checks">
+        <label class="chk">
+          <input id="chkTraceA" type="checkbox" checked />
+          <span>แสดงเส้นทาง</span>
+        </label>
+        <label class="chk">
+          <input id="chkDetailA" type="checkbox" />
+          <span>รายละเอียดเวกเตอร์</span>
+        </label>
+      </div>
+
+      <!-- ตัดปุ่ม/หัวข้อ "อธิบายแบบจำลอง" ออกตามที่สั่ง -->
+
+      <div class="footerLink">
+        <span>ศึกษาเพิ่มเติมที่</span>
+        <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">เพจคลายปมฟิสิกส์</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- RIGHT -->
+  <section class="card canvasWrap" aria-label="จอทดลอง">
+    <canvas id="view" width="1100" height="672"></canvas>
+
+    <div class="mobileAction">
+      <div class="actionInner">
+        <!-- row 1 -->
+        <div class="btnRow two">
+          <button class="pill play" id="playBtnB"><span class="ico">▶️</span><span>เล่น</span></button>
+          <button class="pill reset" id="resetBtnB"><span class="ico">🔄</span><span>รีเซ็ต</span></button>
+        </div>
+
+        <!-- row 2 -->
+        <div class="btnRow two">
+          <button class="pill formula" id="formulaBtnB"><span class="ico">Σ</span><span>สูตรสำคัญ</span></button>
+          <button class="pill quiz" id="quizBtnB"><span class="ico">📝</span><span>แบบฝึกหัด</span></button>
+        </div>
+
+        <div class="checks">
+          <label class="chk">
+            <input id="chkTraceB" type="checkbox" checked />
+            <span>แสดงเส้นทาง</span>
+          </label>
+          <label class="chk">
+            <input id="chkDetailB" type="checkbox" />
+            <span>รายละเอียดเวกเตอร์</span>
+          </label>
+        </div>
+
+        <!-- ตัดปุ่ม/หัวข้อ "อธิบายแบบจำลอง" ออกตามที่สั่ง -->
+
+        <div class="footerLink">
+          <span>ศึกษาเพิ่มเติมที่</span>
+          <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">เพจคลายปมฟิสิกส์</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<!-- ===== Formula Modal ===== -->
+<div class="overlay" id="formulaOverlay" aria-hidden="true">
+  <button class="closeX" id="closeFormula" title="ปิด">❌</button>
+  <div class="sheet formulaSheet">
+    <div class="modalTop">
+      <button class="pill formula" id="toFormulaTop"><span class="ico">Σ</span><span>สูตรสำคัญ</span></button>
+      <button class="pill quiz" id="toQuizTop1"><span class="ico">📝</span><span>แบบฝึกหัด</span></button>
+      <div class="spacer"></div>
+    </div>
+
+    <div class="formulaBody">
+      <div class="formulaCard">
+        <h2 class="formulaTitle">สูตรสำคัญ</h2>
+        <p class="note">หมายเหตุ: กรณีนี้ \(s_y = h\)</p>
+        <div id="formulaMath"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Quiz Modal ===== -->
+<div class="overlay" id="quizOverlay" aria-hidden="true">
+  <button class="closeX" id="closeQuiz" title="ปิด">❌</button>
+  <div class="sheet quizSheet">
+    <div class="modalTop">
+      <button class="pill quiz" id="toQuizTop"><span class="ico">📝</span><span>แบบฝึกหัด</span></button>
+      <button class="pill formula" id="toFormulaTop2"><span class="ico">Σ</span><span>สูตรสำคัญ</span></button>
+      <button class="pill reset" id="calcBtnTop"><span class="ico">🧮</span><span>เครื่องคิดเลขวิทยาศาสตร์</span></button>
+      <div class="spacer"></div>
+    </div>
+
+    <div class="quizBody">
+      <div class="quizHeader"><span style="font-size:20px">📝</span> <span>แบบฝึกหัด</span></div>
+      <div class="quizIntro">
+        เลือกคำตอบ A–D แล้วกด “ตรวจคำตอบ” เพื่อดูคะแนน + เฉลยละเอียดในแต่ละข้อ
+      </div>
+
+      <div class="qcard" data-q="1">
+        <p class="qtitle">ข้อ 1) (ไม่มีแรงต้าน) เวลาในการตกกระทบพื้น \(t\) ขึ้นกับตัวแปรใด?</p>
+        <div class="choices">
+          <label class="choice"><input type="radio" name="q1" value="A">A) ขึ้นกับ \(v_{plane}\) เท่านั้น</label>
+          <label class="choice"><input type="radio" name="q1" value="B">B) ขึ้นกับ \(h\) และ \(g\)</label>
+          <label class="choice"><input type="radio" name="q1" value="C">C) ขึ้นกับมวล \(m\)</label>
+          <label class="choice"><input type="radio" name="q1" value="D">D) ขึ้นกับ \(v_{plane}\) และ \(m\)</label>
+        </div>
+        <div class="sol" id="sol1"></div>
+      </div>
+
+      <div class="qcard" data-q="2">
+        <p class="qtitle">
+          ข้อ 2) (ไม่มีแรงต้าน) ระยะการกระจัดแนวระดับ \(S_x\) คำนวณจากอะไร?
+          (กรณีนี้ \(v_x = v_{plane}\))
+        </p>
+        <div class="choices">
+          <label class="choice"><input type="radio" name="q2" value="A">A) \(S_x = \dfrac{1}{2}gt^2\)</label>
+          <label class="choice"><input type="radio" name="q2" value="B">B) \(S_x = v_x\,t\)</label>
+          <label class="choice"><input type="radio" name="q2" value="C">C) \(S_x = \dfrac{v_x}{t}\)</label>
+          <label class="choice"><input type="radio" name="q2" value="D">D) \(S_x = gt\)</label>
+        </div>
+        <div class="sol" id="sol2"></div>
+      </div>
+
+      <div class="qcard" data-q="3">
+        <p class="qtitle">
+          ข้อ 3) ปล่อยวัตถุที่มีมวล 1 กิโลกรัมจากเครื่องบิน ซึ่งบินอยู่ในแนวระดับด้วยอัตราเร็ว 300 เมตรต่อวินาที และอยู่สูงจากพื้นดิน 2,000 เมตร
+          จงหาว่าถุงยังชีพจะตกถึงพื้นดิน ณ ตำแหน่งที่ห่างจากจุดปล่อยตามแนวระดับกี่เมตร (ไม่คิดแรงต้านอากาศ)
+          <br><b>กำหนดให้ใช้ \(g = 10\ \text{m/s}^2\)</b>
+        </p>
+        <div class="choices">
+          <label class="choice"><input type="radio" name="q3" value="A">A) 3,000 m</label>
+          <label class="choice"><input type="radio" name="q3" value="B">B) 4,000 m</label>
+          <label class="choice"><input type="radio" name="q3" value="C">C) 5,000 m</label>
+          <label class="choice"><input type="radio" name="q3" value="D">D) 6,000 m</label>
+        </div>
+        <div class="sol" id="sol3"></div>
+      </div>
+    </div>
+
+    <div class="checkBtnFixed">
+      <button id="checkAnswers">ตรวจคำตอบ</button>
+    </div>
+  </div>
+</div>
+
+<!-- Calculator -->
+<div class="calcOverlay" id="calcOverlay">
+  <div class="calcBox" role="dialog" aria-label="เครื่องคิดเลข">
+    <div class="calcTop">
+      <span>🧮 เครื่องคิดเลขวิทยาศาสตร์</span>
+      <button class="ck op" id="calcClose" style="padding:8px 10px">ปิด</button>
+    </div>
+    <div class="calcDisp" id="calcDisp">0</div>
+
+    <!-- 5 columns -->
+    <div class="calcKeys">
+      <button class="ck op" data-k="SIN">sin</button>
+      <button class="ck op" data-k="COS">cos</button>
+      <button class="ck op" data-k="TAN">tan</button>
+      <button class="ck op" data-k="BK">⌫</button>
+      <button class="ck op" data-k="C">C</button>
+
+      <button class="ck op" data-k="LN">ln</button>
+      <button class="ck op" data-k="LOG">log</button>
+      <button class="ck op" data-k="PI">π</button>
+      <button class="ck op" data-k="E">e</button>
+      <button class="ck op" data-k="SQRT">√</button>
+
+      <button class="ck op" data-k="(">(</button>
+      <button class="ck op" data-k=")">)</button>
+      <button class="ck op" data-k="^">^</button>
+      <button class="ck op" data-k="/">÷</button>
+      <button class="ck op" data-k="*">×</button>
+
+      <button class="ck" data-k="7">7</button>
+      <button class="ck" data-k="8">8</button>
+      <button class="ck" data-k="9">9</button>
+      <button class="ck op" data-k="-">−</button>
+      <button class="ck op" data-k="+">+</button>
+
+      <button class="ck" data-k="4">4</button>
+      <button class="ck" data-k="5">5</button>
+      <button class="ck" data-k="6">6</button>
+      <button class="ck op" data-k="+/-">±</button>
+      <button class="ck eq" data-k="=">=</button>
+
+      <button class="ck" data-k="1">1</button>
+      <button class="ck" data-k="2">2</button>
+      <button class="ck" data-k="3">3</button>
+      <button class="ck" data-k="0">0</button>
+      <button class="ck" data-k=".">.</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const isMobile = () => window.matchMedia("(max-width:1000px)").matches;
+  const $ = (id)=>document.getElementById(id);
+  const canvas = $("view");
+  const ctx = canvas.getContext("2d");
+
+  const controls = {
+    vPlane: $("vPlane"), vPlaneNum: $("vPlaneNum"),
+    height: $("height"), heightNum: $("heightNum"),
+    mass: $("mass"), massNum: $("massNum"),
+    drag: $("drag"), dragNum: $("dragNum"),
+    grav: $("grav"), gravNum: $("gravNum"),
+  };
+
+  const ui = {
+    playBtns: [$("playBtnA"), $("playBtnB")].filter(Boolean),
+    resetBtns: [$("resetBtnA"), $("resetBtnB")].filter(Boolean),
+    chkTrace: [$("chkTraceA"), $("chkTraceB")].filter(Boolean),
+    chkDetail: [$("chkDetailA"), $("chkDetailB")].filter(Boolean),
+    formulaBtns: [$("formulaBtnA"), $("formulaBtnB")].filter(Boolean),
+    quizBtns: [$("quizBtnA"), $("quizBtnB")].filter(Boolean),
+  };
+
+  const formulaOverlay = $("formulaOverlay");
+  const quizOverlay = $("quizOverlay");
+  const formulaMath = $("formulaMath");
+
+  function show(el){ el.classList.add("show"); el.setAttribute("aria-hidden","false"); }
+  function hide(el){ el.classList.remove("show"); el.setAttribute("aria-hidden","true"); }
+
+  $("closeFormula").onclick = ()=> hide(formulaOverlay);
+  $("closeQuiz").onclick = ()=> hide(quizOverlay);
+
+  $("toQuizTop1").onclick = ()=>{ hide(formulaOverlay); show(quizOverlay); };
+  $("toFormulaTop2").onclick = ()=>{ hide(quizOverlay); show(formulaOverlay); updateFormula(); };
+
+  ui.formulaBtns.forEach(b=> b.addEventListener("click", ()=>{ show(formulaOverlay); updateFormula(); }));
+  ui.quizBtns.forEach(b=> b.addEventListener("click", ()=>{ show(quizOverlay); }));
+
+  [["vPlane","vPlaneNum"],["height","heightNum"],["mass","massNum"],["drag","dragNum"],["grav","gravNum"]]
+  .forEach(([r,n])=>{
+    const R = $(r), N = $(n);
+    const sync = (src,dst)=>()=>{ dst.value = src.value; resetSim(); draw(); updateFormula(false); };
+    R.addEventListener('input', sync(R,N));
+    N.addEventListener('input', sync(N,R));
+  });
+
+  let traceOn = true;
+  let detailOn = false;
+
+  function syncCheckboxes(){
+    ui.chkTrace.forEach(el=> el.checked = traceOn);
+    ui.chkDetail.forEach(el=> el.checked = detailOn);
+  }
+  ui.chkTrace.forEach(el=>{
+    el.addEventListener("change", ()=>{
+      traceOn = el.checked;
+      syncCheckboxes();
+      draw();
+    });
+  });
+  ui.chkDetail.forEach(el=>{
+    el.addEventListener("change", ()=>{
+      detailOn = el.checked;
+      syncCheckboxes();
+      draw();
+    });
+  });
+
+  let running = false, raf = null;
+
+  function setPlayLabel(){
+    ui.playBtns.forEach(b=>{
+      b.innerHTML = running
+        ? `<span class="ico">⏸</span><span>หยุด</span>`
+        : `<span class="ico">▶️</span><span>เล่น</span>`;
+    });
+  }
+  function stopRun(){
+    running = false;
+    cancelAnimationFrame(raf);
+    setPlayLabel();
+  }
+
+  // --- Explosion SFX (WebAudio) ---
+  let audioCtx = null;
+  let audioArmed = false;
+
+  function ensureAudio(){
+    if(audioCtx) return;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if(!AC) return;
+    audioCtx = new AC();
+  }
+  async function armAudio(){
+    ensureAudio();
+    if(!audioCtx) return;
+    try{
+      if(audioCtx.state === "suspended") await audioCtx.resume();
+      audioArmed = true;
+    }catch(e){}
+  }
+  function playExplosionSFX(){
+    if(!audioCtx || !audioArmed) return;
+    const t0 = audioCtx.currentTime;
+
+    const bufferSize = Math.floor(audioCtx.sampleRate * 0.35);
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for(let i=0;i<bufferSize;i++){
+      const x = (Math.random()*2-1);
+      data[i] = x * Math.pow(1 - i/bufferSize, 2.2);
+    }
+    const noise = audioCtx.createBufferSource();
+    noise.buffer = buffer;
+
+    const hp = audioCtx.createBiquadFilter();
+    hp.type = "highpass";
+    hp.frequency.setValueAtTime(60, t0);
+
+    const lp = audioCtx.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.setValueAtTime(900, t0);
+    lp.frequency.exponentialRampToValueAtTime(260, t0+0.25);
+
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(0.9, t0+0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0+0.35);
+
+    noise.connect(hp).connect(lp).connect(gain).connect(audioCtx.destination);
+    noise.start(t0);
+    noise.stop(t0 + 0.36);
+
+    const osc = audioCtx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(95, t0);
+    osc.frequency.exponentialRampToValueAtTime(40, t0+0.25);
+
+    const g2 = audioCtx.createGain();
+    g2.gain.setValueAtTime(0.0001, t0);
+    g2.gain.exponentialRampToValueAtTime(0.55, t0+0.02);
+    g2.gain.exponentialRampToValueAtTime(0.0001, t0+0.32);
+
+    osc.connect(g2).connect(audioCtx.destination);
+    osc.start(t0);
+    osc.stop(t0+0.34);
+  }
+
+  ui.playBtns.forEach(b=>{
+    b.addEventListener("click", async ()=>{
+      await armAudio();
+      running = !running;
+      setPlayLabel();
+      if(running) loop();
+    });
+  });
+  ui.resetBtns.forEach(b=>{
+    b.addEventListener("click", async ()=>{
+      await armAudio();
+      stopRun();
+      resetSim();
+      draw();
+      updateFormula(false);
+    });
+  });
+
+  // ===== Physics state =====
+  const state = {
+    x:0, y:0, vx:0, vy:0, t:0, done:false,
+    x0:0, y0:0,
+    k:0.0, m:50, g:9.81, vPlane:120,
+    worldW:1000, worldH:1000,
+    planeX:0,
+    explosionStart: null
+  };
+
+  function params(){
+    return {
+      vPlane: +controls.vPlane.value,
+      h: +controls.height.value,
+      m: +controls.mass.value,
+      k: +controls.drag.value,
+      g: +controls.grav.value
+    };
+  }
+
+  let trace = [];
+
+  const PAD = 30;
+  const GROUND_SCALE = 2.1 * 1.3; // สูงขึ้น
+  function groundHeightPx(){
+    return (PAD + 3) * GROUND_SCALE;
+  }
+
+  function resetSim(){
+    const p = params();
+    state.vPlane = p.vPlane; state.k = p.k; state.m = p.m; state.g = p.g;
+
+    state.x0 = 0; state.y0 = p.h;
+    state.x = 0; state.y = p.h; state.t = 0; state.done=false; state.explosionStart=null;
+    state.vx = p.vPlane; state.vy = 0; state.planeX = 0;
+
+    const tVac = Math.sqrt(2*p.h/p.g);
+    const rVac = p.vPlane * tVac;
+    const marginX = 1.2, marginY = 1.25;
+    state.worldW = Math.max(200, rVac*marginX + 150);
+    state.worldH = Math.max(100, p.h*marginY + 50);
+
+    trace = [];
+  }
+
+  function derivatives(x,y,vx,vy){
+    const g = state.g, k = state.k, m = state.m;
+    const speed = Math.hypot(vx,vy);
+    const ax = (k===0||speed===0) ? 0 : -(k/m) * vx * speed;
+    const ay = -g + ((k===0||speed===0) ? 0 : -(k/m) * vy * speed);
+    return {dx:vx, dy:vy, dvx:ax, dvy:ay};
+  }
+
+  function stepRK4(dt){
+    let {x,y,vx,vy} = state;
+    const k1 = derivatives(x,y,vx,vy);
+    const k2 = derivatives(x+0.5*dt*k1.dx, y+0.5*dt*k1.dy, vx+0.5*dt*k1.dvx, vy+0.5*dt*k1.dvy);
+    const k3 = derivatives(x+0.5*dt*k2.dx, y+0.5*dt*k2.dy, vx+0.5*dt*k2.dvx, vy+0.5*dt*k2.dvy);
+    const k4 = derivatives(x+dt*k3.dx, y+dt*k3.dy, vx+dt*k3.dvx, vy+dt*k3.dvy);
+
+    state.x += dt*(k1.dx + 2*k2.dx + 2*k3.dx + k4.dx)/6;
+    state.y += dt*(k1.dy + 2*k2.dy + 2*k3.dy + k4.dy)/6;
+    state.vx += dt*(k1.dvx + 2*k2.dvx + 2*k3.dvx + k4.dvx)/6;
+    state.vy += dt*(k1.dvy + 2*k2.dvy + 2*k3.dvy + k4.dvy)/6;
+    state.t += dt;
+    state.planeX += state.vPlane * dt;
+  }
+
+  function worldToCanvas(x,y){
+    const gH = groundHeightPx();
+    const bottomY = canvas.height - gH;
+    const topY = PAD;
+
+    const sx = (x - 0) * (canvas.width - 2*PAD) / state.worldW + PAD;
+    const sy = bottomY - (y - 0) * (bottomY - topY) / state.worldH;
+    return [sx, sy];
+  }
+
+  function fmt2(n){
+    if(!isFinite(n)) return "–";
+    return (Math.abs(n)>=1000) ? n.toFixed(0) : n.toFixed(2);
+  }
+
+  const FONT_PLUS = 5;
+
+  function arrow(x1,y1,x2,y2,color,label, labelDx=6, labelDy=-6, fontPlus=0){
+    ctx.save();
+    ctx.strokeStyle=color;
+    ctx.fillStyle=color;
+    ctx.lineWidth=2.2;
+    ctx.beginPath();
+    ctx.moveTo(x1,y1);
+    ctx.lineTo(x2,y2);
+    ctx.stroke();
+
+    const ang=Math.atan2(y2-y1,x2-x1), ah=8;
+    ctx.beginPath();
+    ctx.moveTo(x2,y2);
+    ctx.lineTo(x2-ah*Math.cos(ang-0.35), y2-ah*Math.sin(ang-0.35));
+    ctx.lineTo(x2-ah*Math.cos(ang+0.35), y2-ah*Math.sin(ang+0.35));
+    ctx.closePath();
+    ctx.fill();
+
+    if(label){
+      ctx.font = `${13 + FONT_PLUS + fontPlus}px system-ui`;
+      ctx.fillText(label, x2+labelDx, y2+labelDy);
+    }
+    ctx.restore();
+  }
+
+  function drawGrid(){
+    const w=canvas.width, h=canvas.height;
+    const gH = groundHeightPx();
+    const bottomY = h - gH;
+    const topY = PAD;
+
+    ctx.fillStyle = "#f8fbff";
+    ctx.fillRect(0,0,w,h);
+
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--ground').trim() || "#f3d8b6";
+    ctx.fillRect(0, bottomY, w, gH);
+
+    ctx.strokeStyle = "#dbeafe";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for(let i=0;i<=10;i++){
+      const x = PAD + i*(w-2*PAD)/10;
+      ctx.moveTo(x, topY);
+      ctx.lineTo(x, bottomY);
+    }
+    for(let j=0;j<=10;j++){
+      const y = topY + j*(bottomY-topY)/10;
+      ctx.moveTo(PAD, y);
+      ctx.lineTo(w-PAD, y);
+    }
+    ctx.stroke();
+
+    ctx.save();
+    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--groundLine').trim() || "#b45309";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, bottomY);
+    ctx.lineTo(w, bottomY);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawHeightIndicator(){
+    const [x0,y0] = worldToCanvas(0,0);
+    const [x1,y1] = worldToCanvas(0,state.y0);
+
+    const x = 16;
+    const yBottom = y0;
+    const yTop = y1;
+
+    ctx.save();
+    ctx.strokeStyle = "#64748b";
+    ctx.fillStyle = "#64748b";
+    ctx.lineWidth = 2;
+
+    ctx.beginPath();
+    ctx.moveTo(x, yBottom);
+    ctx.lineTo(x, yTop);
+    ctx.stroke();
+
+    (function(){
+      const ang = -Math.PI/2, ah=8;
+      ctx.beginPath();
+      ctx.moveTo(x, yTop);
+      ctx.lineTo(x-ah*Math.cos(ang-0.35), yTop-ah*Math.sin(ang-0.35));
+      ctx.lineTo(x-ah*Math.cos(ang+0.35), yTop-ah*Math.sin(ang+0.35));
+      ctx.closePath();
+      ctx.fill();
+    })();
+
+    (function(){
+      const ang = Math.PI/2, ah=8;
+      ctx.beginPath();
+      ctx.moveTo(x, yBottom);
+      ctx.lineTo(x-ah*Math.cos(ang-0.35), yBottom-ah*Math.sin(ang-0.35));
+      ctx.lineTo(x-ah*Math.cos(ang+0.35), yBottom-ah*Math.sin(ang+0.35));
+      ctx.closePath();
+      ctx.fill();
+    })();
+
+    // ป้ายความสูง h: เพิ่มขนาดตัวอักษรเฉพาะมือถือ +10px
+    ctx.font = `${13 + FONT_PLUS + (isMobile() ? 10 : 0)}px system-ui`;
+    ctx.fillStyle = "#475569";
+    const midY = (yTop+yBottom)/2;
+    ctx.fillText(`h = ${fmt2(state.y0)} m`, x+10, midY);
+    ctx.restore();
+  }
+
+  function drawPlane(){
+    const y = state.y0;
+    const [px, py] = worldToCanvas(state.planeX, y);
+
+    const s = 0.3 * (isMobile() ? 1.3 : 1);
+    ctx.save();
+    ctx.translate(px, py);
+    ctx.scale(s, s);
+
+    ctx.strokeStyle = "#374151";
+    ctx.lineWidth = 3;
+    ctx.lineJoin = "miter";
+
+    ctx.beginPath();
+    ctx.moveTo(-70, -18);
+    ctx.lineTo(140, -18);
+    ctx.lineTo(150, -10);
+    ctx.lineTo(150, 18);
+    ctx.lineTo(-60, 18);
+    ctx.closePath();
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(-60, -18);
+    ctx.lineTo(-60, -55);
+    ctx.lineTo(-20, -55);
+    ctx.lineTo(-20, -18);
+    ctx.closePath();
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(-70, 18);
+    ctx.lineTo(-95, 45);
+    ctx.lineTo(-45, 45);
+    ctx.lineTo(-10, 18);
+    ctx.closePath();
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(20, 18);
+    ctx.lineTo(0, 55);
+    ctx.lineTo(70, 55);
+    ctx.lineTo(100, 18);
+    ctx.closePath();
+    ctx.stroke();
+
+    ctx.restore();
+
+    const frontX = px + 56;
+    const dirLen = 60;
+    arrow(frontX, py, frontX + dirLen, py, "#374151", null);
+
+    ctx.save();
+    ctx.fillStyle = "#374151";
+    ctx.font = `${13 + FONT_PLUS}px system-ui`;
+    ctx.fillText(`v_plane = ${Math.round(state.vPlane)} m/s`, px + 40, py - 14);
+    ctx.restore();
+  }
+
+  function drawTrace(){
+    if(!traceOn || trace.length<2) return;
+    ctx.save();
+    ctx.setLineDash([8,6]);
+    ctx.strokeStyle="#ef4444";
+    ctx.lineWidth=1.8;
+    ctx.beginPath();
+    const [sx,sy] = worldToCanvas(trace[0].x, trace[0].y);
+    ctx.moveTo(sx,sy);
+    for(let i=1;i<trace.length;i++){
+      const p = trace[i];
+      const [x,y]=worldToCanvas(p.x,p.y);
+      ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+
+  function drawBomb(){
+    const [bx, by] = worldToCanvas(state.x, state.y);
+
+    ctx.save();
+    ctx.fillStyle = "#ffffff";
+    ctx.strokeStyle="#1d4ed8";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(bx,by,6*(isMobile() ? 1.3 : 1),0,Math.PI*2);
+    ctx.fill();
+    ctx.stroke();
+
+    if(detailOn){
+      const VLAB = isMobile() ? 5 : 0;
+      const scale = 0.5;
+      const vxpx = state.vx * scale;
+      const vypx = -state.vy * scale;
+      const sp = Math.hypot(state.vx, state.vy);
+
+      const colV = "#2563eb";
+      const colComp = "#16a34a";
+
+      // ปรับตำแหน่งป้าย v / vₓ เฉพาะจอมือถือ (ห้ามกระทบคอม)
+      const vDx = 6 + (isMobile() ? 5 : 0);
+      const vDy = -6 + (isMobile() ? 5 : 0);
+      const vxDx = 6;
+      const vxDy = -6 + (isMobile() ? -5 : 0);
+
+      arrow(bx, by, bx + vxpx, by + vypx, colV, `v = ${fmt2(sp)} m/s`, vDx, vDy, VLAB);
+      arrow(bx, by, bx + vxpx, by, colComp, `vₓ = ${fmt2(state.vx)} m/s`, vxDx, vxDy, VLAB);
+
+      /* vy แสดงเป็นค่าบวก */
+      arrow(
+        bx, by, bx, by + vypx, colComp,
+        `vᵧ = ${fmt2(Math.abs(state.vy))} m/s`,
+        (-110 + (isMobile() ? -30 : 0)), (14 + (isMobile() ? 5 : 0)), VLAB
+      );
+
+      ctx.save();
+      ctx.setLineDash([6,6]);
+      ctx.strokeStyle="#94a3b8";
+      ctx.lineWidth=1.1;
+      ctx.beginPath();
+      ctx.moveTo(bx+vxpx,by);
+      ctx.lineTo(bx+vxpx,by+vypx);
+      ctx.moveTo(bx,by+vypx);
+      ctx.lineTo(bx+vxpx,by+vypx);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    ctx.restore();
+  }
+
+  function drawImpactMark(){
+    if(!state.done) return;
+    const [ix,iy] = worldToCanvas(state.x, 0);
+    ctx.save();
+    ctx.strokeStyle="#ef4444";
+    ctx.lineWidth=2;
+    ctx.beginPath();
+    ctx.moveTo(ix-10,iy);
+    ctx.lineTo(ix+10,iy);
+    ctx.moveTo(ix,iy-10);
+    ctx.lineTo(ix,iy+10);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawExplosion(){
+    if(!state.explosionStart) return;
+    const now = performance.now();
+    const elapsed = (now - state.explosionStart)/1000;
+    const duration = 0.8;
+    if(elapsed>duration){ state.explosionStart=null; return; }
+
+    const [ex,ey] = worldToCanvas(state.x, 0);
+    const r = 10 + 180*Math.pow(elapsed/duration,0.6);
+    const g = ctx.createRadialGradient(ex,ey,2, ex,ey,r);
+    g.addColorStop(0,"rgba(255,190,80,0.95)");
+    g.addColorStop(0.4,"rgba(255,100,40,0.75)");
+    g.addColorStop(1,"rgba(255,0,0,0)");
+    ctx.save();
+    ctx.globalCompositeOperation='lighter';
+    ctx.fillStyle=g;
+    ctx.beginPath();
+    ctx.arc(ex,ey,r,0,Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // --- Draggable results label (text-only): Sx with subscript x ---
+  const resultLabel = { x:18, y:26, lineH:22, w:0, h:0, dragging:false, dx:0, dy:0 };
+
+  function measureResultBox(lines){
+    ctx.save();
+    ctx.font = `${14 + FONT_PLUS}px system-ui`;
+    let maxW = 0;
+    for(const s of lines) maxW = Math.max(maxW, ctx.measureText(s).width);
+    ctx.restore();
+    resultLabel.w = Math.ceil(maxW);
+    resultLabel.h = resultLabel.lineH * lines.length;
+  }
+
+  function drawResultOverlay(){
+    const Sx = state.x - state.x0;
+    const t = state.t;
+    const vImp = Math.hypot(state.vx, state.vy);
+
+    const lines = [
+      `S\u2093 = ${fmt2(Sx)} m`,
+      `t = ${fmt2(t)} s`,
+      `v_impact = ${fmt2(vImp)} m/s`
+    ];
+    measureResultBox(lines);
+
+    ctx.save();
+    ctx.fillStyle = "#0f172a";
+    ctx.font = `${14 + FONT_PLUS}px system-ui`;
+    const x0 = resultLabel.x;
+    const y0 = resultLabel.y;
+    ctx.fillText(lines[0], x0, y0);
+    ctx.fillText(lines[1], x0, y0 + resultLabel.lineH);
+    ctx.fillText(lines[2], x0, y0 + 2*resultLabel.lineH);
+    ctx.restore();
+  }
+
+  function hitTestResultLabel(mx,my){
+    const left = resultLabel.x - 8;
+    const top  = resultLabel.y - 18;
+    const right = left + resultLabel.w + 16;
+    const bottom = top + resultLabel.h + 14;
+    return (mx>=left && mx<=right && my>=top && my<=bottom);
+  }
+
+  function getCanvasPos(evt){
+    const r = canvas.getBoundingClientRect();
+    const x = (evt.clientX - r.left) * (canvas.width / r.width);
+    const y = (evt.clientY - r.top) * (canvas.height / r.height);
+    return {x,y};
+  }
+
+  canvas.addEventListener("pointerdown", (e)=>{
+    const p = getCanvasPos(e);
+    if(hitTestResultLabel(p.x,p.y)){
+      resultLabel.dragging = true;
+      resultLabel.dx = p.x - resultLabel.x;
+      resultLabel.dy = p.y - resultLabel.y;
+      canvas.setPointerCapture(e.pointerId);
+      e.preventDefault();
+    }
+  });
+
+  canvas.addEventListener("pointermove", (e)=>{
+    if(!resultLabel.dragging) return;
+    const p = getCanvasPos(e);
+    resultLabel.x = Math.max(10, Math.min(canvas.width - 10, p.x - resultLabel.dx));
+    resultLabel.y = Math.max(20, Math.min(canvas.height - 10, p.y - resultLabel.dy));
+    draw();
+  });
+
+  canvas.addEventListener("pointerup", (e)=>{
+    if(resultLabel.dragging){
+      resultLabel.dragging = false;
+      try{ canvas.releasePointerCapture(e.pointerId); }catch(_){}
+    }
+  });
+
+  canvas.addEventListener("pointercancel", (e)=>{
+    resultLabel.dragging = false;
+    try{ canvas.releasePointerCapture(e.pointerId); }catch(_){}
+  });
+
+  // ===== Formula =====
+  // เงื่อนไข: ถ้า k ≠ 0 (มีแรงต้านอากาศ) -> "ไม่แทนค่า" และ "ไม่แสดงผลการคำนวณ"
+  function updateFormula(typeset=true){
+    if(!formulaOverlay.classList.contains("show") && typeset!==false) return;
+
+    const p = params();
+    const vplane = p.vPlane;
+    const sy = p.h; // กรณีนี้ s_y = h
+    const g = p.g;
+    const k = p.k;
+
+    if(k !== 0){
+      formulaMath.innerHTML = `
+        <div class="note">
+          ตอนนี้ (k \\(\\ne\\) 0) มีแรงต้านอากาศ → ในหน้านี้ <b>ไม่แทนค่า</b> และ <b>ไม่แสดงผลการคำนวณ</b>
+        </div>
+
+        <div style="display:grid;gap:12px">
+
+          <div class="formulaCard" style="border-color:#fb923c">
+            <div style="font-weight:1000;color:#7c2d12;margin-bottom:6px">1) เงื่อนไขเริ่มต้น</div>
+            <div>
+              \\[
+                x(0)=0,\\quad y(0)=h(=s_y),\\quad v_x(0)=v_{plane},\\quad v_y(0)=0
+              \\]
+            </div>
+          </div>
+
+          <div class="formulaCard" style="border-color:#fb923c">
+            <div style="font-weight:1000;color:#7c2d12;margin-bottom:6px">2) สมการการเคลื่อนที่ (มีแรงต้านอากาศ)</div>
+            <div>
+              \\[
+                m\\frac{d\\vec v}{dt}=(0,-mg)-k\\,\\vec v\\,|\\vec v|
+              \\]
+              \\[
+                \\vec v=(v_x,v_y),\\quad |\\vec v|=\\sqrt{v_x^2+v_y^2}
+              \\]
+              \\[
+                \\frac{dv_x}{dt}=-\\frac{k}{m}v_x\\sqrt{v_x^2+v_y^2}
+              \\]
+              \\[
+                \\frac{dv_y}{dt}=-g-\\frac{k}{m}v_y\\sqrt{v_x^2+v_y^2}
+              \\]
+              \\[
+                \\frac{dx}{dt}=v_x,\\quad \\frac{dy}{dt}=v_y
+              \\]
+            </div>
+          </div>
+
+          <div class="formulaCard" style="border-color:#fb923c">
+            <div style="font-weight:1000;color:#7c2d12;margin-bottom:6px">3) ค่าที่ต้องการหา</div>
+            <div style="color:#7c2d12;font-weight:900;margin:0 0 6px">
+              ต้องหาเชิงตัวเลข (numerical) จนถึงเงื่อนไข \(y(t_{hit})=0\)
+            </div>
+            <div>
+              \\[
+                S_x = x(t_{hit})
+              \\]
+            </div>
+          </div>
+
+        </div>
+      `;
+
+      if(typeset !== false && window.MathJax && MathJax.typesetPromise){
+        MathJax.typesetPromise([formulaMath]).catch(()=>{});
+      }
+      return;
+    }
+
+    // ===== k = 0 : แทนค่า + แสดงผลการคำนวณได้ =====
+    const t = Math.sqrt(2*sy/g);
+    const vx = vplane; // กรณีนี้ v_x = v_plane
+    const Sx = vx * t;
+    const vy = g*t;
+    const vImp = Math.sqrt(vx*vx + vy*vy);
+
+    const lockText = `<div class="note">กำลังแสดงผลจากค่าที่ปรับในจอทดลอง (k = 0)</div>`;
+
+    formulaMath.innerHTML = `
+      ${lockText}
+      <div style="display:grid;gap:12px">
+
+        <div class="formulaCard" style="border-color:#fb923c">
+          <div style="font-weight:1000;color:#7c2d12;margin-bottom:6px">1) เวลาในการตกกระทบพื้น</div>
+          <div style="color:#7c2d12;font-weight:900;margin:0 0 6px">กรณีนี้ \(s_y=h\)</div>
+          <div>
+            \\[
+              t = \\sqrt{\\frac{2s_y}{g}}
+            \\]
+            \\[
+              t = \\sqrt{\\frac{2(${sy.toFixed(2)})}{${g.toFixed(2)}}} = ${t.toFixed(3)}\\ \\text{s}
+            \\]
+          </div>
+        </div>
+
+        <div class="formulaCard" style="border-color:#fb923c">
+          <div style="font-weight:1000;color:#7c2d12;margin-bottom:6px">2) ระยะการกระจัดแนวระดับ</div>
+          <div style="color:#7c2d12;font-weight:900;margin:0 0 6px">
+            กรณีนี้ \(v_x = v_{plane}\)
+          </div>
+          <div>
+            \\[
+              S_x = v_x\\,t
+            \\]
+            \\[
+              S_x = (${vx.toFixed(2)})(${t.toFixed(3)}) = ${Sx.toFixed(2)}\\ \\text{m}
+            \\]
+          </div>
+        </div>
+
+        <div class="formulaCard" style="border-color:#fb923c">
+          <div style="font-weight:1000;color:#7c2d12;margin-bottom:6px">3) ความเร็วขณะชนพื้น</div>
+
+          <div>
+            \\[
+              v_{impact} = \\sqrt{v_x^2 + v_y^2}
+            \\]
+          </div>
+
+          <!-- แยกบรรทัดแทนค่า (กันล้นมือถือ) -->
+          <div>
+            \\[
+              v_x = v_{plane} = ${vx.toFixed(2)}\\ \\text{m/s}
+            \\]
+            \\[
+              v_y = gt = (${g.toFixed(2)})(${t.toFixed(3)}) = ${vy.toFixed(2)}\\ \\text{m/s}
+            \\]
+          </div>
+
+          <div>
+            \\[
+              v_{impact} = \\sqrt{(${vx.toFixed(2)})^2 + (${vy.toFixed(2)})^2} = ${vImp.toFixed(2)}\\ \\text{m/s}
+            \\]
+          </div>
+        </div>
+      </div>
+    `;
+
+    if(typeset !== false && window.MathJax && MathJax.typesetPromise){
+      MathJax.typesetPromise([formulaMath]).catch(()=>{});
+    }
+  }
+
+  // ===== Quiz checking (show solution only for answered questions) =====
+  function getSelected(name){
+    const el = document.querySelector(`input[name="${name}"]:checked`);
+    return el ? el.value : null;
+  }
+
+  $("checkAnswers").onclick = ()=>{
+    const a1 = getSelected("q1");
+    const sol1 = $("sol1");
+    if(a1){
+      sol1.classList.add("show");
+      sol1.innerHTML = `
+        เฉลยที่ถูกคือ <span class="ansRed">ช้อย B</span><br>
+        เพราะ (ไม่มีแรงต้าน) การตกในแนวดิ่งขึ้นกับ \(h\) และ \(g\) เท่านั้น:
+        \\[
+          t = \\sqrt{\\frac{2h}{g}}
+        \\]
+      `;
+      if(window.MathJax?.typesetPromise) MathJax.typesetPromise([sol1]).catch(()=>{});
+    }else sol1.classList.remove("show");
+
+    const a2 = getSelected("q2");
+    const sol2 = $("sol2");
+    if(a2){
+      sol2.classList.add("show");
+      sol2.innerHTML = `
+        เฉลยที่ถูกคือ <span class="ansRed">ช้อย B</span><br>
+        เพราะ (ไม่มีแรงต้าน) ความเร็วแนวระดับคงที่ \(v_x\) และในกรณีนี้ \(v_x = v_{plane}\) จึงได้:
+        \\[
+          S_x = v_x t
+        \\]
+      `;
+      if(window.MathJax?.typesetPromise) MathJax.typesetPromise([sol2]).catch(()=>{});
+    }else sol2.classList.remove("show");
+
+    const a3 = getSelected("q3");
+    const sol3 = $("sol3");
+    if(a3){
+      sol3.classList.add("show");
+      sol3.innerHTML = `
+        เฉลยที่ถูกคือ <span class="ansRed">ช้อย D</span><br>
+        กำหนดให้ใช้ \(g = 10\\ \\text{m/s}^2\)<br><br>
+
+        เวลาในการตก:
+        \\[
+          t = \\sqrt{\\frac{2h}{g}} = \\sqrt{\\frac{2(2000)}{10}} = \\sqrt{400} = 20\\ \\text{s}
+        \\]
+
+        ระยะตามแนวระดับ (เพราะ \(v_x = 300\\ \\text{m/s}\)):
+        \\[
+          S_x = v_x t = 300(20) = 6000\\ \\text{m}
+        \\]
+      `;
+      if(window.MathJax?.typesetPromise) MathJax.typesetPromise([sol3]).catch(()=>{});
+    }else sol3.classList.remove("show");
+  };
+
+  // ===== Calculator (centered) =====
+  const calcOverlay = $("calcOverlay");
+  const calcDisp = $("calcDisp");
+  let expr = "0";
+
+  function calcShow(){ calcOverlay.classList.add("show"); }
+  function calcHide(){ calcOverlay.classList.remove("show"); }
+
+  $("calcBtnTop").onclick = ()=> calcShow();
+  $("calcClose").onclick = ()=> calcHide();
+  calcOverlay.addEventListener("click",(e)=>{ if(e.target === calcOverlay) calcHide(); });
+
+  function setDisp(s){ calcDisp.textContent = s; }
+
+  function appendToken(tok){
+    if(expr === "0" && /^[0-9.]$/.test(tok)) expr = tok;
+    else if(expr === "Error") expr = tok;
+    else expr += tok;
+    setDisp(expr);
+  }
+
+  function push(k){
+    if(k==="C"){ expr="0"; setDisp(expr); return; }
+    if(k==="BK"){
+      if(expr==="Error"){ expr="0"; setDisp(expr); return; }
+      if(expr.length<=1){ expr="0"; setDisp(expr); return; }
+      expr = expr.slice(0,-1);
+      setDisp(expr);
+      return;
+    }
+    if(k==="+/-"){
+      if(expr==="0") { expr="-0"; setDisp(expr); return; }
+      if(expr[0]==="-") expr = expr.slice(1);
+      else expr = "-" + expr;
+      setDisp(expr);
+      return;
+    }
+    if(k==="PI"){ appendToken("pi"); return; }
+    if(k==="E"){ appendToken("e"); return; }
+    if(k==="SQRT"){ appendToken("sqrt("); return; }
+    if(k==="SIN"){ appendToken("sin("); return; }
+    if(k==="COS"){ appendToken("cos("); return; }
+    if(k==="TAN"){ appendToken("tan("); return; }
+    if(k==="LN"){ appendToken("ln("); return; }
+    if(k==="LOG"){ appendToken("log("); return; }
+
+    if(k==="="){
+      try{
+        const safe = expr
+          .replace(/\^/g,"**")
+          .replace(/÷/g,"/")
+          .replace(/×/g,"*")
+          .replace(/\bpi\b/g,"Math.PI")
+          .replace(/\be\b/g,"Math.E")
+          .replace(/sqrt\(/g,"Math.sqrt(")
+          .replace(/sin\(/g,"Math.sin(")
+          .replace(/cos\(/g,"Math.cos(")
+          .replace(/tan\(/g,"Math.tan(")
+          .replace(/ln\(/g,"Math.log(")
+          .replace(/log\(/g,"Math.log10(");
+
+        const val = Function(`"use strict"; return (${safe});`)();
+        expr = String(val);
+      }catch(_){
+        expr="Error";
+      }
+      setDisp(expr);
+      return;
+    }
+
+    appendToken(k);
+  }
+
+  document.querySelectorAll(".ck[data-k]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const k = btn.getAttribute("data-k");
+      push(k);
+    });
+  });
+
+  window.addEventListener("keydown",(e)=>{
+    if(!calcOverlay.classList.contains("show")) return;
+    const map = {
+      "Backspace":"BK",
+      "Enter":"=",
+      "+":"+",
+      "-":"-",
+      "*":"*",
+      "/":"/",
+      "(": "(",
+      ")": ")",
+      ".": "."
+    };
+    if(e.key >= "0" && e.key <= "9"){ push(e.key); e.preventDefault(); return; }
+    if(map[e.key]){ push(map[e.key]); e.preventDefault(); return; }
+  });
+
+  // ===== Loop =====
+  function draw(){
+    drawGrid();
+    drawTrace();
+    drawHeightIndicator();
+    drawPlane();
+    drawBomb();
+    drawImpactMark();
+    drawExplosion();
+    drawResultOverlay();
+  }
+
+  function loop(){
+    const dt = 1/240;
+    const stepsPerFrame = 4;
+
+    if(!state.done){
+      for(let i=0;i<stepsPerFrame;i++){
+        const prev = {x:state.x, y:state.y, vx:state.vx, vy:state.vy, t:state.t};
+        stepRK4(dt);
+        trace.push({x:state.x, y:state.y});
+
+        if(state.y<=0){
+          const alpha = (0 - prev.y) / (state.y - prev.y);
+          const tStar = prev.t + alpha * dt;
+          const xStar = prev.x + alpha * (state.x - prev.x);
+          const vxStar = prev.vx + alpha * (state.vx - prev.vx);
+          const vyStar = prev.vy + alpha * (state.vy - prev.vy);
+
+          state.t = tStar;
+          state.x = xStar;
+          state.y = 0;
+          state.vx = vxStar;
+          state.vy = vyStar;
+          state.done = true;
+
+          state.explosionStart = performance.now();
+          playExplosionSFX();
+          break;
+        }
+      }
+    }
+
+    if(state.planeX > state.worldW*0.9){ state.worldW *= 1.3; }
+
+    draw();
+    if(running || state.explosionStart){
+      raf = requestAnimationFrame(loop);
+    }
+  }
+
+  resetSim();
+  syncCheckboxes();
+  setPlayLabel();
+  draw();
+  updateFormula(false);
+})();
+</script>
+</body>
+</html>

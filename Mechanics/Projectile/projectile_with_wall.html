@@ -1,0 +1,1155 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>การทดลอง: โพรเจกไทล์ + กำแพงสะท้อน (g=10)</title>
+
+  <style>
+    :root{
+      --ink:#0f172a;
+      --muted:#475569;
+      --line:#e5e7eb;
+      --bg:#ffffff;
+
+      --btn-play:#38bdf8;
+      --btn-reset:#e5e7eb;
+
+      --shadow: 0 10px 22px rgba(2,6,23,.10);
+      --radius:16px;
+      --radius2:14px;
+
+      --sim-sky:#eaf6ff;
+      --sim-grass:#f3fff5;
+
+      /* เส้นอ้างอิงสีน้ำตาลอ่อนเม็ดเล็ก */
+      --ref:#d6b48c;
+      --ref2: rgba(214,180,140,.80);
+      --refTagBg: rgba(255,255,255,.78);
+
+      /* ลูกศร u สีเทาตามสั่ง */
+      --uArrow:#6b7280;
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:system-ui,"Noto Sans Thai",sans-serif;
+      background:var(--bg);
+      color:var(--ink);
+      padding:12px;
+    }
+
+    .wrap{max-width:1100px;margin:0 auto;display:flex;flex-direction:column;gap:10px;}
+
+    .title{
+      display:flex;flex-direction:column;gap:2px;
+      padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius);
+      background:#fff;box-shadow:var(--shadow);
+    }
+    .title h1{margin:0;font-size:18px;line-height:1.2;color:#1d4ed8;}
+    .title p{margin:0;color:var(--muted);font-size:13px;}
+
+    .layout{display:grid;grid-template-columns: 360px 1fr;gap:10px;align-items:start;}
+    .panel{border:1px solid var(--line);border-radius:var(--radius);background:#fff;box-shadow:var(--shadow);overflow:hidden;}
+    .panel-head{
+      padding:10px 12px;border-bottom:1px solid var(--line);
+      display:flex;align-items:center;justify-content:space-between;gap:10px;
+      min-height:44px;
+    }
+    .section{padding:12px;display:flex;flex-direction:column;gap:10px;}
+
+    .card{border:1px solid var(--line);border-radius:var(--radius2);padding:10px;background:#fff;position:relative;z-index:1;}
+    .field2{display:grid;grid-template-columns: 1fr;gap:6px;}
+    .field2 label{font-size:13px;color:#111827;font-weight:700;}
+    .stepper{display:grid;grid-template-columns: 44px 1fr 44px;gap:8px;align-items:center;}
+    .stepbtn{
+      border:1px solid var(--line);background:#fff;border-radius:14px;height:44px;font-weight:900;
+      cursor:pointer;box-shadow: 0 8px 16px rgba(2,6,23,.08);user-select:none;
+    }
+    .stepbtn:active{ transform: translateY(1px); }
+    .num{width:100%;padding:10px 10px;border:1px solid var(--line);border-radius:14px;font-size:14px;text-align:center;height:44px;}
+    .sub{display:flex;justify-content:space-between;gap:10px;color:var(--muted);font-size:12px;margin-top:2px;}
+
+    .chkRow{
+      display:flex;
+      align-items:flex-start;
+      gap:10px;
+      padding:10px 10px;
+      border:1px solid var(--line);
+      border-radius:14px;
+      background:#fff;
+    }
+    .chkRow input{
+      width:18px;height:18px;
+      accent-color:#2563eb;
+      cursor:pointer;
+      margin-top:2px;
+      flex:0 0 auto;
+    }
+    .chkRow .txt{display:flex;flex-direction:column;gap:2px;line-height:1.25;}
+    .chkRow .txt b{color:#1d4ed8;}
+    .chkRow .txt small{color:var(--muted);font-weight:600}
+
+    .btn-area{border-top:1px solid var(--line);background:#fff;padding:10px 12px;}
+    .btn-grid{display:grid;grid-template-columns: 1fr 1fr;gap:8px;}
+    .btn{
+      border:none;border-radius:999px;padding:10px 10px;font-weight:700;cursor:pointer;
+      box-shadow: 0 6px 14px rgba(2,6,23,.10);display:flex;align-items:center;justify-content:center;
+      gap:8px;user-select:none;min-height:44px;white-space:nowrap;
+    }
+    .btn:active{ transform: translateY(1px); }
+    .btn-play{ background:var(--btn-play); color:#fff; }
+    .btn-reset{ background:var(--btn-reset); color:#111827; }
+
+    .footer-link{
+      padding:10px 12px;border-top:1px solid var(--line);
+      display:flex;justify-content:center;font-size:13px;background:#fff;
+    }
+    .footer-link a{color:#1d4ed8;text-decoration:none;font-weight:700;}
+    .footer-link a:hover{ text-decoration:underline; }
+
+    .miniBtn{
+      border:1px solid var(--line);
+      background:#fff;
+      border-radius:999px;
+      padding:8px 12px;
+      font-weight:900;
+      font-size:12px;
+      cursor:pointer;
+      box-shadow: 0 6px 14px rgba(2,6,23,.08);
+      user-select:none;
+      white-space:nowrap;
+    }
+    .miniBtn:active{ transform: translateY(1px); }
+
+    .rowLabelBtn{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+
+    /* ===== Simulation ===== */
+    .sim{
+      height:624px;border:1px solid var(--line);border-radius:var(--radius);
+      box-shadow:var(--shadow);position:relative;overflow:hidden;
+      background-image:
+        repeating-linear-gradient(to right, rgba(148,163,184,.18) 0, rgba(148,163,184,.18) 1px, transparent 1px, transparent 28px),
+        repeating-linear-gradient(to bottom, rgba(148,163,184,.18) 0, rgba(148,163,184,.18) 1px, transparent 1px, transparent 28px),
+        linear-gradient(to bottom, var(--sim-sky) 0%, var(--sim-grass) 100%);
+    }
+
+    .ground{
+      position:absolute;left:0;right:0;bottom:0;height:67px;
+      background:linear-gradient(to bottom, #bbf7d0, #86efac);
+      border-top:1px solid rgba(15,23,42,.12);z-index:2;
+    }
+
+    .trail{position:absolute;inset:0;pointer-events:none;z-index:1;}
+    .trail .dot{position:absolute;width:3px;height:3px;border-radius:50%;background:rgba(15,23,42,.25);}
+
+    .ball{
+      position:absolute;border-radius:50%;
+      background: radial-gradient(circle at 30% 30%, #ffffff, #d1d5db);
+      border:1px solid rgba(15,23,42,.15);
+      box-shadow:0 3px 10px rgba(2,6,23,.18);
+      z-index:6;
+    }
+
+    .wall{
+      position:absolute;top:0;bottom:67px;width:14px;z-index:5;
+      cursor:ew-resize;touch-action:none;pointer-events:auto;
+
+      background: linear-gradient(to right,
+        rgba(17,24,39,1) 0%,
+        rgba(17,24,39,1) 35%,
+        rgba(255,255,255,.18) 70%,
+        rgba(255,255,255,.55) 100%);
+
+      box-shadow: -10px 10px 22px rgba(2,6,23,.20);
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,.35);
+    }
+    .wall::after{
+      content:"ลากกำแพง";
+      position:absolute;top:10px;left:50%;transform:translateX(-50%);
+      background:rgba(255,255,255,.85);color:#0f172a;font-weight:900;font-size:11px;
+      padding:6px 10px;border-radius:999px;border:1px solid rgba(15,23,42,.12);
+      white-space:nowrap;pointer-events:none;
+    }
+
+    .ghost{
+      position:absolute;
+      border:2px dashed rgba(148,163,184,.9);
+      border-radius:999px;
+      z-index:4;
+      pointer-events:none;
+      opacity:0;
+      transition:opacity .18s ease;
+    }
+
+    .draggableLabel{
+      position:absolute;
+      z-index:7;
+      user-select:none;
+      cursor:grab;
+      touch-action:none;
+    }
+    .draggableLabel:active{ cursor:grabbing; }
+
+    .startLabel{
+      font-weight:500;
+      font-size:13px;
+      color:#0f172a;
+      background:transparent;
+      border:none;
+      padding:0;
+      text-shadow: 0 2px 8px rgba(2,6,23,.18);
+      opacity:.98;
+      white-space:nowrap;
+      line-height:1.25;
+    }
+    .startLabel .line{display:block;}
+    .startLabel .line + .line{margin-top:2px;}
+
+    .distLine{
+      position:absolute;
+      height:0;
+      border-top:2px solid rgba(15,23,42,.35);
+      z-index:3;
+      pointer-events:none;
+    }
+    .distLine::before,
+    .distLine::after{
+      content:"";
+      position:absolute;top:-6px;
+      width:0;height:0;
+      border-top:6px solid transparent;
+      border-bottom:6px solid transparent;
+    }
+    .distLine::before{ left:-2px; border-right:10px solid rgba(15,23,42,.35); }
+    .distLine::after{ right:-2px; border-left:10px solid rgba(15,23,42,.35); }
+
+    .distText{
+      font-size:12px;
+      font-weight:700;
+      color:#0f172a;
+      background:rgba(255,255,255,.75);
+      border:1px solid rgba(15,23,42,.10);
+      border-radius:999px;
+      padding:4px 8px;
+      white-space:nowrap;
+      line-height:1.2;
+    }
+
+    svg{position:absolute;inset:0;z-index:2;pointer-events:none;}
+    .dashRef{
+      stroke: var(--ref2);
+      stroke-width:1.4;
+      stroke-dasharray: 2 8;
+      stroke-linecap: round;
+      fill:none;
+      filter: drop-shadow(0 3px 10px rgba(2,6,23,.08));
+    }
+    .solidArrow{
+      stroke: var(--ref);
+      stroke-width:2.2;
+      fill:none;
+      stroke-linecap: round;
+      filter: drop-shadow(0 3px 10px rgba(2,6,23,.08));
+    }
+
+    .uArrow{
+      stroke: var(--uArrow);
+      stroke-width:2.2;
+      fill:none;
+      stroke-linecap:round;
+      filter: drop-shadow(0 3px 10px rgba(2,6,23,.10));
+    }
+
+    /* ป้าย Sx แบบเดิม (ลอยได้) */
+    .sxTag{
+      font-size:12px;
+      font-weight:700;
+      color: var(--ref);
+      background:var(--refTagBg);
+      border:1px solid rgba(15,23,42,.10);
+      border-radius:999px;
+      padding:4px 8px;
+      white-space:nowrap;
+      line-height:1.2;
+      display:none;
+    }
+
+    /* ✅ ป้าย Sx ที่ “กำกับบนลูกศรสีน้ำตาล” ใน SVG */
+    .sxOnArrow{
+      fill: var(--ref);
+      font-weight:800;
+      font-size:13px;
+      paint-order: stroke;
+      stroke: rgba(255,255,255,.85);
+      stroke-width:3px;
+    }
+
+    .hud{
+      background:transparent;border:none;padding:0;
+      text-shadow: 0 2px 8px rgba(2,6,23,.18);
+      font-size:13px;
+      display:none;
+      line-height:1.25;
+      pointer-events:auto;
+    }
+    .hud .h{font-weight:900;color:#1d4ed8;margin-bottom:6px;}
+    .hudRow{display:flex;justify-content:space-between;gap:12px;padding:3px 0;white-space:nowrap;}
+    .hudRow b{color:#16a34a;}
+
+    #mobileActionsSlot{ display:none; }
+    @media (max-width: 920px){
+      .layout{ grid-template-columns:1fr; }
+      .sim{ height:432px; }
+      #mobileActionsSlot{ display:block; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="title">
+      <h1>โพรเจกไทล์ + กำแพงสะท้อน</h1>
+      <p>
+        ใช้ค่าแรงโน้มถ่วงคงที่ g = 10 m/s² • ปรับ u, θ, ระยะกำแพง แล้วกด ▶️ • ลากกำแพงในจอทดลองได้ (เมาส์/นิ้ว)
+      </p>
+    </div>
+
+    <div class="layout">
+      <div class="panel" id="controlPanel">
+        <div class="panel-head">
+          <div></div><div></div>
+        </div>
+
+        <div class="section">
+          <div class="card">
+            <div class="field2">
+              <label>ความเร็วต้น u (m/s)</label>
+              <div class="stepper">
+                <button class="stepbtn" type="button" id="uMinus">−</button>
+                <input class="num" type="number" id="speedNum" min="0" max="200" step="1" value="30" />
+                <button class="stepbtn" type="button" id="uPlus">+</button>
+              </div>
+              <div class="sub">
+                <span>ปรับด้วย + / − ได้</span>
+                <span id="speedShow">30 m/s</span>
+              </div>
+            </div>
+
+            <div class="field2" style="margin-top:10px">
+              <label>มุมยิง θ (องศา)</label>
+              <div class="stepper">
+                <button class="stepbtn" type="button" id="thMinus">−</button>
+                <input class="num" type="number" id="angleNum" min="0" max="90" step="1" value="60" />
+                <button class="stepbtn" type="button" id="thPlus">+</button>
+              </div>
+              <div class="sub">
+                <span>ปรับด้วย + / − ได้</span>
+                <span id="angleShow">60°</span>
+              </div>
+            </div>
+
+            <div class="field2" style="margin-top:10px">
+              <label>ระยะกำแพงจากจุดเริ่มต้น d (m)</label>
+              <div class="stepper">
+                <button class="stepbtn" type="button" id="wMinus">−</button>
+                <input class="num" type="number" id="wallNum" min="1" max="300" step="1" value="40" />
+                <button class="stepbtn" type="button" id="wPlus">+</button>
+              </div>
+              <div class="sub">
+                <span>ปรับได้ หรือ “ลากกำแพง” ในจอทดลอง</span>
+                <span id="wallShow">40 m</span>
+              </div>
+            </div>
+
+            <div id="checksWrap" style="margin-top:12px; display:flex; flex-direction:column; gap:10px;">
+              <div class="field2">
+                <div class="rowLabelBtn">
+                  <label style="margin:0;">แรงต้านอากาศ</label>
+                  <button class="miniBtn" id="toggleChecksBtn" type="button">ซ่อนช่องติ๊ก</button>
+                </div>
+
+                <div class="chkRow" id="airRow">
+                  <input type="checkbox" id="airChk" />
+                  <div class="txt">
+                    <b>เปิดแรงต้านอากาศ</b>
+                    <small>โมเดล: ax = −k vx, ay = −g − k vy (k คงที่)</small>
+                  </div>
+                </div>
+              </div>
+
+              <div class="field2" id="refBlock">
+                <label>แนวอ้างอิง</label>
+                <div class="chkRow">
+                  <input type="checkbox" id="refChk" />
+                  <div class="txt">
+                    <b>แนวการเคลื่อนที่เมื่อ “ไม่มีสิ่งกีดขวาง” และ “ไม่มีแรงต้าน”</b>
+                    <small>แสดงเส้นปะสีน้ำตาล + ลูกศรการกระจัด + ป้าย Sx</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <div id="desktopActionsSlot">
+          <div id="actionsBlock">
+            <div class="btn-area">
+              <div class="btn-grid">
+                <button class="btn btn-play" id="playBtn" title="เล่น/หยุด">
+                  <span>▶️</span><span>เล่น</span>
+                </button>
+                <button class="btn btn-reset" id="resetBtn" title="รีเซ็ต">
+                  <span>🔄</span><span>รีเซ็ต</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="footer-link">
+              <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">
+                ศึกษาเพิ่มเติมที่เพจคลายปมฟิสิกส์
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sim" id="sim">
+        <svg id="pathSvg" viewBox="0 0 100 100" preserveAspectRatio="none">
+          <path id="refPath" class="dashRef" d="" style="display:none;" />
+          <defs>
+            <marker id="arrowHeadRef" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto">
+              <path d="M0,0 L8,3 L0,6 Z" fill="var(--ref)"></path>
+            </marker>
+            <marker id="arrowHeadU" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto">
+              <path d="M0,0 L8,3 L0,6 Z" fill="var(--uArrow)"></path>
+            </marker>
+          </defs>
+
+          <line id="sxArrow" class="solidArrow" x1="0" y1="0" x2="0" y2="0"
+                marker-end="url(#arrowHeadRef)" style="display:none;"/>
+
+          <!-- ✅ ข้อความ Sx “บนลูกศร” -->
+          <text id="sxOnArrow" class="sxOnArrow" x="0" y="0" text-anchor="middle" dominant-baseline="middle" style="display:none;">
+            Sx = 0.0 m
+          </text>
+
+          <line id="uArrow" class="uArrow" x1="0" y1="0" x2="0" y2="0"
+                marker-end="url(#arrowHeadU)"/>
+        </svg>
+
+        <!-- ป้ายลอยเดิม (ยังคงไว้ ไม่ไปแตะอย่างอื่น) -->
+        <div class="draggableLabel sxTag" id="sxTag">Sx = 0.0 m</div>
+
+        <div class="trail" id="trail"></div>
+
+        <div class="distLine" id="distLine"></div>
+        <div class="draggableLabel distText" id="distText"></div>
+
+        <div class="ghost" id="ghost"></div>
+        <div class="draggableLabel startLabel" id="startLabel"></div>
+
+        <div class="ball" id="ball"></div>
+        <div class="wall" id="wall" aria-label="กำแพงแนวตั้ง"></div>
+
+        <div class="draggableLabel hud" id="hud">
+          <div class="h">ผลลัพธ์</div>
+          <div class="hudRow"><span>Δx (มีกำแพง)</span><b id="outDx">0.0 m</b></div>
+        </div>
+
+        <div class="ground"></div>
+      </div>
+
+      <div id="mobileActionsSlot"></div>
+    </div>
+  </div>
+
+  <script>
+    const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+    const actionsBlock = document.getElementById('actionsBlock');
+    const desktopActionsSlot = document.getElementById('desktopActionsSlot');
+    const mobileActionsSlot  = document.getElementById('mobileActionsSlot');
+    function placeActions(){
+      const isMobile = window.matchMedia('(max-width: 920px)').matches;
+      if(isMobile){
+        if(actionsBlock && mobileActionsSlot && actionsBlock.parentElement !== mobileActionsSlot){
+          mobileActionsSlot.appendChild(actionsBlock);
+        }
+      }else{
+        if(actionsBlock && desktopActionsSlot && actionsBlock.parentElement !== desktopActionsSlot){
+          desktopActionsSlot.appendChild(actionsBlock);
+        }
+      }
+    }
+
+    function makeDraggableInSim(el, sim){
+      if(!el) return;
+      let dragging = false;
+      let startX = 0, startY = 0;
+      let startLeft = 0, startTop = 0;
+
+      const getXY = (e)=> {
+        if(e.touches && e.touches[0]) return {x:e.touches[0].clientX, y:e.touches[0].clientY};
+        return {x:e.clientX, y:e.clientY};
+      };
+
+      const onDown = (e)=>{
+        if(e.target.closest && e.target.closest('.wall')) return;
+        dragging = true;
+        const p = getXY(e);
+        startX = p.x; startY = p.y;
+
+        const s = window.getComputedStyle(el);
+        const rectE = el.getBoundingClientRect();
+        const rectS = sim.getBoundingClientRect();
+
+        const curLeft = parseFloat(el.style.left || s.left || 0);
+        const curTop  = parseFloat(el.style.top  || s.top  || 0);
+
+        if(!el.style.left || !el.style.top){
+          startLeft = rectE.left - rectS.left;
+          startTop  = rectE.top  - rectS.top;
+          el.style.left = `${startLeft}px`;
+          el.style.top  = `${startTop}px`;
+          el.style.bottom = 'auto';
+        }else{
+          startLeft = isFinite(curLeft) ? curLeft : (rectE.left - rectS.left);
+          startTop  = isFinite(curTop)  ? curTop  : (rectE.top  - rectS.top);
+        }
+
+        el.setPointerCapture?.(e.pointerId);
+        e.preventDefault();
+      };
+
+      const onMove = (e)=>{
+        if(!dragging) return;
+        const p = getXY(e);
+        const dx = p.x - startX;
+        const dy = p.y - startY;
+
+        const rectS = sim.getBoundingClientRect();
+        const w = rectS.width, h = rectS.height;
+
+        const newLeft = clamp(startLeft + dx, 4, w - el.offsetWidth - 4);
+        const newTop  = clamp(startTop + dy, 4, h - el.offsetHeight - 4);
+
+        el.style.left = `${newLeft}px`;
+        el.style.top  = `${newTop}px`;
+        el.style.bottom = 'auto';
+
+        e.preventDefault();
+      };
+
+      const onUp = (e)=>{
+        if(!dragging) return;
+        dragging = false;
+        e.preventDefault();
+      };
+
+      el.addEventListener('pointerdown', onDown);
+      window.addEventListener('pointermove', onMove, {passive:false});
+      window.addEventListener('pointerup', onUp, {passive:false});
+
+      el.addEventListener('touchstart', onDown, {passive:false});
+      window.addEventListener('touchmove', onMove, {passive:false});
+      window.addEventListener('touchend', onUp, {passive:false});
+    }
+
+    class ProjectileWallLab {
+      constructor(){
+        this.sim = document.getElementById('sim');
+        this.ball = document.getElementById('ball');
+        this.trail = document.getElementById('trail');
+        this.wallEl = document.getElementById('wall');
+
+        this.svg = document.getElementById('pathSvg');
+        this.refPath = document.getElementById('refPath');
+        this.sxArrow = document.getElementById('sxArrow');
+        this.sxTag = document.getElementById('sxTag');
+        this.sxOnArrow = document.getElementById('sxOnArrow'); // ✅
+        this.uArrow = document.getElementById('uArrow');
+
+        this.distLine = document.getElementById('distLine');
+        this.distText = document.getElementById('distText');
+
+        this.ghost = document.getElementById('ghost');
+        this.startLabel = document.getElementById('startLabel');
+
+        this.hud = document.getElementById('hud');
+        this.outDx = document.getElementById('outDx');
+
+        this.speedNum = document.getElementById('speedNum');
+        this.angleNum = document.getElementById('angleNum');
+        this.wallNum  = document.getElementById('wallNum');
+
+        this.speedShow = document.getElementById('speedShow');
+        this.angleShow = document.getElementById('angleShow');
+        this.wallShow  = document.getElementById('wallShow');
+
+        this.airChk = document.getElementById('airChk');
+        this.refChk = document.getElementById('refChk');
+
+        this.playBtn = document.getElementById('playBtn');
+        this.resetBtn = document.getElementById('resetBtn');
+
+        this.toggleChecksBtn = document.getElementById('toggleChecksBtn');
+        this.airRow = document.getElementById('airRow');
+        this.refBlock = document.getElementById('refBlock');
+        this.checksHidden = false;
+
+        this.g = 10;
+        this.k = 0.18;
+        this.dt = 0.016;
+
+        this.visualScale = 0.8;
+        this.groundH = 67;
+
+        this.ballRpxBase = 6;
+        this.ballRpx = this.ballRpxBase * this.visualScale;
+
+        this.wallWpx = 14;
+        this.leftPadPx = 54;
+
+        this.pxPerM = 4.0;
+
+        this.u = 30;
+        this.thetaDeg = 60;
+        this.wallLeft = 40;
+        this.isAnimating = false;
+        this.isPaused = false;
+        this.raf = null;
+
+        this.airOn = false;
+        this.showRef = false;
+
+        this.x = 0; this.y = 0;
+        this.vx = 0; this.vy = 0;
+        this.t = 0;
+
+        this.applyBallStyle();
+        this.syncUI();
+        this.bind();
+
+        makeDraggableInSim(this.startLabel, this.sim);
+        makeDraggableInSim(this.distText, this.sim);
+        makeDraggableInSim(this.sxTag, this.sim);
+        makeDraggableInSim(this.hud, this.sim);
+
+        this.reset(true);
+        this.preview();
+      }
+
+      applyBallStyle(){
+        const d = this.ballRpx*2;
+        this.ball.style.width = `${d}px`;
+        this.ball.style.height = `${d}px`;
+        this.ball.style.transform = `translate(${-this.ballRpx}px, ${this.ballRpx}px)`;
+      }
+
+      baseBottomPx(){ return this.groundH + this.ballRpx; }
+      ballRadiusM(){ return this.ballRpx / this.pxPerM; }
+
+      bind(){
+        const syncU = (v)=>{
+          this.u = clamp(parseFloat(v||0), 0, 200);
+          this.speedNum.value = String(this.u);
+          this.speedShow.textContent = `${this.u} m/s`;
+          if(!this.isAnimating) this.preview();
+        };
+        const syncTheta = (v)=>{
+          this.thetaDeg = clamp(parseFloat(v||0), 0, 90);
+          this.angleNum.value = String(this.thetaDeg);
+          this.angleShow.textContent = `${this.thetaDeg}°`;
+          if(!this.isAnimating) this.preview();
+        };
+        const syncWall = (v)=>{
+          this.wallLeft = clamp(parseFloat(v||0), 1, 300);
+          this.wallNum.value = String(this.wallLeft);
+          this.wallShow.textContent = `${this.wallLeft} m`;
+          this.layoutWall();
+          if(!this.isAnimating) this.preview();
+        };
+
+        this.speedNum.addEventListener('input', e=> syncU(e.target.value));
+        this.angleNum.addEventListener('input', e=> syncTheta(e.target.value));
+        this.wallNum.addEventListener('input',  e=> syncWall(e.target.value));
+
+        const step = (idMinus, idPlus, getter, setter, delta)=>{
+          document.getElementById(idMinus).addEventListener('click', ()=> setter(getter()-delta));
+          document.getElementById(idPlus).addEventListener('click',  ()=> setter(getter()+delta));
+        };
+        step('uMinus','uPlus', ()=>this.u, (v)=>syncU(v), 1);
+        step('thMinus','thPlus', ()=>this.thetaDeg, (v)=>syncTheta(v), 1);
+        step('wMinus','wPlus', ()=>this.wallLeft, (v)=>syncWall(v), 1);
+
+        this.playBtn.addEventListener('click', ()=> this.togglePlay());
+        this.resetBtn.addEventListener('click', ()=> this.reset(true));
+
+        this.airChk.addEventListener('change', ()=>{
+          this.airOn = !!this.airChk.checked;
+          if(!this.isAnimating) this.preview();
+        });
+
+        this.refChk.addEventListener('change', ()=>{
+          this.showRef = !!this.refChk.checked;
+          if(!this.isAnimating) this.preview();
+        });
+
+        this.toggleChecksBtn.addEventListener('click', ()=>{
+          this.checksHidden = !this.checksHidden;
+          if(this.checksHidden){
+            this.airRow.style.display = 'none';
+            this.refBlock.style.display = 'none';
+            this.toggleChecksBtn.textContent = 'แสดงช่องติ๊ก';
+          }else{
+            this.airRow.style.display = 'flex';
+            this.refBlock.style.display = 'grid';
+            this.toggleChecksBtn.textContent = 'ซ่อนช่องติ๊ก';
+          }
+        });
+
+        window.addEventListener('resize', ()=>{
+          placeActions();
+          this.preview();
+        });
+
+        // Drag wall
+        let dragging = false;
+        let startClientX = 0;
+        let startWallPx = 0;
+        const getClientX = (e)=> (e.touches ? e.touches[0].clientX : e.clientX);
+
+        const onDown = (e)=>{
+          dragging = true;
+          startClientX = getClientX(e);
+          const rect = this.sim.getBoundingClientRect();
+          const wallRect = this.wallEl.getBoundingClientRect();
+          startWallPx = (wallRect.left - rect.left);
+          this.wallEl.setPointerCapture?.(e.pointerId);
+          e.preventDefault();
+        };
+
+        const onMove = (e)=>{
+          if(!dragging) return;
+          const dx = getClientX(e) - startClientX;
+          const rect = this.sim.getBoundingClientRect();
+
+          let newLeftPx = startWallPx + dx;
+          const minPx = this.leftPadPx + 20;
+          const maxPx = rect.width - this.wallWpx - 20;
+          newLeftPx = clamp(newLeftPx, minPx, maxPx);
+
+          const xm = (newLeftPx - this.leftPadPx) / this.pxPerM;
+          this.wallLeft = clamp(xm, 1, 300);
+
+          this.wallNum.value = String(Math.round(this.wallLeft));
+          this.wallShow.textContent = `${Math.round(this.wallLeft)} m`;
+          this.layoutWall(true);
+
+          if(!this.isAnimating) this.preview();
+          e.preventDefault();
+        };
+
+        const onUp = (e)=>{
+          if(!dragging) return;
+          dragging = false;
+          this.wallLeft = clamp(Math.round(this.wallLeft), 1, 300);
+          this.wallNum.value = String(this.wallLeft);
+          this.wallShow.textContent = `${this.wallLeft} m`;
+          this.layoutWall(true);
+          if(!this.isAnimating) this.preview();
+          e.preventDefault();
+        };
+
+        this.wallEl.addEventListener('pointerdown', onDown);
+        window.addEventListener('pointermove', onMove, {passive:false});
+        window.addEventListener('pointerup', onUp, {passive:false});
+        this.wallEl.addEventListener('touchstart', onDown, {passive:false});
+        window.addEventListener('touchmove', onMove, {passive:false});
+        window.addEventListener('touchend', onUp, {passive:false});
+      }
+
+      syncUI(){
+        this.speedShow.textContent = `${this.u} m/s`;
+        this.angleShow.textContent = `${this.thetaDeg}°`;
+        this.wallShow.textContent  = `${this.wallLeft} m`;
+        this.airChk.checked = this.airOn;
+        this.refChk.checked = this.showRef;
+      }
+
+      stepState(s, useWall=true, useAir=this.airOn){
+        let ax = 0;
+        let ay = -this.g;
+
+        if(useAir){
+          ax += -this.k * s.vx;
+          ay += -this.k * s.vy;
+        }
+
+        s.vx += ax * this.dt;
+        s.vy += ay * this.dt;
+
+        s.x  += s.vx * this.dt;
+        s.y  += s.vy * this.dt;
+        s.t  += this.dt;
+
+        if(useWall && s.vx > 0){
+          const r = this.ballRadiusM();
+          if(s.x + r >= this.wallLeft){
+            s.x = this.wallLeft - r;
+            s.vx = -s.vx;
+          }
+        }
+
+        if(s.y < 0) s.y = 0;
+      }
+
+      simulateLanding(useWall, useAir){
+        const th = this.thetaDeg * Math.PI/180;
+        const s = { x:0, y:0, vx:this.u*Math.cos(th), vy:this.u*Math.sin(th), t:0 };
+        let safety = 0;
+        while(safety++ < 25000){
+          this.stepState(s, useWall, useAir);
+          if(s.y <= 0 && s.t > this.dt) break;
+          if(s.t > 60) break;
+        }
+        return { x:s.x, t:s.t };
+      }
+
+      simulatePath(useWall, useAir, maxPts=2200){
+        const th = this.thetaDeg * Math.PI/180;
+        const s = { x:0, y:0, vx:this.u*Math.cos(th), vy:this.u*Math.sin(th), t:0 };
+        const pts = [];
+        let safety = 0;
+        while(safety++ < maxPts){
+          pts.push({x:s.x, y:s.y});
+          this.stepState(s, useWall, useAir);
+          if(s.y <= 0 && s.t > this.dt) { pts.push({x:s.x, y:s.y}); break; }
+          if(s.t > 60) break;
+        }
+        return pts;
+      }
+
+      autoFit(){
+        const ptsB = this.simulatePath(true, this.airOn, 1600);
+        let ptsRef = [];
+        if(this.showRef){
+          ptsRef = this.simulatePath(false, false, 1800);
+        }
+
+        let maxX = this.wallLeft + 3;
+        let maxY = 0;
+
+        const take = (pts)=>{
+          for(const p of pts){
+            maxX = Math.max(maxX, p.x);
+            maxY = Math.max(maxY, p.y);
+          }
+        };
+        take(ptsB);
+        if(this.showRef) take(ptsRef);
+
+        const w = this.sim.clientWidth;
+        const h = this.sim.clientHeight;
+
+        const leftPad = this.leftPadPx;
+        const bottomPad = this.baseBottomPx();
+        const rightPad = 30;
+        const topPad = 20;
+
+        const availW = Math.max(120, w - leftPad - rightPad);
+        const availH = Math.max(120, h - bottomPad - topPad);
+
+        const X = Math.max(0.1, maxX + 2.0);
+        const Y = Math.max(0.1, maxY + 1.0);
+
+        const sx = availW / X;
+        const sy = availH / Y;
+
+        const base = clamp(Math.min(sx, sy), 0.8, 7.0);
+        this.pxPerM = base * 0.8;
+
+        this.svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+      }
+
+      toPxX(xm){ return this.leftPadPx + xm*this.pxPerM; }
+      toPxY(ym){ return (this.baseBottomPx() + ym*this.pxPerM); }
+
+      setBall(xm, ym){
+        this.ball.style.left = `${this.toPxX(xm)}px`;
+        this.ball.style.bottom = `${this.toPxY(ym)}px`;
+      }
+
+      addDot(xm, ym){
+        const d = document.createElement('div');
+        d.className = 'dot';
+        d.style.left = `${this.toPxX(xm)}px`;
+        d.style.bottom = `${this.toPxY(ym)}px`;
+        this.trail.appendChild(d);
+        if(this.trail.childElementCount > 900) this.trail.removeChild(this.trail.firstChild);
+      }
+
+      clearTrail(){ this.trail.innerHTML = ''; }
+
+      layoutWall(skipFit=false){
+        if(!skipFit) this.autoFit();
+        const leftPx = this.toPxX(this.wallLeft);
+        this.wallEl.style.left = `${leftPx}px`;
+      }
+
+      drawStartArtifacts(){
+        const d = this.ballRpx*2;
+        this.ghost.style.width = `${d}px`;
+        this.ghost.style.height = `${d}px`;
+        this.ghost.style.left = `${this.toPxX(0) - this.ballRpx}px`;
+        this.ghost.style.bottom = `${this.toPxY(0) - this.ballRpx}px`;
+
+        this.startLabel.style.left = `${this.toPxX(0) + 34}px`;
+        this.startLabel.style.bottom = `${this.toPxY(0) + 6}px`;
+
+        this.startLabel.innerHTML =
+          `<span class="line">u = ${this.u.toFixed(0)} m/s</span>` +
+          `<span class="line">θ = ${this.thetaDeg.toFixed(0)}°</span>`;
+
+        const x0 = this.toPxX(0);
+        const y0 = (this.sim.clientHeight - this.toPxY(0));
+        const L = 60;
+        const th = this.thetaDeg * Math.PI/180;
+        const x1 = x0 + L*Math.cos(th);
+        const y1 = y0 - L*Math.sin(th);
+
+        this.uArrow.setAttribute('x1', x0.toFixed(1));
+        this.uArrow.setAttribute('y1', y0.toFixed(1));
+        this.uArrow.setAttribute('x2', x1.toFixed(1));
+        this.uArrow.setAttribute('y2', y1.toFixed(1));
+      }
+
+      drawDistanceToWall(){
+        const x0 = this.toPxX(0);
+        const x1 = this.toPxX(this.wallLeft);
+
+        const groundTopY = this.sim.clientHeight - this.groundH;
+        const yPx = groundTopY + 30;
+
+        this.distLine.style.left = `${Math.min(x0,x1)}px`;
+        this.distLine.style.top  = `${yPx}px`;
+        this.distLine.style.width = `${Math.abs(x1-x0)}px`;
+
+        const mid = (x0 + x1)/2;
+        this.distText.style.left = `${mid - 44}px`;
+        this.distText.style.top  = `${yPx - 28}px`;
+        this.distText.textContent = `d = ${this.wallLeft.toFixed(0)} m`;
+      }
+
+      ptsToPath(pts){
+        if(!pts.length) return '';
+        let d = `M ${this.toPxX(pts[0].x).toFixed(1)} ${(this.sim.clientHeight - this.toPxY(pts[0].y)).toFixed(1)}`;
+        for(let i=1;i<pts.length;i++){
+          const px = this.toPxX(pts[i].x);
+          const py = (this.sim.clientHeight - this.toPxY(pts[i].y));
+          d += ` L ${px.toFixed(1)} ${py.toFixed(1)}`;
+        }
+        return d;
+      }
+
+      redrawReference(){
+        if(!this.showRef){
+          this.refPath.style.display = 'none';
+          this.sxArrow.style.display = 'none';
+          this.sxTag.style.display = 'none';
+          this.sxOnArrow.style.display = 'none';   // ✅
+          this.refPath.setAttribute('d','');
+          return;
+        }
+
+        const ptsRef = this.simulatePath(false, false, 1800);
+        this.refPath.style.display = '';
+        this.refPath.setAttribute('d', this.ptsToPath(ptsRef));
+
+        const land = this.simulateLanding(false, false);
+        const xA = this.toPxX(0);
+        const xB = this.toPxX(Math.max(0, land.x));
+        const yG = (this.sim.clientHeight - this.toPxY(0));
+
+        this.sxArrow.style.display = '';
+        this.sxArrow.setAttribute('x1', xA.toFixed(1));
+        this.sxArrow.setAttribute('y1', yG.toFixed(1));
+        this.sxArrow.setAttribute('x2', xB.toFixed(1));
+        this.sxArrow.setAttribute('y2', yG.toFixed(1));
+
+        // (ป้ายลอยเดิม) — คงไว้
+        const mid = (xA + xB) / 2;
+        const topPx = yG - 12;
+        this.sxTag.style.display = '';
+        this.sxTag.style.left = `${mid - 44}px`;
+        this.sxTag.style.top  = `${topPx}px`;
+        this.sxTag.style.bottom = 'auto';
+        this.sxTag.textContent = `Sx = ${Math.abs(land.x).toFixed(1)} m`;
+
+        // ✅ ป้ายบนลูกศรสีน้ำตาล (SVG)
+        this.sxOnArrow.style.display = '';
+        this.sxOnArrow.setAttribute('x', mid.toFixed(1));
+        this.sxOnArrow.setAttribute('y', (yG - 16).toFixed(1)); // ยกขึ้นเหนือเส้นเล็กน้อย
+        this.sxOnArrow.textContent = `Sx = ${Math.abs(land.x).toFixed(1)} m`;
+      }
+
+      preview(){
+        this.syncUI();
+        this.autoFit();
+        this.layoutWall(true);
+
+        this.setBall(0,0);
+        this.clearTrail();
+        this.hud.style.display = 'none';
+        this.ghost.style.opacity = 0;
+
+        this.drawStartArtifacts();
+        this.drawDistanceToWall();
+        this.redrawReference();
+
+        this.outDx.textContent = `0.0 m`;
+      }
+
+      reset(clearHud=true){
+        if(this.raf) cancelAnimationFrame(this.raf);
+        this.raf = null;
+
+        this.isAnimating = false;
+        this.isPaused = false;
+
+        this.x = 0; this.y = 0;
+        this.t = 0;
+
+        const th = this.thetaDeg * Math.PI/180;
+        this.vx = this.u * Math.cos(th);
+        this.vy = this.u * Math.sin(th);
+
+        this.clearTrail();
+        this.setBall(0,0);
+
+        this.playBtn.innerHTML = `<span>▶️</span><span>เล่น</span>`;
+
+        if(clearHud){
+          this.hud.style.display = 'none';
+          this.outDx.textContent = `0.0 m`;
+        }
+
+        this.ghost.style.opacity = 0;
+        this.preview();
+      }
+
+      togglePlay(){
+        if(!this.isAnimating){
+          this.fire();
+          return;
+        }
+        this.isPaused = !this.isPaused;
+        if(this.isPaused){
+          this.playBtn.innerHTML = `<span>▶️</span><span>เล่นต่อ</span>`;
+          if(this.raf) cancelAnimationFrame(this.raf);
+          this.raf = null;
+        }else{
+          this.playBtn.innerHTML = `<span>⏸</span><span>หยุด</span>`;
+          this.loop();
+        }
+      }
+
+      fire(){
+        this.reset(false);
+        this.isAnimating = true;
+        this.isPaused = false;
+        this.playBtn.innerHTML = `<span>⏸</span><span>หยุด</span>`;
+        this.hud.style.display = 'none';
+
+        this.ghost.style.opacity = 1;
+        this.loop();
+      }
+
+      loop(){
+        const step = ()=>{
+          if(this.isPaused) return;
+
+          let ax = 0;
+          let ay = -this.g;
+          if(this.airOn){
+            ax += -this.k * this.vx;
+            ay += -this.k * this.vy;
+          }
+
+          this.vx += ax*this.dt;
+          this.vy += ay*this.dt;
+
+          this.x  += this.vx*this.dt;
+          this.y  += this.vy*this.dt;
+          this.t  += this.dt;
+
+          if(this.vx > 0){
+            const r = this.ballRadiusM();
+            if(this.x + r >= this.wallLeft){
+              this.x = this.wallLeft - r;
+              this.vx = -this.vx;
+            }
+          }
+
+          this.setBall(this.x, this.y);
+          if(Math.floor(this.t*60) % 2 === 0) this.addDot(this.x, this.y);
+
+          if(this.y <= 0 && this.t > this.dt){
+            this.y = 0;
+            this.setBall(this.x, this.y);
+
+            this.isAnimating = false;
+            this.isPaused = false;
+            this.playBtn.innerHTML = `<span>▶️</span><span>เล่น</span>`;
+
+            const dx = Math.abs(this.x);
+            this.outDx.textContent = `${dx.toFixed(1)} m`;
+
+            if(!this.hud.style.left && !this.hud.style.top){
+              this.hud.style.left = `12px`;
+              this.hud.style.top = `12px`;
+            }
+
+            this.hud.style.display = 'block';
+            return;
+          }
+
+          if(this.t > 60){
+            this.isAnimating = false;
+            this.isPaused = false;
+            this.playBtn.innerHTML = `<span>▶️</span><span>เล่น</span>`;
+
+            const dx = Math.abs(this.x);
+            this.outDx.textContent = `${dx.toFixed(1)} m`;
+            if(!this.hud.style.left && !this.hud.style.top){
+              this.hud.style.left = `12px`;
+              this.hud.style.top = `12px`;
+            }
+            this.hud.style.display = 'block';
+            return;
+          }
+
+          this.raf = requestAnimationFrame(step);
+        };
+        step();
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', ()=>{
+      placeActions();
+      window.__lab = new ProjectileWallLab();
+    });
+    window.addEventListener('resize', placeActions);
+  </script>
+</body>
+</html>
