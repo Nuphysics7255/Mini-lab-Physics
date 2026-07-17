@@ -1,0 +1,1138 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=5" />
+<title>EnergyLab — Bullet into Wood (Responsive v2 + arrows)</title>
+<style>
+  :root{
+    --bg:#ffffff;
+    --panel:#f8fafc;
+    --ink:#0f172a;
+    --muted:#475569;
+    --accent:#0ea5e9;
+  }
+  *{box-sizing:border-box}
+  body{
+    font-family:Inter,system-ui,"Noto Sans Thai",Arial,sans-serif;
+    background:var(--bg);
+    color:var(--ink);
+    margin:0;
+    padding:18px;
+    overflow-x:hidden;
+  }
+
+  .wrap{
+    max-width:1100px;
+    margin:0 auto;
+    display:grid;
+    grid-template-columns:360px 1fr;
+    grid-template-areas:
+      "left stage"
+      "controls stage";
+    gap:18px;
+  }
+  .card{
+    background:var(--panel);
+    padding:14px;
+    border-radius:10px;
+    box-shadow:0 6px 18px rgba(2,6,23,0.06);
+  }
+  #leftCard{grid-area:left;}
+  #stage{grid-area:stage; position:relative;}
+  #controlsWrap{grid-area:controls;}
+
+  h1{font-size:18px;margin:0 0 8px}
+  /* ✅ ให้หัวข้อ “การทดลอง: กระสุนปืนชนแท่งไม้ (EnergyLab)” เป็นสีน้ำเงิน */
+  #leftCard h1{ color: var(--accent); }
+
+  .small{font-size:13px;color:var(--muted)}
+
+  .field{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-top:8px;
+  }
+  .field label{
+    margin:0;
+    font-size:13px;
+    color:var(--muted);
+    white-space:nowrap;
+  }
+  .field input[type=number]{
+    flex:0 0 110px;
+  }
+  input[type=number]{
+    width:100%;
+    padding:8px;
+    border-radius:6px;
+    border:1px solid #d1d5db;
+    font-size:14px;
+  }
+
+  .results{margin-top:10px;font-size:14px}
+
+  a.resolve{color:var(--accent);text-decoration:none}
+
+  .sim-wrap{
+    width:100%;
+    overflow:hidden;
+  }
+  canvas#sim{
+    width:100%;
+    height:auto;
+    background:#fff;
+    border-radius:6px;
+    border:1px solid #e6edf3;
+    display:block;
+  }
+
+  .tag{
+    position:absolute;
+    font:13px/1.2 system-ui,"Noto Sans Thai",Arial,sans-serif;
+    background:transparent;
+    border:none;
+    padding:0;
+    transform:translate(-50%,-50%);
+    pointer-events:none;
+    color:#ffffff;
+    text-shadow:0 0 3px rgba(0,0,0,0.85);
+  }
+  #tagU{
+    color:#000;
+    text-shadow:0 0 3px rgba(255,255,255,0.9);
+  }
+  #tagS{color:#f97373;font-weight:700;}
+
+  .controls{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .controls-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+  button{
+    padding:8px 12px;
+    border-radius:8px;
+    border:0;
+    background:var(--accent);
+    color:#fff;
+    cursor:pointer;
+    font-size:14px;
+  }
+  button.secondary{background:#64748b}
+
+  .equation{
+    background:#ffffff;
+    padding:8px;
+    border-radius:6px;
+    border:1px dashed #e6edf3;
+    margin-top:10px;
+  }
+
+  footer{
+    margin-top:12px;
+    font-size:13px;
+    color:var(--muted);
+    text-align:center;
+  }
+
+  .modal{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.5);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:50;
+  }
+  .modal .card{
+    width:820px;
+    max-width:95%;
+    max-height:85%;
+    overflow:auto;
+  }
+  .modal .close{
+    background:#ef4444;
+    padding:6px 10px;
+    border-radius:8px;
+    color:white;
+    border:0;
+    cursor:pointer;
+  }
+  #calcContent,#formContent,#quizContent{
+    word-wrap:break-word;
+    overflow-x:hidden;
+    font-size:14px;
+    line-height:1.7;
+    color:var(--ink);
+  }
+
+  .q{margin:10px 0;padding:10px;border-radius:8px;background:#fff;border:1px solid #e6edf3}
+  .q h4{margin:0 0 6px;font-size:14px}
+  .q label{display:block;margin:6px 0}
+  .score{font-weight:700;margin-top:8px}
+
+  /* ✅ แถบหัวในหน้าแบบฝึกหัด (ให้ปุ่มปิด + นาฬิกา “ลอยอยู่ตลอดเวลา”) */
+  .quizTopbar{
+    position:sticky;
+    top:0;
+    z-index:5;
+    background:var(--panel);
+    padding:8px 0 10px;
+    margin:-14px -14px 10px;
+    border-bottom:1px solid #e6edf3;
+  }
+  .quizTopbar .inner{
+    padding:0 14px;
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:10px;
+  }
+  .quizTopbar .title{
+    font-weight:700;
+    padding-top:2px;
+  }
+  .quizRight{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+    gap:8px;
+  }
+  .quizTimer{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    background:#ffffff;
+    border:1px solid #e6edf3;
+    border-radius:10px;
+    padding:6px 10px;
+    box-shadow:0 4px 12px rgba(2,6,23,0.08);
+  }
+  .quizTime{
+    font-variant-numeric: tabular-nums;
+    font-weight:700;
+    color:var(--ink);
+    min-width:64px;
+    text-align:center;
+  }
+  .quizTimerBtn{
+    width:34px;height:30px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:8px;
+    border:0;
+    background:var(--accent);
+    color:#fff;
+    cursor:pointer;
+    font-size:14px;
+    line-height:1;
+    padding:0;
+  }
+
+  /* จัดกล่องสมการให้อยู่กลางจอสำหรับจอคอม */
+  @media (min-width:769px){
+    #eqBlock{
+      max-width:700px;
+      margin:12px auto 0;
+      text-align:center;
+    }
+  }
+
+  @media (max-width:768px){
+    body{padding:12px;}
+    .wrap{
+      max-width:100%;
+      display:block;
+    }
+    #leftCard{margin-bottom:10px;}
+    #stage{margin-bottom:8px;}
+    #controlsWrap{margin-top:8px;}
+    .tag{font-size:11px;}
+
+    /* ★ มือถือ: หน้าสรุปสูตร + แบบฝึกหัด ให้กว้างเต็มจอ */
+    #modalForm .card,
+    #modalQuiz .card{
+      width:100%;
+      max-width:100%;
+      border-radius:0;
+      margin:0;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card" id="leftCard">
+    <h1>การทดลอง: กระสุนปืนชนแท่งไม้ (EnergyLab)</h1>
+    <div class="small">แท่งไม้ยาว <strong>1.00 m (100 cm)</strong> ยึดไว้ไม่ขยับ — ปรับค่าด้านล่างแล้วกดเล่น ▶️</div>
+
+    <div class="field">
+      <label for="massInput">มวลกระสุน (กรัม)</label>
+      <input id="massInput" type="number" min="0.1" step="0.1" value="9.0" />
+    </div>
+
+    <div class="field">
+      <label for="velInput">ความเร็วเริ่มต้น <strong>u</strong> (m/s)</label>
+      <input id="velInput" type="number" min="1" step="0.1" value="200" />
+    </div>
+
+    <div class="field">
+      <label for="resistInput">แรงต้านเฉลี่ยในเนื้อไม้ <strong>f</strong> (N)</label>
+      <input id="resistInput" type="number" min="1" step="1" value="500" />
+    </div>
+
+    <div class="results" id="results"></div>
+  </div>
+
+  <div class="card" id="stage">
+    <div class="sim-wrap">
+      <canvas id="sim"></canvas>
+    </div>
+    <div id="tagU" class="tag" style="display:none">u = – m/s</div>
+    <div id="tagF" class="tag" style="display:none">f = – N</div>
+    <div id="tagS" class="tag" style="display:none">s = – cm</div>
+    <div id="tagV" class="tag" style="display:none">v = – m/s</div>
+  </div>
+
+  <div class="controls" id="controlsWrap">
+    <div class="controls-row">
+      <button id="toggleBtn">▶️ เล่น</button>
+      <button id="resetBtn" class="secondary">⟲ รีเซ็ต</button>
+      <button id="calcBtn">🧮 วิธีคำนวณ</button>
+    </div>
+    <div class="controls-row">
+      <button id="formBtn" class="secondary">📚 สูตรสำคัญ</button>
+      <button id="quizBtn" class="secondary">📝 แบบฝึกหัด</button>
+    </div>
+  </div>
+</div>
+
+<div class="equation" id="eqBlock">
+  <div class="small">สมการสำคัญ</div>
+  <div id="eq">\(E_k=\tfrac{1}{2}mu^2\), \(W_{\text{res}}=-f\,s\) → <strong>\(\boxed{s=E_k/f}\)</strong></div>
+</div>
+
+<footer>
+  📘 ศึกษาเพิ่มเติมได้ที่เพจ
+  <a class="resolve" href="https://www.facebook.com/resolvephysics" target="_blank">เพจ คลายปมฟิสิกส์</a>
+</footer>
+
+<!-- ===== Modals ===== -->
+<div id="modalCalc" class="modal" role="dialog" aria-modal="true">
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div style="font-weight:700">วิธีคำนวณ (ขั้นตอนละเอียด)</div>
+      <button class="close" data-close="#modalCalc">ปิด</button>
+    </div>
+    <div id="calcContent"></div>
+  </div>
+</div>
+
+<div id="modalForm" class="modal" role="dialog" aria-modal="true">
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div style="font-weight:700">📚 สูตรสำคัญ — งาน–พลังงาน (สรุปสั้น)</div>
+      <button class="close" data-close="#modalForm">ปิด</button>
+    </div>
+    <div id="formContent"></div>
+  </div>
+</div>
+
+<div id="modalQuiz" class="modal" role="dialog" aria-modal="true">
+  <div class="card">
+    <!-- ✅ topbar แบบ sticky: ปุ่มปิด + นาฬิกา (อยู่มุมขวาบน ใต้ปุ่มปิด และลอยตลอดเวลา) -->
+    <div class="quizTopbar">
+      <div class="inner">
+        <div class="title">📝 แบบฝึกหัด (4 ตัวเลือก) — มีเฉลย</div>
+        <div class="quizRight">
+          <button class="close" data-close="#modalQuiz">ปิด</button>
+          <div class="quizTimer" aria-label="นาฬิกาจับเวลา">
+            <div class="quizTime" id="quizTime">00:00</div>
+            <button class="quizTimerBtn" id="quizTimerBtn" title="เริ่ม/หยุด">▶</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="quizContent"></div>
+  </div>
+</div>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath: [["\\(","\\)"],["$","$"]],
+      displayMath: [["\\[","\\]"],["$$","$$"]],
+      processEscapes: true,
+      packages: {'[+]': ['noerrors']}
+    },
+    options: { enableMenu: false },
+    svg: { fontCache: 'global' }
+  };
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+<script>
+// ===== DOM =====
+const stage = document.getElementById('stage');
+const canvas = document.getElementById('sim');
+const ctx = canvas.getContext('2d');
+
+const tagU = document.getElementById('tagU');
+const tagF = document.getElementById('tagF');
+const tagS = document.getElementById('tagS');
+const tagV = document.getElementById('tagV');
+
+const massInput=document.getElementById('massInput');
+const velInput=document.getElementById('velInput');
+const resistInput=document.getElementById('resistInput');
+const toggleBtn=document.getElementById('toggleBtn');
+const resetBtn=document.getElementById('resetBtn');
+const calcBtn=document.getElementById('calcBtn');
+const formBtn=document.getElementById('formBtn');
+const quizBtn=document.getElementById('quizBtn');
+const resultsDiv=document.getElementById('results');
+const modalCalc=document.getElementById('modalCalc');
+const modalForm=document.getElementById('modalForm');
+const modalQuiz=document.getElementById('modalQuiz');
+const calcContent=document.getElementById('calcContent');
+const formContent=document.getElementById('formContent');
+const quizContent=document.getElementById('quizContent');
+
+// ===== Quiz timer elements =====
+const quizTimeEl = document.getElementById('quizTime');
+const quizTimerBtn = document.getElementById('quizTimerBtn');
+
+// ===== Base canvas size (virtual) =====
+const BASE_W = 900;
+const BASE_H = 420;
+let scaleX = 1;
+let scaleY = 1;
+
+// ==== Transform: ขยับไปซ้าย 25px และขยาย 30% ====
+const EXP_SHIFT_X = 25;
+const EXP_SHIFT_Y = 0;
+const EXP_SCALE   = 1.3;
+
+const woodLength_m = 1.00;
+const pxPerMeter   = 300;
+const woodPx       = woodLength_m * pxPerMeter;
+let   woodH        = 130;
+
+const barrelX = 10;
+const SLIDE_W = 170;
+const SLIDE_H = 20;
+const woodX_const = 320;
+
+// ===== State =====
+let state = {
+  running:false,
+  t:0,
+  bulletX:barrelX,
+  bulletV:0,
+  m:0.009,
+  Fres:500,
+  showFlash:false,
+  penetr_m:0,
+  exitV:0,
+  stopX_px:null,
+  fired:false
+};
+let smoke = [];
+function getMuzzleX(){ return barrelX + SLIDE_W; }
+
+// ===== Resize canvas =====
+function resizeCanvas(){
+  const ratio = BASE_W/BASE_H;
+  const stageInnerWidth = stage.clientWidth - 4;
+  const w = stageInnerWidth > 0 ? stageInnerWidth : BASE_W;
+  const h = w/ratio;
+  canvas.width = w;
+  canvas.height = h;
+  scaleX = w/BASE_W;
+  scaleY = h/BASE_H;
+  drawScene();
+}
+window.addEventListener('resize', resizeCanvas);
+
+// ===== Draw helpers =====
+function drawGun(x,y){
+  const slideW = SLIDE_W, slideH = SLIDE_H;
+  const gripW = 24, gripH = 90;
+  ctx.fillStyle = '#000';
+  ctx.fillRect(x, y, slideW, slideH);      // slide ปืน
+
+  // ลบแท่งดำด้านซ้ายสุด (เดิม grip สีดำ)
+  // ctx.fillRect(x-50, y+slideH, gripW, gripH);
+
+  ctx.strokeStyle = '#0f172a'; ctx.lineWidth = 2;
+  const tgx = x-8 + 50, tgy = y+slideH, tgw = 42, tgh = 26, r = 6;
+  ctx.beginPath();
+  ctx.moveTo(tgx+r, tgy);
+  ctx.lineTo(tgx+tgw-r, tgy);
+  ctx.quadraticCurveTo(tgx+tgw, tgy, tgx+tgw, tgy+r);
+  ctx.lineTo(tgx+tgw, tgy+tgh-r);
+  ctx.quadraticCurveTo(tgx+tgw, tgy+tgh, tgx+tgw-r, tgy+tgh);
+  ctx.lineTo(tgx+r, tgy+tgh);
+  ctx.quadraticCurveTo(tgx, tgy+tgh, tgx, tgy+tgh-r);
+  ctx.lineTo(tgx, tgy+r);
+  ctx.quadraticCurveTo(tgx, tgy, tgx+r, tgy);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(x+54, y+slideH-4);
+  ctx.lineTo(x+62, y+slideH+8);
+  ctx.stroke();
+
+  // ด้ามปืนลายไม้
+  const rectW=28, rectH=65, rectX=barrelX, rectY=y+slideH;
+  const grad=ctx.createLinearGradient(rectX,rectY,rectX,rectY+rectH);
+  grad.addColorStop(0,'#deb887');
+  grad.addColorStop(1,'#8b5a2b');
+  ctx.fillStyle=grad;
+  ctx.fillRect(rectX,rectY,rectW,rectH);
+  ctx.strokeStyle='#0f172a';
+  ctx.lineWidth=2;
+  ctx.strokeRect(rectX,rectY,rectW,rectH);
+}
+
+function drawArrow(x1,y1,x2,y2,color){
+  ctx.strokeStyle = color;
+  ctx.fillStyle   = color;
+  ctx.lineWidth   = 3;
+  ctx.beginPath();
+  ctx.moveTo(x1,y1);
+  ctx.lineTo(x2,y2);
+  ctx.stroke();
+  const ang = Math.atan2(y2-y1,x2-x1);
+  const L = 10;
+  ctx.beginPath();
+  ctx.moveTo(x2,y2);
+  ctx.lineTo(x2-L*Math.cos(ang-Math.PI/6), y2-L*Math.sin(ang-Math.PI/6));
+  ctx.lineTo(x2-L*Math.cos(ang+Math.PI/6), y2-L*Math.sin(ang+Math.PI/6));
+  ctx.closePath();
+  ctx.fill();
+}
+
+function placeTag(el, baseX, baseY, text){
+  el.style.display='block';
+  el.textContent=text;
+
+  const canvasRect = canvas.getBoundingClientRect();
+  const stageRect  = stage.getBoundingClientRect();
+  const offsetX = canvasRect.left - stageRect.left;
+  const offsetY = canvasRect.top  - stageRect.top;
+  const kx = canvasRect.width  / canvas.width;
+  const ky = canvasRect.height / canvas.height;
+
+  const xCanvas = baseX * scaleX*EXP_SCALE + EXP_SHIFT_X;
+  const yCanvas = baseY * scaleY*EXP_SCALE + EXP_SHIFT_Y;
+
+  el.style.left = (offsetX + xCanvas * kx) + 'px';
+  el.style.top  = (offsetY + yCanvas * ky) + 'px';
+}
+
+function hideTags(){
+  tagU.style.display = tagF.style.display = tagS.style.display = tagV.style.display = 'none';
+}
+
+// ===== main draw =====
+function drawScene(){
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  ctx.setTransform(scaleX*EXP_SCALE,0,0,scaleY*EXP_SCALE,EXP_SHIFT_X,EXP_SHIFT_Y);
+
+  const woodX = woodX_const;
+  const woodY = BASE_H - (woodH + 80);
+  const bulletY = woodY + woodH/2;
+
+  // พื้นสีเทาอยู่ใต้แท่งไม้
+  ctx.fillStyle='#f3f4f6';
+  ctx.fillRect(0, woodY + woodH, BASE_W, 40);
+
+  // ปืน
+  drawGun(barrelX, bulletY-20);
+
+  // แท่งไม้
+  ctx.fillStyle='#8b5a2b';
+  ctx.fillRect(woodX,woodY,woodPx,woodH);
+  ctx.strokeStyle='rgba(0,0,0,0.12)';
+  for(let i=0;i<Math.ceil(woodPx/30);i++){
+    ctx.beginPath();
+    ctx.moveTo(woodX+i*30,woodY);
+    ctx.lineTo(woodX+i*30+8,woodY+woodH);
+    ctx.stroke();
+  }
+  ctx.strokeStyle='black';
+  ctx.strokeRect(woodX,woodY,woodPx,woodH);
+
+  // เส้นปะร่องรอย (2 เส้น) เฉพาะเมื่อกระสุนเข้าไม้
+  if(state.bulletX >= woodX){
+    ctx.save();
+    ctx.setLineDash([6,6]);
+    ctx.strokeStyle='#9ca3af';
+    const endX = Math.min(state.bulletX, woodX+woodPx);
+
+    ctx.beginPath();
+    ctx.moveTo(woodX, bulletY);
+    ctx.lineTo(endX, bulletY);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(woodX, bulletY-10);
+    ctx.lineTo(endX, bulletY-10);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  // กระสุน
+  const bx = state.bulletX + 10;
+  const by = bulletY - 5;
+  ctx.fillStyle='gray';
+  ctx.beginPath();
+  ctx.ellipse(bx, by, 8,6,0,0,Math.PI*2);
+  ctx.fill();
+
+  // แฟลชปากกระบอก
+  if(state.showFlash){
+    const fx=getMuzzleX(), fy=by-5;
+    const grad=ctx.createRadialGradient(fx,fy,2, fx,fy,28);
+    grad.addColorStop(0,'rgba(255,200,80,0.95)');
+    grad.addColorStop(0.6,'rgba(255,120,0,0.6)');
+    grad.addColorStop(1,'rgba(255,120,0,0)');
+    ctx.fillStyle=grad;
+    ctx.beginPath();
+    ctx.ellipse(fx,fy,26,16,0,0,Math.PI*2);
+    ctx.fill();
+  }
+
+  // ควัน
+  for(const p of smoke){
+    ctx.globalAlpha=Math.max(0,p.a);
+    ctx.fillStyle='gray';
+    ctx.beginPath();
+    ctx.ellipse(p.x,p.y,p.s,p.s*0.8,0,0,Math.PI*2);
+    ctx.fill();
+    ctx.globalAlpha=1;
+  }
+
+  const u = parseFloat(velInput.value)||0;
+  const fVal = parseFloat(resistInput.value)||0;
+  const s_cm = (state.penetr_m*100).toFixed(1);
+
+  // ป้าย u เฉพาะเมื่อยิงแล้ว
+  if(state.fired){
+    placeTag(tagU, getMuzzleX()+10, by-40, "u = " + u.toFixed(1) + " m/s");
+  } else {
+    tagU.style.display='none';
+  }
+
+  // ลูกศร f และ s + ป้าย แสดงเมื่อกระสุนถูกยิง (fired)
+  if(state.fired){
+    // ลูกศร f บนเส้นปะบน ชี้ไปทางซ้าย
+    const fArrowY = bulletY - 10;
+    const fX1 = woodX + woodPx*0.65;
+    const fX2 = woodX + woodPx*0.45;
+    drawArrow(fX1, fArrowY, fX2, fArrowY, '#ffffff');
+    const fMidX = (fX1 + fX2)/2;
+    const fMidY = fArrowY - 14;
+    placeTag(tagF, fMidX, fMidY, "f = " + fVal.toFixed(0) + " N");
+
+    // ลูกศร s สีแดง จากผิวไม้ซ้าย → ปลายกระสุน
+    const sArrowY = bulletY + 15;
+    const sEndX = Math.min(state.bulletX, woodX+woodPx);
+    drawArrow(woodX, sArrowY, sEndX, sArrowY, '#ef4444');
+    const sMidX = (woodX + sEndX)/2;
+    const sMidY = sArrowY + 18;
+    placeTag(tagS, sMidX, sMidY, "s = " + s_cm + " cm");
+  } else {
+    tagF.style.display='none';
+    tagS.style.display='none';
+  }
+
+  // ป้าย v ถ้าทะลุออก
+  if(state.exitV > 0 && state.fired){
+    placeTag(tagV, bx, by+26, "v = " + state.exitV.toFixed(2) + " m/s");
+  } else {
+    tagV.style.display='none';
+  }
+
+  ctx.setTransform(1,0,0,1,0,0);
+}
+
+// ===== Physics =====
+function computePhysics(){
+  const m_g=parseFloat(massInput.value)||9.0;
+  const u=parseFloat(velInput.value)||200;
+  const f=parseFloat(resistInput.value)||500;
+  state.m=m_g/1000;
+  state.bulletV=u;
+  state.Fres=f;
+  const Ek=0.5*state.m*u*u;
+  const s_possible=Ek/Math.max(1,f);
+  state.penetr_m=Math.min(s_possible, woodLength_m);
+  const ratio=state.penetr_m/woodLength_m;
+  state.stopX_px=woodX_const+ratio*woodPx;
+  if(s_possible>=woodLength_m){
+    const Ek_after=Math.max(0, Ek - f*woodLength_m);
+    state.exitV=Math.sqrt(Math.max(0, 2*Ek_after/state.m));
+  } else {
+    state.exitV=0;
+  }
+}
+
+function step(dt){
+  if(state.running){
+    let x=state.bulletX;
+    let v=state.bulletV;
+    const woodX=woodX_const;
+    const woodEnd=woodX+woodPx;
+
+    if(x<woodX){
+      x+=v*dt*pxPerMeter;
+      if(x>=woodX) x=woodX;
+    } else {
+      if(state.penetr_m<woodLength_m){
+        const target=state.stopX_px || (woodX + (state.penetr_m/woodLength_m)*woodPx);
+        const speed_px=Math.max(60, v*pxPerMeter*0.4);
+        if(x<target){
+          x=Math.min(target, x+speed_px*dt);
+          v=Math.max(0, v - (state.Fres/state.m)*dt*0.3);
+        }
+        if(x>=target){
+          x=target;
+          v=0;
+          state.running=false;
+          toggleBtn.textContent='▶️ เล่น';
+        }
+      } else {
+        const vx_px=Math.max(80, (state.exitV||v)*pxPerMeter*0.5);
+        if(x<woodEnd){
+          x=Math.min(woodEnd, x+vx_px*dt);
+        } else {
+          x+=vx_px*dt;
+          if(x>woodEnd+160){
+            state.running=false;
+            toggleBtn.textContent='▶️ เล่น';
+          }
+        }
+      }
+    }
+    state.bulletX=x;
+    state.bulletV=v;
+    state.t+=dt;
+  }
+
+  for(const p of smoke){
+    p.x+=p.vx*dt;
+    p.y+=p.vy*dt;
+    p.vy-=2*dt;
+    p.a-=0.6*dt;
+  }
+  smoke=smoke.filter(p=>p.a>0);
+}
+
+let last=null;
+function loop(ts){
+  if(!last) last=ts;
+  const dt=Math.min(0.05,(ts-last)/1000);
+  last=ts;
+  step(dt);
+  drawScene();
+  updateUI();
+  if(state.running || smoke.length>0 || state.showFlash){
+    requestAnimationFrame(loop);
+  } else {
+    last=null;
+  }
+}
+
+// ===== Controls =====
+function fire(){
+  computePhysics();
+  state.bulletX=getMuzzleX();
+  state.t=0;
+  state.running=true;
+  state.showFlash=true;
+  state.fired=true;
+  spawnSmoke();
+  playBang();
+  setTimeout(function(){state.showFlash=false;},150);
+  requestAnimationFrame(loop);
+}
+
+toggleBtn.addEventListener('click',function(){
+  if(!state.running){
+    if(!state.fired){ fire(); }
+    else{
+      state.running=true;
+      requestAnimationFrame(loop);
+    }
+    toggleBtn.textContent='⏸ หยุด';
+  } else {
+    state.running=false;
+    toggleBtn.textContent='▶️ เล่น';
+  }
+});
+
+resetBtn.addEventListener('click',function(){
+  state.running=false;
+  state.t=0;
+  state.bulletX=barrelX;
+  state.bulletV=0;
+  state.exitV=0;
+  state.fired=false;
+  smoke=[];
+  hideTags();
+  updateUI();
+  drawScene();
+  toggleBtn.textContent='▶️ เล่น';
+});
+
+// ===== Calc modal =====
+calcBtn.addEventListener('click', function(){
+  var m_g=parseFloat(massInput.value)||9.0;
+  var mkg=m_g/1000;
+  var u=parseFloat(velInput.value)||200;
+  var f=parseFloat(resistInput.value)||500;
+  var Ek=0.5*mkg*u*u;
+  var s_possible=Ek/Math.max(1,f);
+  var s_m=Math.min(s_possible, woodLength_m);
+  var s_cm=s_m*100;
+  var exited=s_possible>=woodLength_m;
+  var v_exit=0, E_out=0;
+  if(exited){
+    E_out=Math.max(0, Ek - f*woodLength_m);
+    v_exit=Math.sqrt(Math.max(0, 2*E_out/mkg));
+  }
+
+  var html = "";
+  html += "<p><b>แนวคิด:</b> ใช้กฎงาน-พลังงานให้พลังงานจลน์ของกระสุนทำงานต้านแรงในไม้</p>";
+  html += "<p>พลังงานจลน์เริ่มต้น \\(E_k=\\tfrac12 m u^2\\)</p>";
+  html += "<p>งานของแรงต้าน \\(W_{\\text{res}} = -f s\\)</p>";
+  html += "<p>กรณีหยุดในไม้: \\(E_k = f s \\Rightarrow s = E_k/f\\)</p>";
+  html += "<hr/>";
+  html += "<p><b>แทนค่า:</b></p>";
+  html += "<p>มวลกระสุน \\(m = " + mkg.toFixed(4) + "\\,\\text{kg}\\) จาก " + m_g.toFixed(1) + " g</p>";
+  html += "<p>พลังงานจลน์เริ่มต้น \\(E_k = " + Ek.toFixed(4) + " \\text{ J}\\)</p>";
+  html += "<p>ระยะเจาะที่เป็นไปได้ \\(s_{pos} = E_k/f = " + s_possible.toFixed(4) + " \\text{ m}\\)</p>";
+  if(!exited){
+    html += "<p>เพราะ \\(s_{pos} < 1.00\\,\\text{m}\\) ⇒ กระสุนหยุดในไม้</p>";
+    html += "<p>ดังนั้น \\(s = " + s_m.toFixed(4) + "\\,\\text{m} = " + s_cm.toFixed(2) + "\\,\\text{cm}\\)</p>";
+  }else{
+    html += "<p>เพราะ \\(s_{pos} \\ge 1.00\\,\\text{m}\\) ⇒ กระสุนทะลุ</p>";
+    html += "<p>พลังงานคงเหลือ \\(E_{out} = " + E_out.toFixed(4) + " \\text{ J}\\)</p>";
+    html += "<p>ความเร็วหลุดออก \\(v_{exit} = " + v_exit.toFixed(3) + " \\text{m/s}\\)</p>";
+  }
+
+  calcContent.innerHTML = html;
+  typesetMath();
+  openModal(modalCalc);
+});
+
+// ===== Formulas modal =====
+formBtn.addEventListener('click', function(){
+  var html = "";
+  html += "<p><b>สูตรหลักงาน–พลังงาน</b></p>";
+  html += "<p>พลังงานจลน์ \\(E_k = \\tfrac12 m u^2\\)</p>";
+  html += "<p>งานของแรงต้าน \\(W_{\\text{res}} = -f s\\)</p>";
+  html += "<p>กรณีหยุดในไม้: <b>\\(s = E_k/f\\)</b></p>";
+  html += "<p>กรณีทะลุ: ถ้า \\(E_k &gt; fL\\) ⇒ พลังงานคงเหลือ \\(E_{out}=E_k-fL\\), ";
+  html += "ความเร็วหลุดออก \\(v_{exit} = \\sqrt{2E_{out}/m}\\)</p>";
+  formContent.innerHTML = html;
+  typesetMath();
+  openModal(modalForm);
+});
+
+// ===== Quiz timer logic =====
+let quizTimerRunning = false;
+let quizTimerStartMs = 0;
+let quizTimerAccumMs = 0;
+let quizTimerRAF = null;
+
+function formatMMSS(ms){
+  const total = Math.floor(ms/1000);
+  const mm = String(Math.floor(total/60)).padStart(2,'0');
+  const ss = String(total%60).padStart(2,'0');
+  return mm + ":" + ss;
+}
+function renderQuizTime(){
+  const now = performance.now();
+  const ms = quizTimerAccumMs + (quizTimerRunning ? (now - quizTimerStartMs) : 0);
+  quizTimeEl.textContent = formatMMSS(ms);
+  if(quizTimerRunning) quizTimerRAF = requestAnimationFrame(renderQuizTime);
+}
+function quizTimerStart(){
+  if(quizTimerRunning) return;
+  quizTimerRunning = true;
+  quizTimerStartMs = performance.now();
+  quizTimerBtn.textContent = "⏸";
+  renderQuizTime();
+}
+function quizTimerStop(){
+  if(!quizTimerRunning) return;
+  quizTimerRunning = false;
+  quizTimerAccumMs += (performance.now() - quizTimerStartMs);
+  quizTimerBtn.textContent = "▶";
+  if(quizTimerRAF) cancelAnimationFrame(quizTimerRAF);
+  quizTimerRAF = null;
+  quizTimeEl.textContent = formatMMSS(quizTimerAccumMs);
+}
+function quizTimerReset(){
+  quizTimerRunning = false;
+  quizTimerAccumMs = 0;
+  quizTimerStartMs = 0;
+  if(quizTimerRAF) cancelAnimationFrame(quizTimerRAF);
+  quizTimerRAF = null;
+  quizTimerBtn.textContent = "▶";
+  quizTimeEl.textContent = "00:00";
+}
+quizTimerBtn.addEventListener('click', function(){
+  if(quizTimerRunning) quizTimerStop();
+  else quizTimerStart();
+});
+
+// ===== Quiz modal =====
+quizBtn.addEventListener('click', function(){
+  // เปิดแบบฝึกหัด: รีเซ็ตนาฬิกาเสมอ (เริ่มนับเมื่อกดเอง)
+  quizTimerReset();
+
+  // ✅ ข้อ 4, 5 ใช้ค่าคงที่ตามโจทย์ที่กำหนด (ไม่ผูกกับค่า input)
+  const m4 = 0.008;        // kg
+  const u4 = 500;          // m/s
+  const f4 = 600;          // N
+  const L4 = 1.00;         // m
+  const Ek4 = 0.5*m4*u4*u4;     // J
+  const Eout4 = Math.max(0, Ek4 - f4*L4);
+  const v4 = Math.sqrt(Math.max(0, 2*Eout4/m4)); // m/s
+
+  const m5 = 0.010;        // kg
+  const u5 = 400;          // m/s
+  const s5 = 0.25;         // m
+  const Ek5 = 0.5*m5*u5*u5;     // J
+  const favg5 = Ek5 / s5;       // N
+
+  var questions = [
+    {
+      // ✅ ข้อ 1: เปลี่ยนเป็น “ตัวแปร” เอาตัวเลขออก
+      text: "1) ให้มวลกระสุน \\(m\\), ความเร็วต้น \\(u\\), และแรงต้านเฉลี่ย \\(f\\) (คงที่) ถ้ากระสุน <b>ไม่ทะลุไม้</b> ระยะเจาะ \\(s\\) เท่าใด?",
+      options: [
+        {k:"A", text:"\\(s = \\dfrac{E_k}{f}\\)", correct:true},
+        {k:"B", text:"\\(s = \\dfrac{E_k}{2f}\\)", correct:false},
+        {k:"C", text:"\\(s = \\dfrac{2E_k}{f}\\)", correct:false},
+        {k:"D", text:"\\(s = \\dfrac{E_k}{100f}\\)", correct:false}
+      ],
+      explain:"ใช้กฎงาน–พลังงาน: \\(E_k = f s\\) และ \\(E_k=\\tfrac12 m u^2\\) จึงได้ \\(s=\\dfrac{E_k}{f}=\\dfrac{\\tfrac12 m u^2}{f}\\)"
+    },
+    {
+      text:"2) ถ้าเพิ่มความเร็วต้นเป็น 2 เท่า (ยังไม่ทะลุ) \\(s\\) เปลี่ยนอย่างไร?",
+      options:[
+        {k:"A", text:"เพิ่มเป็น 2 เท่า", correct:false},
+        {k:"B", text:"เพิ่มเป็น 3 เท่า", correct:false},
+        {k:"C", text:"เพิ่มเป็น 4 เท่า", correct:true},
+        {k:"D", text:"ไม่เปลี่ยน", correct:false}
+      ],
+      explain:"เพราะ \\(E_k \\propto u^2\\) ดังนั้น \\(s=E_k/f \\propto u^2\\) เมื่อ \\(u\\) เพิ่ม 2 เท่า ⇒ \\(s\\) เพิ่ม 4 เท่า"
+    },
+    {
+      text:"3) เงื่อนไขใดทำให้กระสุนทะลุไม้ยาว \\(L\\)?",
+      options:[
+        {k:"A", text:"\\(E_k < fL\\)", correct:false},
+        {k:"B", text:"\\(E_k = fL\\)", correct:false},
+        {k:"C", text:"\\(E_k > fL\\)", correct:true},
+        {k:"D", text:"\\(f = 0\\)", correct:false}
+      ],
+      explain:"ทะลุเมื่อพลังงานจลน์มากกว่างานต้านสูงสุดในไม้ทั้งแท่ง คือ \\(E_k>fL\\)"
+    },
+    {
+      // ✅ ข้อ 4: ใส่ค่าที่จำเป็น + เฉลยละเอียด
+      text:"4) กำหนด \\(m=0.008\\,\\text{kg}\\), \\(u=500\\,\\text{m/s}\\), \\(f=600\\,\\text{N}\\), และ \\(L=1.00\\,\\text{m}\\) กระสุนทะลุออกได้หรือไม่? ถ้าทะลุ ความเร็วหลุดออก \\(v_{exit}\\) ประมาณเท่าใด?",
+      options:[
+        {k:"A", text: (v4.toFixed(2)) + " m/s", correct:true},
+        {k:"B", text: (v4*0.80).toFixed(2) + " m/s", correct:false},
+        {k:"C", text: (v4*1.25).toFixed(2) + " m/s", correct:false},
+        {k:"D", text: (u4).toFixed(0) + " m/s", correct:false}
+      ],
+      explain:
+        "ขั้นที่ 1: พลังงานจลน์เริ่มต้น<br/>" +
+        "\\(E_k=\\tfrac12 m u^2\\)<br/>" +
+        "\\(E_k=\\tfrac12(0.008)(500^2)=\\tfrac12(0.008)(250000)=1000\\,\\text{J}\\)<br/><br/>" +
+        "ขั้นที่ 2: งานต้านสูงสุดในไม้ยาว \\(L\\)<br/>" +
+        "\\(W_{res}=fL=(600)(1.00)=600\\,\\text{J}\\)<br/><br/>" +
+        "ขั้นที่ 3: เพราะ \\(E_k>fL\\) ⇒ กระสุนทะลุ และพลังงานคงเหลือ<br/>" +
+        "\\(E_{out}=E_k-fL=1000-600=400\\,\\text{J}\\)<br/><br/>" +
+        "ขั้นที่ 4: หา \\(v_{exit}\\)<br/>" +
+        "\\(v_{exit}=\\sqrt{\\tfrac{2E_{out}}{m}}=\\sqrt{\\tfrac{2(400)}{0.008}}=\\sqrt{100000}\\approx 316.23\\,\\text{m/s}\\)"
+    },
+    {
+      // ✅ ข้อ 5: เพิ่มโจทย์หาแรงต้านเฉลี่ยจากระยะฝัง
+      text:"5) กำหนด \\(m=0.010\\,\\text{kg}\\), \\(u=400\\,\\text{m/s}\\) และกระสุนฝังเข้าไม้ระยะ \\(s=0.25\\,\\text{m}\\) (หยุดพอดี) จงหาแรงต้านเฉลี่ยในเนื้อไม้ \\(f_{avg}\\)",
+      options:[
+        {k:"A", text: (favg5.toFixed(0)) + " N", correct:true},
+        {k:"B", text: (favg5/2).toFixed(0) + " N", correct:false},
+        {k:"C", text: (favg5*2).toFixed(0) + " N", correct:false},
+        {k:"D", text: (favg5/10).toFixed(0) + " N", correct:false}
+      ],
+      explain:
+        "เมื่อหยุดพอดี ใช้ \\(E_k = f_{avg}s\\)<br/>" +
+        "\\(E_k=\\tfrac12 m u^2=\\tfrac12(0.010)(400^2)=\\tfrac12(0.010)(160000)=800\\,\\text{J}\\)<br/>" +
+        "ดังนั้น \\(f_{avg}=\\dfrac{E_k}{s}=\\dfrac{800}{0.25}=3200\\,\\text{N}\\)"
+    }
+  ];
+
+  var html = '<div id="quizBox">';
+  for(var i=0;i<questions.length;i++){
+    var q = questions[i];
+    html += '<div class="q" data-i="'+i+'">';
+    html += '<h4>'+q.text+'</h4>';
+    for(var j=0;j<q.options.length;j++){
+      var op = q.options[j];
+      html += '<label><input type="radio" name="q'+i+'" value="'+op.k+'"> '+op.k+'. '+op.text+'</label>';
+    }
+    html += '<div class="exp small" style="display:none"></div>';
+    html += '</div>';
+  }
+  html += '<button id="checkBtn">ตรวจคำตอบ</button>';
+  html += '<div class="score" id="scoreBox"></div>';
+  html += '</div>';
+
+  quizContent.innerHTML = html;
+
+  document.getElementById('checkBtn').addEventListener('click', function(){
+    var score=0;
+    for(var i=0;i<questions.length;i++){
+      var q = questions[i];
+      var box = quizContent.querySelector('.q[data-i="'+i+'"]');
+      var sel = quizContent.querySelector('input[name="q'+i+'"]:checked');
+      var exp = box.querySelector('.exp');
+      var correctKey = null;
+      for(var j=0;j<q.options.length;j++){
+        if(q.options[j].correct) correctKey = q.options[j].k;
+      }
+      if(sel && sel.value === correctKey){
+        score++;
+        exp.style.color='#16a34a';
+      }else{
+        exp.style.color='#ef4444';
+      }
+      exp.style.display='block';
+      exp.innerHTML = 'เฉลย: <b>'+correctKey+'</b> — '+q.explain;
+    }
+    document.getElementById('scoreBox').innerHTML = 'คะแนน: <b>'+score+'</b> / '+questions.length;
+
+    // ✅ เฉลยมีสมการ → typeset อีกครั้ง
+    typesetMath();
+  });
+
+  typesetMath();
+  openModal(modalQuiz);
+});
+
+// ===== Modal helpers & MathJax =====
+function openModal(el){ el.style.display='flex'; }
+function closeModal(el){ el.style.display='none'; }
+document.querySelectorAll('.close').forEach(function(btn){
+  btn.addEventListener('click', function(e){
+    var sel=e.currentTarget.getAttribute('data-close');
+    var m=document.querySelector(sel);
+    if(m) closeModal(m);
+
+    // ถ้าปิดแบบฝึกหัด ให้หยุดนาฬิกา (ไม่ไปยุ่งส่วนอื่น)
+    if(sel === "#modalQuiz"){
+      quizTimerStop();
+    }
+  });
+});
+
+function typesetMath(){
+  if(window.MathJax && MathJax.typesetPromise){
+    MathJax.typesetPromise();
+  }
+}
+
+// ===== UI summary =====
+function updateUI(){
+  var mkg=(parseFloat(massInput.value)||9)/1000;
+  var u=parseFloat(velInput.value)||200;
+  var f=parseFloat(resistInput.value)||500;
+  var Ek=0.5*mkg*u*u;
+  var s_possible=Ek/Math.max(1,f);
+  var s_m=Math.min(s_possible, woodLength_m);
+  var s_cm=s_m*100;
+  var exited=s_possible>=woodLength_m;
+  var v_exit=0;
+  if(exited){
+    var Ek_after=Math.max(0,Ek - f*woodLength_m);
+    v_exit=Math.sqrt(Math.max(0,2*Ek_after/mkg));
+  }
+  resultsDiv.innerHTML =
+    '<div>พลังงานจลน์เริ่มต้น: <strong>'+Ek.toFixed(2)+' J</strong></div>'+
+    '<div>ระยะเจาะ (<b>s</b>): <strong>'+s_cm.toFixed(2)+' cm</strong></div>'+
+    '<div>สถานะ: <strong>'+(exited ? ('ทะลุออกมาด้วยความเร็ว '+v_exit.toFixed(2)+' m/s') : 'ฝังในเนื้อไม้')+'</strong></div>';
+}
+
+// ===== Audio & smoke =====
+let audioCtx=null;
+function ensureAudioCtx(){
+  if(!audioCtx){
+    try{ audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }
+    catch(e){ audioCtx=null; }
+  }
+  if(audioCtx && audioCtx.state==='suspended'){ audioCtx.resume(); }
+  return audioCtx;
+}
+function playBang(){
+  const ctxA=ensureAudioCtx();
+  if(!ctxA) return;
+  const len=0.18, rate=ctxA.sampleRate;
+  const buffer=ctxA.createBuffer(1, rate*len, rate);
+  const data=buffer.getChannelData(0);
+  for(let i=0;i<data.length;i++){
+    data[i]=(Math.random()*2-1)*Math.exp(-10*i/data.length);
+  }
+  const noise=ctxA.createBufferSource();
+  noise.buffer=buffer;
+  const gN=ctxA.createGain();
+  gN.gain.value=0.8;
+  noise.connect(gN);
+  gN.connect(ctxA.destination);
+  noise.start();
+
+  const o=ctxA.createOscillator();
+  const g=ctxA.createGain();
+  o.type='triangle';
+  o.frequency.setValueAtTime(90, ctxA.currentTime);
+  g.gain.setValueAtTime(0.9, ctxA.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.0001, ctxA.currentTime+0.22);
+  o.connect(g);
+  g.connect(ctxA.destination);
+  o.start();
+  o.stop(ctxA.currentTime+0.24);
+}
+function spawnSmoke(){
+  const woodY=BASE_H-(woodH+80);
+  const bulletY=woodY+woodH/2;
+  const sx=getMuzzleX(), sy=bulletY;
+  smoke=[];
+  for(let i=0;i<20;i++){
+    smoke.push({x:sx,y:sy,vx:40+Math.random()*60,vy:-10+Math.random()*20,a:0.9,s:4+Math.random()*6});
+  }
+}
+
+// ===== Init =====
+state.bulletX=barrelX;
+hideTags();
+resizeCanvas();
+updateUI();
+</script>
+</body>
+</html>

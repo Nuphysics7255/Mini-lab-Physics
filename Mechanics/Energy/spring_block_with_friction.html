@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>สปริงดันกล่องบนพื้น AB — สูตรสำคัญ + แบบฝึกหัด (v4.3)</title>
+
+<style>
+:root{
+  --ink:#0f172a;--muted:#64748b;--line:#e5e7eb;
+  --panel:#f8fafc;--accent:#2563eb;--overlay:#0b1220cc;
+  --block:#b45309;--ground:#d1d5db;--plate:#1d4ed8;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:#fff;color:var(--ink);
+  font-family:system-ui,-apple-system,"Noto Sans Thai",sans-serif;
+}
+main{max-width:1100px;margin:auto;padding:12px}
+.hint{font-size:12px;color:var(--muted);margin-top:6px}
+
+/* ===== Canvas ===== */
+#sim{
+  display:block;
+  width:100%;
+  height:520px;
+  border:1px solid var(--line);
+  border-radius:14px;
+  touch-action:none;
+  user-select:none;
+  background:#fff;
+  cursor:grab;
+}
+
+/* ===== Controls ===== */
+.controls{
+  display:grid;
+  grid-template-columns:120px 1fr 80px;
+  gap:6px;
+  margin-top:16px;
+  background:#f8fafc;
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:12px;
+  max-width:920px;
+  align-items:center;
+}
+.controls input[type=number]{
+  width:100%;
+  padding:6px;
+  border:1px solid var(--line);
+  border-radius:10px;
+}
+button{
+  padding:8px 12px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:#fff;
+  cursor:pointer;
+  font-size:14px;
+  transition:.15s;
+}
+button:hover{transform:translateY(-1px)}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+
+/* สีปุ่มโทนอ่อน */
+#resetBtn{
+  background:#fee2e2;
+  border-color:#fecaca;
+  color:#b91c1c;
+}
+#formulaBtn{
+  background:#e0f2fe;
+  border-color:#bae6fd;
+  color:#075985;
+}
+#quizBtn{
+  background:#ecfdf5;
+  border-color:#bbf7d0;
+  color:#047857;
+}
+
+/* ===== ปุ่ม 4 ปุ่ม: ใส่ไอคอน + จอคอมให้ขนาดเท่ากัน ===== */
+.ctrlBtn{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  font-weight:700;
+  line-height:1;
+}
+.ctrlBtn svg{
+  width:18px;height:18px;
+  display:block;
+  flex:0 0 auto;
+}
+.btnRow{
+  grid-column:1 / -1;
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:10px;
+}
+.btnRow .ctrlBtn{
+  width:100%;
+  height:44px;            /* ปุ่ม 4 ปุ่มเท่ากันบนเดสก์ท็อป */
+}
+
+/* HUD text base */
+.hudText{ font-size:13px; }
+
+/* ===== Modal ===== */
+.modal{
+  position:fixed;
+  inset:0;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  background:var(--overlay);
+  z-index:50;
+}
+.modal.active{display:flex}
+.card{
+  background:white;
+  border-radius:16px;
+  max-width:900px;
+  width:95%;
+  padding:24px;
+  border:1px solid var(--accent);
+  box-shadow:0 10px 25px #0003;
+  position:relative;
+}
+.card header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:8px;
+  cursor:move;
+}
+.card h3{margin:0;color:var(--accent)}
+.card .content{max-height:70vh;overflow-y:auto;line-height:1.7}
+.panel{border-radius:10px;padding:12px 16px;margin:12px 0}
+.panel.blue{background:#eff6ff;border:1px solid #bfdbfe}
+.panel.green{background:#ecfdf5;border:1px solid #a7f3d0}
+.close{background:#111827;color:white}
+
+/* เฉลยสีแดง */
+.exp, .ansline{
+  color:#b91c1c;
+  font-weight:700;
+}
+.exp{ font-weight:600; }
+
+/* ===== Stopwatch (Quiz) — ลดขนาดเหลือ 80% ===== */
+.quizCard{ position:relative; }
+.quizStopwatch{
+  position:absolute;
+  right:16px;
+  top:56px;               /* เดสก์ท็อป */
+  z-index:5;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  padding:4px 6px;
+  background:rgba(255,255,255,0.95);
+  border:1px solid var(--line);
+  border-radius:10px;
+  box-shadow:0 4px 9px #0001;
+
+  transform:scale(0.8);
+  transform-origin: top right;
+}
+.quizStopwatch .time{
+  font-variant-numeric:tabular-nums;
+  font-weight:800;
+  letter-spacing:0.25px;
+  min-width:40px;
+  text-align:center;
+  font-size:11px;
+}
+.iconBtn{
+  width:26px;height:26px;
+  padding:0;
+  display:grid;place-items:center;
+  border-radius:9px;
+  border:1px solid var(--line);
+  background:#fff;
+  cursor:pointer;
+  transition:.15s;
+  position:relative;
+  overflow:hidden;
+}
+.iconBtn:hover{transform:translateY(-1px)}
+.iconBtn.primary{
+  background:#dbeafe;
+  border-color:#bfdbfe;
+}
+.iconBtn svg{
+  width:16px;height:16px;
+  position:absolute;
+  left:50%;top:50%;
+  transform:translate(-50%,-50%);
+  margin:0;
+  display:block;
+}
+.quizContentPad{ padding-top:54px; }
+
+/* ===== Mobile ===== */
+@media(max-width:600px){
+  #sim{ height:auto; aspect-ratio:960/520; }
+
+  .controls{
+    margin-top:40px;
+    grid-template-columns:95px 1fr 70px;
+    gap:4px;
+    padding:10px;
+  }
+  .hudText{ font-size:20px !important; }
+  button{ font-size:13px; }
+
+  /* ปุ่ม 4 ปุ่มในมือถือให้สมดุล (คงแนวเดิม) */
+  .btnRow{ gap:8px; }
+  .btnRow .ctrlBtn{ height:42px; }
+
+  /* นาฬิกาในหน้าแบบฝึกหัด (มือถือ): ขยับลง 20px ไม่ให้ทับปุ่มปิด */
+  .quizStopwatch{
+    right:12px;
+    top:74px;             /* เดิม 54px -> +20px */
+    padding:4px 6px;
+    border-radius:10px;
+    gap:6px;
+    transform:scale(0.8);
+    transform-origin: top right;
+  }
+  .quizStopwatch .time{min-width:40px;font-size:11px}
+  .iconBtn{width:26px;height:26px;border-radius:9px}
+  .iconBtn svg{width:16px;height:16px}
+  .quizContentPad{padding-top:56px}
+
+  /* เฉลยในมือถือ: ลดขนาดสมการลง 5px (เฉพาะมือถือเท่านั้น) */
+  .exp mjx-container[jax="SVG"]{
+    font-size: calc(1em - 5px);
+  }
+}
+</style>
+
+<script>
+  window.MathJax = {
+    tex:{inlineMath:[["$","$"],["\\(","\\)"]]},
+    svg:{fontCache:'global'}
+  };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+</head>
+
+<body>
+<main>
+  <h2><span style="color:var(--accent);">สปริงดันกล่องบนพื้น AB</span></h2>
+  <p class="hint">
+    ลากกล่องไปทางซ้ายเพื่อกดสปริง แล้วปล่อยเพื่อเริ่ม • ศึกษาเพิ่มเติมที่
+    <a href="https://www.facebook.com/resolvephysics" target="_blank">เพจคลายปมฟิสิกส์</a>
+  </p>
+
+  <canvas id="sim" width="960" height="520"></canvas>
+
+  <section class="controls">
+    <div>k (N/m)</div>
+    <input type="range" id="kRange" min="10" max="1000" step="10" value="100">
+    <input type="number" id="kNum" min="10" max="1000" step="10" value="100">
+
+    <div>x₀ (m)</div>
+    <input type="range" id="xRange" min="0" max="0.555" step="0.005" value="0.000">
+    <input type="number" id="xNum" min="0" max="0.555" step="0.005" value="0.000">
+
+    <div>m (kg)</div>
+    <input type="range" id="mRange" min="0.1" max="50" step="0.1" value="5.0">
+    <input type="number" id="mNum" min="0.1" max="50" step="0.1" value="5.0">
+
+    <div>μₖ (ช่วง AB)</div>
+    <input type="range" id="muRange" min="0" max="1" step="0.01" value="0.50">
+    <input type="number" id="muNum" min="0" max="1" step="0.01" value="0.50">
+
+    <!-- แถวปุ่มเริ่ม/รีเซต (ขนาดเท่ากันบนจอคอม) -->
+    <div class="btnRow">
+      <button id="playBtn" class="primary ctrlBtn" type="button" aria-label="เริ่ม">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M8 5v14l11-7-11-7z" fill="currentColor"></path>
+        </svg>
+        เริ่ม
+      </button>
+      <button id="resetBtn" class="ctrlBtn" type="button" aria-label="รีเซต">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M21 12a9 9 0 1 1-2.64-6.36" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+          <path d="M21 3v6h-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>
+        รีเซต
+      </button>
+    </div>
+
+    <!-- แถวปุ่มสูตรสำคัญ/แบบฝึกหัด (ขนาดเท่ากันบนจอคอม) -->
+    <div class="btnRow">
+      <button id="formulaBtn" class="ctrlBtn" type="button" aria-label="สูตรสำคัญ">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M6 4h12v16H6V4z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></path>
+          <path d="M8 8h8M8 12h6M8 16h7" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+        </svg>
+        สูตรสำคัญ
+      </button>
+      <button id="quizBtn" class="ctrlBtn" type="button" aria-label="แบบฝึกหัด">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M9 11l2 2 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M7 4h10a2 2 0 0 1 2 2v14H5V6a2 2 0 0 1 2-2z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></path>
+          <path d="M9 7h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+        </svg>
+        แบบฝึกหัด
+      </button>
+    </div>
+  </section>
+</main>
+
+<!-- สูตรสำคัญ -->
+<div class="modal" id="formulaModal">
+  <div class="card" id="formulaCard">
+    <header id="formulaHeader">
+      <h3>สูตรสำคัญ — งานและพลังงาน</h3>
+      <button id="closeFormula" class="close" type="button">ปิด</button>
+    </header>
+    <div class="content">
+      <div class="panel blue">
+        <h4>1) การหา $v_0$</h4>
+        <p>$$\frac{1}{2}k x_0^2 = \frac{1}{2} m v_0^2$$</p>
+        <p>$$\Rightarrow\ v_0 = \sqrt{\frac{k}{m}}\,x_0$$</p>
+      </div>
+      <div class="panel green">
+        <h4>2) ระยะหยุด $S$ บนช่วง AB</h4>
+        <p>$$-\mu_k m g S = 0-\frac{1}{2}mv_0^2$$</p>
+        <p>$$\Rightarrow\ S = \frac{v_0^2}{2\mu_k g}$$</p>
+      </div>
+      <div class="panel blue">
+        <h4>3) ความสัมพันธ์ของ $S$ กับ $k,\ m,\ x_0$</h4>
+        <p>$$\boxed{\,S = \frac{k\,x_0^2}{2\,m\,\mu_k\,g}\,}$$</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- แบบฝึกหัด -->
+<div class="modal" id="quizModal">
+  <div class="card quizCard">
+    <header style="cursor:default;">
+      <h3>แบบฝึกหัด — งาน–พลังงาน (10 ข้อ)</h3>
+      <button id="closeQuiz" class="close" type="button">ปิด</button>
+    </header>
+
+    <div class="quizStopwatch" aria-label="Stopwatch">
+      <div class="time" id="swTime">00:00</div>
+      <button class="iconBtn primary" id="swToggle" title="เริ่ม/หยุด" aria-label="เริ่ม/หยุด" type="button">
+        <svg id="swIconPlay" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M8 5v14l11-7-11-7z" fill="#2563eb"></path>
+        </svg>
+        <svg id="swIconPause" viewBox="0 0 24 24" fill="none" style="display:none" aria-hidden="true">
+          <path d="M7 5h3v14H7V5zm7 0h3v14h-3V5z" fill="#2563eb"></path>
+        </svg>
+      </button>
+    </div>
+
+    <div class="content quizContentPad" id="quizBox"></div>
+
+    <div style="text-align:right;margin-top:8px">
+      <button id="checkQuiz" class="primary" type="button">ตรวจคำตอบ</button>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* ===== DOM ===== */
+const canvas = document.getElementById("sim");
+const ctx = canvas.getContext("2d");
+let W = canvas.width, H = canvas.height;
+
+const playBtn = document.getElementById("playBtn");
+const resetBtn = document.getElementById("resetBtn");
+const formulaBtn = document.getElementById("formulaBtn");
+const formulaModal = document.getElementById("formulaModal");
+const closeFormula = document.getElementById("closeFormula");
+const quizBtn = document.getElementById("quizBtn");
+const quizModal = document.getElementById("quizModal");
+const quizBox = document.getElementById("quizBox");
+const closeQuiz = document.getElementById("closeQuiz");
+const checkQuiz = document.getElementById("checkQuiz");
+
+const formulaCard = document.getElementById("formulaCard");
+const formulaHeader = document.getElementById("formulaHeader");
+
+const kRange=document.getElementById("kRange"), kNum=document.getElementById("kNum");
+const xRange=document.getElementById("xRange"), xNum=document.getElementById("xNum");
+const mRange=document.getElementById("mRange"), mNum=document.getElementById("mNum");
+const muRange=document.getElementById("muRange"), muNum=document.getElementById("muNum");
+
+const isMobile = window.matchMedia("(max-width:600px)").matches;
+
+/* ===== Physics consts ===== */
+const g = 9.81;
+const m2px = 300;
+const groundY = H-100;
+const wallX = 80;
+const springRest_m = 0.6;
+const plateW = 10;
+const plateH = 80;
+const A_px = wallX + springRest_m*m2px + plateW;
+
+/* ===== State ===== */
+let params = {k:100,x0:0,m:5,mu:0.5};
+let x = -params.x0, v = 0, state = "idle";
+let blockX_px = wallX + (springRest_m + x)*m2px + plateW + 2;
+let detachX_px = null;
+let v0Computed = null, sComputed = null;
+let raf = null;
+
+/* HUD */
+const HUD = {x:16,y:116,w:260,h:128};
+
+/* Dragging block */
+let draggingBlock = false;
+let dragOffsetX = 0;
+
+/* Dragging formula card */
+let draggingCard = false;
+let cardOffsetX = 0, cardOffsetY = 0;
+let cardStartX = 0, cardStartY = 0;
+
+function updateCardTransform(){
+  formulaCard.style.transform = `translate(${cardOffsetX}px,${cardOffsetY}px)`;
+}
+
+/* ===== Helpers ===== */
+function blockSizeFromM(m){
+  const baseMin=26, baseMax=66;
+  const t=(m-0.1)/(50-0.1);
+  let size = baseMin + t*(baseMax-baseMin);
+  if(isMobile) size *= 2;
+  return size;
+}
+function getCanvasPos(evt){
+  const rect = canvas.getBoundingClientRect();
+  const sx = W/rect.width;
+  const sy = H/rect.height;
+  return { x:(evt.clientX-rect.left)*sx, y:(evt.clientY-rect.top)*sy };
+}
+
+/* ===== Draw ===== */
+function draw(){
+  ctx.clearRect(0,0,W,H);
+
+  const springY = groundY - plateH/2;
+  const L = (springRest_m + x)*m2px;
+
+  // ground
+  ctx.fillStyle="#d1d5db";
+  ctx.fillRect(wallX,groundY,W-wallX,4);
+  ctx.fillStyle="#fdebd3";
+  ctx.fillRect(A_px,groundY+4,W-A_px,10);
+
+  ctx.fillStyle="#0f172a";
+  ctx.font="16px system-ui";
+  ctx.fillText("A",A_px-10,groundY+23);
+  ctx.fillText("B",W-20,groundY+23);
+
+  // wall
+  ctx.fillStyle="#111827";
+  ctx.fillRect(wallX-50,groundY-160,50,164);
+
+  // spring
+  ctx.strokeStyle="#111827";
+  ctx.lineWidth=4;
+  ctx.beginPath();
+  ctx.moveTo(wallX,springY);
+  for(let i=1;i<=9;i++){
+    const xx = wallX + (i/9)*L;
+    const yy = springY + (i%2?-16:16);
+    ctx.lineTo(xx,yy);
+  }
+  ctx.lineTo(wallX+L,springY);
+  ctx.stroke();
+
+  // plate
+  ctx.fillStyle="#1d4ed8";
+  ctx.fillRect(wallX+L,groundY-plateH,plateW,plateH);
+
+  // block
+  const bSize = blockSizeFromM(params.m);
+  const blockH = bSize, blockW = bSize;
+  if(state!=="slide" && state!=="flyOut" && state!=="stopped"){
+    blockX_px = wallX + (springRest_m + x)*m2px + plateW + 2;
+  }
+  ctx.fillStyle="#b45309";
+  ctx.fillRect(blockX_px,groundY-blockH,blockW,blockH);
+
+  // HUD
+  ctx.fillStyle="rgba(255,255,255,0.9)";
+  ctx.fillRect(HUD.x,HUD.y,HUD.w,HUD.h);
+
+  ctx.font = (isMobile ? "20px" : "13px") + " system-ui";
+
+  const f=n=>Number.isFinite(n)?n.toFixed(3):"—";
+  const v0p=Math.sqrt(params.k/params.m)*params.x0;
+  const s0p=(params.mu>0)?(v0p*v0p)/(2*params.mu*g):Infinity;
+
+  const rows=[
+    ["x₀",`${f(params.x0)} m`],
+    ["k",`${params.k.toFixed(0)} N/m`],
+    ["μₖ",f(params.mu)],
+    ["v₀",v0Computed!=null?`${f(v0Computed)} m/s`:`≈ ${f(v0p)} m/s`],
+    ["S",sComputed!=null?`${f(sComputed)} m`:(s0p===Infinity?"≈ ∞":"≈ "+f(s0p)+" m")]
+  ];
+  let yy = HUD.y+24;
+  rows.forEach(([lb,val])=>{
+    ctx.fillStyle = (lb==="S") ? "#b91c1c" : "#0f172a";
+    ctx.fillText(lb,HUD.x+12,yy);
+    ctx.fillText(val,HUD.x+90,yy);
+    yy += isMobile?26:22;
+  });
+}
+
+/* ===== Step ===== */
+function step(){
+  const dt=0.016;
+
+  if(state==="contact"){
+    const a = -(params.k/params.m)*x;
+    v += a*dt;
+    x += v*dt;
+
+    if(x>=0){
+      x=0;
+      v0Computed = Math.sqrt(params.k/params.m)*params.x0;
+      v = v0Computed;
+      state = (params.mu===0 ? "flyOut" : "slide");
+      detachX_px = blockX_px;
+    }
+  }else if(state==="slide"){
+    const a = -params.mu*g;
+    v += a*dt;
+    if(v<0) v=0;
+    blockX_px += v*dt*m2px;
+
+    if(v===0){
+      sComputed = (blockX_px - detachX_px)/m2px;
+      state="stopped";
+      draw(); return;
+    }
+  }else if(state==="flyOut"){
+    blockX_px += v*dt*m2px;
+    if(blockX_px > W + 200){
+      state="stopped";
+      draw(); return;
+    }
+  }
+
+  draw();
+  raf = requestAnimationFrame(step);
+}
+
+/* ===== Controls ===== */
+function start(){
+  if(params.x0<=0) return;
+  cancelAnimationFrame(raf);
+  x = -params.x0;
+  v = 0;
+  v0Computed = null;
+  sComputed = null;
+  state="contact";
+  raf=requestAnimationFrame(step);
+}
+function reset(){
+  cancelAnimationFrame(raf);
+  params={k:100,x0:0,m:5,mu:0.5};
+  x = -params.x0;
+  v = 0;
+  v0Computed=null; sComputed=null;
+  state="idle";
+  kRange.value=kNum.value=100;
+  xRange.value=xNum.value=0;
+  mRange.value=mNum.value=5;
+  muRange.value=muNum.value=0.5;
+  draw();
+}
+
+playBtn.addEventListener("click",start);
+resetBtn.addEventListener("click",reset);
+
+/* ===== Bind sliders/inputs ===== */
+function bind(r,n,key){
+  function apply(v){
+    let f=parseFloat(v);
+    if(key==="x0") f=Math.max(0,Math.min(0.555,f));
+    if(key==="m")  f=Math.max(0.1,Math.min(50,f));
+    if(key==="k")  f=Math.max(10,Math.min(1000,f));
+    if(key==="mu") f=Math.max(0,Math.min(1,f));
+    params[key]=f;
+    r.value=f; n.value=f;
+    if(key==="x0" && (state==="idle"||state==="stopped")){
+      x=-params.x0;
+      v0Computed=null; sComputed=null;
+    }
+    draw();
+  }
+  r.addEventListener("input",e=>apply(e.target.value));
+  n.addEventListener("change",e=>apply(e.target.value));
+}
+bind(kRange,kNum,"k");
+bind(xRange,xNum,"x0");
+bind(mRange,mNum,"m");
+bind(muRange,muNum,"mu");
+
+/* ===== Drag block ===== */
+canvas.addEventListener("pointerdown",e=>{
+  const p = getCanvasPos(e);
+  const mx=p.x, my=p.y;
+  const size=blockSizeFromM(params.m);
+  const blockH=size;
+
+  if(mx>=blockX_px-20 && mx<=blockX_px+size+20 &&
+     my>=groundY-blockH-20 && my<=groundY+20){
+    draggingBlock=true;
+    dragOffsetX = mx - blockX_px;
+    canvas.setPointerCapture(e.pointerId);
+  }
+});
+canvas.addEventListener("pointermove",e=>{
+  if(!draggingBlock) return;
+  const p = getCanvasPos(e);
+  const mx = p.x;
+
+  let intended = mx - dragOffsetX;
+  const maxLeft = wallX + plateW + 5;
+  const maxRight = A_px;
+
+  if(intended<maxLeft) intended=maxLeft;
+  if(intended>maxRight) intended=maxRight;
+
+  blockX_px=intended;
+
+  const d = A_px - blockX_px;
+  const x0 = d/m2px;
+  params.x0 = x0<0?0:x0;
+  xRange.value=xNum.value=params.x0.toFixed(3);
+  x=-params.x0;
+  v0Computed=null; sComputed=null;
+  state="idle";
+  draw();
+});
+canvas.addEventListener("pointerup",e=>{
+  if(draggingBlock){
+    draggingBlock=false;
+    canvas.releasePointerCapture(e.pointerId);
+    start();
+  }
+});
+
+/* ===== Modals + MathJax ===== */
+function typesetNow(el){
+  if(window.MathJax && MathJax.typesetPromise){
+    MathJax.typesetPromise([el]);
+  }
+}
+
+/* สูตรสำคัญ modal */
+formulaBtn.addEventListener("click",()=>{
+  formulaModal.classList.add("active");
+  cardOffsetX = 0; cardOffsetY = 0;
+  updateCardTransform();
+  typesetNow(formulaModal);
+});
+closeFormula.addEventListener("click",(e)=>{
+  e.stopPropagation();
+  formulaModal.classList.remove("active");
+});
+closeFormula.addEventListener("pointerdown",(e)=>e.stopPropagation());
+formulaModal.addEventListener("click",e=>{
+  if(e.target===formulaModal) formulaModal.classList.remove("active");
+});
+
+/* draggable card */
+formulaHeader.addEventListener("pointerdown",e=>{
+  if(e.target.closest("button")) return;
+  draggingCard = true;
+  cardStartX = e.clientX;
+  cardStartY = e.clientY;
+  formulaHeader.setPointerCapture(e.pointerId);
+});
+formulaHeader.addEventListener("pointermove",e=>{
+  if(!draggingCard) return;
+  const dx = e.clientX - cardStartX;
+  const dy = e.clientY - cardStartY;
+  cardOffsetX += dx;
+  cardOffsetY += dy;
+  cardStartX = e.clientX;
+  cardStartY = e.clientY;
+  updateCardTransform();
+});
+formulaHeader.addEventListener("pointerup",e=>{
+  if(!draggingCard) return;
+  draggingCard = false;
+  formulaHeader.releasePointerCapture(e.pointerId);
+});
+
+/* ===== Stopwatch (Quiz) ===== */
+const swTimeEl = document.getElementById("swTime");
+const swToggle = document.getElementById("swToggle");
+const swIconPlay = document.getElementById("swIconPlay");
+const swIconPause = document.getElementById("swIconPause");
+
+let swRunning=false;
+let swStartMs=0;
+let swElapsedMs=0;
+let swTimer=null;
+
+function fmtTime(ms){
+  const total = Math.max(0, Math.floor(ms/1000));
+  const mm = String(Math.floor(total/60)).padStart(2,"0");
+  const ss = String(total%60).padStart(2,"0");
+  return `${mm}:${ss}`;
+}
+function swRender(){
+  const now = performance.now();
+  const cur = swRunning ? (swElapsedMs + (now - swStartMs)) : swElapsedMs;
+  swTimeEl.textContent = fmtTime(cur);
+}
+function swStart(){
+  if(swRunning) return;
+  swRunning=true;
+  swStartMs=performance.now();
+  swIconPlay.style.display="none";
+  swIconPause.style.display="block";
+  if(swTimer) clearInterval(swTimer);
+  swTimer=setInterval(swRender, 200);
+  swRender();
+}
+function swStop(){
+  if(!swRunning) return;
+  swRunning=false;
+  swElapsedMs += (performance.now() - swStartMs);
+  swIconPlay.style.display="block";
+  swIconPause.style.display="none";
+  if(swTimer) clearInterval(swTimer);
+  swTimer=null;
+  swRender();
+}
+function swResetAll(){
+  swRunning=false;
+  swElapsedMs=0;
+  swStartMs=performance.now();
+  swIconPlay.style.display="block";
+  swIconPause.style.display="none";
+  if(swTimer) clearInterval(swTimer);
+  swTimer=null;
+  swRender();
+}
+swToggle.addEventListener("click",()=> swRunning ? swStop() : swStart());
+
+/* ===== Quiz ===== */
+const L = String.raw;
+const QUIZ10 = [
+  {stem:L`ข้อ 1: กล่องมวล $m=2.0\ \mathrm{kg}$ ถูกสปริงค่าคงตัว $k=200\ \mathrm{N/m}$ อัดไว้ $x_0=0.30\ \mathrm{m}$ แล้วปล่อยให้พุ่งออกมาถึงจุด A (ไม่คิดเสียดทานตอนสปริงคลาย) ความเร็วที่จุด A คือเท่าไร`,
+   choices:[L`$3.0\ \mathrm{m/s}$`,L`$4.2\ \mathrm{m/s}$`,L`$5.0\ \mathrm{m/s}$`,L`$6.0\ \mathrm{m/s}$`],
+   ans:0,exp:L`$$\frac12 kx_0^2=\frac12 mv_0^2$$
+$$v_0=\sqrt{\frac{k}{m}}\,x_0=\sqrt{\frac{200}{2.0}}\,(0.30)=\sqrt{100}\,(0.30)=10(0.30)=3.0\ \mathrm{m/s}$$`},
+  {stem:L`ข้อ 2: ทดลอง 2 กรณี โดยใช้สปริงตัวเดิม (ดังนั้น $k$ เท่าเดิม) และกล่องมวลเท่าเดิม กรณีที่ 1 อัดสปริงเป็นระยะ $x_0$ ส่วนกรณีที่ 2 อัดสปริงเป็นระยะ $2x_0$ (ไม่คิดเสียดทานตอนสปริงคลาย) จงหา “ความเร็วที่จุด A” ของกรณีที่ 2 เป็นกี่เท่าของกรณีที่ 1`,
+   choices:[L`$2$ เท่า`,L`$\frac12$ เท่า`,L`$4$ เท่า`,L`$1$ เท่า`],
+   ans:0,exp:L`$$\frac12 kx_0^2=\frac12 mv_0^2\Rightarrow v_0=\sqrt{\frac{k}{m}}\,x_0$$
+$$v_0\propto x_0 \Rightarrow \frac{v_{0,2}}{v_{0,1}}=\frac{2x_0}{x_0}=2$$`},
+  {stem:L`ข้อ 3: หลังกล่องหลุดจากสปริงแล้วไถลบนพื้นช่วง AB ที่มีเสียดทานจลน์ $\mu_k=0.25$ ถ้ากล่องมีความเร็วเริ่มต้นบนช่วง AB เป็น $v_0=4.0\ \mathrm{m/s}$ กล่องจะไถลไปได้ไกลเท่าไรจึงหยุด (เมื่อ $g$ คือค่าสนามโน้มถ่วง และให้ $(g=9.81\ \mathrm{N/kg})$)`,
+   choices:[L`$1.6\ \mathrm{m}$`,L`$2.4\ \mathrm{m}$`,L`$3.3\ \mathrm{m}$`,L`$6.5\ \mathrm{m}$`],
+   ans:2,exp:L`$$0-\frac12 mv_0^2=-\mu_k mgS$$
+$$S=\frac{v_0^2}{2\mu_k g}=\frac{(4.0)^2}{2(0.25)(9.81)}=\frac{16}{4.905}\approx 3.26\ \mathrm{m}\approx 3.3\ \mathrm{m}$$`},
+  {stem:L`ข้อ 4: สปริงดันกล่องออกมาด้วย $k=300\ \mathrm{N/m}$ กล่องมวล $m=3.0\ \mathrm{kg}$ อัดสปริง $x_0=0.40\ \mathrm{m}$ แล้วกล่องไปไถลบน AB ที่มี $\mu_k=0.30$ จงหาว่ากล่องจะหยุดที่ระยะ $S$ เท่าไร (เมื่อ $g$ คือค่าสนามโน้มถ่วง และให้ $(g=9.81\ \mathrm{N/kg})$)`,
+   choices:[L`$0.68\ \mathrm{m}$`,L`$1.36\ \mathrm{m}$`,L`$2.04\ \mathrm{m}$`,L`$2.72\ \mathrm{m}$`],
+   ans:3,exp:L`$$v_0=\sqrt{\frac{k}{m}}\,x_0=\sqrt{\frac{300}{3.0}}(0.40)=\sqrt{100}(0.40)=10(0.40)=4.0\ \mathrm{m/s}$$
+$$S=\frac{v_0^2}{2\mu_k g}=\frac{(4.0)^2}{2(0.30)(9.81)}=\frac{16}{5.886}\approx 2.72\ \mathrm{m}$$`},
+  {stem:L`ข้อ 5: ทดลอง 2 กรณีบนพื้นช่วง AB เดิม (ดังนั้น $\mu_k$ เท่ากันทั้งสองกรณี) ใช้กล่องและสปริงชุดเดิม กรณีที่ 1 อัดสปริงเป็นระยะ $x_0$ ส่วนกรณีที่ 2 อัดสปริงเป็นระยะ $2x_0$ จงหาอัตราส่วนระยะหยุด $\dfrac{S_2}{S_1}$`,
+   choices:[L`$2$`,L`$4$`,L`$\frac12$`,L`$\frac14$`],
+   ans:1,exp:L`$$S\propto x_0^2 \Rightarrow \frac{S_2}{S_1}=\left(\frac{2x_0}{x_0}\right)^2=4$$`},
+  {stem:L`ข้อ 6: เราอยาก “ออกแบบพื้น” ให้กล่องหยุดพอดีที่ระยะ $S=2.0\ \mathrm{m}$ โดยกล่องมีความเร็วเริ่มต้นบน AB เป็น $v_0=3.5\ \mathrm{m/s}$ (เมื่อ $g$ คือค่าสนามโน้มถ่วง และให้ $(g=9.81\ \mathrm{N/kg})$) ต้องเลือกค่าสัมประสิทธิ์เสียดทานจลน์ $\mu_k$ ประมาณเท่าไร`,
+   choices:[L`$\mu_k=0.20$`,L`$\mu_k=0.31$`,L`$\mu_k=0.40$`,L`$\mu_k=0.62$`],
+   ans:1,exp:L`$$\mu_k=\frac{v_0^2}{2gS}=\frac{(3.5)^2}{2(9.81)(2.0)}\approx 0.31$$`},
+  {stem:L`ข้อ 7: ในการทดลองหนึ่ง เรารู้ว่า $k=500\ \mathrm{N/m}$ อัดสปริง $x_0=0.20\ \mathrm{m}$ แล้ววัดได้ว่าความเร็วที่จุด A เป็น $v_0=2.0\ \mathrm{m/s}$ (ไม่คิดเสียดทานตอนสปริงคลาย) จากข้อมูลนี้ “มวลของกล่อง” $m$ คือเท่าไร`,
+   choices:[L`$m=0.50\ \mathrm{kg}$`,L`$m=1.00\ \mathrm{kg}$`,L`$m=2.00\ \mathrm{kg}$`,L`$m=5.00\ \mathrm{kg}$`],
+   ans:3,exp:L`$$m=\frac{kx_0^2}{v_0^2}=\frac{500(0.20)^2}{(2.0)^2}=5.0\ \mathrm{kg}$$`},
+  {stem:L`ข้อ 8: เรารู้มวลกล่อง $m=4.0\ \mathrm{kg}$ อัดสปริง $x_0=0.30\ \mathrm{m}$ และวัดความเร็วที่จุด A ได้ $v_0=3.0\ \mathrm{m/s}$ (ไม่คิดเสียดทานตอนสปริงคลาย) จงหาค่าคงตัวสปริง $k$`,
+   choices:[L`$k=100\ \mathrm{N/m}$`,L`$k=200\ \mathrm{N/m}$`,L`$k=300\ \mathrm{N/m}$`,L`$k=400\ \mathrm{N/m}$`],
+   ans:3,exp:L`$$k=\frac{mv_0^2}{x_0^2}=\frac{4.0(3.0)^2}{(0.30)^2}=400\ \mathrm{N/m}$$`},
+  {stem:L`ข้อ 9: กล่องมวล $m$ ถูกสปริงค่าคงตัว $k$ อัดเป็นระยะ $x_0$ แล้วปล่อยให้เคลื่อนที่บนพื้นช่วง AB ที่มีสัมประสิทธิ์เสียดทานจลน์ $\mu_k$ (เมื่อ $g$ คือค่าสนามโน้มถ่วง) จงหานิพจน์ของระยะหยุด $S$`,
+   choices:[L`$S=\dfrac{kx_0^2}{2m\mu_k g}$`,L`$S=\dfrac{kx_0}{2m\mu_k g}$`,L`$S=\dfrac{mx_0^2}{2k\mu_k g}$`,L`$S=\dfrac{kx_0^2}{m\mu_k g}$`],
+   ans:0,exp:L`$$S=\frac{kx_0^2}{2m\mu_k g}$$`},
+  {stem:L`ข้อ 10: เรารู้ว่าความเร็วของกล่องที่จุด A เป็น $v_0=3.0\ \mathrm{m/s}$ และพื้นช่วง AB มีสัมประสิทธิ์เสียดทานจลน์ $\mu_k=0.20$ จงหาระยะหยุด $S$ (เมื่อ $g$ คือค่าสนามโน้มถ่วง และให้ $(g=9.81\ \mathrm{N/kg})$)`,
+   choices:[L`$S\approx 1.5\ \mathrm{m}$`,L`$S\approx 2.3\ \mathrm{m}$`,L`$S\approx 3.0\ \mathrm{m}$`,L`$S\approx 4.6\ \mathrm{m}$`],
+   ans:1,exp:L`$$S=\frac{v_0^2}{2\mu_k g}=\frac{(3.0)^2}{2(0.20)(9.81)}\approx 2.3\ \mathrm{m}$$`}
+];
+
+function renderQuiz(){
+  const html = QUIZ10.map((q,i)=>{
+    const n=i+1;
+    const opts=q.choices.map((c,j)=>`
+      <label style="display:flex;gap:8px;align-items:flex-start;margin:6px 0;padding:8px;border:1px solid var(--line);border-radius:10px;">
+        <input type="radio" name="q${n}" value="${j}" style="margin-top:4px">
+        <span><b>${String.fromCharCode(65+j)}.</b> ${c}</span>
+      </label>`).join("");
+    return `
+      <div class="panel" style="border:1px solid var(--line)">
+        <div style="font-weight:800;margin-bottom:6px">${q.stem}</div>
+        ${opts}
+        <div class="ansline" style="display:none;margin-top:6px"></div>
+        <div class="exp" style="display:none;margin-top:6px">วิธีทำ: ${q.exp}</div>
+      </div>`;
+  }).join("");
+
+  quizBox.innerHTML = html;
+  typesetNow(quizBox);
+}
+
+quizBtn.addEventListener("click",()=>{
+  renderQuiz();
+  quizModal.classList.add("active");
+  swResetAll();
+});
+closeQuiz.addEventListener("click",()=>{
+  quizModal.classList.remove("active");
+  swStop();
+});
+quizModal.addEventListener("click",e=>{
+  if(e.target===quizModal){
+    quizModal.classList.remove("active");
+    swStop();
+  }
+});
+
+checkQuiz.addEventListener("click",()=>{
+  let score=0;
+  const panels = quizBox.querySelectorAll(".panel");
+
+  QUIZ10.forEach((q,i)=>{
+    const picked = document.querySelector(`input[name="q${i+1}"]:checked`);
+    const pickedIdx = picked ? parseInt(picked.value,10) : null;
+    if(pickedIdx===q.ans) score++;
+
+    const ansLetter = String.fromCharCode(65+q.ans);
+    const pickedLetter = (pickedIdx===null) ? "—" : String.fromCharCode(65+pickedIdx);
+
+    const ansLine = panels[i].querySelector(".ansline");
+    const expEl = panels[i].querySelector(".exp");
+
+    ansLine.style.display="block";
+    ansLine.innerHTML = `คำตอบที่ถูก: <b>${ansLetter}</b> &nbsp;|&nbsp; คำตอบที่เลือก: <b>${pickedLetter}</b>`;
+    expEl.style.display="block";
+  });
+
+  const oldResult = document.getElementById("quizResult");
+  if(oldResult) oldResult.remove();
+
+  const panel=document.createElement("div");
+  panel.id="quizResult";
+  panel.className="panel green";
+  panel.innerHTML = `<b>คะแนนรวม: ${score}/${QUIZ10.length}</b>`;
+  quizBox.appendChild(panel);
+
+  typesetNow(quizBox);
+});
+
+/* ===== Init ===== */
+draw();
+</script>
+</body>
+</html>

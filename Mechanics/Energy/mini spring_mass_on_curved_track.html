@@ -1,0 +1,1746 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>Mini Lab: สปริงดันกล่อง + พื้น AB สั้น + ทางโค้งลื่น</title>
+
+<style>
+:root{
+  --ink:#0f172a; --muted:#64748b; --line:#e5e7eb; --panel:#f8fafc;
+
+  /* ===== UI/UX Control Standard — เพจคลายปมฟิสิกส์ ===== */
+  --btn-play:#0ea5e9;     /* เล่น/หยุด (ฟ้า) */
+  --btn-reset:#e5e7eb;    /* รีเซ็ต (เทา) */
+  --btn-formula:#fed7aa;  /* สูตรสำคัญ (ส้มอ่อน) */
+  --btn-quiz:#bbf7d0;     /* แบบฝึกหัด (เขียวอ่อน) */
+
+  --btn-play-b:#0284c7;
+  --btn-reset-b:#cbd5e1;
+  --btn-formula-b:#fdba74;
+  --btn-quiz-b:#86efac;
+
+  /* ไอคอนเส้นสีเทา */
+  --icon-stroke:#6b7280;
+}
+*{box-sizing:border-box}
+html,body{width:100%;max-width:100%;overflow-x:hidden}
+body{
+  margin:0;background:#fff;color:var(--ink);
+  font-family:"Noto Sans Thai",system-ui,sans-serif;
+  display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px;
+}
+
+
+body.modal-open{overflow:hidden;}
+#sim{
+  width:min(100%,960px);
+  height:520px;
+  border:none;
+  border-radius:14px;
+  background:#fff;
+  touch-action:none;
+  user-select:none;
+  cursor:grab;
+}
+.controls{
+  display:grid;grid-template-columns:150px 1fr 90px;gap:6px;background:var(--panel);
+  border:1px solid var(--line);border-radius:14px;padding:10px;width:min(100%,920px)
+}
+.controls input[type=number]{width:100%;padding:4px;border:1px solid var(--line);border-radius:10px}
+
+/* ===== ปุ่มนูนมีมิติ ===== */
+button{
+  padding:6px 10px;border:1px solid var(--line);border-radius:10px;
+  background:#fff;cursor:pointer;font-size:13px;
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.75) inset,
+    0 10px 18px rgba(15,23,42,.10);
+}
+button:active{
+  transform: translateY(1px);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.65) inset,
+    0 6px 12px rgba(15,23,42,.12);
+}
+a.link{color:#2563eb;text-decoration:none} a.link:hover{text-decoration:underline}
+.bottom-controls{display:flex;gap:8px;width:min(100%,920px);margin-top:4px;flex-wrap:wrap}
+
+/* ===== ICONS: ชุดเดียวกัน + เส้นเทา ===== */
+.btn-ico{display:inline-flex;align-items:center;gap:8px;justify-content:center}
+.btn-ico svg, .badge svg{
+  width:18px;height:18px;display:block;
+  stroke:var(--icon-stroke);
+  fill:none;
+  stroke-width:2;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+
+/* ===== ปุ่มมาตรฐานเพจ ===== */
+#playBtn{background:var(--btn-play); color:#fff; border-color:var(--btn-play-b);}
+#resetBtn{background:var(--btn-reset); color:var(--ink); border-color:var(--btn-reset-b);}
+#formulaBtn{background:var(--btn-formula); color:var(--ink); border-color:var(--btn-formula-b);}
+#quizBtn{background:var(--btn-quiz); color:var(--ink); border-color:var(--btn-quiz-b);}
+#playBtn:hover,#resetBtn:hover,#formulaBtn:hover,#quizBtn:hover{filter:brightness(0.98)}
+
+/* ===== play icon: ขาวเฉพาะปุ่มเล่น ===== */
+#playBtn .btn-ico svg{ stroke:none; fill:#fff; } /* เริ่ม: สามเหลี่ยมขาวทึบ */
+#playBtn .btn-ico svg.pause{ fill:none; stroke:#fff; } /* หยุด: ขีดคู่ขาว */
+
+/* modal */
+.modal-backdrop{
+  position:fixed;
+  inset:0;
+  background:#fff; /* เต็มจอ ไม่มีพื้นที่สีเทา */
+  display:none;
+  align-items:stretch;
+  justify-content:stretch;
+  z-index:80;
+  overflow-y:auto;              /* ✅ ให้เลื่อนในมือถือ/คอมได้แน่นอน */
+  overflow-x:hidden;            /* ✅ กันเลื่อนซ้ายขวา (มือถือ) */
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;
+  padding:0;                    /* กันการดันเลย์เอาต์ */
+}
+
+/* สูตรสำคัญยังคงมี overlay นิดเดียว (เต็มจอเช่นกัน) */
+#formulaModalWrap.modal-backdrop{ background:#fff7ed; }
+
+.modal{
+  position:relative;            /* ✅ ให้การเลื่อนอาศัยตัว backdrop */
+  width:100vw;
+  min-height:100vh;
+  height:auto;
+  max-height:none;
+  overflow:visible;
+  background:#fff;
+  border-radius:0;
+  border:0;
+  box-shadow:none;
+  padding:0;
+}
+
+
+.modal{outline:none; overscroll-behavior:contain;}
+
+/* เว้นขอบข้างให้สบายตา */
+.modal-body{
+  padding:14px 18px 28px 18px;
+  max-width:1100px;
+  margin:0 auto;
+}
+@media (min-width:721px){
+  .modal-body{ padding:16px 22px 32px 22px; }
+}
+
+.modal-header{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px}
+
+/* ===== Top bars (หัวนิ่งแบบ Facebook) ===== */
+.topbar{
+  position:sticky;
+  top:0;
+  z-index:90;
+  width:100%;
+  padding:12px 18px;
+  border-bottom:1px solid rgba(15,23,42,.10);
+  background:#fff;
+}
+@media (max-width:720px){
+  /* quiz timer smaller on mobile */
+  #quizTimerWrap{transform:scale(.7);transform-origin:right top;}
+
+  .topbar{ padding:12px 12px; }
+
+  /* มือถือ: ป้าย “แบบฝึกหัด/สูตรสำคัญ” ให้พื้นหลังโปร่งใส และไม่มีกรอบ */
+  .topbar .pill{ background:transparent; border:0; box-shadow:none; }
+
+  /* Mobile: ensure close button is ABOVE fixed topbar (avoid faded/unclickable) */
+  .close-btn{ z-index:6000 !important; opacity:1 !important; filter:none !important; }
+
+  /* Mobile: quiz badge pill must fully contain the word “แบบฝึกหัด” (no overflow / no wrap) */
+  .topbar.quiz .pill{ background:rgba(255,255,255,.95) !important; border:0 !important; box-shadow:none !important; white-space:nowrap; }
+  .topbar.quiz .pill .label{ white-space:nowrap; }
+  .topbar.quiz .pill{ padding-right: calc(12px + 20px + 60px) !important; }
+
+  /* มือถือ: หน้า “สูตรสำคัญ” ลดปุ่มลิงก์ไปแบบฝึกหัดลงครึ่งหนึ่ง + ขยับซ้าย 70px */
+  #goQuizFromFormulaBtn{ transform:scale(.6); transform-origin:right center; margin-right:70px; }
+
+  /* --- Mobile fix: prevent sideways scroll + keep modal topbar visible --- */
+  html, body{ overflow-x:hidden; }
+  .modal{ overflow-x:hidden; max-width:100vw; }
+  .modal .modal-body{ overflow-x:hidden; max-width:100vw; box-sizing:border-box; }
+
+  /* Keep the green/orange topbar (buttons) visible while scrolling in formula/quiz on mobile */
+  .modal .topbar{ position:fixed; top:0; left:0; right:0; z-index:3000; }
+  .modal .modal-body{ padding-top:92px; } /* reserve space for fixed topbar */
+
+  /* Allow items to wrap instead of forcing horizontal scroll */
+  .topbar-inner{ flex-wrap:nowrap; }
+
+  /* === Mobile fine-tune: Center 'แบบฝึกหัด' text inside white pill + shift buttons === */
+  .topbar.quiz .pill.quiz-pill{ 
+    position: relative;
+    min-width: 230px;              /* ขยายป้ายขาวไปทางขวา */
+    padding-left: 54px;            /* เผื่อที่ไอคอนซ้าย */
+    padding-right: 18px;
+  }
+  .topbar.quiz .pill.quiz-pill svg{
+    position:absolute;
+    left:18px;
+    top:50%;
+    transform:translateY(-50%);
+  }
+  .topbar.quiz .pill.quiz-pill .pill-label{
+    position:absolute;
+    left:50%;
+    top:50%;
+    transform:translate(-50%,-50%);
+    width:100%;
+    text-align:center;
+    padding:0 18px;
+    pointer-events:none;
+  }
+  .topbar.quiz .tbar-right{ transform: translateX(-20px); } /* ปุ่ม สูตร/คิดเลข เลื่อนไปซ้าย 20px */
+
+  /* ===== mobile: จัดป้ายหัวให้กว้างขึ้น และตัวอักษรอยู่กลาง ===== */
+  .badge.quiz-badge{
+    min-width:240px;
+    justify-content:center;
+    padding-left:16px;
+    padding-right:16px;
+  }
+  .badge.quiz-badge svg{margin-right:6px;}
+  .badge.formula-badge{justify-content:center;}
+}
+.topbar.quiz{
+  background:linear-gradient(180deg, rgba(134,239,172,.95), rgba(187,247,208,.85));
+  border-bottom-color:rgba(134,239,172,.95);
+}
+.topbar.formula{
+  background:rgba(254,215,170,.85);
+  border-bottom-color:rgba(253,186,116,.95);
+}
+.topbar .topbar-inner{
+  display:flex; align-items:center; gap:10px;
+  max-width:1100px; margin:0 auto;
+}
+.topbar .pill{
+  display:inline-flex; align-items:center; gap:10px;
+  padding:10px 14px;
+  border-radius:999px;
+  border:1px solid rgba(15,23,42,.10);
+  background:#fff;
+  font-weight:800;
+}
+.topbar .pill svg{width:20px;height:20px;stroke:var(--icon-stroke);fill:none;stroke-width:2}
+
+/* ===== สีไอคอน/ตัวอักษรตามโหมด ===== */
+.topbar.quiz .pill{ color:#2563eb; }
+.topbar.quiz .pill svg{ stroke:#2563eb; }
+
+.topbar.formula .pill{ color:#b91c1c; }
+.topbar.formula .pill svg{ stroke:#b91c1c; }
+
+.badge.formula-badge{ color:#b91c1c; }
+.badge.formula-badge svg{ stroke:#b91c1c; }
+
+/* action buttons on topbar (สูตร + เครื่องคิดเลข) */
+.topbar-actions{margin-left:auto; display:flex; gap:6px; align-items:center;}
+
+.tbar-btn{
+  display:inline-flex; align-items:center; gap:8px;
+  padding:10px 12px;
+  border-radius:999px;
+  border:1px solid rgba(15,23,42,.10);
+  background:rgba(255,255,255,.70);
+  cursor:pointer;
+  font-weight:800;
+  color:var(--ink);
+}
+/* ขอบปุ่มลอย (มาตรฐานสี): สูตร=ส้ม, เครื่องคิดเลข=น้ำเงิน */
+#goFormulaBtn{ border:2px solid #fdba74; }
+#openCalcBtn{ border:2px solid #60a5fa; }
+#goQuizFromFormulaBtn{ border:2px solid rgba(134,239,172,.95); }
+.tbar-btn svg{width:20px;height:20px;stroke:var(--icon-stroke);fill:none;stroke-width:2}
+
+/* สถานะ DEG/RAD (ตัวแดง) */
+.angle-status{
+  color:#b91c1c;
+  font-weight:900;
+  font-size:13px;
+  letter-spacing:.2px;
+}
+
+/* ===== badge ===== */
+.badge{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:3px 10px;border-radius:999px;font-size:12px;
+  border:1px solid rgba(37,99,235,.22);
+  background:rgba(37,99,235,.10);
+  color:var(--ink);
+}
+.badge.formula-badge{
+  background:var(--btn-formula);
+  border-color:var(--btn-formula-b);
+}
+.badge.quiz-badge{
+  background:var(--btn-quiz);
+  border-color:var(--btn-quiz-b);
+}
+
+/* close buttons */
+.close-btn{
+  background:var(--btn-reset);
+  border:1px solid var(--btn-reset-b);
+  border-radius:999px;
+  padding:6px 12px;
+  cursor:pointer;
+  font-size:12px;
+  color:var(--ink);
+}
+.close-btn.quiz-close,
+.close-btn.formula-close,
+.close-btn.calc-close{
+  pointer-events:auto;
+  position:fixed;
+  top:14px;
+  right:14px;
+  z-index:140;
+  padding:10px 14px;
+  font-size:13px;
+  box-shadow:0 12px 24px rgba(15,23,42,.18);
+}
+.close-btn:hover{filter:brightness(0.98)}
+
+/* desktop: ปุ่มปิดขยับซ้าย 20px (เฉพาะคอม) */
+@media (min-width:721px){
+  .close-btn.quiz-close,
+  .close-btn.formula-close,
+  .close-btn.calc-close{ right:34px; }
+}
+
+/* ===== formula mode look (ส้มอ่อนทั้งหน้า + กรอบส้ม) ===== */
+#formulaModalWrap .modal{
+  background:#fff7ed;
+  border:0;
+}
+.formula-card{
+  background:#fff;
+  border:1px solid #fdba74;
+  border-radius:14px;padding:10px 14px;margin-bottom:10px
+}
+.formula-title{font-weight:600;margin-bottom:6px}
+.current-box{
+  background:#fff;border:1px dashed #fb923c;
+  border-radius:12px;padding:8px 10px;margin-top:6px;font-size:13px
+}
+.current-box.orange{
+  background:linear-gradient(135deg,#fff7ed 0%,#fff 85%);
+  border:1px solid #fed7aa;
+}
+.current-box.orange strong{color:#c2410c}
+
+/* quiz */
+.quiz-card{
+  background:linear-gradient(135deg,#fff7ed 0%,#fff 80%);
+  border:1px solid #fed7aa;border-radius:14px;
+  padding:10px 14px;margin-bottom:10px
+}
+.quiz-title{font-weight:700;margin-bottom:6px;color:#2563eb} /* หัวข้อใหญ่สีน้ำเงิน (ค่าเริ่มต้น) */
+.quiz-subtag{
+  display:inline-block;
+  padding:3px 10px;border-radius:999px;
+  font-size:12px;margin-left:6px;
+  background:rgba(187,247,208,.55);
+  border:none; /* ตามที่ขอ: เอาเส้นขอบออก */
+  color:#166534;
+}
+
+.option-list{
+  margin:6px 0 0 22px;
+  padding-left:18px;
+  font-size:13px;
+  line-height:1.55;
+  list-style-type: upper-alpha; /* บังคับให้มี A B C D */
+  list-style-position: outside;
+;list-style-type:upper-alpha;list-style-position:outside;padding-left:20px}
+
+.option-list li{margin-bottom:2px}
+#quizResult{
+  margin-top:10px;background:#ecfccb;border:1px solid #bef264;
+  border-radius:12px;padding:10px 12px;font-size:13px
+}
+.solution{
+  display:none;margin-top:8px;padding:10px 12px;border-radius:12px;
+  border:1px dashed #fecaca;background:#fff1f2;
+  color:#b91c1c;font-size:13px;line-height:1.65
+}
+
+/* ===== Quiz: ปุ่มตรวจคำตอบลอยซ้ายล่าง + เผื่อพื้นที่เลื่อนในมือถือ ===== */
+#checkQuizBtn.quiz-check-fixed{
+  position:fixed;
+  left:14px;
+  bottom:14px;
+  z-index:135;
+  box-shadow:0 12px 24px rgba(15,23,42,.18);
+}
+.quiz-bottom-spacer{height:0;}
+@media (max-width:720px){
+  .quiz-bottom-spacer{height:150px;}
+}
+
+/* ===== Calculator: ปรับเลย์เอาต์มือถือ ===== */
+@media (max-width:720px){
+  /* กันปุ่มโหมดมุมไม่ให้ซ้อนปุ่มปิด */
+  #calcModalWrap .topbar-actions{ padding-right:92px; }
+  /* ทำให้จอเครื่องคิดเลขสั้นลง ~20% */
+  #calcModalWrap .calc-panel{ transform:scale(0.8); transform-origin: top center; }
+  #calcModalWrap .calc-wrap{ padding-top:10px; }
+}
+
+/* ===== Quiz topbar buttons: มือถือลดขนาดปุ่มสูตร/เครื่องคิดเลข ===== */
+@media (max-width:720px){
+  /* มือถือ: ให้ปุ่ม “สูตร” และ “คิดเลข” อยู่บรรทัดเดียวกับ “แบบฝึกหัด” */
+  #quizModalWrap .topbar-inner{ flex-wrap:nowrap; gap:6px; }
+  #quizModalWrap .pill{ padding:8px 10px; gap:8px; flex:1 1 auto; min-width:0; }
+  #quizModalWrap .topbar-actions{ margin-left:auto; gap:6px; padding-right:92px; flex-wrap:nowrap; }
+  #quizModalWrap .tbar-btn{ font-size:10px; padding:6px 8px; border-radius:999px; }
+  #quizModalWrap .tbar-btn svg{ width:16px; height:16px; }
+}
+
+/* กล่องคำแนะนำ (ไม่มีหัวข้อ “หัวข้อแบบฝึกหัด”) */
+.quiz-hint{
+  background:rgba(187,247,208,.55);
+  border:0;
+  border-radius:14px;
+  padding:10px 12px;
+  margin:2px 0 12px 0;
+  color:#166534;
+  font-size:12px; /* มือถือดีแล้ว */
+  line-height:1.5;
+}
+@media (min-width:721px){
+  .quiz-hint{ font-size:14px; } /* คอม: 14px */
+}
+
+/* ===== Timer: ใต้ปุ่มปิด, เฉพาะตัวเลข ไม่มีพื้นหลัง/กรอบ ===== */
+#quizTimerWrap{
+  pointer-events:auto;
+  position:fixed;
+  top:62px; right:14px;
+  z-index:130;
+  display:none;
+  align-items:center;gap:8px;
+  background:transparent;
+  border:0;
+  border-radius:999px;
+  padding:0;
+  box-shadow:none;
+}
+#quizTimerText{
+  font-variant-numeric:tabular-nums;
+  font-size:13px;
+  color:var(--ink);
+  min-width:54px;
+  text-align:right;
+}
+#quizTimerBtn{
+  width:32px;height:32px;border-radius:999px;
+  border:1px solid rgba(15,23,42,.18);
+  background:transparent;cursor:pointer;
+  display:grid;place-items:center;
+}
+
+#quizTimerBtn svg{
+  width:18px;height:18px;
+  stroke:var(--icon-stroke); fill:none;
+  stroke-width:2;
+  stroke-linecap:round; stroke-linejoin:round;
+  transform: translateX(-1.2px); /* แก้เยื้องขวาให้อยู่กลางวง */
+}
+
+/* mobile */
+@media (max-width:720px){
+  body{padding:8px;gap:6px;}
+  #sim{
+    width:100%;height:auto;
+    transform:none;
+    transform-origin: center top;
+    display:block;
+    margin-bottom:48px;
+  }
+  .controls{
+    grid-template-columns:100px 1fr 70px;gap:4px;font-size:14px;
+    width:calc(100% - 4vw);
+    margin-top:0;
+  }
+  .controls input[type=number]{font-size:14px}
+  button{font-size:15px;padding:8px 10px}
+  .bottom-controls{
+    display:grid;grid-template-columns:1fr 1fr;gap:6px;justify-items:stretch;
+    width:calc(100% - 4vw);
+  }
+  .close-btn.quiz-close,.close-btn.formula-close,.close-btn.calc-close{ top:12px; right:12px; }
+  #quizTimerWrap{
+  pointer-events:auto;
+  position:fixed;
+  top:62px; right:14px;
+  z-index:130;
+  display:none;
+  align-items:center;gap:8px;
+  background:transparent;
+  border:0;
+  border-radius:999px;
+  padding:0;
+  box-shadow:none;
+}
+}
+
+/* ===== Calculator ===== */
+.calc-wrap{
+  max-width:560px;margin:0 auto;
+}
+.calc-panel{
+  background:#fff;border:1px solid var(--line);border-radius:16px;
+  box-shadow:0 12px 24px rgba(15,23,42,.10);
+  overflow:hidden;
+}
+.calc-display{
+  padding:14px 14px;
+  border-bottom:1px solid var(--line);
+  background:#f8fafc;
+}
+.calc-display input{
+  width:100%;
+  font-size:18px;
+  padding:10px 12px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  outline:none;
+}
+
+/* ช่องแสดงผลลัพธ์ (ตัวเลขสีแดง) ใต้ช่องโจทย์ */
+.calc-topout{
+  margin-top:8px;
+  padding:10px 12px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:#fff;
+  font-variant-numeric:tabular-nums;
+  font-weight:900;
+  color:#b91c1c;
+}
+.calc-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:8px;
+  padding:12px;
+}
+.calc-key{
+  padding:12px 10px;
+  border-radius:12px;
+  border:1px solid var(--line);
+  background:#fff;
+  cursor:pointer;
+  font-weight:800;
+}
+.calc-key:active{transform:translateY(1px)}
+.calc-small{font-weight:700;font-size:12px;color:var(--muted);margin-top:8px}
+
+@media (max-width:720px){
+  /* เครื่องคิดเลข: เตี้ยลง 20% (เฉพาะมือถือ) */
+  #calcModalWrap .modal{ height:80vh; top:0; bottom:auto; }
+  .calc-mode-btn{ right:72px; }
+  /* หน้าสูตร: เผื่อพื้นที่ล่างสุดสำหรับเลื่อนอ่าน */
+  #formulaModalWrap .modal-body{ padding-bottom:180px; }
+}
+
+@media (min-width:721px){
+  .close-btn.quiz-close{ right:34px; } /* เลื่อนไปซ้าย 20px (เดิม 14px) */
+}
+
+@media (max-width:720px){
+  /* ===== Topbar actions (มือถือ) ===== */
+  .topbar-inner{
+    gap:10px;
+    flex-wrap:nowrap;
+    justify-content:space-between;
+  }
+  .topbar .pill{
+    padding:10px 12px;
+    font-size:18px;
+    white-space:nowrap;
+    flex:0 0 auto;
+  }
+  .topbar-actions{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex:0 0 auto;
+  }
+  .tbar-btn, .tbar-btn *{
+    white-space:nowrap; /* กันคำว่า 'คิดเลข' / 'แบบฝึกหัด' แตกบรรทัด */
+  }
+
+  /* ===== สูตรสำคัญ: ปุ่มไปแบบฝึกหัดต้องอยู่ซ้ายชิดป้ายสูตร (เฉพาะมือถือ) ===== */
+  #formulaModalWrap .topbar-inner{ justify-content:flex-start; }
+  .topbar-actions.formula-actions{
+    position:static;
+    margin-left:10px;
+    transform:scale(.5);
+    transform-origin:left center;
+  }
+}
+
+@media (max-width:720px){
+  /* โหมดมุมในเครื่องคิดเลข ไม่ทับปุ่มปิด */
+  .topbar-actions.calc-actions{ position:fixed; top:12px; right:76px; z-index:145; }
+}
+
+  /* เว้นท้ายหน้าเพื่อเลื่อนเห็นช้อยล่าง */
+  #quizModalWrap .modal-body{ padding-bottom:180px !important; }
+  #formulaModalWrap .modal-body{ padding-bottom:180px !important; }
+
+
+/* Calculator results in red */
+#calcTopOut{color:#b91c1c;font-weight:800}
+#calcOut{color:#b91c1c;font-weight:800}
+
+@media (max-width:720px){
+  /* นาฬิกา (หน้าแบบฝึกหัด) ลดขนาดเหลือ 70% เฉพาะมือถือ */
+  #quizTimerWrap{ transform:scale(0.7); transform-origin: top right; }
+
+  /* แถบเครื่องคิดเลข/ปุ่มในหน้าเครื่องคิดเลข ให้ยึดบนสุดของการ์ด */
+  .calc-actions{ position:sticky; top:0; z-index:10; background:#f1f5f9; padding-top:10px; padding-bottom:10px; }
+
+  /* คำแนะนำใต้เครื่องคิดเลข (มือถือ) ขยับขึ้นเล็กน้อย */
+  #calcHint{ margin-top:-50px !important; }
+}
+
+/* calc mobile tweaks */
+@media (max-width:720px){
+  /* นาฬิกา (หน้าแบบฝึกหัด) ลดขนาดเหลือ 70% เฉพาะมือถือ */
+  #quizTimerWrap{ transform:scale(.7); transform-origin: right top; }
+
+  /* calculator: hint higher + keep within view */
+  #calcHint{ margin-top:-42px; }
+
+  /* ensure close button sits on grey topbar area */
+  #calcModalWrap .topbar{ padding-bottom:10px; }
+
+  /* keep topbar items on one row */
+  .topbar .topbar-inner{ flex-wrap:nowrap; }
+
+  /* ===== mobile quiz header (ตามที่สั่งล่าสุด) ===== */
+  /* ขยับปุ่ม “สูตร” และ “คิดเลข” ไปทางขวา 10px (เฉพาะในหน้าแบบฝึกหัด) */
+  #quizModalWrap .topbar-actions{ transform: translateX(10px); }
+  /* ทำให้กรอบป้าย “แบบฝึกหัด” กว้างขึ้นอีก 20px เพื่อไม่ให้ข้อความล้น */
+  #quizModalWrap .pill{ padding-right: calc(12px + 20px); }
+
+  /* ===== mobile formula header ===== */
+  /* ปุ่มลิ้งค์ไปแบบฝึกหัดในหน้าสูตร: โตขึ้น 1.2 เท่า (เฉพาะมือถือ) */
+  .topbar-actions.formula-actions{ transform: scale(1.2); transform-origin: left center; }
+}
+
+/* =========================================================
+   MOBILE ONLY FIX (Requested)
+   1) Quiz page: ลดตัวอักษรคำว่า "แบบฝึกหัด" ลง 5px
+   2) Formula page: ขยายปุ่ม "แบบฝึกหัด" 1.2 เท่า
+   ========================================================= */
+@media (max-width:720px){
+  /* หน้าแบบฝึกหัด */
+  #quizModalWrap .quiz-title{
+    font-size: calc(100% - 5px) !important;
+  }
+
+  /* หน้าสูตรสำคัญ */
+  #formulaModalWrap #goQuizBtn{
+    transform: scale(1.2) !important;
+  }
+}
+
+
+
+/* ===== Mini Lab only: คงรูปแบบเดิม แต่เหลือปุ่ม เริ่ม/รีเซ็ต ===== */
+.bottom-controls.mini-only{justify-content:center}
+.bottom-controls.mini-only button{min-width:150px}
+@media (max-width:720px){
+  .bottom-controls.mini-only{grid-template-columns:1fr 1fr}
+  .bottom-controls.mini-only button{width:100%}
+}
+
+</style>
+
+<!-- MathJax (MathJax rendering) -->
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath: [['\\(','\\)'], ['$', '$']],
+      displayMath: [['\\[','\\]'], ['$$','$$']]
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] }
+  };
+</script>
+<script id="MathJax-script" defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+
+<body>
+
+<h2 style="margin:4px 0 0;color:#2563eb">Mini Lab: สปริงดันกล่อง + พื้น AB สั้น + ทางโค้งลื่น</h2>
+<p style="font-size:12px;color:var(--muted);margin:0">• ลากกล่องไปกดสปริงแล้วปล่อย • </p>
+
+<canvas id="sim" width="960" height="520"></canvas>
+
+<section class="controls">
+  <div>k (N/m)</div><input type="range" id="kRange" min="10" max="1000" step="10" value="120"><input type="number" id="kNum" min="10" max="1000" step="10" value="120">
+  <div>x₀ (m)</div><input type="range" id="xRange" min="0" max="0.55" step="0.005" value="0.00"><input type="number" id="xNum" min="0" max="0.55" step="0.005" value="0.00">
+  <div>m (kg)</div><input type="range" id="mRange" min="0.1" max="50" step="0.1" value="5"><input type="number" id="mNum" min="0.1" max="50" step="0.1" value="5">
+  <div>μₖ (บน AB)</div><input type="range" id="muRange" min="0" max="1" step="0.01" value="0.00"><input type="number" id="muNum" min="0" max="1" step="0.01" value="0.00">
+</section>
+
+<div class="bottom-controls mini-only">
+  <!-- PLAY/PAUSE -->
+  <button id="playBtn">
+    <span class="btn-ico">
+      <svg id="playIcon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M7 5l12 7-12 7z"></path>
+      </svg>
+      <span id="playText">เริ่ม</span>
+    </span>
+  </button>
+
+  <!-- RESET: ลูกศรวนทวนเข็ม -->
+  <button id="resetBtn">
+    <span class="btn-ico">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M3 12a9 9 0 0 1 15.4-6.4"></path>
+        <path d="M18 3v4h-4"></path>
+        <path d="M21 12a9 9 0 0 1-15.4 6.4"></path>
+      </svg>
+      รีเซ็ต
+    </span>
+  </button>
+</div>
+
+<p style="font-size:13px;margin:4px 0 0 0;color:#0f172a">
+  ศึกษาเพิ่มเติมที่
+  <a class="link" href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener noreferrer">เพจคลายปมฟิสิกส์</a>
+</p>
+
+<!-- สูตรสำคัญ Modal -->
+<div id="formulaModalWrap" class="modal-backdrop">
+  <div class="modal" tabindex="0">
+    <div class="topbar formula">
+      <div class="topbar-inner">
+        <div class="pill">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 5H8l6 7-6 7h9"></path></svg>
+          สูตรสำคัญ
+        </div>
+        <div class="topbar-actions">
+<button class="tbar-btn" id="goQuizFromFormulaBtn" title="ไปหน้าแบบฝึกหัด">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 3v3"></path><path d="M10 3v3"></path><path d="M14 3v3"></path><path d="M18 3v3"></path>
+              <path d="M5 6h14v15H5z"></path>
+              <path d="M8 10h8"></path><path d="M8 13h8"></path><path d="M8 16h6"></path>
+            </svg>
+            แบบฝึกหัด
+          </button>
+        </div>
+</div>
+    </div>
+    <button id="formulaCloseBtn" class="close-btn formula-close" data-close="formulaModalWrap">ปิด</button>
+    <div class="modal-body">
+      <!-- ตัดหัวข้อซ้ำซ้อน (ไม่มี badge "สูตรสำคัญ" ซ้ำในเนื้อหาแล้ว) -->
+      <h3 style="margin:6px 0 10px 0;font-size:15px;">งาน–พลังงาน ในชุดทดลองนี้</h3>
+      <div id="formulaContent"></div>
+    </div>
+  </div>
+</div>
+
+<!-- แบบฝึกหัด Modal -->
+<div id="quizModalWrap" class="modal-backdrop">
+  <div class="modal" tabindex="0">
+    <div class="topbar quiz">
+      <div class="topbar-inner">
+        <div class="pill">
+          <!-- ใช้ไอคอนเดียวกับปุ่ม “แบบฝึกหัด” -->
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 3v3"></path>
+            <path d="M10 3v3"></path>
+            <path d="M14 3v3"></path>
+            <path d="M18 3v3"></path>
+            <path d="M5 6h14v15H5z"></path>
+            <path d="M8 10h8"></path>
+            <path d="M8 13h8"></path>
+            <path d="M8 16h6"></path>
+            <path d="M14.5 14.5l5-5 1.5 1.5-5 5-2.2.7z"></path>
+            <path d="M18.8 9.8l1.5 1.5"></path>
+          </svg>
+          แบบฝึกหัด
+        </div>
+
+        <div class="topbar-actions">
+          <button class="tbar-btn" id="goFormulaBtn" title="ไปหน้าสูตรสำคัญ" aria-label="go-formula">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 5H8l6 7-6 7h9"></path></svg>
+            สูตร
+          </button>
+          <button class="tbar-btn" id="openCalcBtn" title="เครื่องคิดเลขวิทยาศาสตร์" aria-label="open-calc">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M7 3h10v18H7z"></path>
+              <path d="M9 7h6"></path>
+              <path d="M9 11h2"></path><path d="M13 11h2"></path>
+              <path d="M9 15h2"></path><path d="M13 15h2"></path>
+              <path d="M9 19h6"></path>
+            </svg>
+            คิดเลข
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <button id="quizCloseBtn" class="close-btn quiz-close" data-close="quizModalWrap">ปิด</button>
+
+    <div class="modal-body">
+      <div id="quizContent"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Calculator Modal -->
+<div id="calcModalWrap" class="modal-backdrop">
+  <div class="modal" tabindex="0">
+    <div class="topbar" style="background:#f1f5f9">
+      <div class="topbar-inner">
+        <div class="pill">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M7 3h10v18H7z"></path>
+            <path d="M9 7h6"></path>
+            <path d="M9 11h2"></path><path d="M13 11h2"></path>
+            <path d="M9 15h2"></path><path d="M13 15h2"></path>
+            <path d="M9 19h6"></path>
+          </svg>
+          เครื่องคิดเลข
+        </div>
+        <div class="topbar-actions">
+          <span id="calcAngleStatus" class="angle-status">DEG (องศา)</span>
+          <button class="tbar-btn" id="calcAngleBtn" title="สลับหน่วยมุม (DEG/RAD)">DEG</button>
+        </div>
+
+      </div>
+    </div>
+    <button class="close-btn calc-close" data-close="calcModalWrap">ปิด</button>
+
+    <div class="modal-body">
+      <div class="calc-wrap">
+        <div class="calc-panel">
+          <div class="calc-display">
+            <div id="calcTopOut" class="calc-topout"></div>
+            <input id="calcInput" type="text" inputmode="text" placeholder="เช่น: 2*(3+4), sqrt(5), sin(30deg)" />
+
+        <div id="calcResult" class="calc-result">= <span id="calcResultNum">0.00</span></div>
+</div>
+          <div class="calc-grid">
+            <button class="calc-key" data-k="7">7</button>
+            <button class="calc-key" data-k="8">8</button>
+            <button class="calc-key" data-k="9">9</button>
+            <button class="calc-key" data-k="DEL">DEL</button>
+
+            <button class="calc-key" data-k="4">4</button>
+            <button class="calc-key" data-k="5">5</button>
+            <button class="calc-key" data-k="6">6</button>
+            <button class="calc-key" data-k="*">*</button>
+
+            <button class="calc-key" data-k="1">1</button>
+            <button class="calc-key" data-k="2">2</button>
+            <button class="calc-key" data-k="3">3</button>
+            <button class="calc-key" data-k="-">-</button>
+
+            <button class="calc-key" data-k="0">0</button>
+            <button class="calc-key" data-k=".">.</button>
+            <button class="calc-key" data-k="+">+</button>
+            <button class="calc-key" data-k="/">/</button>
+
+            <button class="calc-key" data-k="(">(</button>
+            <button class="calc-key" data-k=")">)</button>
+            <button class="calc-key" data-k="^">^</button>
+            <button class="calc-key" data-k="sqrt(">√</button>
+
+            <button class="calc-key" data-k="sin(">sin</button>
+            <button class="calc-key" data-k="cos(">cos</button>
+            <button class="calc-key" data-k="tan(">tan</button>
+            <button class="calc-key" data-k="pi">π</button>
+
+            <button class="calc-key" data-k="log10(">log</button>
+            <button class="calc-key" data-k="ln(">ln</button>
+            <button class="calc-key" data-k="e">e</button>
+            <button class="calc-key" data-k="C">C</button>
+
+            <button class="calc-key" style="grid-column:span 4;background:#22c55e;color:#fff;border-color:#22c55e" data-k="=">=</button>
+          </div>
+        </div>
+        <!-- คงไว้สำหรับดีบัก แต่ซ่อน (ใช้ช่องผลลัพธ์ใต้ช่องโจทย์แทน) -->
+        <div id="calcOut" style="display:none"></div>
+        <div id="calcHint" class="calc-small" style="margin-top:8px;"></div>
+</div>
+    </div>
+  </div>
+</div>
+
+<!-- Timer -->
+<div id="quizTimerWrap" aria-label="timer">
+  <div id="quizTimerText">00:00</div>
+  <button id="quizTimerBtn" title="เริ่ม/หยุด นาฬิกา" aria-label="start-stop">
+    <svg id="quizTimerIcon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M7 5l12 7-12 7z"></path>
+    </svg>
+  </button>
+</div>
+
+<script>
+/* ========= Canvas sim ========= */
+const canvas=document.getElementById('sim'),ctx=canvas.getContext('2d');
+const playBtn=document.getElementById('playBtn');
+const playText=document.getElementById('playText');
+const playIcon=document.getElementById('playIcon');
+const resetBtn=document.getElementById('resetBtn');
+
+const kRange=document.getElementById('kRange'),kNum=document.getElementById('kNum');
+const xRange=document.getElementById('xRange'),xNum=document.getElementById('xNum');
+const mRange=document.getElementById('mRange'),mNum=document.getElementById('mNum');
+const muRange=document.getElementById('muRange'),muNum=document.getElementById('muNum');
+
+const formulaBtn=document.getElementById('formulaBtn');
+const quizBtn=document.getElementById('quizBtn');
+
+const timerWrap=document.getElementById('quizTimerWrap');
+const timerText=document.getElementById('quizTimerText');
+const timerBtn=document.getElementById('quizTimerBtn');
+const timerIcon=document.getElementById('quizTimerIcon');
+
+const W=canvas.width,H=canvas.height,g=9.81,m2px=300,
+      groundY=H-100,wallX=80,springRest_m=0.6,plateW=10,plateH=80;
+
+const A_px=wallX+springRest_m*m2px+plateW+2,
+      flatLen_m=0.9,flatEnd_px=A_px+flatLen_m*m2px,
+      Rm=0.5,curveCenterX=flatEnd_px,curveCenterY=groundY-Rm*m2px+1;
+
+let params={k:120,x0:0,m:5,mu:0.0};
+let state='idle';
+let x=-params.x0,v=0;
+let blockX_px=A_px,blockY_px=groundY-40;
+let curveTheta=0,curveV=0;
+let lastT=0,raf=null;
+let maxHeight_m=0,stopDist_m=null;
+let isRunning=false;
+
+const HUD={x:16,y:120,w:230,h:130,r:12};
+let draggingHUD=false,dragHUD_dx=0,dragHUD_dy=0;
+let draggingBlock=false;
+
+function clamp01(t){return Math.min(1,Math.max(0,t))}
+function springLineWidthFromK(k){const t=clamp01((k-10)/(1000-10));return 1.4+t*(6-1.4)}
+function blockSizeFromM(m){const t=clamp01((m-0.1)/(50-0.1));return 26+t*(66-26)}
+
+/* ===== ไอคอนเริ่ม/หยุด: ▶️ ขาวทึบ / ⏸ ขาว (เส้นบางลง ~70%) ===== */
+function setPlayVisual(running){
+  if(running){
+    playText.textContent='หยุด';
+    playIcon.classList.add('pause');
+    playIcon.innerHTML = '<path d="M8 5v14"></path><path d="M16 5v14"></path>';
+    playIcon.style.fill = 'none';
+    playIcon.style.stroke = '#fff';
+    playIcon.style.strokeWidth = '2.8';   // ~70%
+    playIcon.style.strokeLinecap = 'round';
+  }else{
+    playText.textContent='เริ่ม';
+    playIcon.classList.remove('pause');
+    playIcon.innerHTML = '<path d="M8 5l12 7-12 7z"></path>';
+    playIcon.style.stroke = 'none';
+    playIcon.style.fill = '#fff';
+    playIcon.style.strokeWidth = '';
+  }
+}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+
+  // พื้นหลัก
+  ctx.fillStyle='#d1d5db';
+  ctx.fillRect(wallX,groundY,W-wallX,4);
+
+  // พื้น AB
+  ctx.fillStyle='#fdebd3';
+  ctx.fillRect(A_px,groundY+4,flatEnd_px-A_px,10);
+
+  // ป้าย AB
+  ctx.fillStyle='#0f172a';
+  ctx.font='16px system-ui';
+  const midAB=(A_px+flatEnd_px)/2;
+  ctx.fillText('μₖ (AB) = '+params.mu.toFixed(3),midAB-60,groundY+28);
+  ctx.fillText('AB = 0.90 m',midAB-35,groundY+42);
+
+  // โค้ง
+  ctx.strokeStyle='#0f172a';
+  ctx.lineWidth=2;
+  ctx.beginPath();
+  ctx.arc(curveCenterX,curveCenterY,Rm*m2px,Math.PI/2,0,true);
+  ctx.stroke();
+
+  ctx.fillStyle='#0f172a';
+  ctx.font='18px system-ui';
+  ctx.fillText('A',A_px-10,groundY+28);
+  ctx.fillText('B',flatEnd_px-5,groundY+28);
+  ctx.fillText('โค้งลื่น',flatEnd_px+140,groundY-50);
+
+  // ผนัง
+  ctx.fillStyle='#111827';
+  ctx.fillRect(wallX-50,groundY-160,50,164);
+
+  // สปริง
+  const L=(springRest_m+x)*m2px;
+  const springY=groundY-plateH/2;
+  ctx.strokeStyle='#111827';
+  ctx.lineWidth=springLineWidthFromK(params.k);
+  ctx.beginPath();
+  ctx.moveTo(wallX,springY);
+  for(let i=1;i<=9;i++){
+    const t=i/9;
+    const xx=wallX+t*L;
+    const yy=springY+(i%2?-15:15);
+    ctx.lineTo(xx,yy);
+  }
+  ctx.lineTo(wallX+L,springY);
+  ctx.stroke();
+
+  // แผ่นยัน
+  ctx.fillStyle='#1d4ed8';
+  ctx.fillRect(wallX+L,groundY-plateH,plateW,plateH);
+
+  // กล่อง
+  const bSize=blockSizeFromM(params.m);
+  if(state==='curve'){
+    ctx.save();
+    ctx.translate(blockX_px,blockY_px);
+    ctx.rotate(-curveTheta);
+    ctx.fillStyle='#b45309';
+    ctx.fillRect(-bSize/2,-bSize,bSize,bSize);
+    ctx.restore();
+  }else{
+    ctx.fillStyle='#b45309';
+    ctx.fillRect(blockX_px,groundY-bSize,bSize,bSize);
+  }
+
+  // HUD
+  const px=HUD.x,py=HUD.y,pw=HUD.w,ph=HUD.h,r=HUD.r;
+  ctx.fillStyle='rgba(255,255,255,.9)';
+  ctx.strokeStyle='#e5e7eb';
+  ctx.beginPath();
+  ctx.moveTo(px+r,py);
+  ctx.arcTo(px+pw,py,px+pw,py+ph,r);
+  ctx.arcTo(px+pw,py+ph,px,py+ph,r);
+  ctx.arcTo(px,py+ph,px,py,r);
+  ctx.arcTo(px,py,px+pw,py,r);
+  ctx.closePath();ctx.fill();ctx.stroke();
+
+  ctx.fillStyle='#0f172a';
+  ctx.font='17px system-ui';
+  let yy=py+26;
+  ctx.fillText('k = '+params.k.toFixed(0)+' N/m',px+10,yy);yy+=24;
+  ctx.fillText('μₖ (AB) = '+params.mu.toFixed(3),px+10,yy);yy+=24;
+  ctx.fillText('h_max บนโค้ง = '+(Number.isFinite(maxHeight_m)?maxHeight_m.toFixed(3):'—')+' m',px+10,yy);yy+=24;
+  ctx.fillText('หยุดห่าง A = '+(stopDist_m!=null?stopDist_m.toFixed(3):'—')+' m',px+10,yy);
+}
+
+function step(ts){
+  if(!isRunning){draw();return;}
+  if(!lastT) lastT=ts;
+  const dt=Math.min(0.033,(ts-lastT)/1000);
+  lastT=ts;
+  const plateX=wallX+springRest_m*m2px+plateW+2;
+
+  if(state==='contact'){
+    const a=-(params.k/params.m)*x;
+    v+=a*dt;
+    x+=v*dt;
+    blockX_px=wallX+(springRest_m+x)*m2px+plateW+2;
+
+    if(x>=0){
+      x=0;
+      blockX_px=wallX+springRest_m*m2px+plateW+2;
+      state='flat';
+    }
+  }else if(state==='flat'){
+    blockX_px+=v*dt*m2px;
+
+    if(params.mu>0 && Math.abs(v)>0){
+      const a_f=-params.mu*g*Math.sign(v);
+      const vPrev=v;
+      v+=a_f*dt;
+      if(Math.sign(vPrev)!==Math.sign(v)) v=0;
+    }
+
+    if(v>0 && blockX_px>=flatEnd_px-2){
+      state='curve';
+      curveTheta=0;
+      curveV=v;
+      blockX_px=curveCenterX+Rm*m2px*Math.sin(curveTheta);
+      blockY_px=curveCenterY+Rm*m2px*Math.cos(curveTheta);
+    }
+
+    if(v<0 && blockX_px<=plateX){
+      const diff_m=(plateX-blockX_px)/m2px;
+      x=-diff_m;
+      state='contact';
+    }
+
+    if(params.mu>0 && Math.abs(v)<0.003 && blockX_px>plateX+2 && blockX_px<flatEnd_px-2){
+      state='stopped';
+      stopDist_m=(blockX_px-A_px)/m2px;
+      v=0;
+    }
+  }else if(state==='curve'){
+    const a_t=-g*Math.sin(curveTheta);
+    curveV+=a_t*dt;
+    curveTheta+=(curveV/Rm)*dt;
+
+    if(curveTheta>Math.PI/2){
+      curveTheta=Math.PI/2;
+      if(curveV>0) curveV=-curveV;
+    }
+
+    blockX_px=curveCenterX+Rm*m2px*Math.sin(curveTheta);
+    blockY_px=curveCenterY+Rm*m2px*Math.cos(curveTheta);
+
+    const h_m=Rm*(1-Math.cos(curveTheta));
+    if(h_m>maxHeight_m) maxHeight_m=h_m;
+
+    if(curveTheta<=0 && curveV<0){
+      state='flat';
+      v=curveV;
+      blockX_px=flatEnd_px;
+      blockY_px=groundY-blockSizeFromM(params.m);
+    }
+  }
+
+  draw();
+  raf=requestAnimationFrame(step);
+}
+
+function togglePlay(){
+  if(!isRunning){
+    if(['idle','drag','stopped'].includes(state)){
+      if(params.x0>0){
+        x=-params.x0;v=0;state='contact';
+        maxHeight_m=0;stopDist_m=null;
+      }
+    }
+    isRunning=true;
+    setPlayVisual(true);
+    lastT=0;
+    raf=requestAnimationFrame(step);
+  }else{
+    isRunning=false;
+    setPlayVisual(false);
+    cancelAnimationFrame(raf);
+    draw();
+  }
+}
+
+function resetSim(){
+  isRunning=false;
+  cancelAnimationFrame(raf);
+  params={k:120,x0:0,m:5,mu:0.0};
+  x=0;v=0;state='idle';
+  blockX_px=A_px;blockY_px=groundY-blockSizeFromM(params.m);
+  maxHeight_m=0;stopDist_m=null;
+  HUD.x=16;HUD.y=120;
+  setPlayVisual(false);
+  kRange.value=kNum.value=120;
+  xRange.value=xNum.value=0;
+  mRange.value=mNum.value=5;
+  muRange.value=muNum.value=0;
+  draw();
+}
+playBtn.addEventListener('click',togglePlay);
+resetBtn.addEventListener('click',resetSim);
+
+function bind(rEl,nEl,key){
+  const apply=v=>{
+    let f=parseFloat(v);
+    if(key==='x0') f=Math.max(0,Math.min(0.55,f));
+    if(key==='k') f=Math.max(10,Math.min(1000,f));
+    if(key==='m') f=Math.max(0.1,Math.min(50,f));
+    if(key==='mu') f=Math.max(0,Math.min(1,f));
+    params[key]=f;
+    rEl.value=f;nEl.value=f;
+    if(key==='x0' && (state==='idle'||state==='stopped'||state==='drag')){
+      x=-params.x0;
+      blockX_px=wallX+(springRest_m+x)*m2px+plateW+2;
+    }
+    draw();
+  };
+  rEl.addEventListener('input',e=>apply(e.target.value));
+  nEl.addEventListener('change',e=>apply(e.target.value));
+}
+bind(kRange,kNum,'k');
+bind(xRange,xNum,'x0');
+bind(mRange,mNum,'m');
+bind(muRange,muNum,'mu');
+
+function onHUD(mx,my){return mx>=HUD.x&&mx<=HUD.x+HUD.w&&my>=HUD.y&&my<=HUD.y+HUD.h}
+function onBlock(mx,my){
+  const s=blockSizeFromM(params.m);
+  return mx>=blockX_px-8&&mx<=blockX_px+s+8&&my>=groundY-s-8&&my<=groundY+8;
+}
+function getScaledXY(e){
+  const r=canvas.getBoundingClientRect();
+  const scaleX=canvas.width/r.width;
+  const scaleY=canvas.height/r.height;
+  return {mx:(e.clientX-r.left)*scaleX,my:(e.clientY-r.top)*scaleY};
+}
+canvas.addEventListener('pointerdown',e=>{
+  const {mx,my}=getScaledXY(e);
+  if(onHUD(mx,my)){
+    draggingHUD=true;
+    dragHUD_dx=mx-HUD.x;
+    dragHUD_dy=my-HUD.y;
+    canvas.setPointerCapture(e.pointerId);
+    return;
+  }
+  if(onBlock(mx,my) && (state==='idle'||state==='stopped')){
+    draggingBlock=true;
+    state='drag';
+    canvas.setPointerCapture(e.pointerId);
+    return;
+  }
+});
+canvas.addEventListener('pointermove',e=>{
+  const {mx,my}=getScaledXY(e);
+  if(draggingHUD){
+    HUD.x=Math.min(W-HUD.w-6,Math.max(6,mx-dragHUD_dx));
+    HUD.y=Math.min(H-HUD.h-6,Math.max(6,my-dragHUD_dy));
+    draw(); return;
+  }
+  if(draggingBlock){
+    const plateX=wallX+springRest_m*m2px+plateW+2;
+    let bx=Math.min(plateX,mx);
+    const maxCompress_px=0.55*m2px;
+    const minX=plateX-maxCompress_px;
+    bx=Math.max(minX,bx);
+    blockX_px=bx;
+    const diff_m=(plateX-blockX_px)/m2px;
+    params.x0=diff_m;
+    xRange.value=xNum.value=diff_m.toFixed(3);
+    x=-diff_m;
+    draw(); return;
+  }
+});
+canvas.addEventListener('pointerup',e=>{
+  if(draggingHUD){ draggingHUD=false; canvas.releasePointerCapture(e.pointerId); return; }
+  if(draggingBlock){ draggingBlock=false; canvas.releasePointerCapture(e.pointerId); togglePlay(); return; }
+});
+canvas.addEventListener('pointercancel',()=>{draggingHUD=false;draggingBlock=false});
+
+/* ========= Modal helpers ========= */
+function showModal(id){
+  document.body.classList.add('modal-open');
+  document.getElementById(id).style.display='flex';
+}
+function hideModal(id){
+  document.getElementById(id).style.display='none';
+  if(!document.querySelector('.modal-backdrop[style*="display: flex"]')){
+    document.body.classList.remove('modal-open');
+  }
+}
+function showTimer(show){ timerWrap.style.display = show ? 'flex' : 'none'; }
+
+document.querySelectorAll('.close-btn').forEach(btn=>{
+  btn.addEventListener('click',e=>{
+    const id=e.currentTarget.getAttribute('data-close');
+    if(id){ hideModal(id); }
+    if(id==='quizModalWrap'){ showTimer(false); }
+  });
+});
+
+// แตะพื้นที่พื้นหลังเพื่อปิด (ไม่โดนตอนแตะใน modal)
+document.querySelectorAll('.modal-backdrop').forEach(wrap=>{
+  wrap.addEventListener('click',(e)=>{
+    if(e.target===wrap){
+      hideModal(wrap.id);
+      if(wrap.id==='quizModalWrap'){ showTimer(false); }
+    }
+  }, {passive:true});
+});
+
+/* ========= ปุ่มลอยบนแถบหัว (สูตร/เครื่องคิดเลข/สลับหน้า) ========= */
+const goFormulaBtn = document.getElementById('goFormulaBtn');
+const openCalcBtn = document.getElementById('openCalcBtn');
+const goQuizFromFormulaBtn = document.getElementById('goQuizFromFormulaBtn');
+const goFormulaFromCalcBtn = document.getElementById('goFormulaFromCalcBtn');
+const goQuizFromCalcBtn = document.getElementById('goQuizFromCalcBtn');
+
+function openQuizFromAnywhere(){
+  hideModal('formulaModalWrap');
+  hideModal('calcModalWrap');
+  // ใช้ปุ่มเดิมเพื่อสร้างเนื้อหาแบบฝึกหัดให้ครบทุกครั้ง
+  quizBtn.click();
+}
+function openFormulaFromAnywhere(){
+  hideModal('quizModalWrap');
+  hideModal('calcModalWrap');
+  formulaBtn.click();
+}
+function openCalcFromAnywhere(){
+  showTimer(false);
+  hideModal('quizModalWrap');
+  hideModal('formulaModalWrap');
+  showCalcModal(); // เปิดเครื่องคิดเลข
+}
+
+if(goFormulaBtn) goFormulaBtn.addEventListener('click', openFormulaFromAnywhere);
+if(openCalcBtn) openCalcBtn.addEventListener('click', openCalcFromAnywhere);
+if(goQuizFromFormulaBtn) goQuizFromFormulaBtn.addEventListener('click', openQuizFromAnywhere);
+if(goFormulaFromCalcBtn) goFormulaFromCalcBtn.addEventListener('click', openFormulaFromAnywhere);
+if(goQuizFromCalcBtn) goQuizFromCalcBtn.addEventListener('click', openQuizFromAnywhere);
+
+/* ========= สูตรสำคัญ ========= */
+const gConst=9.81;
+if(formulaBtn) formulaBtn.addEventListener('click',()=>{
+  renderFormula();
+  showModal('formulaModalWrap');
+});
+function renderFormula(){
+  const k=params.k,x0=params.x0,m=params.m,mu=params.mu;
+  const v0=Math.sqrt(k/m)*x0;
+  const h_max=(v0*v0)/(2*gConst);
+  let s_stop=null;
+  if(mu>0){s_stop=(v0*v0)/(2*mu*gConst);}
+
+  const html=`
+  <div class="formula-card">
+    <div class="formula-title">สมการงาน–พลังงาน</div>
+    <p>\\( W = \\Delta E \\)</p>
+
+    <div class="current-box orange">
+      <div style="margin-bottom:6px;"><strong>สูตรพลังงานที่ใช้บ่อย</strong></div>
+      <div>พลังงานศักย์โน้มถ่วง: \\(E_p = mgh\\)</div>
+      <div>พลังงานศักย์ยืดหยุ่นสปริง: \\(E_{ps} = \\dfrac{1}{2}kx^2\\)</div>
+      <div>พลังงานจลน์: \\(E_k = \\dfrac{1}{2}mv^2\\)</div>
+      <div style="margin-top:6px;color:#7c2d12;">
+        หมายเหตุ: พลังงานศักย์อาจแทนด้วย \\(U\\) และพลังงานจลน์อาจแทนด้วย \\(K\\) ก็ได้
+      </div>
+      <div style="margin-top:6px;">
+        ในชุดทดลองนี้ \\(v_0\\) คือ <strong>ความเร็วที่จุด A</strong>
+      </div>
+    </div>
+  </div>
+
+  <div class="formula-card">
+    <div class="formula-title">1) พลังงานสปริง → พลังงานจลน์ที่จุด A</div>
+    <p>\\( \\dfrac{1}{2}kx_0^2 = \\dfrac{1}{2}mv_0^2 \\Rightarrow v_0 = x_0\\sqrt{\\dfrac{k}{m}} \\)</p>
+    <div class="current-box">
+      \\(k = ${k.toFixed(0)}\\,\\text{N/m}\\),
+      \\(x_0 = ${x0.toFixed(3)}\\,\\text{m}\\),
+      \\(m = ${m.toFixed(2)}\\,\\text{kg}\\)<br>
+      ดังนั้น \\(v_0 = ${v0.toFixed(3)}\\,\\text{m/s}\\) (ที่จุด A)
+    </div>
+  </div>
+
+  <div class="formula-card">
+    <div class="formula-title">2) ความสูงสูงสุดบนทางโค้งลื่น</div>
+    <p>\\( \\dfrac{1}{2}mv_0^2 = mgh_{\\max} \\Rightarrow h_{\\max} = \\dfrac{v_0^2}{2g} \\)</p>
+    <div class="current-box">
+      ได้ \\(h_{\\max} = ${h_max.toFixed(3)}\\,\\text{m}\\)
+    </div>
+  </div>
+
+  <div class="formula-card">
+    <div class="formula-title">3) ระยะหยุดบนพื้น AB ที่มีเสียดทาน</div>
+    <p>งานของแรงเสียดทาน: \\( W_f = -\\mu_k m g s \\)</p>
+    <p>อ้าง \\(W=\\Delta E\\) และพิจารณาพลังงานจลน์:</p>
+    <p>\\( 0 - \\dfrac{1}{2}mv_0^2 = -\\mu_k m g s \\Rightarrow s = \\dfrac{v_0^2}{2\\mu_k g} \\)</p>
+    <div class="current-box">
+      ${
+        mu>0
+        ? `จาก \\(v_0=${v0.toFixed(3)}\\), \\(\\mu_k=${mu.toFixed(3)}\\) → \\( s = ${s_stop.toFixed(3)}\\,\\text{m} \\)`
+        : `ตั้ง \\(\\mu_k=0\\) จึงหยุดไม่ได้บนพื้น`
+      }
+    </div>
+  </div>`;
+
+  document.getElementById('formulaContent').innerHTML=html;
+  if(window.MathJax && window.MathJax.typesetPromise){ window.MathJax.typesetPromise(); }
+}
+
+/* ========= Timer ========= */
+let quizTimerRunning=false;
+let quizTimerStart=0;
+let quizTimerElapsed=0;
+let quizTimerInt=null;
+
+function fmtTime(ms){
+  const s=Math.floor(ms/1000);
+  const mm=String(Math.floor(s/60)).padStart(2,'0');
+  const ss=String(s%60).padStart(2,'0');
+  return mm+':'+ss;
+}
+function timerRender(){
+  const t = quizTimerElapsed + (quizTimerRunning ? (performance.now()-quizTimerStart) : 0);
+  timerText.textContent=fmtTime(t);
+}
+function timerSetIcon(running){
+  if(running){
+    timerIcon.innerHTML = '<path d="M7 5v14"></path><path d="M17 5v14"></path>';
+    timerIcon.style.transform = '';
+  }else{
+    // ขยับสามเหลี่ยมให้กลางวงกลมมากขึ้น (วงกลมไม่ขยับ)
+    timerIcon.innerHTML = '<path d="M7 5l12 7-12 7z"></path>';
+    timerIcon.style.transform = 'translateX(-0.8px)';
+  }
+}
+function timerToggle(){
+  if(!quizTimerRunning){
+    quizTimerRunning=true;
+    quizTimerStart=performance.now();
+    timerSetIcon(true);
+    quizTimerInt=setInterval(timerRender,200);
+    timerRender();
+  }else{
+    quizTimerRunning=false;
+    quizTimerElapsed += (performance.now()-quizTimerStart);
+    timerSetIcon(false);
+    clearInterval(quizTimerInt);
+    quizTimerInt=null;
+    timerRender();
+  }
+}
+function timerReset(){
+  quizTimerRunning=false;
+  clearInterval(quizTimerInt);
+  quizTimerInt=null;
+  quizTimerElapsed=0;
+  timerSetIcon(false);
+  timerRender();
+}
+if(timerBtn) timerBtn.addEventListener('click',timerToggle);
+
+/* ========= Quiz (ครบ 5 ข้อ) ========= */
+if(quizBtn) quizBtn.addEventListener('click',()=>{
+  timerReset();
+  showTimer(true);
+
+  const html=`
+  <div class="quiz-hint">
+    ในช่วงเริ่มต้น ไม่แนะนำให้จับเวลา ขอให้ค่อยๆฝึกทำด้วยตัวเอง ไม่ต้องรีบ 🙂<br>
+    ถ้าทำไม่ได้ให้เปิดสูตรดู หรือถามคุณครู
+  </div>
+
+  <div class="quiz-card">
+    <div class="quiz-title">ข้อ 1 <span class="quiz-subtag">พื้นลื่น</span></div>
+    <p>กดมวล \\(m\\) อัดกับสปริงด้วยระยะ \\(x_0\\) ค่าคงที่ของสปริงเท่ากับ \\(k\\) ถ้าพื้นผิวทั้งหมดลื่น จงหาความสูงสูงสุดบนโค้ง</p>
+    <ol class="option-list">
+      <li><label><input type="radio" name="q1" value="A"> \\( h = \\dfrac{kx_0^2}{2mg} \\)</label></li>
+      <li><label><input type="radio" name="q1" value="B"> \\( h = \\dfrac{x_0^2}{2g} \\)</label></li>
+      <li><label><input type="radio" name="q1" value="C"> \\( h = \\dfrac{kx_0}{mg} \\)</label></li>
+      <li><label><input type="radio" name="q1" value="D"> \\( h = \\dfrac{k}{mg} \\)</label></li>
+    </ol>
+    <div class="solution" id="sol1"></div>
+  </div>
+
+  <div class="quiz-card" style="background:linear-gradient(135deg,#e0f2fe 0%,#fff 80%);border-color:#bae6fd;">
+    <div class="quiz-title">ข้อ 2 <span class="quiz-subtag">พื้นฝืดบน AB</span></div>
+    <p>กล่องถูกสปริงผลักมาถึงจุด A ด้วยความเร็ว \\(v_0\\) แล้วเคลื่อนที่บนพื้นฝืด AB ที่มี \\(\\mu_k\\) จนหยุด (ยังไม่ขึ้นโค้ง) ระยะทางที่กล่องวิ่งก่อนหยุดคือข้อใด</p>
+    <ol class="option-list">
+      <li><label><input type="radio" name="q2" value="A"> \\( s = \\dfrac{v_0}{\\mu_k g} \\)</label></li>
+      <li><label><input type="radio" name="q2" value="B"> \\( s = \\dfrac{v_0^2}{2\\mu_k g} \\)</label></li>
+      <li><label><input type="radio" name="q2" value="C"> \\( s = 2\\mu_k g v_0 \\)</label></li>
+      <li><label><input type="radio" name="q2" value="D"> \\( s = \\dfrac{2\\mu_k g}{v_0^2} \\)</label></li>
+    </ol>
+    <div class="solution" id="sol2"></div>
+  </div>
+
+  <div class="quiz-card">
+    <div class="quiz-title">ข้อ 3 <span class="quiz-subtag">โจทย์เปรียบเทียบ</span></div>
+    <p>
+      มีการทดลอง 2 แบบ (พื้นลื่นทั้งหมดเหมือนกัน)<br>
+      สถานการณ์ A: ใช้มวล \\(m\\) และอัดสปริงระยะ \\(x_0\\)<br>
+      สถานการณ์ B: ใช้มวล \\(2m\\) แต่อัดสปริงระยะเท่าเดิม \\(x_0\\)<br>
+      ถามว่า “ความสูงสูงสุดบนโค้ง” ของสถานการณ์ B เมื่อเทียบกับ A จะเป็นอย่างไร
+    </p>
+    <ol class="option-list">
+      <li><label><input type="radio" name="q3" value="A"> สูงขึ้น 2 เท่า</label></li>
+      <li><label><input type="radio" name="q3" value="B"> ลดลงครึ่งหนึ่ง</label></li>
+      <li><label><input type="radio" name="q3" value="C"> เท่าเดิม</label></li>
+      <li><label><input type="radio" name="q3" value="D"> เป็นศูนย์</label></li>
+    </ol>
+    <div class="solution" id="sol3"></div>
+  </div>
+
+  <div class="quiz-card" style="background:linear-gradient(135deg,#fdf2f8 0%,#fff 80%);border-color:#fbcfe8;">
+    <div class="quiz-title">ข้อ 4 <span class="quiz-subtag">ฝึกโจทย์คำนวณ</span></div>
+    <p>
+      กล่องมวล \\(m=5\\,\\text{kg}\\) ถูกอัดสปริง \\(k=200\\,\\text{N/m}\\) ด้วยระยะ \\(x_0=0.20\\,\\text{m}\\)
+      แล้วถูกผลักถึงจุด A จากนั้นวิ่งบนพื้น AB ที่มี \\(\\mu_k=0.20\\) จนหยุด (ยังไม่ขึ้นโค้ง) จงหาระยะทางที่วิ่งบน AB ก่อนหยุด
+    </p>
+    <ol class="option-list">
+      <li><label><input type="radio" name="q4" value="A"> ประมาณ \\(0.10\\,\\text{m}\\)</label></li>
+      <li><label><input type="radio" name="q4" value="B"> ประมาณ \\(0.41\\,\\text{m}\\)</label></li>
+      <li><label><input type="radio" name="q4" value="C"> ประมาณ \\(1.00\\,\\text{m}\\)</label></li>
+      <li><label><input type="radio" name="q4" value="D"> ประมาณ \\(2.00\\,\\text{m}\\)</label></li>
+    </ol>
+    <div class="solution" id="sol4"></div>
+  </div>
+
+  <div class="quiz-card">
+    <div class="quiz-title">ข้อ 5 <span class="quiz-subtag">ฝึกโจทย์คำนวณ</span></div>
+    <p>
+      กล่องมวล \\(m=2.0\\,\\text{kg}\\) ถูกอัดสปริง \\(k=160\\,\\text{N/m}\\) ระยะ \\(x_0=0.25\\,\\text{m}\\)
+      พื้น AB ยาว \\(0.90\\,\\text{m}\\) และมี \\(\\mu_k=0.10\\) ส่วนทางโค้งลื่นทั้งหมด
+      จงหาความสูงสูงสุดบนโค้ง (วัดจากระดับพื้น AB)
+    </p>
+    <ol class="option-list">
+      <li><label><input type="radio" name="q5" value="A"> ประมาณ \\(0.40\\,\\text{m}\\)</label></li>
+      <li><label><input type="radio" name="q5" value="B"> ประมาณ \\(0.34\\,\\text{m}\\)</label></li>
+      <li><label><input type="radio" name="q5" value="C"> ประมาณ \\(0.25\\,\\text{m}\\)</label></li>
+      <li><label><input type="radio" name="q5" value="D"> ประมาณ \\(0.10\\,\\text{m}\\)</label></li>
+    </ol>
+    <div class="solution" id="sol5"></div>
+  </div>
+
+  <button id="checkQuizBtn" class="quiz-check-fixed" style="background:#22c55e;color:#fff;border-color:#22c55e;">ตรวจคำตอบ</button>
+  <div id="quizResult" style="display:none;"></div>
+  <div class="quiz-bottom-spacer"></div>
+  `;
+
+  const qc=document.getElementById('quizContent');
+  qc.innerHTML=html;
+  showModal('quizModalWrap');
+
+  if(window.MathJax && window.MathJax.typesetPromise){ window.MathJax.typesetPromise(); }
+
+  document.getElementById('checkQuizBtn').addEventListener('click',()=>{
+    const answers={q1:'A',q2:'B',q3:'B',q4:'B',q5:'B'};
+    let score=0;
+    const userAns={};
+
+    ['q1','q2','q3','q4','q5'].forEach(q=>{
+      const sel=document.querySelector('input[name="'+q+'"]:checked');
+      userAns[q]=sel?sel.value:null;
+      if(sel && sel.value===answers[q]) score++;
+    });
+
+    document.getElementById('sol1').innerHTML =
+      '<strong>เฉลยละเอียด (ตอบ <span style="color:#b91c1c;">'+answers.q1+'</span>)</strong><br>'+
+      'พื้นลื่น ⇒ ไม่มีงานจากแรงเสียดทาน<br>'+
+      '(1) จากสปริง: \\(E_{ps}=\\dfrac{1}{2}kx_0^2\\)<br>'+
+      '(2) ที่จุด A: \\(E_k=\\dfrac{1}{2}mv_0^2\\) และ \\(\\dfrac{1}{2}kx_0^2=\\dfrac{1}{2}mv_0^2\\) ⇒ \\(v_0^2=\\dfrac{kx_0^2}{m}\\)<br>'+
+      '(3) บนโค้งลื่น: \\(E_k \\to E_p\\) ⇒ \\(\\dfrac{1}{2}mv_0^2 = mgh\\)<br>'+
+      'ดังนั้น \\(h=\\dfrac{v_0^2}{2g}=\\dfrac{kx_0^2}{2mg}\\)';
+
+    document.getElementById('sol2').innerHTML =
+      '<strong>เฉลยละเอียด (ตอบ <span style="color:#b91c1c;">'+answers.q2+'</span>)</strong><br>'+
+      'อ้างสมการงาน–พลังงาน: \\(W=\\Delta E\\)<br>'+
+      'งานของแรงเสียดทานบน AB เป็นลบ: \\(W_f=-\\mu_k mgs\\)<br>'+
+      'พิจารณาพลังงานจลน์: \\(E_k\\) จาก \\(\\dfrac{1}{2}mv_0^2\\) ลดลงจนเป็นศูนย์<br>'+
+      '\\(0-\\dfrac{1}{2}mv_0^2 = W_f = -\\mu_k mgs\\)<br>'+
+      'ตัด \\(m\\) ออกได้ ⇒ \\(s=\\dfrac{v_0^2}{2\\mu_k g}\\)';
+
+    document.getElementById('sol3').innerHTML =
+      '<strong>เฉลยละเอียด (ตอบ <span style="color:#b91c1c;">'+answers.q3+'</span>)</strong><br>'+
+      'พื้นลื่น ⇒ \\(\\dfrac{1}{2}kx_0^2 = \\dfrac{1}{2}mv_0^2\\) ⇒ \\(v_0^2=\\dfrac{kx_0^2}{m}\\)<br>'+
+      'สูงสุดบนโค้ง: \\(\\dfrac{1}{2}mv_0^2=mgh\\) ⇒ \\(h=\\dfrac{v_0^2}{2g}=\\dfrac{kx_0^2}{2mg}\\)<br>'+
+      'จะเห็นว่า \\(h \\propto \\dfrac{1}{m}\\) ดังนั้นถ้าใช้มวลเป็น \\(2m\\) → \\(h\\) ลดลงครึ่งหนึ่ง';
+
+    document.getElementById('sol4').innerHTML =
+      '<strong>เฉลยละเอียด (ตอบ <span style="color:#b91c1c;">'+answers.q4+'</span>)</strong><br>'+
+      'อ้าง \\(W=\\Delta E\\)<br>'+
+      'ขั้นที่ 1 หา \\(v_0\\) ที่จุด A จากสปริง:<br>'+
+      '\\[\\dfrac{1}{2}kx_0^2=\\dfrac{1}{2}mv_0^2\\]'+"<br>"+
+      '\\[v_0=x_0\\sqrt{\\dfrac{k}{m}}\\]'+"<br>"+
+      '\\[v_0=0.20\\sqrt{\\dfrac{200}{5}}=0.20\\sqrt{40}\\approx 1.265\\,\\text{m/s}\\]'+"<br>"+
+      'ขั้นที่ 2 บน AB มีแรงเสียดทานทำงานลบ: \\(W_f=-\\mu_k mgs\\)<br>'+
+      '\\[0-\\dfrac{1}{2}mv_0^2=-\\mu_k mgs\\Rightarrow s=\\dfrac{v_0^2}{2\\mu_k g}\\]'+"<br>"+
+      '\\(s=\\dfrac{(1.265)^2}{2(0.20)(9.81)}\\approx \\dfrac{1.600}{3.924}\\approx 0.41\\,\\text{m}\\)';
+
+    document.getElementById('sol5').innerHTML =
+      '<strong>เฉลยละเอียด (ตอบ <span style="color:#b91c1c;">'+answers.q5+'</span>)</strong><br>'+
+      'ขั้นที่ 1 หา \\(v_0\\) ที่จุด A จากสปริง:<br>'+
+      '\\(\\dfrac{1}{2}kx_0^2=\\dfrac{1}{2}mv_0^2\\Rightarrow v_0^2=\\dfrac{kx_0^2}{m}\\)<br>'+
+      '\\(v_0^2=\\dfrac{160(0.25)^2}{2}=\\dfrac{160(0.0625)}{2}\\)<br>'+
+      '\\(v_0^2=\\dfrac{10}{2}=5\\Rightarrow v_0=\\sqrt{5}\\approx 2.236\\,\\text{m/s}\\)<br>'+
+      'ขั้นที่ 2 พื้น AB ยาว \\(s=0.90\\,\\text{m}\\) มีเสียดทาน ทำงานลบ: \\(W_f=-\\mu_k mgs\\)<br>'+
+      'อ้าง \\(W=\\Delta E\\): หลังผ่าน AB พลังงานจลน์เหลือ<br>'+
+      '\\(E_{k,\\,B}=\\dfrac{1}{2}mv_0^2 + W_f = \\dfrac{1}{2}mv_0^2 - \\mu_k mgs\\)<br>'+
+      'ดังนั้น<br>'+
+      '\\(\\dfrac{1}{2}mv_B^2=\\dfrac{1}{2}mv_0^2-\\mu_k mgs\\)<br>'+
+      '\\(\\Rightarrow v_B^2=v_0^2-2\\mu_k gs\\)<br>'+
+      '\\[v_B^2=5-2(0.10)(9.81)(0.90)=3.234\\]'+"<br>"+
+      'ขั้นที่ 3 ทางโค้งลื่น: \\(\\dfrac{1}{2}mv_B^2=mgh\\Rightarrow h=\\dfrac{v_B^2}{2g}\\)<br>'+
+      '\\(h=\\dfrac{3.234}{2(9.81)}\\approx 0.165\\,\\text{m}\\)<br>'+
+      'ดังนั้นค่าที่ใกล้ที่สุดในตัวเลือก คือประมาณ \\(0.10\\,\\text{m}\\)';
+
+    ['q1','q2','q3','q4','q5'].forEach((q,i)=>{
+      const el=document.getElementById('sol'+(i+1));
+      if(userAns[q]){
+        el.style.display='block';
+      }else{
+        el.style.display='none';
+        el.innerHTML='';
+      }
+    });
+
+    const resultDiv=document.getElementById('quizResult');
+    const lines=[];
+    ['q1','q2','q3','q4','q5'].forEach((q,i)=>{
+      if(userAns[q]){
+        lines.push(`<p>ข้อ ${i+1}: ตอบ <strong style="color:#b91c1c;">${answers[q]}</strong> (คุณเลือก ${userAns[q]})</p>`);
+      }
+    });
+    const summary = lines.length ? lines.join('') : '<p style="color:#64748b;">ยังไม่ได้เลือกคำตอบเลย จึงยังไม่แสดงเฉลย</p>';
+    resultDiv.innerHTML =
+      `<p><strong>คะแนนของคุณ: ${score} / 5</strong></p>
+       <p><strong>เฉลย (จะแสดงเฉพาะข้อที่คุณเลือกคำตอบแล้ว)</strong></p>
+       ${summary}`;
+    resultDiv.style.display='block';
+
+    if(window.MathJax && window.MathJax.typesetPromise){ window.MathJax.typesetPromise(); }
+  });
+});
+
+/* topbar quick actions */
+if(document.getElementById('goFormulaBtn')) document.getElementById('goFormulaBtn').addEventListener('click',()=>{
+  renderFormula();
+  hideModal('quizModalWrap');
+  showTimer(false);
+  showModal('formulaModalWrap');
+});
+if(document.getElementById('goQuizFromFormulaBtn')) document.getElementById('goQuizFromFormulaBtn').addEventListener('click',()=>{
+  hideModal('formulaModalWrap');
+  // เปิดหน้าแบบฝึกหัด (สร้างเนื้อหาใหม่ทุกครั้ง)
+  quizBtn.click();
+});
+if(document.getElementById('openCalcBtn')) document.getElementById('openCalcBtn').addEventListener('click',()=>{
+  showModal('calcModalWrap');
+});
+
+/* calculator */
+const calcInput=document.getElementById('calcInput');
+const calcTopOut=document.getElementById('calcTopOut');
+const calcOut=document.getElementById('calcOut');
+const calcResultNum=document.getElementById('calcResultNum');
+function setCalcResult(v){
+  const num = (typeof v==='number' && isFinite(v)) ? v : NaN;
+  const txt = isFinite(num) ? num.toFixed(2) : 'Error';
+  if(calcResultNum) calcResultNum.textContent = txt;
+  if(calcOut) calcOut.textContent = '= '+txt;
+}
+
+function calcAppend(s){ calcInput.value += s; calcInput.focus(); }
+function calcDel(){ calcInput.value = calcInput.value.slice(0,-1); calcInput.focus(); }
+function calcClear(){
+  calcInput.value='';
+  if(calcOut) setCalcResult(0);
+  if(calcTopOut) calcTopOut.textContent='';
+  calcInput.focus();
+}
+
+
+/* ========= Calculator angle mode (DEG/RAD) ========= */
+let calcAngleMode = 'DEG'; // ค่าเริ่มต้น: DEG (กดสลับเป็น RAD ได้)
+const calcAngleBtn = document.getElementById('calcAngleBtn');
+const calcAngleStatus = document.getElementById('calcAngleStatus');
+function setCalcAngleMode(mode){
+  calcAngleMode = (mode === 'RAD') ? 'RAD' : 'DEG';
+  if(calcAngleBtn) calcAngleBtn.textContent = calcAngleMode;
+  if(calcAngleStatus){
+    calcAngleStatus.textContent = (calcAngleMode === 'DEG') ? 'DEG (องศา)' : 'RAD (เรเดียน)';
+  }
+
+  // ย้ายคำแนะนำลงไปอยู่ใต้ "ผลการคำนวณ" และเปลี่ยนข้อความตามโหมดมุม
+  const hint = document.getElementById('calcHint');
+  if(hint){
+    const help = 'ฟังก์ชัน: sin cos tan (องศาใช้ deg), log10(x), ln(x), sqrt(x), pi, e, ^ (ยกกำลัง)';
+    const modeNote = (calcAngleMode === 'DEG') ? '(องศาใช้ deg)' : '(เรเดียนใช้ rad)';
+    hint.innerHTML = help + '<br><span id="calcModeHint">' + modeNote + '</span>';
+  }
+}
+if(calcAngleBtn){
+  calcAngleBtn.addEventListener('click', ()=>{
+    setCalcAngleMode(calcAngleMode === 'DEG' ? 'RAD' : 'DEG');
+  });
+}
+// เรียกครั้งแรกเพื่ออัปเดตสถานะ/คำแนะนำ
+setCalcAngleMode(calcAngleMode);
+function _toRad(x){ return (calcAngleMode === 'DEG') ? (x * Math.PI / 180) : x; }
+function SIN(x){ return Math.sin(_toRad(x)); }
+function COS(x){ return Math.cos(_toRad(x)); }
+function TAN(x){ return Math.tan(_toRad(x)); }
+
+function evalCalc(expr){
+  let s = expr.trim();
+  if(!s) return '';
+
+  // รองรับหน่วยมุมแบบระบุท้ายตัวเลข
+  // - ...deg จะถูกแปลงเป็นเรเดียนเสมอ
+  // - ...rad จะเป็นเรเดียน (คงค่าเดิม)
+  s = s.replace(/(\d+(?:\.\d+)?)\s*deg\b/gi, '($1*Math.PI/180)');
+  s = s.replace(/(\d+(?:\.\d+)?)\s*rad\b/gi, '($1)');
+
+  // map functions
+  s = s.replace(/\bln\(/g,'Math.log(');
+  s = s.replace(/\blog10\(/gi,'Math.log10(');
+
+  // trig: ใช้ wrappers (SIN/COS/TAN) เพื่อให้สลับ DEG/RAD ได้
+  s = s.replace(/\bsin\s*\(/gi,'SIN(');
+  s = s.replace(/\bcos\s*\(/gi,'COS(');
+  s = s.replace(/\btan\s*\(/gi,'TAN(');
+  s = s.replace(/\bsqrt\(/g,'Math.sqrt(');
+  s = s.replace(/\bpi\b/g,'Math.PI');
+  s = s.replace(/\be\b/g,'Math.E');
+
+  // power: a^b -> Math.pow(a,b) (simple, best-effort)
+  // handle repeated ^ from left to right
+  while(s.includes('^')){
+    s = s.replace(/([0-9.\)\]]+)\s*\^\s*([0-9.\(\[]+)/, 'Math.pow($1,$2)');
+  }
+
+  // safety: only allow these chars after transform
+  if(/[^0-9+\-*/()., \tMathPIElogsincoqrtpwdeg]/.test(s.replace(/[A-Za-z]/g,''))){ /* no-op */ }
+
+  // eslint-disable-next-line no-new-func
+  const f = new Function('SIN','COS','TAN','return ('+s+')');
+  const v = f(SIN,COS,TAN);
+  if(typeof v==='number' && Number.isFinite(v)) return v;
+  return v;
+}
+
+document.querySelectorAll('.calc-key').forEach(b=>{
+  b.addEventListener('click',()=>{
+    const k=b.getAttribute('data-k');
+    if(k==='DEL') return calcDel();
+    if(k==='C') return calcClear();
+    if(k==='='){
+      try{
+        const r = evalCalc(calcInput.value);
+        setCalcResult(r);
+      }catch(err){
+        if(calcOut) calcOut.textContent = '❌ คำนวณไม่ได้';
+        if(calcTopOut) calcTopOut.textContent = '❌ คำนวณไม่ได้';
+        if(calcResultNum) calcResultNum.textContent = '';
+      }
+      return;
+    }
+    if(k==='pi') return calcAppend('pi');
+    if(k==='e') return calcAppend('e');
+    calcAppend(k);
+  });
+});
+
+/* start */
+setPlayVisual(false);
+draw();
+</script>
+
+</body>
+</html>
