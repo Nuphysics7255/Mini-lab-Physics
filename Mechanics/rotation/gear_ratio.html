@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>เฟือง 2–3 ตัว — ขอบนอกแตะกัน + ปรับ r₁ r₂ และ ω₁ ด้วยการพิมพ์</title>
+
+<!-- MathJax -->
+<script>
+  window.MathJax = { tex:{inlineMath:[['$','$'],['\\(','\\)']]}, svg:{fontCache:'global'} };
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+
+<style>
+:root{
+  --ink:#0f172a; --muted:#475569;
+  --panel:#ffffff; --bg:#f8fafc; --line:#e5e7eb;
+  --accent:#0ea5e9;
+  --g1:#ffd4b0; --g2:#dbeafe; --g3:#d1fae5;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;background:#fff;color:var(--ink);
+  font-family:system-ui,"Noto Sans Thai",sans-serif;
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+}
+
+/* --- Header --- */
+header{
+  width:100%;
+  display:flex;
+  gap:10px;
+  align-items:center;
+  justify-content:space-between;
+  padding:14px 14px 6px 14px;
+}
+.title{font-weight:800;font-size:clamp(18px,2.2vw,30px)}
+
+.btn{
+  border:1px solid var(--line);
+  background:var(--panel);
+  color:var(--ink);
+  padding:8px 14px;
+  border-radius:999px;
+  cursor:pointer;
+  box-shadow:0 1px 2px #0001;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+}
+.btn.primary{background:var(--accent);color:#fff;border-color:transparent}
+.btn.ghost{background:#eef2ff;color:#312e81;border-color:#e2e8f0}
+.link-blue{color:#0ea5e9!important;font-weight:700;text-decoration:underline}
+
+.panel{
+  border:1px solid var(--line);
+  background:var(--panel);
+  border-radius:14px;
+  padding:12px;
+  box-shadow:0 2px 6px #0000000d;
+}
+
+/* --- App Layout --- */
+#app{
+  width:100%;
+  padding:8px 14px 14px 14px;
+  display:grid;
+  gap:12px;
+  flex:1;
+}
+
+/* Desktop: stage full screen + controls right */
+@media (min-width: 980px){
+  body{overflow:hidden;}
+  #app{
+    height: calc(100vh - 64px);
+    grid-template-columns: 1fr 380px;
+    align-items:stretch;
+  }
+  #stagePanel{height:100%;}
+  #vp{height:100%;}
+}
+
+/* Mobile: stage full width */
+@media (max-width: 979px){
+  #app{
+    grid-template-columns:1fr;
+    padding:0;                 /* ให้เต็มจอ */
+    gap:10px;
+  }
+  #stagePanel{
+    border-radius:0;
+    border-left:0;border-right:0;
+    padding:10px;
+  }
+}
+
+/* ===== Controls: เรียงเป็นแถว (stack) ===== */
+.controls{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  align-items:stretch;
+}
+.control{display:flex;flex-direction:column;gap:8px}
+.control.wide{width:100%}
+.control label{font-size:14px;color:var(--muted)}
+.row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.value-pill{background:#eef2ff;color:#312e81;padding:4px 10px;border-radius:999px;font-weight:800;font-variant-numeric:tabular-nums}
+input[type="range"]{width:320px;max-width:100%}
+input[type="number"]{width:110px;padding:6px 10px;border:1px solid var(--line);border-radius:10px;font-weight:700}
+
+/* Mobile: collapsible controls */
+.controls-wrap{position:relative}
+.toggle-controls{
+  display:none;
+  align-items:center;
+  gap:8px;
+  margin-bottom:8px;
+  padding:0 14px;
+}
+.toggle-controls .btn{padding:8px 12px}
+@media (max-width: 979px){
+  .toggle-controls{display:flex;}
+  .controls-wrap{padding:0 0 12px 0;}
+  .controls-wrap .panel{margin:0 10px;border-radius:14px;}
+}
+.controls.collapsed{display:none;}
+
+/* --- Stage --- */
+.stage{
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  min-height:380px;
+}
+@media (max-width: 979px){
+  .stage{min-height:auto;}
+}
+
+#vp{
+  position:relative;
+  width:100%;
+  overflow:hidden;
+  display:flex;
+  align-items:flex-start;
+  justify-content:flex-start;
+}
+
+/* canvas: มือถือให้เต็มความกว้างจอ */
+canvas{
+  background:var(--bg);
+  border:1px solid var(--line);
+  border-radius:14px;
+  touch-action:none;
+  display:block;
+  width:100%;
+}
+
+/* Gear tags */
+.gear-tag{
+  position:absolute;transform:translate(-50%,-50%);
+  padding:2px 8px;border-radius:999px;
+  font-weight:800;font-size:14px;color:#0b2447;background:#fff;border:1px solid var(--line);
+  box-shadow:0 1px 3px #0001;pointer-events:none;
+}
+
+/* --- Buttons --- */
+.bottom-bar{
+  display:flex;
+  gap:10px;
+  padding:10px 12px;
+  background:#ffffffee;
+  border-top:1px solid var(--line);
+  backdrop-filter: blur(8px);
+  z-index:25;
+}
+.bottom-bar .btn{flex:1;}
+
+@media (max-width: 979px){
+  /* มือถือ: ปุ่มล่างจอ */
+  .bottom-bar{position:fixed; left:0; right:0; bottom:0;}
+  #app{padding-bottom:90px;}
+}
+
+/* จอคอม: ย้ายปุ่มไปทางขวาของจอทดลอง */
+@media (min-width: 980px){
+  .bottom-bar{
+    position:absolute;
+    top:14px;
+    right:14px;
+    flex-direction:column;
+    gap:10px;
+    padding:0;
+    background:transparent;
+    border-top:0;
+    backdrop-filter:none;
+  }
+  .bottom-bar .btn{
+    flex:none;
+    width:170px;
+    justify-content:center;
+  }
+}
+
+/* --- Footer link bottom --- */
+footer{
+  width:100%;
+  padding:10px 14px 16px 14px;
+  display:flex;
+  justify-content:flex-end;
+}
+@media (max-width: 979px){
+  footer{
+    justify-content:center;
+    padding-bottom:110px; /* กันชน bottom bar */
+  }
+}
+
+/* --- Modal --- */
+.modal-backdrop{position:fixed;inset:0;background:#0006;display:none;align-items:center;justify-content:center;z-index:30}
+.modal{width:min(980px,94vw);max-height:88vh;overflow:auto;background:#fff;border-radius:16px;border:2px solid var(--accent);box-shadow:0 24px 64px #0004;padding:18px 20px}
+.modal h2{margin:0 0 14px;color:#0b5bd3}
+.boxY{background:#fff7cc;border:2px dashed #f59e0b;border-radius:12px;padding:12px 14px;margin:10px 0}
+.modal .foot{display:flex;justify-content:flex-end;margin-top:12px}
+.tight-text{letter-spacing:0}
+</style>
+</head>
+
+<body>
+<header>
+  <div class="title">การทดลอง:การทดรอบด้วยเฟือง</div>
+</header>
+
+<div id="app">
+  <!-- STAGE -->
+  <div class="panel stage" id="stagePanel">
+    <div id="vp">
+      <div id="tag1" class="gear-tag">เฟือง 1</div>
+      <div id="tag2" class="gear-tag">เฟือง 2</div>
+      <div id="tag3" class="gear-tag" style="display:none">เฟือง 3</div>
+      <canvas id="cv" width="1100" height="560"></canvas>
+    </div>
+
+    <!-- ปุ่มควบคุม -->
+    <div class="bottom-bar" id="bottomBar">
+      <button id="playBtn" class="btn primary">▶ เล่น</button>
+      <button id="resetBtn" class="btn">🔄 รีเซ็ต</button>
+      <button id="formulaBtn" class="btn ghost">📘 สูตรสำคัญ</button>
+    </div>
+  </div>
+
+  <!-- CONTROLS -->
+  <div class="controls-wrap">
+    <div class="toggle-controls">
+      <button id="toggleCtrlBtn" class="btn">ซ่อนแผงตั้งค่า</button>
+    </div>
+
+    <div class="panel controls" id="controlsPanel">
+      <!-- A -->
+      <div class="control">
+        <label>อัตราส่วนรัศมีพิทช์ (เฟือง 1 : เฟือง 2)</label>
+        <div class="row">
+          <input id="ratio12" type="range" min="0.25" max="4" step="0.01" value="2" />
+          <span class="value-pill"><span id="ratio12Txt">2.00</span> : 1</span>
+        </div>
+      </div>
+
+      <!-- B -->
+      <div class="control">
+        <label>พิมพ์รัศมีพิทช์ (หน่วย cm; 1px=1cm)</label>
+        <div class="row">
+          r₁: <input id="r1In" type="number" step="0.1" min="1" value="120.0" />
+          r₂: <input id="r2In" type="number" step="0.1" min="1" value="60.0" />
+        </div>
+      </div>
+
+      <!-- C -->
+      <div class="control">
+        <label>ความเร็วเชิงมุมของเฟือง 1, ω₁ (rad/s)</label>
+        <div class="row">
+          <input id="w1" type="range" min="0" max="8" step="0.01" value="2.00" />
+          <input id="w1In" type="number" step="0.01" min="0" max="8" value="2.00" />
+          <span class="value-pill"><span id="w1Txt">2.00</span> rad/s</span>
+        </div>
+      </div>
+
+      <!-- D -->
+      <div class="control">
+        <label>ทิศการหมุนของเฟือง 1</label>
+        <div class="row">
+          <select id="dir" class="btn">
+            <option value="ccw">ทวนเข็มนาฬิกา</option>
+            <option value="cw">ตามเข็มนาฬิกา</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- E -->
+      <div class="control">
+        <label>เพิ่มเฟืองที่ 3 (สัมผัสต่อจากเฟือง 2)</label>
+        <div class="row">
+          <label class="row" style="gap:6px"><input id="g3on" type="checkbox"> แสดงเฟือง 3 (สีเขียวอ่อน)</label>
+        </div>
+        <div class="row" id="g3row" style="display:none">
+          <span>อัตราส่วนรัศมีพิทช์ (เฟือง 2 : เฟือง 3)</span>
+          <input id="ratio23" type="range" min="0.25" max="4" step="0.01" value="1.50" />
+          <span class="value-pill"><span id="ratio23Txt">1.50</span> : 1</span>
+        </div>
+      </div>
+
+      <!-- ✅ สถานะ: ตัดออกจาก UI (ซ่อน) แต่คง id ไว้ให้ JS ไม่พัง -->
+      <div class="control wide" style="display:none">
+        <span id="r1Txt">—</span>
+        <span id="r2Txt">—</span>
+        <span id="w2Txt">—</span>
+        <span id="g3info" style="display:none">
+          <span id="r3Txt">—</span>
+          <span id="w3Txt">—</span>
+        </span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Footer link: อยู่ล่างสุด -->
+<footer>
+  <a class="btn link-blue" href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">
+    ศึกษาเพิ่มเติมที่เพจคลายปมฟิสิกส์
+  </a>
+</footer>
+
+<!-- MODAL สูตรสำคัญ -->
+<div id="modal" class="modal-backdrop">
+  <div class="modal">
+    <h2>🟦 สูตรสำคัญ — เฟืองที่สัมผัสกันโดยไม่ไถล</h2>
+    <div class="boxY">
+      $$ v_{t1}=v_{t2} \Rightarrow \omega_1 r_1=\omega_2 r_2 $$
+      <div style="display:flex;justify-content:center;margin:8px 0">
+        $$ \boxed{\omega_2=\frac{r_1}{r_2}\,\omega_1} $$
+      </div>
+      <div class="tight-text" style="margin-top:6px">และทิศ “ตรงข้าม” กับเฟืองที่ 1</div>
+    </div>
+    <div class="boxY">
+      ถ้า $r_1>r_2$ ⇒ $|\omega_2|>|\omega_1|$ (เฟืองเล็กหมุนเร็วกว่า)
+    </div>
+    <div class="boxY">
+      <b>กรณีรู้จำนวนซี่เฟือง:</b> เมื่อ $r\propto N$
+      <div style="display:flex;justify-content:center;margin:8px 0;flex-direction:column;gap:10px;align-items:center">
+        $$ \omega_2=\frac{N_1}{N_2}\omega_1 $$
+        $$ G\equiv\frac{\omega_1}{\omega_2}=\frac{r_2}{r_1}=\frac{N_2}{N_1} $$
+      </div>
+    </div>
+    <div class="foot"><button id="closeModal" class="btn">ปิด ✕</button></div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+
+  // UI refs
+  const ratio12El=document.getElementById('ratio12'), ratio12Txt=document.getElementById('ratio12Txt');
+  const r1In=document.getElementById('r1In'), r2In=document.getElementById('r2In');
+  const w1El=document.getElementById('w1'), w1In=document.getElementById('w1In'), w1Txt=document.getElementById('w1Txt');
+  const dirEl=document.getElementById('dir');
+  const g3on=document.getElementById('g3on'), g3row=document.getElementById('g3row');
+  const ratio23El=document.getElementById('ratio23'), ratio23Txt=document.getElementById('ratio23Txt');
+
+  // Hidden status ids (คงไว้)
+  const r1Txt=document.getElementById('r1Txt'), r2Txt=document.getElementById('r2Txt'), r3Txt=document.getElementById('r3Txt');
+  const w2Txt=document.getElementById('w2Txt'), w3Txt=document.getElementById('w3Txt');
+  const g3info=document.getElementById('g3info');
+
+  const playBtn=document.getElementById('playBtn'), resetBtn=document.getElementById('resetBtn');
+
+  // Modal
+  const modal=document.getElementById('modal');
+  document.getElementById('formulaBtn').onclick=()=>modal.style.display='flex';
+  document.getElementById('closeModal').onclick=()=>modal.style.display='none';
+  modal.addEventListener('click',e=>{if(e.target===modal)modal.style.display='none'});
+
+  // Mobile controls toggle
+  const toggleBtn=document.getElementById('toggleCtrlBtn');
+  const controlsPanel=document.getElementById('controlsPanel');
+  function isMobile(){ return window.matchMedia('(max-width: 979px)').matches; }
+  function setToggleText(){
+    toggleBtn.textContent = controlsPanel.classList.contains('collapsed') ? 'แสดงแผงตั้งค่า' : 'ซ่อนแผงตั้งค่า';
+  }
+  toggleBtn.addEventListener('click', ()=>{
+    controlsPanel.classList.toggle('collapsed');
+    setToggleText();
+  });
+  window.addEventListener('resize', ()=>{
+    if(!isMobile()){
+      controlsPanel.classList.remove('collapsed');
+    }
+    setToggleText();
+    refreshCanvasSize();
+    refresh();
+  });
+  setToggleText();
+
+  // Tag positions
+  const vp=document.getElementById('vp');
+  const tag1=document.getElementById('tag1'), tag2=document.getElementById('tag2'), tag3=document.getElementById('tag3');
+
+  // Layout
+  const padding=40;
+  let cx1=260, cy=cv.height/2;
+  const SUM12 = ()=> Math.min((cv.width-padding*2)*0.9,(cv.height-padding*2))*0.46;
+
+  // State
+  let running=false, last=performance.now();
+  let angle1=0, angle2=0, angle3=0;
+  let r1_manual=null, r2_manual=null;
+
+  // Tooth model
+  const TOOTH_PITCH=16;
+  const TOUCH_EPS=0.01;
+
+  function teethFromR(r){
+    const N=Math.max(8, Math.round((2*Math.PI*r)/TOOTH_PITCH));
+    const p=(2*Math.PI*r)/N, m=p/Math.PI;
+    return {N,p,m,add:m,ded:1.25*m};
+  }
+
+  function getRadii12(){
+    const S=SUM12();
+    if(r1_manual!=null && r2_manual!=null){
+      let r1=Math.max(1, r1_manual), r2=Math.max(1, r2_manual);
+      const sum=r1+r2, limit=S*1.0;
+      if(sum>limit){ const k=limit/sum; r1*=k; r2*=k; }
+      const ratio=r1/r2;
+      const rmin=parseFloat(ratio12El.min), rmax=parseFloat(ratio12El.max);
+      ratio12El.value = Math.min(rmax, Math.max(rmin, ratio));
+      ratio12Txt.textContent = (+ratio12El.value).toFixed(2);
+      r1In.value=r1.toFixed(1); r2In.value=r2.toFixed(1);
+      return {r1,r2};
+    }else{
+      const k=parseFloat(ratio12El.value);
+      const r1=S*(k/(1+k)), r2=S*(1/(1+k));
+      r1In.value=r1.toFixed(1); r2In.value=r2.toFixed(1);
+      return {r1,r2};
+    }
+  }
+
+  function drawGear(cx,cy,rPitch,teeth,phase,fill){
+    const {N,add,ded}=teeth;
+    const rOut=Math.max(2, rPitch+add), rRoot=Math.max(2, rPitch-ded);
+    const step=(Math.PI*2)/N, flank=step*0.30;
+    ctx.fillStyle=fill; ctx.strokeStyle='#0b2447'; ctx.lineWidth=2;
+    ctx.beginPath();
+    for(let i=0;i<N;i++){
+      const a0=phase+i*step;
+      const x1=cx+rOut*Math.cos(a0-flank), y1=cy+rOut*Math.sin(a0-flank);
+      const x2=cx+rOut*Math.cos(a0+flank), y2=cy+rOut*Math.sin(a0+flank);
+      const x3=cx+rRoot*Math.cos(a0+step*0.5), y3=cy+rRoot*Math.sin(a0+step*0.5);
+      if(i===0) ctx.moveTo(x1,y1); else ctx.lineTo(x1,y1);
+      ctx.lineTo(x2,y2); ctx.lineTo(x3,y3);
+    }
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    return {rOut,rRoot};
+  }
+
+  function w2From(w1,r1,r2){const s=Math.sign(w1)||1;return -(s)*Math.abs(w1)*(r1/r2);}
+  function w3From(w2,r2,r3){const s=Math.sign(w2)||1;return -(s)*Math.abs(w2)*(r2/r3);}
+
+  function drawArrow(x,y,r,ang){
+    const x2=x+r*Math.cos(ang), y2=y+r*Math.sin(ang);
+    ctx.strokeStyle="#6b7280"; ctx.lineWidth=5;
+    ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x2,y2); ctx.stroke();
+    const ah=16; ctx.fillStyle="#ef4444";
+    ctx.beginPath();
+    ctx.moveTo(x2,y2);
+    ctx.lineTo(x2 - ah*Math.cos(ang - Math.PI/8), y2 - ah*Math.sin(ang - Math.PI/8));
+    ctx.lineTo(x2 - ah*Math.cos(ang + Math.PI/8), y2 - ah*Math.sin(ang + Math.PI/8));
+    ctx.closePath(); ctx.fill();
+  }
+
+  function clamp(v,min,max){return Math.max(min,Math.min(max,v));}
+  function placeTags(cx1,cy,r1Out, cx2,cy2,r2Out, cx3,cy3,r3Out){
+    const vpRect=vp.getBoundingClientRect(), cvRect=cv.getBoundingClientRect();
+    const pad=12, toLocal=(x,y)=>({lx:x-(cvRect.left-vpRect.left), ly:y-(cvRect.top-vpRect.top)});
+    let {lx:lx1,ly:ly1}=toLocal(cx1, cy - r1Out - 18);
+    let {lx:lx2,ly:ly2}=toLocal(cx2, cy2 - r2Out - 18);
+    tag1.style.left=clamp(lx1,pad,vp.clientWidth-pad)+'px';
+    tag1.style.top =clamp(ly1,pad,cv.height-pad)+'px';
+    tag2.style.left=clamp(lx2,pad,vp.clientWidth-pad)+'px';
+    tag2.style.top =clamp(ly2,pad,cv.height-pad)+'px';
+    if(tag3.style.display!=='none'){
+      let {lx:lx3,ly:ly3}=toLocal(cx3, cy3 - r3Out - 18);
+      tag3.style.left=clamp(lx3,pad,vp.clientWidth-pad)+'px';
+      tag3.style.top =clamp(ly3,pad,cv.height-pad)+'px';
+    }
+  }
+
+  function getCanvasFontSize(){
+    // เดิม 16px → มือถือลดลง 5px = 11px
+    const mobile = window.matchMedia('(max-width: 979px)').matches;
+    return mobile ? 11 : 16;
+  }
+
+  function render(){
+    const {r1,r2}=getRadii12();
+
+    const t1=teethFromR(r1), t2=teethFromR(r2);
+    const out1=r1+t1.add, out2=r2+t2.add;
+
+    const cx2=cx1 + out1 + out2 - TOUCH_EPS;
+
+    let r3=0,t3=null,out3=0,cx3=0;
+    if(g3on.checked){
+      const S=SUM12(); const k23=parseFloat(ratio23El.value);
+      r3=S*(1/(1+k23))*0.95; t3=teethFromR(r3); out3=r3+t3.add;
+      cx3=cx2 + out2 + out3 - TOUCH_EPS;
+    }
+
+    const s=(dirEl.value==='ccw')?+1:-1;
+    const w1=s*parseFloat(w1El.value);
+    const w2=w2From(w1,r1,r2);
+    const w3=g3on.checked?w3From(w2,r2,r3):0;
+
+    // update hidden status (ไม่แสดง แต่ยังอัปเดตได้)
+    r1Txt.textContent=r1.toFixed(1);
+    r2Txt.textContent=r2.toFixed(1);
+    w2Txt.textContent=Math.abs(w2).toFixed(2);
+
+    ratio12Txt.textContent=parseFloat(ratio12El.value).toFixed(2);
+    if(g3on.checked){
+      r3Txt.textContent=r3.toFixed(1);
+      ratio23Txt.textContent=parseFloat(ratio23El.value).toFixed(2);
+      g3row.style.display='';
+      g3info.style.display='';
+      tag3.style.display='';
+      w3Txt.textContent=Math.abs(w3).toFixed(2);
+    }else{
+      g3row.style.display='none';
+      g3info.style.display='none';
+      tag3.style.display='none';
+      w3Txt.textContent='—';
+    }
+
+    w1Txt.textContent=Math.abs(w1).toFixed(2);
+
+    ctx.clearRect(0,0,cv.width,cv.height);
+
+    const g1=drawGear(cx1,cy,r1,t1,angle1,getComputedStyle(document.documentElement).getPropertyValue('--g1'));
+    const g2=drawGear(cx2,cy,r2,t2,angle2,getComputedStyle(document.documentElement).getPropertyValue('--g2'));
+    let g3={rOut:0};
+    if(g3on.checked) g3=drawGear(cx3,cy,r3,t3,angle3,getComputedStyle(document.documentElement).getPropertyValue('--g3'));
+
+    drawArrow(cx1,cy,g1.rOut,angle1-Math.PI/2);
+    drawArrow(cx2,cy,g2.rOut,angle2-Math.PI/2);
+    if(g3on.checked) drawArrow(cx3,cy,g3.rOut,angle3-Math.PI/2);
+
+    // labels r + ω ใต้ r  (มือถือ ลดฟอนต์ลง 5px)
+    const fs = getCanvasFontSize();
+    ctx.fillStyle='#0b2447';
+    ctx.font=`bold ${fs}px system-ui,"Noto Sans Thai",sans-serif`;
+    ctx.textAlign='center';
+
+    const y1=cy+g1.rOut+24, y1w=y1+18;
+    const y2=cy+g2.rOut+24, y2w=y2+18;
+    ctx.fillText(`r₁=${r1.toFixed(1)} cm`, cx1, y1);
+    ctx.fillText(`ω₁=${w1.toFixed(2)} rad/s`, cx1, y1w);
+    ctx.fillText(`r₂=${r2.toFixed(1)} cm`, cx2, y2);
+    ctx.fillText(`ω₂=${w2.toFixed(2)} rad/s`, cx2, y2w);
+
+    if(g3on.checked){
+      const y3=cy+g3.rOut+24, y3w=y3+18;
+      ctx.fillText(`r₃=${r3.toFixed(1)} cm`, cx3, y3);
+      ctx.fillText(`ω₃=${w3.toFixed(2)} rad/s`, cx3, y3w);
+    }
+
+    placeTags(cx1,cy,g1.rOut, cx2,cy,g2.rOut, cx3,cy,g3.rOut);
+
+    return {w1,w2,w3};
+  }
+
+  function step(dt){ const {w1,w2,w3}=render(); angle1+=w1*dt; angle2+=w2*dt; if(g3on.checked) angle3+=w3*dt; }
+  function loop(t){ if(!running){last=t;return;} const dt=Math.min(0.05,(t-last)/1000); step(dt); last=t; requestAnimationFrame(loop); }
+  function refresh(){ render(); }
+
+  // --- Events ---
+  ratio12El.addEventListener('input', ()=>{ r1_manual=null; r2_manual=null; refresh(); });
+
+  function onRInput(){
+    const r1=parseFloat(r1In.value), r2=parseFloat(r2In.value);
+    if(isFinite(r1)&&isFinite(r2)&&r1>0&&r2>0){ r1_manual=r1; r2_manual=r2; refresh(); }
+  }
+  r1In.addEventListener('input', onRInput);
+  r2In.addEventListener('input', onRInput);
+
+  function applyW1FromNumber(){
+    let v=parseFloat(w1In.value); if(!isFinite(v)||v<0) v=0;
+    if(v>parseFloat(w1El.max)) v=parseFloat(w1El.max);
+    w1El.value=v.toFixed(2); w1In.value=w1El.value; refresh();
+  }
+  w1In.addEventListener('input', applyW1FromNumber);
+  w1El.addEventListener('input', ()=>{ w1In.value=w1El.value; refresh(); });
+
+  ;['change','input'].forEach(ev=>{
+    dirEl.addEventListener(ev,refresh);
+    g3on.addEventListener(ev,refresh);
+    ratio23El.addEventListener(ev,refresh);
+  });
+
+  playBtn.onclick=()=>{ running=!running; playBtn.textContent=running?'⏸ หยุด':'▶ เล่น'; if(running){ last=performance.now(); requestAnimationFrame(loop);} };
+  resetBtn.onclick=()=>{ angle1=angle2=angle3=0; refresh(); };
+
+  // --- Canvas sizing + mobile shift left 120px ---
+  function refreshCanvasSize(){
+    const isDesk = window.matchMedia('(min-width: 980px)').matches;
+    const isMobile = window.matchMedia('(max-width: 979px)').matches;
+
+    const w = Math.max(10, Math.round(vp.clientWidth));
+    let h;
+
+    if(isDesk){
+      h = Math.max(420, Math.round(vp.clientHeight));
+      cv.style.width = '100%';
+    }else{
+      // มือถือ: ให้กว้างเต็มจอ (canvas width = vp width)
+      h = Math.max(300, Math.min(640, Math.round(w*0.58)));
+      cv.style.width = '100%';
+    }
+
+    cv.width = w;
+    cv.height = h;
+    cv.style.height = h + 'px';
+
+    cy = cv.height/2;
+
+    // ตำแหน่งเฟือง 1 (มือถือลากซ้ายอีก 120px)
+    const baseCx1 = Math.max(200, Math.min(300, Math.round(w*0.22)));
+    cx1 = isMobile ? (baseCx1 - 120) : baseCx1;
+
+    // กันหลุดซ้ายจนมองไม่เห็นเลย
+    cx1 = Math.max(60, cx1);
+  }
+
+  const ro = new ResizeObserver(()=>{
+    refreshCanvasSize();
+    refresh();
+  });
+  ro.observe(vp);
+
+  window.addEventListener('orientationchange', ()=>{
+    setTimeout(()=>{ refreshCanvasSize(); refresh(); }, 50);
+  });
+
+  refreshCanvasSize();
+  refresh();
+})();
+</script>
+</body>
+</html>

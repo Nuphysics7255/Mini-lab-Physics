@@ -1,0 +1,576 @@
+<!DOCTYPE html> 
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>การทดลอง: สายพาน-รอก — ทดรอบความเร็ว (ปรับรัศมี + ω + ทิศทาง + สายพานเลื่อน)</title>
+<style>
+  :root{
+    --ink:#0f172a; --muted:#475569; --panel:#ffffff; --bg:#f8fafc; --line:#e5e7eb;
+    --belt:#111111; --pulley1:#fdba74; --pulley2:#dbeafe; --rim:#0b2545;
+    --shaft:#b91c1c;
+    --arrowHead:#ef4444; --accent:#0ea5e9;
+    --pill:#eef2ff;
+  }
+  html,body{margin:0;background:#fff;color:var(--ink);font-family:system-ui,"Noto Sans Thai",sans-serif}
+  .wrap{display:flex;flex-direction:column;align-items:center;gap:12px;padding:14px}
+  #stage{width:min(980px,100%);background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:10px}
+
+  /* ✅ หัวข้อใหญ่ หนา */
+  .titleBar{
+    width:min(980px,100%);
+    display:flex;
+    justify-content:flex-start;
+    align-items:center;
+  }
+  .titleBig{
+    font-size:22px;
+    font-weight:800;
+    color:var(--ink);
+    line-height:1.15;
+  }
+  @media (max-width: 640px){
+    .titleBig{font-size:20px}
+  }
+
+  canvas{width:100%;aspect-ratio: 16/9; background:#fff; border:1px solid var(--line); border-radius:12px; touch-action:none}
+
+  .controls{display:grid;grid-template-columns:repeat(12,1fr);gap:10px;margin-top:8px}
+  .card{grid-column:span 12;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px}
+  .row{display:grid;grid-template-columns: 150px 1fr 92px; gap:10px; align-items:center}
+  .row input[type="range"]{width:100%}
+
+  /* ✅ ช่องตัวเลขสั้นลงเหลือ 70% */
+  .row input[type="number"]{
+    width:70%;
+    justify-self:end;
+    padding:6px 8px;
+    border:1px solid var(--line);
+    border-radius:10px
+  }
+
+  .btns{display:flex;flex-wrap:wrap;gap:8px}
+  button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:8px 14px;cursor:pointer}
+  .primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  a.link{color:#1d4ed8;text-decoration:underline}
+  .muted{color:var(--muted)}
+  dialog{border:none;border-radius:16px;max-width:min(720px,95vw);} .modal{padding:0}
+  .modal header{background:linear-gradient(135deg,#22d3ee,#818cf8);color:#fff;padding:16px 18px;border-radius:16px 16px 0 0}
+  .modal .content{padding:16px 18px}
+  .modal .content .box{border:2px dashed #93c5fd;background:#eff6ff;border-radius:14px;padding:12px;margin:10px 0}
+  .modal footer{display:flex;justify-content:flex-end;padding:12px 18px}
+  .close{background:#1e293b;color:#fff}
+
+  .topnote{
+    font-size:12px;
+    color:var(--muted);
+    margin:0 0 8px 0;
+    padding:8px 10px;
+    background:#ffffff;
+    border:1px solid var(--line);
+    border-radius:12px;
+  }
+
+  .checks{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px 14px;
+    align-items:center;
+    margin-top:10px;
+    padding-top:10px;
+    border-top:1px dashed var(--line);
+  }
+  .chk{
+    display:flex;
+    gap:8px;
+    align-items:center;
+    user-select:none;
+    font-size:14px;
+    color:var(--ink);
+  }
+  .chk input{transform:translateY(1px)}
+
+  .footerLink{
+    width:min(980px,100%);
+    display:flex;
+    justify-content:center;
+    padding:6px 0 2px;
+  }
+
+  /* br เฉพาะจอคอม */
+  .br-desktop{display:none}
+  @media (min-width: 641px){
+    .br-desktop{display:block}
+  }
+
+  /* มือถือ: ช่องตัวเลขคอลัมน์แคบลง + ขยายจอทดลองแนวตั้ง 10% (รูปเดิม) */
+  @media (max-width: 640px){
+    canvas{aspect-ratio: 16/9; height: calc((100vw - 22px) * 9 / 16 * 1.10); max-height: 62vh;}
+    .row{grid-template-columns: 140px 1fr 46px}
+    .row input[type="number"]{padding:6px 6px}
+  }
+</style>
+
+<script>
+  const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+
+  window.addEventListener('DOMContentLoaded',()=>{
+    const cvs=document.getElementById('c');
+    const ctx=cvs.getContext('2d');
+
+    const r1Range=document.getElementById('r1');
+    const r2Range=document.getElementById('r2');
+    const r1Num=document.getElementById('r1n');
+    const r2Num=document.getElementById('r2n');
+    const w1Range=document.getElementById('w1');
+    const w1Num=document.getElementById('w1n');
+    const dirSel=document.getElementById('dir');
+
+    const playBtn=document.getElementById('play');
+    const resetBtn=document.getElementById('reset');
+
+    const showVChk=document.getElementById('showV');
+    const showW2Chk=document.getElementById('showW2');
+
+    const formulaBtn=document.getElementById('formula');
+    const dlg=document.getElementById('dlg');
+    const closeBtn=document.getElementById('closeModal');
+
+    const state={
+      r1:80, r2:45, w1:3.0, dir:1,
+      theta1:0, theta2:0, beltOffset:0,
+      playing:false,
+      showV:false,
+      showW2:false,
+      drag:{
+        p1_r:{dx:0,dy:0},
+        p1_w:{dx:0,dy:0},
+        p2_r:{dx:0,dy:0},
+        p2_w:{dx:0,dy:0},
+        v:{dx:0,dy:0},
+      }
+    };
+
+    function isMobile(){
+      return window.matchMedia && window.matchMedia('(max-width: 640px)').matches;
+    }
+
+    const syncFromUI=()=>{
+      state.r1=+r1Range.value; r1Num.value=state.r1;
+      state.r2=+r2Range.value; r2Num.value=state.r2;
+      state.w1=+w1Range.value; w1Num.value=state.w1;
+      state.dir=parseInt(dirSel.value,10);
+    };
+    const syncUIFromState=()=>{
+      r1Range.value=state.r1; r1Num.value=state.r1;
+      r2Range.value=state.r2; r2Num.value=state.r2;
+      w1Range.value=state.w1; w1Num.value=state.w1;
+      dirSel.value=state.dir;
+      showVChk.checked=!!state.showV;
+      showW2Chk.checked=!!state.showW2;
+    };
+
+    [r1Range,r2Range,w1Range,dirSel].forEach(el=>el.addEventListener('input',()=>{
+      syncFromUI(); draw();
+    }));
+
+    [r1Num,r2Num,w1Num].forEach(el=>el.addEventListener('change',()=>{
+      const v=parseFloat(el.value);
+      if(!Number.isFinite(v)) return;
+      if(el===r1Num) state.r1=clamp(v,20,140);
+      if(el===r2Num) state.r2=clamp(v,20,140);
+      if(el===w1Num) state.w1=clamp(v,0,12);
+      syncUIFromState(); draw();
+    }));
+
+    showVChk.addEventListener('change',()=>{ state.showV=showVChk.checked; draw(); });
+    showW2Chk.addEventListener('change',()=>{ state.showW2=showW2Chk.checked; draw(); });
+
+    playBtn.addEventListener('click',()=>{
+      state.playing=!state.playing;
+      playBtn.textContent=state.playing? 'พักการเล่น':'เล่น';
+    });
+
+    resetBtn.addEventListener('click',()=>{
+      state.theta1=0; state.theta2=0; state.beltOffset=0;
+      draw();
+    });
+
+    formulaBtn.addEventListener('click',()=>{ dlg.showModal(); pumpFormula(); });
+    closeBtn.addEventListener('click',()=>{ dlg.close(); });
+
+    function getCss(name){return getComputedStyle(document.documentElement).getPropertyValue(name).trim();}
+
+    function drawPulley(x,y,r,angle,fill){
+      ctx.save(); ctx.translate(x,y);
+      ctx.lineWidth=4; ctx.strokeStyle=getCss('--rim'); ctx.fillStyle=fill;
+      ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.fill(); ctx.stroke();
+
+      ctx.rotate(angle);
+      ctx.lineWidth=3; ctx.strokeStyle=getCss('--shaft');
+      ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(0,-r+10); ctx.stroke();
+
+      ctx.fillStyle=getCss('--arrowHead');
+      const ah=8, aw=7, tipY=-r+8;
+      ctx.beginPath();
+      ctx.moveTo(0,tipY-ah);
+      ctx.lineTo(-aw, tipY);
+      ctx.lineTo( aw, tipY);
+      ctx.closePath(); ctx.fill();
+      ctx.restore();
+    }
+
+    function drawBelt(c1,c2,r1,r2){
+      const {x:x1,y:y1}=c1, {x:x2,y:y2}=c2;
+      const dSafe = Math.max(1, x2-x1);
+      const k=(r1-r2)/dSafe;
+      const ang=Math.atan(k);
+
+      const t1Top=Math.PI/2 - ang, t1Bot=Math.PI/2 + ang;
+      const t2Top=Math.PI/2 - ang, t2Bot=Math.PI/2 + ang;
+
+      const p1_top={x:x1 + r1*Math.cos(t1Top), y:y1 - r1*Math.sin(t1Top)};
+      const p2_top={x:x2 - r2*Math.cos(t2Top), y:y2 - r2*Math.sin(t2Top)};
+      const p1_bot={x:x1 + r1*Math.cos(t1Bot), y:y1 + r1*Math.sin(t1Bot)};
+      const p2_bot={x:x2 - r2*Math.cos(t2Bot), y:y2 + r2*Math.sin(t2Bot)};
+
+      ctx.lineWidth=4; ctx.strokeStyle=getCss('--belt');
+      ctx.beginPath(); ctx.moveTo(p1_top.x,p1_top.y); ctx.lineTo(p2_top.x,p2_top.y); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(p1_bot.x,p1_bot.y); ctx.lineTo(p2_bot.x,p2_bot.y); ctx.stroke();
+      ctx.beginPath(); ctx.arc(x1,y1,r1, t1Top, t1Bot, false); ctx.stroke();
+      ctx.beginPath(); ctx.arc(x2,y2,r2, Math.PI - t2Top, Math.PI - t2Bot, false); ctx.stroke();
+
+      ctx.setLineDash([12,10]); ctx.lineWidth=2; ctx.strokeStyle="#9ca3af";
+      const offTop = -state.beltOffset;
+      const offBot =  state.beltOffset;
+
+      ctx.lineDashOffset = offTop;
+      ctx.beginPath(); ctx.moveTo(p1_top.x,p1_top.y); ctx.lineTo(p2_top.x,p2_top.y); ctx.stroke();
+
+      ctx.lineDashOffset = offBot;
+      ctx.beginPath(); ctx.moveTo(p1_bot.x,p1_bot.y); ctx.lineTo(p2_bot.x,p2_bot.y); ctx.stroke();
+
+      ctx.lineDashOffset = offTop;
+      ctx.beginPath(); ctx.arc(x1,y1,r1, t1Top, t1Bot, false); ctx.stroke();
+
+      ctx.lineDashOffset = offBot;
+      ctx.beginPath(); ctx.arc(x2,y2,r2, Math.PI - t2Top, Math.PI - t2Bot, false); ctx.stroke();
+
+      ctx.setLineDash([]);
+
+      return {p1_top,p2_top,p1_bot,p2_bot};
+    }
+
+    function drawPlainTextRed(x,y,text,px,alpha){
+      ctx.save();
+      ctx.globalAlpha = (alpha==null ? 0.95 : alpha);
+      ctx.font = (px||16) + 'px system-ui, "Noto Sans Thai"';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#dc2626';
+      ctx.shadowColor = 'rgba(0,0,0,0.18)';
+      ctx.shadowBlur = 6;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 2;
+      ctx.fillText(text, x, y);
+      ctx.restore();
+    }
+
+    // hitboxes for dragging
+    let hitBoxes=[];
+    function addHitBox(key, x, y, w, h){ hitBoxes.push({key,x,y,w,h}); }
+    function measureHit(text, fontPx){
+      ctx.save(); ctx.font = fontPx + 'px system-ui, "Noto Sans Thai"';
+      const w = ctx.measureText(text).width;
+      ctx.restore(); return w;
+    }
+    function drawTextHit(key, x, y, text, fontPx, color){
+      ctx.save();
+      ctx.font = fontPx + 'px system-ui, "Noto Sans Thai"';
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillStyle = color || getCss('--ink');
+      ctx.fillText(text, x, y);
+      const w = measureHit(text, fontPx);
+      const h = fontPx * 1.3;
+      addHitBox(key, x - w/2 - 6, y - h/2 - 4, w + 12, h + 8);
+      ctx.restore();
+    }
+
+    function draw(){
+      const DPR=Math.min(2,window.devicePixelRatio||1);
+      const W=cvs.clientWidth, H=cvs.clientHeight;
+      cvs.width=W*DPR; cvs.height=H*DPR;
+      ctx.setTransform(DPR,0,0,DPR,0,0);
+      ctx.clearRect(0,0,W,H);
+      hitBoxes=[];
+
+      const mobile = isMobile();
+      const s = mobile ? 0.6 : 1.0;
+
+      const r1d = state.r1 * s;
+      const r2d = state.r2 * s;
+
+      const pad=40;
+      const bring = mobile ? -30 : 100;
+
+      const C1={x:pad+Math.max(70,r1d)+bring, y:H*0.58};
+      const C2={x:W-pad-Math.max(50,r2d)-bring, y:H*0.58};
+
+      const beltGeom = drawBelt(C1,C2,r1d,r2d);
+      drawPulley(C1.x,C1.y,r1d,state.theta1,getCss('--pulley1'));
+      drawPulley(C2.x,C2.y,r2d,state.theta2,getCss('--pulley2'));
+
+      const fontPx = (14*s + 2);
+
+      const baseP1r = {x:C1.x, y:C1.y+r1d+38*s};
+      const baseP1w = {x:C1.x, y:C1.y+r1d+56*s};
+      const baseP2r = {x:C2.x, y:C2.y+r2d+38*s};
+      const baseP2w = {x:C2.x, y:C2.y+r2d+56*s};
+
+      drawTextHit('p1_r',
+        baseP1r.x + state.drag.p1_r.dx, baseP1r.y + state.drag.p1_r.dy,
+        `รอก 1 (R₁=${(state.r1/10).toFixed(2)} cm)`,
+        fontPx, getCss('--ink')
+      );
+      drawTextHit('p1_w',
+        baseP1w.x + state.drag.p1_w.dx, baseP1w.y + state.drag.p1_w.dy,
+        `ω₁ = ${(state.dir*state.w1).toFixed(2)} rad/s`,
+        fontPx, getCss('--ink')
+      );
+      drawTextHit('p2_r',
+        baseP2r.x + state.drag.p2_r.dx, baseP2r.y + state.drag.p2_r.dy,
+        `รอก 2 (R₂=${(state.r2/10).toFixed(2)} cm)`,
+        fontPx, getCss('--ink')
+      );
+
+      if(state.showW2){
+        const w2 = (state.r1/state.r2)*state.w1 * state.dir;
+        drawTextHit('p2_w',
+          baseP2w.x + state.drag.p2_w.dx, baseP2w.y + state.drag.p2_w.dy,
+          `ω₂ = ${w2.toFixed(2)} rad/s`,
+          fontPx, getCss('--ink')
+        );
+      }
+
+      if(state.showV){
+        const v = state.w1*state.r1;
+        const midX=(beltGeom.p1_top.x + beltGeom.p2_top.x)/2;
+        const midY=(beltGeom.p1_top.y + beltGeom.p2_top.y)/2 - (16*s + 20);
+
+        /* ✅ ลดขนาดป้าย v ลงอีก 5px (จากเดิม -10 → -15) */
+        const fontV = Math.max(10, (18*s + 6) - 10);
+
+        const x = midX + state.drag.v.dx;
+        const y = midY + state.drag.v.dy;
+
+        /* ✅ ใส่หน่วย m/s */
+        const vLabel = `v = ${v.toFixed(2)} m/s`;
+        drawPlainTextRed(x, y, vLabel, fontV, 0.95);
+
+        const w = measureHit(vLabel, fontV);
+        const h = fontV * 1.3;
+        addHitBox('v', x - w/2 - 6, y - h/2 - 4, w + 12, h + 8);
+      }
+    }
+
+    // drag: ไม่ block ปุ่ม
+    let draggingKey=null;
+    let dragStart=null;
+
+    function canvasPointFromEvent(ev){
+      const rect=cvs.getBoundingClientRect();
+      let clientX, clientY;
+      if(ev.touches && ev.touches[0]){
+        clientX = ev.touches[0].clientX;
+        clientY = ev.touches[0].clientY;
+      }else{
+        clientX = ev.clientX;
+        clientY = ev.clientY;
+      }
+      return {x: clientX - rect.left, y: clientY - rect.top};
+    }
+
+    function hitTest(pt){
+      for(let i=hitBoxes.length-1;i>=0;i--){
+        const b=hitBoxes[i];
+        if(pt.x>=b.x && pt.x<=b.x+b.w && pt.y>=b.y && pt.y<=b.y+b.h) return b.key;
+      }
+      return null;
+    }
+
+    function startDrag(ev){
+      const pt=canvasPointFromEvent(ev);
+      const key=hitTest(pt);
+      if(!key) return;
+      draggingKey=key;
+      dragStart={pt, dx: state.drag[key].dx, dy: state.drag[key].dy};
+      try{ cvs.setPointerCapture && ev.pointerId!=null && cvs.setPointerCapture(ev.pointerId);}catch(_){}
+      ev.preventDefault();
+    }
+    function moveDrag(ev){
+      if(!draggingKey || !dragStart) return;
+      const pt=canvasPointFromEvent(ev);
+      const ddx = pt.x - dragStart.pt.x;
+      const ddy = pt.y - dragStart.pt.y;
+      state.drag[draggingKey].dx = dragStart.dx + ddx;
+      state.drag[draggingKey].dy = dragStart.dy + ddy;
+      draw();
+      ev.preventDefault();
+    }
+    function endDrag(ev){
+      if(!draggingKey) return;
+      draggingKey=null;
+      dragStart=null;
+      ev.preventDefault();
+    }
+
+    cvs.addEventListener('pointerdown', startDrag, {passive:false});
+    cvs.addEventListener('pointermove', moveDrag, {passive:false});
+    window.addEventListener('pointerup', endDrag, {passive:false});
+
+    cvs.addEventListener('touchstart', startDrag, {passive:false});
+    cvs.addEventListener('touchmove', moveDrag, {passive:false});
+    window.addEventListener('touchend', endDrag, {passive:false});
+
+    function step(){
+      if(state.playing){
+        const dt=1/60;
+        const sgn=state.dir;
+        const w1=sgn*state.w1;
+        const w2=(state.r1/state.r2)*sgn*state.w1;
+
+        state.theta1+=w1*dt;
+        state.theta2+=w2*dt;
+
+        const v=Math.abs(state.w1)*state.r1*(sgn>0?1:-1);
+        state.beltOffset=(state.beltOffset+v*dt)%1000;
+        draw();
+      }
+      requestAnimationFrame(step);
+    }
+
+    function pumpFormula(){
+      document.getElementById('F_R1').textContent=(state.r1/10).toFixed(2);
+      document.getElementById('F_R2').textContent=(state.r2/10).toFixed(2);
+      document.getElementById('F_W1').textContent=state.w1.toFixed(2);
+      const w2=(state.r1/state.r2)*state.w1;
+      document.getElementById('F_W2').textContent=w2.toFixed(2);
+      if(window.MathJax){MathJax.typesetPromise();}
+    }
+
+    syncUIFromState();
+    draw();
+    requestAnimationFrame(step);
+    window.addEventListener('resize', draw);
+  });
+</script>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="titleBar">
+      <div class="titleBig">การทดลอง: สายพาน-รอก — ทดรอบความเร็ว</div>
+    </div>
+
+    <section id="stage">
+      <p class="topnote">
+        * สายพานไม่ไถล จึงทำให้รอกทั้งสองหมุนทิศเดียวกัน และมี v ที่ขอบรอกเท่ากัน
+      </p>
+
+      <canvas id="c"></canvas>
+
+      <div class="controls">
+        <div class="card">
+          <div class="row"><label>รัศมีรอก 1 (R₁, cm)</label>
+            <input id="r1" type="range" min="20" max="140" step="1" value="80"/>
+            <input id="r1n" type="number" min="20" max="140" step="1" value="80" />
+          </div>
+          <div class="row"><label>รัศมีรอก 2 (R₂, cm)</label>
+            <input id="r2" type="range" min="20" max="140" step="1" value="45"/>
+            <input id="r2n" type="number" min="20" max="140" step="1" value="45" />
+          </div>
+
+          <div class="row">
+            <label>
+              อัตราเร็วเชิงมุมรอก 1
+              <br class="br-desktop">
+              (|ω₁|, rad/s)
+            </label>
+            <input id="w1" type="range" min="0" max="12" step="0.1" value="3"/>
+            <input id="w1n" type="number" min="0" max="12" step="0.1" value="3" />
+          </div>
+
+          <div class="row"><label>ทิศทางการหมุนของรอก 1</label>
+            <select id="dir">
+              <option value="1">ตามเข็มนาฬิกา</option>
+              <option value="-1">ทวนเข็มนาฬิกา</option>
+            </select>
+          </div>
+
+          <div class="checks">
+            <label class="chk">
+              <input id="showV" type="checkbox" />
+              แสดง \(v\) ของสายพาน
+            </label>
+            <label class="chk">
+              <input id="showW2" type="checkbox" />
+              แสดง \(\omega_2\) ของรอก 2
+            </label>
+          </div>
+
+          <div class="btns" style="margin-top:10px">
+            <button id="play" class="primary">เล่น</button>
+            <button id="reset">รีเซ็ต</button>
+            <button id="formula" style="background:#fee2e2;border-color:#fecaca">สูตรสำคัญ</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="footerLink">
+      <a class="link" href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">
+        ศึกษาเพิ่มเติมที่เพจคลายปมฟิสิกส์
+      </a>
+    </div>
+  </div>
+
+  <dialog id="dlg" class="modal">
+    <form method="dialog">
+      <header>
+        <h3 style="margin:0">สูตรสำคัญ — หลักการทดรอบด้วยสายพาน</h3>
+        <div style="font-size:12px;opacity:.9">กรณีผิวสัมผัสไม่ไถล (no-slip)</div>
+      </header>
+      <div class="content">
+        <div class="box">
+          <p><b>หลักการ:</b> ที่จุดสัมผัส สายพานและขอบรอกไม่มีการไถล จึงมีอัตราเร็วเชิงเส้นเท่ากัน</p>
+          <p style="text-align:center">$$ v = \omega_1 R_1 = \omega_2 R_2 $$</p>
+          <p>ดังนั้นอัตราเร็วเชิงมุมของรอกที่ 2 คือ</p>
+          <p style="text-align:center">$$ \boxed{\;\omega_2 = \frac{R_1}{R_2}\,\omega_1\;} $$</p>
+          <p><i>ทิศทาง:</i> สายพานแบบ open-belt ทำให้ทั้งสองรอก <b>หมุนทิศเดียวกัน</b>.</p>
+        </div>
+
+        <p style="margin-top:12px">ตัวอย่างแทนค่าแบบสด ๆ จากจอ:</p>
+        <div class="box">
+          \(R_1\)=<span id="F_R1">—</span> cm,
+          \(R_2\)=<span id="F_R2">—</span> cm,
+          \(|\omega_1|\)=<span id="F_W1">—</span> rad/s
+          <br/>
+          สรุป \(\omega_2 = (R_1/R_2)\,\omega_1 =\)
+          <span id="F_W2">—</span> rad/s
+        </div>
+      </div>
+      <footer>
+        <button id="closeModal" class="close">ปิด</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['$','$'],['\\(','\\)']] },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" defer></script>
+</body>
+</html>
