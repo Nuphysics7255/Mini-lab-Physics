@@ -1,0 +1,1626 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>ห้องมืด: สีของวัตถุภายใต้แสงสี (RGB)</title>
+
+<style>
+  :root{
+    --bg:#070a12;
+    --panel:#0d1324;
+    --panel2:#0b1020;
+    --text:#eaf0ff;
+    --muted:#aab6d8;
+    --line:rgba(255,255,255,.12);
+    --pill:rgba(255,255,255,.08);
+    --pill2:rgba(255,255,255,.12);
+
+    --blue:#3aa6ff;
+    --gray:#6c7a92;
+    --orange:#ffd2a8;
+    --green:#bff1c6;
+
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bot: env(safe-area-inset-bottom, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Thai", sans-serif;
+    background:var(--bg);
+    color:var(--text);
+  }
+  a{color:#5fb3ff}
+
+  button, .tbtn, .tabbtn{
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .wrap{
+    max-width:1200px;
+    margin:0 auto;
+    padding:12px 12px calc(12px + var(--safe-bot));
+  }
+  .topbar{
+    display:flex; gap:10px; flex-wrap:wrap;
+    align-items:center;
+    padding:10px;
+    background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+    border:1px solid var(--line);
+    border-radius:16px;
+    position:sticky; top:calc(8px + var(--safe-top));
+    z-index:5;
+    backdrop-filter: blur(10px);
+  }
+  .tabbtn{
+    border:1px solid var(--line);
+    background:rgba(255,255,255,.06);
+    color:var(--text);
+    padding:10px 14px;
+    border-radius:999px;
+    cursor:pointer;
+    display:flex; align-items:center; gap:8px;
+    user-select:none;
+  }
+  .tabbtn.active{ outline:2px solid rgba(58,166,255,.35); background:rgba(58,166,255,.14); }
+  .grow{flex:1}
+  .brand{
+    margin-left:auto;
+    font-size:14px;
+    color:var(--muted);
+    white-space:nowrap;
+  }
+
+  .grid{
+    display:grid;
+    grid-template-columns: 360px 1fr;
+    gap:12px;
+    margin-top:12px;
+  }
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:18px;
+    padding:12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.25);
+  }
+  .panel h3{
+    margin:0 0 10px 0;
+    font-size:16px;
+    color:#bcd7ff;
+  }
+  .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
+  label{font-size:13px; color:var(--muted)}
+  select, input[type="range"], input[type="number"]{
+    width:100%;
+  }
+  select, .pill{
+    background:rgba(255,255,255,.06);
+    border:1px solid var(--line);
+    color:var(--text);
+    border-radius:14px;
+    padding:10px 12px;
+    outline:none;
+  }
+
+  /* material select: options readable on light dropdown */
+  #materialSel{
+    background:#ffffff !important;
+    color:#000000 !important;
+  }
+  #materialSel option{ color:#000000 !important; }
+
+
+  .mini{
+    font-size:12px;
+    color:var(--muted);
+    line-height:1.4;
+  }
+  .kbd{
+    display:inline-block;
+    padding:2px 6px;
+    border:1px solid var(--line);
+    border-radius:8px;
+    background:rgba(255,255,255,.06);
+    font-size:12px;
+    color:var(--text);
+  }
+
+  .sceneBox{
+    position:relative;
+    background:var(--panel2);
+    border:1px solid var(--line);
+    border-radius:18px;
+    overflow:hidden;
+    min-height:420px;
+  }
+  canvas{display:block; width:100%; height:100%;}
+  .hud{
+    position:absolute;
+    left:12px; top:12px;
+    background:rgba(0,0,0,.35);
+    border:1px solid rgba(255,255,255,.16);
+    border-radius:14px;
+    padding:10px 12px;
+    max-width:min(420px, calc(100% - 24px));
+    backdrop-filter: blur(8px);
+  }
+  .hud .title{font-weight:700; font-size:14px;}
+  .hud .sub{font-size:12px; color:rgba(255,255,255,.8); margin-top:4px; line-height:1.35;}
+  .chip{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:6px 10px; border-radius:999px;
+    border:1px solid rgba(255,255,255,.14);
+    background:rgba(255,255,255,.06);
+    font-size:12px; color:rgba(255,255,255,.92);
+    margin-top:8px;
+    flex-wrap:wrap;
+  }
+  .dot{width:10px; height:10px; border-radius:999px; display:inline-block; border:1px solid rgba(0,0,0,.25);}
+
+  .btn{
+    border:none; cursor:pointer;
+    padding:12px 14px;
+    border-radius:14px;
+    font-weight:700;
+    color:#0b1020;
+    background:#fff;
+  }
+  .btn.blue{background:var(--blue); color:white;}
+  .btn.gray{background:#aab6d8; color:#101628;}
+  .btn.orange{background:var(--orange); color:#3a2200;}
+  .btn.green{background:var(--green); color:#0f2b14;}
+  .btn.outline{
+    background:transparent;
+    border:1px solid var(--line);
+    color:var(--text);
+    font-weight:700;
+    border-radius:999px;
+    min-height:48px;
+    padding:12px 16px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .toggleRow{display:flex; gap:8px; flex-wrap:wrap;}
+  .tbtn{
+    cursor:pointer;
+    border:1px solid var(--line);
+    border-radius:999px;
+    padding:10px 14px;
+    min-height:44px;
+    background:rgba(255,255,255,.06);
+    color:var(--text);
+    user-select:none;
+    display:flex; align-items:center; gap:8px;
+  }
+  .tbtn.on{outline:2px solid rgba(255,255,255,.18); background:rgba(255,255,255,.12);}
+  .tbtn .sw{
+    width:28px; height:16px; border-radius:999px;
+    background:rgba(0,0,0,.35);
+    border:1px solid rgba(255,255,255,.18);
+    position:relative;
+  }
+  .tbtn .knob{
+    position:absolute; top:1px; left:1px;
+    width:12px; height:12px; border-radius:999px;
+    background:#cfd8ff;
+    transition: transform .15s ease;
+  }
+  .tbtn.on .knob{ transform: translateX(12px); }
+  .tbtn .tag{
+    font-weight:800;
+  }
+
+  .section{display:none;}
+  .section.active{display:block;}
+
+  /* principle & exercise layout */
+  .content{
+    margin-top:12px;
+    display:grid;
+    grid-template-columns: 1fr;
+    gap:12px;
+  }
+  .prose{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:18px;
+    padding:14px 16px;
+    line-height:1.65;
+    color:rgba(255,255,255,.92);
+  }
+  .prose h2{margin:0 0 10px 0; font-size:18px; color:#bcd7ff;}
+  .prose h3{margin:14px 0 8px 0; font-size:16px; color:#bcd7ff;}
+  .prose ul{margin:8px 0 8px 18px;}
+  .prose table{
+    width:100%; border-collapse:collapse; overflow:hidden;
+    border:1px solid rgba(255,255,255,.14);
+    border-radius:14px;
+  }
+  .prose th, .prose td{
+    padding:10px 10px;
+    border-bottom:1px solid rgba(255,255,255,.10);
+    vertical-align:top;
+  }
+  .prose th{color:#dbe8ff; text-align:left; background:rgba(255,255,255,.05);}
+
+  .qa{
+    background:rgba(255,255,255,.05);
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:16px;
+    padding:12px;
+    margin:10px 0;
+  }
+  .qtitle{font-weight:800; margin-bottom:8px;}
+  .choices{display:grid; gap:8px;}
+  .choice{
+    display:flex; gap:10px; align-items:flex-start;
+    background:rgba(0,0,0,.20);
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:14px;
+    padding:10px 12px;
+    cursor:pointer;
+  }
+  .choice input{margin-top:3px;}
+  .explain{
+    margin-top:10px;
+    padding:10px 12px;
+    border-radius:14px;
+    border:1px solid rgba(255,255,255,.12);
+    background:rgba(255,255,255,.06);
+    display:none;
+  }
+  .explain.show{display:block;}
+  .ans{color:#ff5c5c; font-weight:900;}
+  .scoreBox{
+    margin-top:10px;
+    padding:10px 12px;
+    border-radius:14px;
+    border:1px solid rgba(191,241,198,.35);
+    background:rgba(191,241,198,.08);
+    color:rgba(255,255,255,.92);
+    display:none;
+  }
+  .scoreBox.show{display:block;}
+  /* --- principle visual examples (animated) --- */
+  .exViz{
+    display:grid;
+    grid-template-columns: repeat(3, minmax(0,1fr));
+    gap:12px;
+    margin:12px 0 6px;
+  }
+  @media (max-width: 900px){
+    .exViz{ grid-template-columns: 1fr; }
+  }
+  .vizCard{
+    border:1px solid rgba(255,255,255,.14);
+    background:rgba(0,0,0,.14);
+    border-radius:16px;
+    padding:12px;
+  }
+  .vizCap{ font-weight:900; margin:0 0 10px 0; color:#0b1020; background:rgba(255,255,255,.78); border:1px solid rgba(11,16,32,.10); padding:8px 10px; border-radius:14px; display:inline-block; }
+  .vizStage{
+    position:relative;
+    height:118px;
+    border-radius:14px;
+    overflow:hidden;
+    border:1px solid rgba(255,255,255,.10);
+    background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(0,0,0,.28));
+  }
+  .vizBeam{
+    position:absolute;
+    left:14px; top:18px;
+    width:44px; height:44px;
+    border-radius:999px;
+    border:1px solid rgba(0,0,0,.25);
+    filter:saturate(1.15);
+  }
+  .vizSpot{
+    position:absolute;
+    left:-10px; top:-10px;
+    width:160px; height:160px;
+    border-radius:999px;
+    opacity:.85;
+  }
+  .vizObj{
+    position:absolute;
+    right:16px; top:44px;
+    width:96px; height:44px;
+    border-radius:14px;
+    border:1px solid rgba(255,255,255,.14);
+    box-shadow: 0 14px 24px rgba(0,0,0,.35);
+  }
+  .vizHint{
+    margin-top:8px;
+    font-size:13px;
+    color:rgba(255,255,255,.86);
+    line-height:1.45;
+  }
+  @keyframes pulseSoft{
+    from{ transform:scale(0.98); opacity:.70; }
+    to{ transform:scale(1.02); opacity:1; }
+  }
+  .pulse{ animation:pulseSoft 1.2s ease-in-out infinite alternate; }
+
+  /* color sets */
+  .beam-red{ background:#ff4d4d; box-shadow:0 0 18px rgba(255,77,77,.55); }
+  .spot-red{ background: radial-gradient(circle, rgba(255,77,77,.85), rgba(255,77,77,0) 70%); }
+  .beam-green{ background:#4dff6a; box-shadow:0 0 18px rgba(77,255,106,.45); }
+  .spot-green{ background: radial-gradient(circle, rgba(77,255,106,.75), rgba(77,255,106,0) 70%); }
+  .beam-yellow{ background:#ffd000; box-shadow:0 0 18px rgba(255,208,0,.45); }
+  .spot-yellow{ background: radial-gradient(circle, rgba(255,208,0,.75), rgba(255,208,0,0) 70%); }
+
+  .obj-dark{ background:rgba(12,14,18,.92); }
+  .obj-green{ background:rgba(77,255,106,.85); }
+  .obj-yellow{ background:rgba(255,208,0,.85); }
+
+  .footerLink{
+    margin-top:12px;
+    text-align:center;
+    color:#9fb2d8;
+    font-size:14px;
+  }
+
+  /* mobile */
+  @media (max-width: 980px){
+  /* === mobile sizing overrides (requested) === */
+  .sceneBox{ min-height: 300px !important; }
+  .vizStage{ height: 300px !important; }
+  #cv{ height: 300px !important; }
+  .vizObj{ width: 90px !important; height: 90px !important; }
+  #footerLink{ display:none !important; }
+
+    /* layout order (mobile only) */
+    .grid{grid-template-columns: 1fr; display:flex; flex-direction:column; gap:12px;}
+    .panel{display:flex; flex-direction:column;}
+    .mobSliders{order:0;}
+    .mobMaterial{order:1;}
+    .mobLights{order:2;}
+    .sceneBox{order:3; min-height:380px;}
+    /* bottom action bar (mobile: under the experiment, not floating) */
+    .bottomActions{order:4; position:static; margin-top:12px; background:rgba(13,19,36,.92); border:1px solid var(--line); border-radius:18px; padding:10px; backdrop-filter: blur(10px); box-shadow: 0 16px 40px rgba(0,0,0,.20);} 
+.bottomActions .row + .row{ margin-top:8px !important; }
+    /* turn into 1 row of 4 buttons */
+    .bottomActions{
+      display:grid;
+      grid-template-columns: repeat(4, minmax(0,1fr));
+      gap:10px;
+    }
+    .bottomActions .row{ display:contents; }
+    .bottomActions .btn{ width:100%; padding:12px 10px; border-radius:14px; font-weight:800; }
+    /* make space so content not hidden behind fixed bar */
+    .wrap{ padding-bottom: calc(120px + var(--safe-bot)); }
+    /* footer link goes after scene, below the fixed bar area (moved by JS) */
+    #footerLink{ margin-top:14px; }
+    .brand{display:none}
+  }
+
+  /* ---------- additions (requested) ---------- */
+  .panelTitle{ color:#3aa6ff; font-size:18px; margin:0 0 8px 0; }
+  .hudToggle{
+    position:absolute; top:8px; right:8px;
+    border:1px solid rgba(255,255,255,.18);
+    background:rgba(255,255,255,.10);
+    color:rgba(255,255,255,.92);
+    border-radius:999px;
+    padding:6px 10px;
+    font-size:12px;
+    cursor:pointer;
+  }
+  .hud.hudHide > *:not(.hudToggle){ display:none; }
+  .hud.hudHide{ transform: translateX(20px); }
+  .missionBanner{
+  position:absolute;
+  left:12px; right:12px;
+  bottom:12px;
+  padding:6px 10px;
+  border-radius:999px;
+  background:rgba(0,0,0,.28);
+  border:1px solid rgba(255,255,255,.16);
+  backdrop-filter: blur(6px);
+}
+.missionBanner.hide{ display:none; }
+.missionRow{ display:flex; gap:10px; align-items:center; }
+.missionText{
+  flex:1;
+  font-size:13px;
+  color:rgba(255,255,255,.92);
+  line-height:1.25;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.missionNext{
+  white-space:nowrap;
+  padding:8px 10px;
+  border-radius:999px;
+}
+
+/* overlays */
+  .overlay{
+    position:fixed; inset:0;
+    background:transparent;
+    display:none;
+    z-index:50;
+    padding:calc(12px + var(--safe-top)) 12px calc(12px + var(--safe-bot));
+    overflow:auto;
+  }
+  .overlay.show{ display:block; }
+  .overlayInner{ max-width:none; margin:0; }
+  .closeBtn{
+    position:fixed; top:calc(10px + var(--safe-top)); right:calc(10px + 20px + var(--safe-right));
+    width:44px; height:44px;
+    border-radius:999px;
+    border:1px solid rgba(255,255,255,.18);
+    background:rgba(255,255,255,.10);
+    color:white;
+    cursor:pointer;
+    z-index:60;
+  }
+
+  /* overlay themes (มาตรฐานเพจ) */
+  #overlayExercise{ background:#f3fff5; }
+  #overlayExercise .prose{
+    background:rgba(255,255,255,.92);
+    border:1px solid rgba(0,0,0,.08);
+    color:#0b1020;
+  }
+  #overlayExercise .prose h2, #overlayExercise .prose h3{ color:#0b3a7a; }
+  #overlayExercise .mini{ color:rgba(0,0,0,.60); }
+  #overlayExercise .qa{ background:#ffffff; border:1px solid rgba(0,0,0,.10); }
+  #overlayExercise .choice{ background:#ffffff; border:1px solid rgba(0,0,0,.10); color:#0b1020; }
+  #overlayExercise .explain{ background:rgba(0,0,0,.03); border:1px solid rgba(0,0,0,.10); color:#0b1020; }
+  #overlayExercise .scoreBox{ background:rgba(0,128,0,.06); border:1px solid rgba(0,128,0,.18); color:#0b1020; }
+  #overlayExercise .footerLink{ color:rgba(0,0,0,.55); }
+
+  #overlayPrinciple{ background:#fff1e3; }
+  #overlayPrinciple .prose{
+    background:#eef4ff; /* เทาอมฟ้า */
+    border:1px solid rgba(0,0,0,.08);
+    color:#0b1020;
+  }
+  #overlayPrinciple .prose h2, #overlayPrinciple .prose h3{ color:#0b3a7a; }
+  #overlayPrinciple .mini{ color:rgba(0,0,0,.60); }
+  #overlayPrinciple .qa{ background:rgba(255,255,255,.85); border:1px solid rgba(0,0,0,.10); }
+  #overlayPrinciple .prose table{ border:1px solid rgba(0,0,0,.12); }
+  #overlayPrinciple .prose th{ background:rgba(0,0,0,.04); color:#0b1020; }
+  #overlayPrinciple .prose td{ border-bottom:1px solid rgba(0,0,0,.08); }
+  #overlayPrinciple .footerLink{ color:rgba(0,0,0,.55); }
+
+
+  /* switch glow to show ON clearly */
+  #ambientBtn.on{ box-shadow: 0 0 0 3px rgba(255,255,255,.10), 0 0 16px rgba(255,255,255,.22); }
+  .tbtn.on[data-ch="r"]{ box-shadow: 0 0 0 3px rgba(255,77,77,.16), 0 0 18px rgba(255,77,77,.28); }
+  .tbtn.on[data-ch="g"]{ box-shadow: 0 0 0 3px rgba(77,255,106,.14), 0 0 18px rgba(77,255,106,.24); }
+  .tbtn.on[data-ch="b"]{ box-shadow: 0 0 0 3px rgba(77,131,255,.14), 0 0 18px rgba(77,131,255,.24); }
+
+  /* keep bottom area comfortable on mobile */
+  @media (max-width: 980px){
+    .missionRow{ flex-direction:column; align-items:stretch; }
+    .missionNext{ width:100%; }
+  }
+
+</style>
+
+<!-- MathJax (MathJax, not KaTeX) -->
+<script>
+  window.MathJax = {
+    tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']] },
+    svg: { fontCache: 'global' }
+  };
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+
+<style>
+/* ===== Mobile: make Principle/Exercise open as true full-screen pages (keep original content/style) ===== */
+@media (max-width: 980px){
+  #overlayPrinciple.overlay, #overlayExercise.overlay{
+    padding: 0 !important;
+    background: var(--bg) !important;
+    overflow: hidden !important;
+  }
+  #overlayPrinciple .overlayInner, #overlayExercise .overlayInner{
+    height: 100vh !important;
+  }
+  #overlayPrinciple .prose, #overlayExercise .prose{
+    height: 100vh !important;
+    overflow: auto !important;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 0 !important;
+    border-left: 0 !important;
+    border-right: 0 !important;
+    border-top: 0 !important;
+    padding-top: calc(64px + var(--safe-top)) !important; /* space for close button */
+    padding-bottom: calc(18px + var(--safe-bot)) !important;
+  }
+  /* Ensure close is always reachable and clickable */
+  #overlayPrinciple .closeBtn, #overlayExercise .closeBtn{
+    right: calc(10px + var(--safe-right)) !important;
+    top: calc(10px + var(--safe-top)) !important;
+    z-index: 99999 !important;
+    pointer-events: auto !important;
+  }
+}
+</style>
+
+
+<style id="colorWordStyles">
+/* colored word helper */
+.t-red{ color:#ff3b3b !important; font-weight:800; }
+.t-green{ color:#31d158 !important; font-weight:800; }
+.t-blue{ color:#3b82ff !important; font-weight:800; }
+.t-yellow{ color:#ffd33d !important; font-weight:800; }
+.t-cyan{ color:#22d3ee !important; font-weight:800; }
+.t-magenta{ color:#ff4fd8 !important; font-weight:800; }
+.t-dark{ color:rgba(30,35,45,.78) !important; }
+/* make example hint text darker (requested) */
+.vizHint{ color:rgba(30,35,45,.78) !important; }
+</style>
+
+</head>
+<body>
+<div class="wrap">
+
+  <div class="grid">
+
+      <div class="panel">
+        <h3 class="panelTitle">การทดลองฉายแสงเพื่อสังเกตสีของวัตถุ</h3>
+        <div class="mini" style="margin:-6px 0 10px 0;">ฉายแสงสีลงบนวัตถุ แล้วสังเกตว่า “สีที่เห็น” เปลี่ยนอย่างไร</div>
+        <h3 style="margin-top:6px;">ตั้งค่า</h3>
+
+        
+
+        <div class="mobGroup mobMaterial">
+<div class="row" style="margin-bottom:10px;">
+          <div style="flex:1; min-width:220px;">
+            <label>สีวัสดุ (Material)</label>
+            <select id="materialSel" class="pill">
+              <option value="R">แดง (R)</option>
+              <option value="G" selected>เขียว (G)</option>
+              <option value="B">น้ำเงิน (B)</option>
+              <option value="Y">เหลือง (Y)</option>
+              <option value="M">แดงม่วง (M)</option>
+              <option value="C">ฟ้า (C)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row" style="margin-bottom:10px;">
+          <div style="flex:1; min-width:220px;">
+            <div class="toggleRow">
+              <div class="tbtn" id="ambientBtn" role="button" aria-pressed="false" title="เปิด/ปิด แสงขาวทั้งห้อง">
+                <span class="sw"><span class="knob"></span></span>
+                <span style="font-weight:900;">แสงขาว (W)</span>
+                <span class="mini">ทั้งห้อง</span>
+              </div>
+            </div>
+            <div class="mini" style="margin-top:6px;">
+              โหมดห้องมืด: ปิดแสงขาว → เห็นวัตถุเฉพาะบริเวณที่ “วงแสง” ส่องถึง
+            </div>
+          </div>
+        </div>
+
+        
+        </div>
+
+
+
+        <div class="mobGroup mobLights">
+<hr style="border:none;border-top:1px solid var(--line); margin:10px 0;">
+
+        <div class="row" style="margin-bottom:6px;">
+          <label style="width:100%;">แสงสี (เปิดได้หลายสีพร้อมกัน)</label>
+        </div>
+        <div class="toggleRow" style="margin-bottom:10px;">
+          <div class="tbtn on" id="rBtn" data-ch="r" role="button" aria-pressed="true">
+            <span class="sw"><span class="knob"></span></span>
+            <span class="tag" style="color:#ff4d4d;">R</span>
+          </div>
+          <div class="tbtn on" id="gBtn" data-ch="g" role="button" aria-pressed="true">
+            <span class="sw"><span class="knob"></span></span>
+            <span class="tag" style="color:#4dff6a;">G</span>
+          </div>
+          <div class="tbtn on" id="bBtn" data-ch="b" role="button" aria-pressed="true">
+            <span class="sw"><span class="knob"></span></span>
+            <span class="tag" style="color:#4d83ff;">B</span>
+          </div>
+        </div>
+
+        <div class="row" style="margin-bottom:10px;">
+          <button class="btn outline" id="presetOff">ปิดทั้งหมด</button>
+          <button class="btn outline" id="presetWhite">W</button>
+          <button class="btn outline" id="presetR">R</button>
+          <button class="btn outline" id="presetG">G</button>
+          <button class="btn outline" id="presetB">B</button>
+          <button class="btn outline" id="presetY">Y</button>
+          <button class="btn outline" id="presetM">M</button>
+          <button class="btn outline" id="presetC">C</button>
+        </div>
+
+        
+
+        
+        </div>
+<div class="mobGroup mobSliders">
+<div class="row" style="margin-bottom:10px;">
+          <div style="flex:1; min-width:220px;">
+            <label>ความเข้มแสง (Intensity)</label>
+            <input id="intensity" type="range" min="0" max="2.0" step="0.01" value="1.0">
+            <div class="mini">0 → มืด, 1 → ปกติ, 2 → สว่างมาก</div>
+          </div>
+        </div>
+
+        <div class="row" style="margin-bottom:10px;">
+          <div style="flex:1; min-width:220px;">
+            <label>รัศมีวงแสง (Radius)</label>
+            <input id="radius" type="range" min="80" max="520" step="1" value="156">
+          </div>
+        </div>
+
+        <div class="row" style="margin-bottom:10px;">
+          <div style="flex:1; min-width:220px;">
+            <label>ความนุ่มขอบแสง (Softness)</label>
+            <input id="softness" type="range" min="0.05" max="0.75" step="0.01" value="0.38">
+          </div>
+        </div>
+        </div>
+
+
+        
+
+        <div class="bottomActions">
+<div class="row" style="margin-top:6px;">
+            <button class="btn gray" id="resetBtn">🔄 รีเซ็ต</button>
+            <button class="btn outline" id="btnMission">🎯 ภารกิจ</button>
+          </div>
+          <div class="row" style="margin-top:10px;">
+            <button class="btn orange" id="btnPrinciple">📘 อธิบายหลักการ</button>
+            <button class="btn green" id="btnExercise">📝 แบบฝึกหัด</button>
+          </div>
+
+        
+        </div>
+<div class="footerLink" id="footerLink">
+          ศึกษาเพิ่มเติมที่เพจคลายปมฟิสิกส์
+          <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">เพจ คลายปมฟิสิกส์</a>
+        </div>
+      </div>
+
+      <div class="sceneBox">
+        <canvas id="cv"></canvas>
+
+        <div class="missionBanner" id="missionBanner">
+          <div class="missionRow">
+            <div class="missionText" id="missionText"></div>
+            <button class="missionNext btn green" id="missionNext" type="button">ภารกิจถัดไป</button>
+          </div>
+</div>
+
+        <div class="hud" id="hud">
+          <button class="hudToggle" id="hudToggle" type="button">ซ่อน</button>
+          <div class="title">ห้องมืด + วัตถุสี</div>
+          <div class="sub" id="hudSub">
+            ปิดแสงขาว → ลองเปิด/ปิด R,G,B แล้วส่องดูวัตถุว่าจะ “เห็นสีอะไร”
+          </div>
+          <div class="chip">
+            <span class="dot" id="dotLight"></span>
+            <span>แสง: <span id="hudLightTxt">RGB</span></span>
+            <span> | วัตถุ: <span id="hudMatTxt">G</span></span>
+          </div>
+          <div class="mini" style="margin-top:8px;">
+            ลาก <span class="kbd">จุดวงแสง</span> เพื่อย้ายไฟฉาย
+          </div>
+        </div>
+      </div>
+    
+  </div>
+
+  <!-- OVERLAY: PRINCIPLE -->
+  <div class="overlay" id="overlayPrinciple" aria-hidden="true">
+    <button class="closeBtn" id="closePrinciple" type="button">❌</button>
+    <div class="overlayInner">
+      <div class="prose">
+
+        <h2>อธิบายหลักการ: ทำไม “สีที่เห็น” เปลี่ยนตามแสง?</h2>
+
+        <h3>1) ทำไมวัตถุถึง “มีสี” ?</h3>
+        <ul>
+          <li>วัตถุไม่ได้ “สร้างสี” เอง แต่ทำหน้าที่ <b>สะท้อนบางสี</b> และ <b>ดูดกลืนบางสี</b></li>
+          <li>สิ่งที่เราเห็น = <b>สีของแสงที่สะท้อนเข้าตา</b></li>
+          <li>ถ้าแสงที่ส่อง “ไม่มีสีที่วัตถุสะท้อนได้” → วัตถุจะดู <b>มืด/ดำ</b> ในบริเวณนั้น</li>
+        </ul>
+
+        <h3>2) แสงขาวคืออะไร?</h3>
+        <p>
+          แสงขาว ≈ รวมแสง
+          <span style="color:#ff4d4d;font-weight:900;">R</span> +
+          <span style="color:#4dff6a;font-weight:900;">G</span> +
+          <span style="color:#4d83ff;font-weight:900;">B</span>
+          (อยู่ปนกัน)
+        </p>
+        <p>
+          เพราะแสงขาว “มีทุกช่องสีหลัก” วัตถุจึงมักแสดง “สีจริงของมัน” ได้ชัดที่สุดเมื่อเปิดแสงขาว
+        </p>
+
+        
+        <h3>3) ฉายแสงสีอื่นแล้วทำไมสีเพี้ยน?</h3>
+
+        <p>
+          <b>คิดง่าย ๆ แค่ 2 อย่าง</b><br>
+          (1) แสงที่ส่อง “มีสีอะไรบ้าง”  และ (2) วัตถุ “สะท้อนสีอะไรได้บ้าง”
+        </p>
+        <p class="mini" style="margin-top:-4px;">
+          สีที่เราเห็น = สีที่ “แสงมี” และ “วัตถุสะท้อนได้” พร้อมกัน (ถ้าไม่มีส่วนที่สะท้อนได้ → จะมืด/ดำ)
+        </p>
+
+        <div class="exViz">
+          <div class="vizCard">
+            <div class="vizCap">ตัวอย่าง 1: 🔴 แดง → วัตถุเขียว</div>
+            <div class="vizStage">
+              <div class="vizSpot spot-red pulse"></div>
+              <div class="vizBeam beam-red pulse"></div>
+              <div class="vizObj obj-dark"></div>
+            </div>
+            <div class="vizHint">
+              วัตถุ<span class="t-green">เขียว</span>สะท้อน “<span class="t-green">เขียว</span>” แต่แสงที่ส่องมีแค่ “<span class="t-red">แดง</span>” → ไม่มี<span class="t-green">เขียว</span>ให้สะท้อน → เห็นมืด/ดำ
+            </div>
+          </div>
+
+          <div class="vizCard">
+            <div class="vizCap">ตัวอย่าง 2: 🟢 เขียว → วัตถุเหลือง</div>
+            <div class="vizStage">
+              <div class="vizSpot spot-green pulse"></div>
+              <div class="vizBeam beam-green pulse"></div>
+              <div class="vizObj obj-green pulse"></div>
+            </div>
+            <div class="vizHint">
+              วัตถุ<span class="t-yellow">เหลือง</span>สะท้อน “<span class="t-red">แดง</span>+<span class="t-green">เขียว</span>” แต่มีแสง “<span class="t-green">เขียว</span>” อย่างเดียว → จึงเห็นเป็น “<span class="t-green">เขียว</span>”
+            </div>
+          </div>
+
+          <div class="vizCard">
+            <div class="vizCap">ตัวอย่าง 3: 🟡 (แดง+เขียว) → วัตถุฟ้า</div>
+            <div class="vizStage">
+              <div class="vizSpot spot-yellow pulse"></div>
+              <div class="vizBeam beam-yellow pulse"></div>
+              <div class="vizObj obj-green pulse"></div>
+            </div>
+            <div class="vizHint">
+              วัตถุ<span class="t-cyan">ฟ้า</span>สะท้อน “<span class="t-green">เขียว</span>+<span class="t-blue">น้ำเงิน</span>” แต่แสงมี “<span class="t-red">แดง</span>+<span class="t-green">เขียว</span>” (ไม่มี<span class="t-blue">น้ำเงิน</span>) → เหลือสะท้อน “<span class="t-green">เขียว</span>” → เห็น<span class="t-green">เขียว</span>
+            </div>
+          </div>
+        </div>
+
+        <h3>4) ตารางจำง่าย (วัสดุ 6 สี)</h3>
+
+        <table>
+          <thead>
+            <tr><th>วัตถุ</th><th>สะท้อน</th><th>ดูดกลืน</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span style="color:#ff4d4d;font-weight:900;">แดง (R)</span></td>
+              <td>R</td><td>G, B</td>
+            </tr>
+            <tr>
+              <td><span style="color:#4dff6a;font-weight:900;">เขียว (G)</span></td>
+              <td>G</td><td>R, B</td>
+            </tr>
+            <tr>
+              <td><span style="color:#4d83ff;font-weight:900;">น้ำเงิน (B)</span></td>
+              <td>B</td><td>R, G</td>
+            </tr>
+            <tr>
+              <td><span style="color:#ffd000;font-weight:900;">เหลือง (Y)</span></td>
+              <td>R + G</td><td>B</td>
+            </tr>
+            <tr>
+              <td><span style="color:#ff4da6;font-weight:900;">แดงม่วง (M)</span></td>
+              <td>R + B</td><td>G</td>
+            </tr>
+            <tr>
+              <td><span style="color:#00e5ff;font-weight:900;">ฟ้า (C)</span></td>
+              <td>G + B</td><td>R</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p class="mini" style="margin-top:10px;">
+          ทริก: ถ้าปิดแสงขาวแล้ว “เห็นดำ” แปลว่า <b>แสงที่ส่องไม่มีส่วนที่วัตถุสะท้อนได้</b>
+        </p>
+
+        <div class="footerLink">
+          ศึกษาเพิ่มเติมที่เพจคลายปมฟิสิกส์
+          <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">เพจ คลายปมฟิสิกส์</a>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- OVERLAY: EXERCISE -->
+  <div class="overlay" id="overlayExercise" aria-hidden="true">
+    <button class="closeBtn" id="closeExercise" type="button">❌</button>
+    <div class="overlayInner">
+      <div class="prose">
+
+        <h2>📝 แบบฝึกหัด (ช้อยส์ A–E)</h2>
+        <div class="mini">เลือกคำตอบ A–E แล้วกด “ตรวจคำตอบ” เพื่อดูคะแนน + เฉลยละเอียดในแต่ละข้อ</div>
+
+        <div class="qa" data-q="1">
+          <div class="qtitle">ข้อ 1) ปิดแสงขาว แล้วฉายแสง <span style="color:#ff4d4d;font-weight:900;">R</span> ลงบนวัตถุสีเขียว เราจะเห็นวัตถุเป็นสีใดในวงแสง?</div>
+          <div class="choices">
+            <label class="choice"><input type="radio" name="q1" value="A"> A) แดง</label>
+            <label class="choice"><input type="radio" name="q1" value="B"> B) เขียว</label>
+            <label class="choice"><input type="radio" name="q1" value="C"> C) เหลือง</label>
+            <label class="choice"><input type="radio" name="q1" value="D"> D) ฟ้า</label>
+            <label class="choice"><input type="radio" name="q1" value="E"> E) ดำ</label>
+          </div>
+          <div class="explain" id="ex1">
+            คำตอบที่ถูกคือ <span class="ans">E</span> เพราะวัตถุเขียวสะท้อนเฉพาะ <span style="color:#4dff6a;font-weight:900;">G</span> แต่แสงที่ส่องเป็น <span style="color:#ff4d4d;font-weight:900;">R</span> จึงไม่มีแสงสีเขียวให้สะท้อน → เห็นมืด/ดำในวงแสง
+          </div>
+        </div>
+
+        <div class="qa" data-q="2">
+          <div class="qtitle">ข้อ 2) ปิดแสงขาว แล้วฉายแสง <span style="color:#4dff6a;font-weight:900;">G</span> ลงบนวัตถุสีเหลือง (<span style="color:#ffd000;font-weight:900;">Y</span>) เราจะเห็นวัตถุเป็นสีใด?</div>
+          <div class="choices">
+            <label class="choice"><input type="radio" name="q2" value="A"> A) แดง</label>
+            <label class="choice"><input type="radio" name="q2" value="B"> B) เขียว</label>
+            <label class="choice"><input type="radio" name="q2" value="C"> C) น้ำเงิน</label>
+            <label class="choice"><input type="radio" name="q2" value="D"> D) ขาว</label>
+            <label class="choice"><input type="radio" name="q2" value="E"> E) ดำ</label>
+          </div>
+          <div class="explain" id="ex2">
+            คำตอบที่ถูกคือ <span class="ans">B</span> เพราะวัตถุเหลืองสะท้อน R+G แต่แสงที่ส่องมีแค่ <span style="color:#4dff6a;font-weight:900;">G</span> จึงสะท้อนออกมาเป็น “เขียว”
+          </div>
+        </div>
+
+        <div class="qa" data-q="3">
+          <div class="qtitle">ข้อ 3) ปิดแสงขาว แล้วเปิดแสงพร้อมกัน <span style="color:#ff4d4d;font-weight:900;">R</span> และ <span style="color:#4dff6a;font-weight:900;">G</span> (ไม่มี B) ฉายลงบนวัตถุสีฟ้า (<span style="color:#00e5ff;font-weight:900;">C</span>) จะเห็นเป็นสีใด?</div>
+          <div class="choices">
+            <label class="choice"><input type="radio" name="q3" value="A"> A) เขียว</label>
+            <label class="choice"><input type="radio" name="q3" value="B"> B) เหลือง</label>
+            <label class="choice"><input type="radio" name="q3" value="C"> C) น้ำเงิน</label>
+            <label class="choice"><input type="radio" name="q3" value="D"> D) ดำ</label>
+            <label class="choice"><input type="radio" name="q3" value="E"> E) ขาว</label>
+          </div>
+          <div class="explain" id="ex3">
+            คำตอบที่ถูกคือ <span class="ans">A</span> เพราะวัตถุฟ้า (<span style="color:#00e5ff;font-weight:900;">C</span>) สะท้อน G+B แต่แสงที่ส่องมี R+G (ไม่มี B) → เหลือสะท้อนเฉพาะ G → จึงเห็นเป็นเขียว
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:10px; gap:10px;">
+          <button class="btn green" id="checkBtn">📝 ตรวจคำตอบ</button>
+          <button class="btn gray" id="resetExBtn">🔄 รีเซ็ต</button>
+        </div>
+        <div class="scoreBox" id="scoreBox"></div>
+
+        
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ---------- helpers ---------- */
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const mix=(a,b,t)=>a+(b-a)*t;
+function rgbToCss([r,g,b], a=1){
+  r=Math.round(clamp(r,0,1)*255);
+  g=Math.round(clamp(g,0,1)*255);
+  b=Math.round(clamp(b,0,1)*255);
+  return `rgba(${r},${g},${b},${a})`;
+}
+function vecMul(a,b){ return [a[0]*b[0], a[1]*b[1], a[2]*b[2]]; }
+function vecAdd(a,b){ return [a[0]+b[0], a[1]+b[1], a[2]+b[2]]; }
+function vecScale(a,s){ return [a[0]*s, a[1]*s, a[2]*s]; }
+function approxNameRGB(v){
+  const [r,g,b]=v.map(x=>x>0.15?1:0);
+  if(r===0&&g===0&&b===0) return "ปิด";
+  if(r&&g&&b) return "RGB (ขาว)";
+  if(r&&g&&!b) return "Y (R+G)";
+  if(r&&!g&&b) return "M (R+B)";
+  if(!r&&g&&b) return "C (G+B)";
+  if(r&&!g&&!b) return "R";
+  if(!r&&g&&!b) return "G";
+  if(!r&&!g&&b) return "B";
+  return "ผสม";
+}
+
+/* fast tap (mobile): respond immediately on touch */
+function bindTap(el, fn){
+  if(!el) return;
+  let last = 0;
+  el.addEventListener("pointerdown", (e)=>{
+    e.preventDefault();
+    e.stopPropagation();
+    const now = performance.now();
+    if(now - last < 220) return; // debounce accidental double taps
+    last = now;
+    fn();
+  });
+  // suppress delayed click
+  el.addEventListener("click", (e)=>{ e.preventDefault(); e.stopPropagation(); });
+}
+
+/* material reflectance */
+const MAT = {
+  R:[1,0,0],
+  G:[0,1,0],
+  B:[0,0,1],
+  Y:[1,1,0],
+  M:[1,0,1],
+  C:[0,1,1],
+};
+const MAT_LABEL = {R:"R",G:"G",B:"B",Y:"Y",M:"M",C:"C"};
+
+function objectLabel(){
+  const m = state.material;
+  const mapName = {R:"แดง",G:"เขียว",B:"น้ำเงิน",Y:"เหลือง",M:"แดงม่วง",C:"ฟ้า"};
+  const mapRefl = {
+    R:"สีแดง",
+    G:"สีเขียว",
+    B:"สีน้ำเงิน",
+    Y:"สีแดง+สีเขียว",
+    M:"สีแดง+สีน้ำเงิน",
+    C:"สีเขียว+สีน้ำเงิน"
+  };
+  const nm = mapName[m] || m;
+  const rf = mapRefl[m] || "";
+  return `วัตถุสี${nm}${rf?` (สะท้อน ${rf})`:""}`;
+}
+
+
+/* ---------- state ---------- */
+const state = {
+  material:"G",
+  ambient:false,        // white room light
+  ch:{r:true,g:true,b:true},
+  intensity:1.0,
+  radius:156,
+  softness:0.38,
+  spot:{x:260,y:210},
+  dragging:false
+};
+
+/* ---------- UI refs ---------- */
+const cv = document.getElementById("cv");
+const ctx = cv.getContext("2d");
+const materialSel = document.getElementById("materialSel");
+const ambientBtn = document.getElementById("ambientBtn");
+const rBtn = document.getElementById("rBtn");
+const gBtn = document.getElementById("gBtn");
+const bBtn = document.getElementById("bBtn");
+const intensityEl = document.getElementById("intensity");
+const radiusEl = document.getElementById("radius");
+const softEl = document.getElementById("softness");
+const resetBtn = document.getElementById("resetBtn");
+
+const dotLight = document.getElementById("dotLight");
+const hudLightTxt = document.getElementById("hudLightTxt");
+const hudMatTxt = document.getElementById("hudMatTxt");
+const hudSub = document.getElementById("hudSub");
+
+function setBtnOn(el, on){
+  el.classList.toggle("on", on);
+  el.setAttribute("aria-pressed", on ? "true" : "false");
+}
+function lightVec(){
+  return [
+    state.ch.r ? 1:0,
+    state.ch.g ? 1:0,
+    state.ch.b ? 1:0,
+  ];
+}
+function currentLightColor(){
+  const L = vecScale(lightVec(), state.intensity);
+  return [clamp(L[0],0,2), clamp(L[1],0,2), clamp(L[2],0,2)];
+}
+
+/* presets */
+function setRGB(r,g,b){
+  state.ch.r=!!r; state.ch.g=!!g; state.ch.b=!!b;
+  setBtnOn(rBtn, state.ch.r);
+  setBtnOn(gBtn, state.ch.g);
+  setBtnOn(bBtn, state.ch.b);
+  renderHUD();
+}
+bindTap(document.getElementById("presetOff"), ()=>setRGB(0,0,0));
+bindTap(document.getElementById("presetWhite"), ()=>setRGB(1,1,1));
+bindTap(document.getElementById("presetR"), ()=>setRGB(1,0,0));
+bindTap(document.getElementById("presetG"), ()=>setRGB(0,1,0));
+bindTap(document.getElementById("presetB"), ()=>setRGB(0,0,1));
+bindTap(document.getElementById("presetY"), ()=>setRGB(1,1,0));
+bindTap(document.getElementById("presetM"), ()=>setRGB(1,0,1));
+bindTap(document.getElementById("presetC"), ()=>setRGB(0,1,1));
+
+/* toggles */
+materialSel.onchange = ()=>{ state.material = materialSel.value; renderHUD(); };
+bindTap(ambientBtn, ()=>{
+  state.ambient = !state.ambient;
+  setBtnOn(ambientBtn, state.ambient);
+  renderHUD();
+});
+bindTap(rBtn, ()=>{ state.ch.r=!state.ch.r; setBtnOn(rBtn, state.ch.r); renderHUD(); });
+bindTap(gBtn, ()=>{ state.ch.g=!state.ch.g; setBtnOn(gBtn, state.ch.g); renderHUD(); });
+bindTap(bBtn, ()=>{ state.ch.b=!state.ch.b; setBtnOn(bBtn, state.ch.b); renderHUD(); });
+intensityEl.oninput=()=>{ state.intensity=parseFloat(intensityEl.value); renderHUD(); };
+radiusEl.oninput=()=>{ state.radius=parseFloat(radiusEl.value); };
+softEl.oninput=()=>{ state.softness=parseFloat(softEl.value); };
+
+/* reset */
+function resetAll(){
+  state.material="G";
+  materialSel.value="G";
+  state.ambient=false; setBtnOn(ambientBtn,false);
+  setRGB(1,1,1);
+  state.intensity=1.0; intensityEl.value="1.0";
+  state.radius=156; radiusEl.value="156";
+  state.softness=0.38; softEl.value="0.38";
+  state.spot={x:260,y:210};
+  renderHUD();
+}
+bindTap(resetBtn, resetAll);
+
+/* ---------- canvas sizing ---------- */
+function resize(){
+  const box = cv.parentElement.getBoundingClientRect();
+  const dpr = devicePixelRatio || 1;
+  const isMobile = window.matchMedia && window.matchMedia("(max-width: 980px)").matches;
+  const cssW = Math.max(300, Math.floor(box.width));
+  const cssH = isMobile ? 300 : Math.max(280, Math.floor(box.height));
+  cv.style.height = cssH + "px";
+  cv.width = Math.floor(cssW * dpr);
+  cv.height = Math.floor(cssH * dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+window.addEventListener("resize", resize);
+
+/* ---------- interaction: dragging spotlight ---------- */
+function getMousePos(e){
+  const r = cv.getBoundingClientRect();
+  const x = (e.touches?e.touches[0].clientX:e.clientX) - r.left;
+  const y = (e.touches?e.touches[0].clientY:e.clientY) - r.top;
+  return {x,y, rect:r};
+}
+function spotHandleHit(p){
+  const dx=p.x-state.spot.x, dy=p.y-state.spot.y;
+  return (dx*dx+dy*dy) <= (14*14);
+}
+function down(e){
+  const p=getMousePos(e);
+  if(spotHandleHit(p)){
+    state.dragging=true;
+    e.preventDefault();
+  }
+}
+function move(e){
+  if(!state.dragging) return;
+  const p=getMousePos(e);
+  state.spot.x = clamp(p.x, 20, p.rect.width-20);
+  state.spot.y = clamp(p.y, 20, p.rect.height-20);
+  e.preventDefault();
+}
+function up(){ state.dragging=false; }
+
+cv.addEventListener("mousedown", down);
+window.addEventListener("mousemove", move);
+window.addEventListener("mouseup", up);
+cv.addEventListener("touchstart", down, {passive:false});
+window.addEventListener("touchmove", move, {passive:false});
+window.addEventListener("touchend", up);
+
+/* ---------- rendering core ---------- */
+const off = document.createElement("canvas");
+const offCtx = off.getContext("2d");
+
+function drawAmbientBackground(w,h){
+  // bright room when ambient on
+  // subtle vignette so still looks like room (not pure white)
+  ctx.fillStyle = "#f5f6fb";
+  ctx.fillRect(0,0,w,h);
+  // light vignette
+  const g = ctx.createRadialGradient(w*0.5,h*0.45, 50, w*0.5,h*0.45, Math.max(w,h)*0.75);
+  g.addColorStop(0, "rgba(255,255,255,0)");
+  g.addColorStop(1, "rgba(0,0,0,0.10)");
+  ctx.fillStyle=g;
+  ctx.fillRect(0,0,w,h);
+}
+
+function drawDarkBackground(w,h){
+  // true black room
+  ctx.fillStyle = "rgb(0,0,0)";
+  ctx.fillRect(0,0,w,h);
+}
+
+function drawSpotlight(w,h, Lrgb){
+  // draw colored light cone as radial gradient on background
+  const r = state.radius;
+  const soft = state.softness; // 0.05..0.75
+  const inner = r*(1-soft);
+  const grad = ctx.createRadialGradient(state.spot.x, state.spot.y, inner, state.spot.x, state.spot.y, r);
+  const col = [clamp(Lrgb[0]/2,0,1), clamp(Lrgb[1]/2,0,1), clamp(Lrgb[2]/2,0,1)];
+  grad.addColorStop(0, rgbToCss(col, 0.95));
+  grad.addColorStop(1, rgbToCss(col, 0.0));
+  ctx.fillStyle = grad;
+  ctx.fillRect(0,0,w,h);
+}
+
+function drawObject(w,h, Lrgb){
+  const isMobile = window.matchMedia && window.matchMedia("(max-width: 980px)").matches;
+  const ow = isMobile ? 90 : w*0.34;
+  const oh = isMobile ? 90 : h*0.22;
+  const rect = {
+    x: isMobile ? (w - ow - 16) : w*0.56,
+    y: isMobile ? (h*0.5 - oh/2) : h*0.48,
+    w: ow, h: oh,
+    r: isMobile ? 18 : 18
+  };
+  // expose last object rect for HUD reason calculation
+  window.__lastObjRect = rect;
+
+  // object base: when ambient on -> full visible as material under white
+  // when ambient off -> visible only inside spotlight mask with computed color
+  const mat = MAT[state.material];
+
+  // compute perceived lit color in spotlight: per-channel multiply
+  const lit = vecMul(vecScale(lightVec(), state.intensity), mat);
+  // compress brightness gently to avoid washing to white; keep saturation
+  // simple tone map: c/(1+c)
+  const litTM = lit.map(c => c/(1+c));
+
+  function roundRectPath(c,x,y,wid,hei,rad){
+    const rr = Math.min(rad, wid/2, hei/2);
+    c.beginPath();
+    c.moveTo(x+rr,y);
+    c.arcTo(x+wid,y,x+wid,y+hei,rr);
+    c.arcTo(x+wid,y+hei,x,y+hei,rr);
+    c.arcTo(x,y+hei,x,y,rr);
+    c.arcTo(x,y,x+wid,y,rr);
+    c.closePath();
+  }
+
+  if(state.ambient){
+    // material under white -> show true color (reflectance)
+    const col = mat.map(c=> c/(1+c)); // keep comparable
+    ctx.save();
+    // soft shadow
+    ctx.shadowColor="rgba(0,0,0,.35)";
+    ctx.shadowBlur=18;
+    ctx.shadowOffsetY=10;
+    roundRectPath(ctx, rect.x, rect.y, rect.w, rect.h, rect.r);
+    ctx.fillStyle = rgbToCss(col, 1);
+    ctx.fill();
+    ctx.restore();
+
+    // border
+    ctx.strokeStyle="rgba(0,0,0,.18)";
+    ctx.lineWidth=2;
+    roundRectPath(ctx, rect.x, rect.y, rect.w, rect.h, rect.r);
+    ctx.stroke();
+  } else {
+    // room dark: only show the lit area on object, using a spotlight mask
+    off.width = Math.floor(w*devicePixelRatio);
+    off.height = Math.floor(h*devicePixelRatio);
+    offCtx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+    offCtx.clearRect(0,0,w,h);
+
+    // draw lit object
+    offCtx.save();
+    offCtx.shadowColor="rgba(0,0,0,.35)";
+    offCtx.shadowBlur=18;
+    offCtx.shadowOffsetY=10;
+    roundRectPath(offCtx, rect.x, rect.y, rect.w, rect.h, rect.r);
+    offCtx.fillStyle = rgbToCss(litTM, 1);
+    offCtx.fill();
+    offCtx.restore();
+
+    // border (still only in lit area)
+    offCtx.strokeStyle="rgba(255,255,255,.14)";
+    offCtx.lineWidth=2;
+    roundRectPath(offCtx, rect.x, rect.y, rect.w, rect.h, rect.r);
+    offCtx.stroke();
+
+    // mask with spotlight gradient (destination-in)
+    offCtx.save();
+    offCtx.globalCompositeOperation="destination-in";
+    const r = state.radius;
+    const soft = state.softness;
+    const inner = r*(1-soft);
+    const m = offCtx.createRadialGradient(state.spot.x, state.spot.y, inner, state.spot.x, state.spot.y, r);
+    // alpha mask (strong center, fade edge)
+    m.addColorStop(0, "rgba(255,255,255,1)");
+    m.addColorStop(1, "rgba(255,255,255,0)");
+    offCtx.fillStyle=m;
+    offCtx.fillRect(0,0,w,h);
+    offCtx.restore();
+
+    ctx.drawImage(off,0,0,w,h);
+  }
+
+  // label
+  ctx.font="600 14px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Noto Sans Thai, sans-serif";
+  ctx.fillStyle = state.ambient ? "rgba(10,14,24,.65)" : "rgba(255,255,255,.65)";
+  const lbl = objectLabel();
+  if(w < 620 && lbl.includes(" (สะท้อน ")){
+    const i = lbl.indexOf(" (สะท้อน ");
+    const line1 = lbl.slice(0,i);
+    const line2 = lbl.slice(i+1); // remove leading space
+    ctx.fillText(line1, rect.x+10, rect.y-10);
+    ctx.fillText(line2, rect.x+10, rect.y+6);
+  }else{
+    ctx.fillText(lbl, rect.x+10, rect.y-10);
+  }
+}
+
+function drawSpotHandle(){
+  // handle ring at center of spotlight
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(state.spot.x, state.spot.y, 10, 0, Math.PI*2);
+  ctx.strokeStyle = "rgba(0,0,0,.5)";
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(state.spot.x, state.spot.y, 9, 0, Math.PI*2);
+  ctx.strokeStyle = "rgba(255,255,255,.75)";
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.restore();
+}
+
+function renderHUD(){
+  const L = lightVec();
+  const Ls = vecScale(L, state.intensity);
+  // dot shows light color
+  const dot = [clamp(Ls[0]/2,0,1), clamp(Ls[1]/2,0,1), clamp(Ls[2]/2,0,1)];
+  dotLight.style.background = rgbToCss(dot, 1);
+  hudLightTxt.textContent = state.ambient ? "แสงขาว (ทั้งห้อง)" : approxNameRGB(L);
+  hudMatTxt.textContent = MAT_LABEL[state.material];
+
+  if(state.ambient){
+    hudSub.innerHTML = "แสงขาวเปิดอยู่ → เห็นสีจริงของวัตถุได้ชัด (ทั้งห้องสว่าง)";
+  } else {
+    hudSub.innerHTML = "ลากวงแสงไปส่องที่วัตถุเพื่อดูเหตุผลการเห็นสี";
+  }
+
+}
+
+/* ---- HUD reason when spotlight hits object (mobile-friendly) ---- */
+function _arrHas(a,i){ return a.indexOf(i) !== -1; }
+function _lightNameFromBits(bits){
+  // bits: array of 'R','G','B'
+  const key = bits.slice().sort().join("");
+  if(key==="") return "มืด/ดำ";
+  if(key==="R") return '<span class="t-red">แดง</span>';
+  if(key==="G") return '<span class="t-green">เขียว</span>';
+  if(key==="B") return '<span class="t-blue">น้ำเงิน</span>';
+  if(key==="RG") return '<span class="t-yellow">เหลือง</span>';
+  if(key==="RB") return '<span class="t-magenta">ม่วงแดง</span>';
+  if(key==="GB") return '<span class="t-cyan">ฟ้าอมเขียว</span>';
+  if(key==="RGB") return "ขาว";
+  return "สีผสม";
+}
+function _bitsToText(bits){
+  // return “แดง + เขียว + น้ำเงิน” with colored words
+  if(bits.length===0) return "ไม่มีสี";
+  const map = {R:'<span class="t-red">แดง</span>', G:'<span class="t-green">เขียว</span>', B:'<span class="t-blue">น้ำเงิน</span>'};
+  return bits.map(b=>map[b]).join(" + ");
+}
+function _materialReflectBits(){
+  const m = MAT[state.material]; // [r,g,b] reflectance
+  const bits = [];
+  if(m[0] > 0.5) bits.push("R");
+  if(m[1] > 0.5) bits.push("G");
+  if(m[2] > 0.5) bits.push("B");
+  return bits;
+}
+function _lightBits(){
+  const L = lightVec();
+  const bits = [];
+  if(L[0] > 0.01) bits.push("R");
+  if(L[1] > 0.01) bits.push("G");
+  if(L[2] > 0.01) bits.push("B");
+  return bits;
+}
+function _spotIntersectsRect(spot, radius, rect){
+  // circle-rect intersection (axis-aligned)
+  const cx = spot.x, cy = spot.y;
+  const rx = rect.x, ry = rect.y, rw = rect.w, rh = rect.h;
+  const nx = Math.max(rx, Math.min(cx, rx+rw));
+  const ny = Math.max(ry, Math.min(cy, ry+rh));
+  const dx = cx - nx, dy = cy - ny;
+  return (dx*dx + dy*dy) <= (radius*radius);
+}
+let __lastReasonOn = false;
+let __lastReasonKey = "";
+function updateHudReason(w,h){
+  if(state.ambient){ 
+    __lastReasonOn = false; __lastReasonKey = "";
+    return; 
+  }
+  const rect = window.__lastObjRect || {x:w*0.56,y:h*0.48,w:w*0.34,h:h*0.22,r:18};
+  const on = _spotIntersectsRect(state.spot, state.radius*0.92, rect);
+  if(!on){
+    if(__lastReasonOn){
+      // revert to default instruction
+      hudSub.innerHTML = "ลากวงแสงไปส่องที่วัตถุเพื่อดูเหตุผลการเห็นสี";
+      __lastReasonOn = false;
+      __lastReasonKey = "";
+    }
+    return;
+  }
+
+  const mBits = _materialReflectBits();
+  const lBits = _lightBits();
+  const refl = mBits.filter(b=> _arrHas(lBits,b));
+  const key = state.material + "|" + lBits.join("") + "|" + refl.join("");
+  if(key === __lastReasonKey && __lastReasonOn) return;
+
+  const matName = MAT_LABEL[state.material].split(" ")[0].replace(/[()]/g,""); // "เขียว"
+  const matSpan = wrapColorWord(matName);
+
+  if(refl.length===0){
+    hudSub.innerHTML =
+      `วัตถุสี${matSpan}สะท้อน “${_bitsToText(mBits)}” แต่แสงที่ส่องมีแค่ “${_bitsToText(lBits)}” → ไม่มีสีให้สะท้อน → เห็นมืด/ดำ`;
+  }else{
+    const seen = _lightNameFromBits(refl);
+    hudSub.innerHTML =
+      `วัตถุสี${matSpan}สะท้อน “${_bitsToText(mBits)}” และแสงที่ส่องมี “${_bitsToText(lBits)}” → จึงมี “${_bitsToText(refl)}” ให้สะท้อน → เห็นเป็น “${seen}”`;
+  }
+  __lastReasonOn = true;
+  __lastReasonKey = key;
+}
+// wrap single Thai color word with span class
+function wrapColorWord(w){
+  if(w.includes("แดง")) return '<span class="t-red">แดง</span>';
+  if(w.includes("เขียว")) return '<span class="t-green">เขียว</span>';
+  if(w.includes("น้ำเงิน")) return '<span class="t-blue">น้ำเงิน</span>';
+  if(w.includes("เหลือง")) return '<span class="t-yellow">เหลือง</span>';
+  if(w.includes("ฟ้า")) return '<span class="t-cyan">ฟ้า</span>';
+  if(w.includes("ม่วง")) return '<span class="t-magenta">ม่วง</span>';
+  return w;
+}
+
+
+/* main loop */
+function tick(){
+  const w=cv.getBoundingClientRect().width;
+  const h=cv.getBoundingClientRect().height;
+
+  if(state.ambient){
+    drawAmbientBackground(w,h);
+  } else {
+    drawDarkBackground(w,h);
+    const Lrgb = currentLightColor();
+    drawSpotlight(w,h,Lrgb);
+  }
+
+  drawObject(w,h,currentLightColor());
+  updateHudReason(w,h);
+  if(!state.ambient){
+    drawSpotHandle();
+  }
+  // color letters on preset buttons
+document.getElementById("presetR").innerHTML='<span style="color:#ff4d4d;font-weight:900;">R</span>';
+document.getElementById("presetG").innerHTML='<span style="color:#4dff6a;font-weight:900;">G</span>';
+document.getElementById("presetB").innerHTML='<span style="color:#4d83ff;font-weight:900;">B</span>';
+document.getElementById("presetY").innerHTML='<span style="color:#ffd000;font-weight:900;">Y</span>';
+document.getElementById("presetM").innerHTML='<span style="color:#ff4da6;font-weight:900;">M</span>';
+document.getElementById("presetC").innerHTML='<span style="color:#00e5ff;font-weight:900;">C</span>';
+document.getElementById("presetWhite").textContent='W';
+requestAnimationFrame(tick);
+}
+
+/* ---------- exercises ---------- */
+const ANSWERS = { q1:"E", q2:"B", q3:"A" };
+document.getElementById("checkBtn").onclick=()=>{
+  let score=0, total=3;
+  for(let i=1;i<=3;i++){
+    const name="q"+i;
+    const picked = document.querySelector(`input[name="${name}"]:checked`);
+    const exp = document.getElementById("ex"+i);
+    if(picked && picked.value===ANSWERS[name]) score++;
+    exp.classList.add("show");
+  }
+  const box=document.getElementById("scoreBox");
+  box.classList.add("show");
+  box.innerHTML = `คะแนน: <b>${score}</b> / ${total}<br><span class="mini">เฉลยตัวอักษรที่ถูกเป็น <span class="ans">สีแดง</span> ตามมาตรฐาน</span>`;
+};
+document.getElementById("resetExBtn").onclick=()=>{
+  document.querySelectorAll('#overlayExercise input[type="radio"]').forEach(x=>x.checked=false);
+  [1,2,3].forEach(i=>document.getElementById("ex"+i).classList.remove("show"));
+  const box=document.getElementById("scoreBox");
+  box.classList.remove("show"); box.innerHTML="";
+};
+
+/* ---------- missions (banner on LAB only) ---------- */
+const missions = [
+  "ปิดแสงขาว (W) แล้วลองเปิด/ปิด R,G,B เพื่อดูวัตถุว่า “เห็นสีอะไร”",
+  "เลือกวัตถุสีเขียว (G) แล้วฉายแสงแดง (R) → ในวงแสงควรเห็นมืด/ดำ",
+  "เลือกวัตถุสีเหลือง (Y) แล้วฉายแสงเขียว (G) → ควรเห็นเป็นเขียว",
+  "เลือกวัตถุสีเหลือง (Y) แล้วฉายแสงแดง (R) → ควรเห็นเป็นแดง",
+  "เลือกวัตถุสีฟ้า (C) แล้วเปิดแสง R+G (ปิด B) → ควรเห็นเป็นเขียว",
+  "สรุปด้วยคำพูดตัวเอง: สีที่เห็นขึ้นกับ “แสงที่ส่อง” + “การสะท้อนของวัตถุ”"
+];
+let mIndex = 0;
+const missionBanner = document.getElementById("missionBanner");
+const missionText = document.getElementById("missionText");
+const missionNext = document.getElementById("missionNext");
+
+let missionMode = false; // show banner only when mission mode is ON
+
+function renderMission(){
+  missionText.textContent = missions[mIndex];
+}
+function setMissionMode(on){
+  missionMode = !!on;
+  missionBanner.classList.toggle("hide", !missionMode);
+  // optional visual state on button
+  const btn = document.getElementById("btnMission");
+  if(btn){
+    btn.classList.toggle("active", missionMode);
+    btn.style.background = missionMode ? "rgba(255,255,255,.12)" : "";
+  }
+}
+
+missionNext.onclick = ()=>{
+  mIndex = (mIndex + 1) % missions.length;
+  renderMission();
+};
+
+/* ---------- overlays ---------- */
+const overlayPrinciple = document.getElementById("overlayPrinciple");
+const overlayExercise = document.getElementById("overlayExercise");
+function openOverlay(el){
+  el.classList.add("show");
+  document.body.style.overflow="hidden";
+  if(window.MathJax && window.MathJax.typeset){
+    setTimeout(()=>MathJax.typeset(), 30);
+  }
+}
+function closeOverlay(el){
+  el.classList.remove("show");
+  document.body.style.overflow="";
+}
+document.getElementById("btnPrinciple").onclick = ()=>openOverlay(overlayPrinciple);
+document.getElementById("btnExercise").onclick = ()=>openOverlay(overlayExercise);
+document.getElementById("closePrinciple").onclick = ()=>closeOverlay(overlayPrinciple);
+document.getElementById("closeExercise").onclick = ()=>closeOverlay(overlayExercise);
+
+/* mission button toggles mission mode (banner subtitle) */
+document.getElementById("btnMission").onclick = ()=>{
+  setMissionMode(!missionMode);
+};
+
+
+/* ---------- HUD hide/show ---------- */
+const hud = document.getElementById("hud");
+document.getElementById("hudToggle").onclick = ()=>{
+  const hidden = hud.classList.toggle("hudHide");
+  document.getElementById("hudToggle").textContent = hidden ? "แสดง" : "ซ่อน";
+};
+
+
+/* ---------- mobile layout: reorder + footer placement (mobile only) ---------- */
+const __layout = {
+  footerMoved:false,
+  footerParent:null,
+  footerNext:null
+};
+function applyMobileLayout(){
+  const isMobile = window.matchMedia("(max-width: 980px)").matches;
+  const footer = document.getElementById("footerLink");
+  const panel = document.querySelector(".panel");
+  const scene = document.querySelector(".sceneBox");
+  if(!footer || !panel || !scene) return;
+
+  if(!__layout.footerParent){
+    __layout.footerParent = footer.parentElement;
+    __layout.footerNext = footer.nextSibling; // may be null
+  }
+
+  if(isMobile){
+    const actions = document.querySelector(".bottomActions");
+    const anchor = actions || scene;
+    if(!__layout.footerMoved){
+      anchor.insertAdjacentElement("afterend", footer);
+      __layout.footerMoved = true;
+    }
+  }else{
+    if(__layout.footerMoved){
+      // restore to original place (end of panel)
+      if(__layout.footerNext){
+        __layout.footerParent.insertBefore(footer, __layout.footerNext);
+      }else{
+        __layout.footerParent.appendChild(footer);
+      }
+      __layout.footerMoved = false;
+    }
+  }
+}
+window.addEventListener("resize", applyMobileLayout);
+
+/* ---------- mobile DOM reorder (keep desktop untouched) ---------- */
+function applyMobileLayout(){
+  const isMobile = window.matchMedia && window.matchMedia("(max-width: 980px)").matches;
+  const grid = document.querySelector("#tab-lab .grid") || document.querySelector(".grid");
+  if(!grid) return;
+
+  const panel = grid.querySelector(".panel");
+  const scene = grid.querySelector(".sceneBox");
+  const bottomActions = grid.querySelector(".bottomActions");
+  const footer = grid.querySelector("#footerLink");
+
+  if(isMobile){
+    // place controls panel first, then scene, then bottom buttons, then footer (at bottom)
+    if(scene && bottomActions && scene.parentElement === grid){
+      scene.insertAdjacentElement("afterend", bottomActions);
+    }
+    if(bottomActions && footer){
+      bottomActions.insertAdjacentElement("afterend", footer);
+    }
+  } else {
+    // put them back inside the panel (desktop)
+    if(panel){
+      const slidersEnd = panel.querySelector(".mobSliders") || panel;
+      if(bottomActions && !panel.contains(bottomActions)){
+        panel.appendChild(bottomActions);
+      }
+      if(footer && !panel.contains(footer)){
+        panel.appendChild(footer);
+      }
+    }
+  }
+}
+window.addEventListener("resize", applyMobileLayout);
+/* init */
+resize();
+applyMobileLayout();
+resetAll();
+renderMission();
+setMissionMode(false);
+// color letters on preset buttons
+document.getElementById("presetR").innerHTML='<span style="color:#ff4d4d;font-weight:900;">R</span>';
+document.getElementById("presetG").innerHTML='<span style="color:#4dff6a;font-weight:900;">G</span>';
+document.getElementById("presetB").innerHTML='<span style="color:#4d83ff;font-weight:900;">B</span>';
+document.getElementById("presetY").innerHTML='<span style="color:#ffd000;font-weight:900;">Y</span>';
+document.getElementById("presetM").innerHTML='<span style="color:#ff4da6;font-weight:900;">M</span>';
+document.getElementById("presetC").innerHTML='<span style="color:#00e5ff;font-weight:900;">C</span>';
+document.getElementById("presetWhite").textContent='W';
+requestAnimationFrame(tick);
+
+</script>
+
+<script>
+// Mobile-only: start spotlight at bottom-left, not overlapping object
+window.addEventListener("load", function(){
+  if (window.matchMedia && window.matchMedia("(max-width: 980px)").matches){
+    try{
+      const cv = document.getElementById("cv");
+      if(!cv) return;
+      const rect = cv.getBoundingClientRect();
+
+      const spotRadius = (typeof state !== "undefined" && state.radius) ? state.radius : 120;
+
+      // bottom-left position with small padding
+      const padding = 20;
+      const x = Math.max(spotRadius * 0.6, padding + spotRadius * 0.6 - 70);
+      const y = rect.height - padding - spotRadius * 0.6;
+
+      if(typeof state !== "undefined" && state.spot){
+        state.spot.x = x;
+        state.spot.y = y;
+      }
+    }catch(e){}
+  }
+});
+</script>
+
+</body>
+</html>

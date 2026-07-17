@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Mini Lab: การหักเหของแสงผ่านปริซึมมุมฉาก — spectrum v3</title>
+<!-- spectrum v3: adds white light mode with 7 spectral rays -->
+<script>
+window.MathJax = { tex:{inlineMath:[['\\(','\\)'],['$','$']],displayMath:[['\\[','\\]']]}, svg:{fontCache:'global'} };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<style>
+:root{--blue:#2f6fd6;--deep:#204d7c;--soft:#edf3fb;--orange:#fff3df;--green:#eef9ea;--gray:#eef2f6;--red:#e53935;--ink:#17324d;}
+*{box-sizing:border-box} body{margin:0;font-family:system-ui,-apple-system,'Segoe UI',Tahoma,sans-serif;background:#f7fbff;color:var(--ink);padding-bottom:120px;overflow-x:hidden}.app{max-width:1180px;margin:auto;padding:14px}.title{text-align:center;margin:8px 0 10px}.title h1{margin:0;color:var(--blue);font-size:clamp(24px,3.5vw,42px);font-weight:900}.title h2{margin:2px 0 0;color:var(--deep);font-size:clamp(18px,2.5vw,30px);font-weight:900}.main{display:grid;grid-template-columns:1.5fr .9fr;gap:14px}.card{background:white;border:1px solid #d8e3ef;border-radius:24px;box-shadow:0 8px 24px rgba(30,70,120,.08);overflow:hidden}.stageWrap{position:relative;padding:10px;background:linear-gradient(#fff,#f9fcff)}canvas{width:100%;height:auto;display:block;touch-action:none;border-radius:18px;background:#fff}.readouts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:10px}.pill{background:var(--soft);border:1px solid #d8e3ef;border-radius:16px;padding:9px 10px;text-align:center;font-weight:800;font-size:14px}.pill b{color:var(--blue)}.controls{padding:14px;display:grid;gap:14px}.ctrl{background:#f8fbff;border:1px solid #dce7f3;border-radius:18px;padding:12px}.ctrl label{display:flex;justify-content:space-between;gap:8px;font-weight:850;color:#2c5e8c;margin-bottom:8px}.row{display:grid;grid-template-columns:1fr 86px;gap:8px;align-items:center}.miniBtns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}.miniBtn{border:1px solid #bdd1e5;background:#fff;border-radius:14px;padding:10px;font-weight:900;color:#2c5e8c;cursor:pointer}input[type=range]{width:100%;accent-color:var(--blue)}input[type=number],select{width:100%;padding:10px;border:1px solid #bdd1e5;border-radius:14px;font-size:16px;font-weight:800;background:white}.checks{display:grid;gap:10px}.checks label{display:flex;align-items:center;gap:8px;justify-content:flex-start;margin:0;color:#244e78}.btnbar{position:fixed;left:50%;bottom:calc(10px + env(safe-area-inset-bottom));transform:translateX(-50%);width:min(760px,calc(100vw - 20px));display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;background:rgba(235,241,247,.72);backdrop-filter:blur(8px);border:1px solid #d8e3ef;border-radius:24px;padding:8px;z-index:50}.btn{border:0;border-radius:18px;min-height:50px;font-weight:900;font-size:15px;cursor:pointer;box-shadow:0 3px 0 rgba(0,0,0,.16)}.play{background:#4aa3df;color:white}.reset{background:#d9dee6;color:#34495e}.formulaBtn{background:#ffe1b8;color:#7a4300}.quizBtn{background:#dff3d8;color:#1f6f35}.modal{position:fixed;inset:0;background:rgba(18,32,50,.35);z-index:100;display:none;padding:calc(18px + env(safe-area-inset-top)) 12px calc(130px + env(safe-area-inset-bottom));overflow:auto}.modal.show{display:block}.sheet{max-width:940px;margin:auto;border-radius:26px;padding:18px;background:#fff;box-shadow:0 18px 50px rgba(0,0,0,.18);position:relative}.close{position:fixed;right:calc(12px + env(safe-area-inset-right));top:calc(12px + env(safe-area-inset-top));width:52px;height:52px;border:0;border-radius:18px;background:#e7eef6;color:#45688f;font-size:28px;font-weight:900;z-index:120}.formulaSheet{background:#fff7ee}.formulaSheet .box{background:#fff3df;border:2px solid #efc58f;border-radius:20px;padding:14px;margin:12px 0}.formulaSheet h2,.quizSheet h2{margin:0 0 10px;color:#123d70;font-size:26px}.box h3{margin:0 0 8px;color:#123d70;font-size:20px}.quizSheet{background:#f6fff4}.q{background:white;border:1px solid #d8e3ef;border-radius:18px;padding:14px;margin:12px 0}.q h3{margin:0 0 10px;color:#155d29}.choice{display:block;margin:8px 0;padding:10px;border-radius:14px;border:1px solid #d8e3ef;background:#fff}.answer{display:none;margin-top:8px;padding:10px;border-radius:12px;background:#fff7f7;border:1px solid #ffc6c6}.answer b{color:red}.footer{text-align:center;margin:16px 0 90px}.footer a{color:#1b65d8;text-decoration:underline;font-weight:900}.warn{color:#c62828;font-weight:900}.small{font-size:14px;color:#54708c}.legend{position:absolute;left:18px;top:18px;background:rgba(255,255,255,.86);border:1px solid #d8e3ef;border-radius:14px;padding:8px 10px;font-weight:800;font-size:13px}.tag{display:inline-block;width:28px;height:5px;border-radius:99px;vertical-align:middle;margin-right:6px}
+@media(max-width:850px){.main{grid-template-columns:1fr}.readouts{grid-template-columns:1fr 1fr}.app{padding:8px}.controls{padding:10px}.btnbar{grid-template-columns:1fr 1fr 1fr}.btn{font-size:13px;min-height:46px}.stageWrap{padding:6px}.legend{font-size:12px;left:12px;top:12px}.pill{font-size:13px}.modal{padding-left:8px;padding-right:8px}.sheet{padding:14px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="title"><h1>Mini Lab</h1><h2>การหักเหของแสงผ่านปริซึมมุมฉาก</h2></div>
+  <div class="main">
+    <div class="card stageWrap">
+      <div class="legend"><span class="tag" id="colorTag"></span> <span id="legendText">แสงสีตามความยาวคลื่น</span></div>
+      <canvas id="cv" width="880" height="560"></canvas>
+      <div class="readouts">
+        <div class="pill">\(\lambda_{air}\) <b id="lamAir">650</b> nm</div>
+        <div class="pill">\(n\) <b id="nVal">1.509</b></div>
+        <div class="pill">\(\lambda_{prism}\) <b id="lamPrism">430.7</b> nm</div>
+        <div class="pill">ผิวที่สอง: \(i_2\) <b id="i2Val">-</b></div>
+        <div class="pill">ผิวที่สอง: \(r_2\) <b id="r2Val">-</b></div>
+        <div class="pill">สถานะ <b id="status">หักเหออก</b></div>
+      </div>
+    </div>
+    <div class="card controls">
+      <div class="ctrl"><label>มุมปริซึมด้านเอียง <span><b id="apexText">45</b>°</span></label><div class="row"><input id="apex" type="range" min="25" max="65" step="1" value="45"><input id="apexNum" type="number" min="25" max="65" step="1" value="45"></div><div class="small">ปรับมุมของปริซึมมุมฉาก โดยฐานและด้านตั้งฉากยังคงทำมุม 90°</div></div>
+      <div class="ctrl"><label>ชนิดของแสง <span><b id="modeText">แสงสีเดี่ยว</b></span></label><select id="lightMode"><option value="single">แสงสีเดี่ยว</option><option value="white">แสงขาว — แยกเป็น 7 สี</option></select><div class="small">โหมดแสงขาวจะแสดงรังสี 7 สี เพื่อดูการแยกสเปกตรัมหลังผ่านปริซึม</div></div>
+      <div class="ctrl" id="waveCtrl"><label>ความยาวคลื่นในอากาศ <span><b id="waveText">650</b> nm</span></label><div class="row"><input id="wave" type="range" min="400" max="700" step="1" value="650"><input id="waveNum" type="number" min="400" max="700" step="1" value="650"></div></div>
+      <div class="ctrl"><label>ตำแหน่งลำแสงหลัก <span><b id="yText">220</b></span></label><div class="row"><input id="rayY" type="range" min="90" max="430" step="1" value="220"><input id="rayYNum" type="number" min="90" max="430" step="1" value="220"></div><div class="small">จับแท่งไฟฉายสีดำหรือลากรังสีบนจอทดลองขึ้น–ลงได้โดยตรง</div></div>
+      <div class="ctrl"><label>จำนวนรังสีแสง <span><b id="rayCountText">1</b> เส้น</span></label><div class="row"><input id="rayCount" type="range" min="1" max="7" step="1" value="1"><input id="rayCountNum" type="number" min="1" max="7" step="1" value="1"></div><div class="miniBtns"><button class="miniBtn" id="removeRay" type="button">− ลดรังสี</button><button class="miniBtn" id="addRay" type="button">＋ เพิ่มรังสี</button></div><div class="small">เพิ่มได้สูงสุด 7 เส้น และลากรังสีแต่ละเส้นขึ้น–ลงบนจอทดลองได้</div></div>
+      <div class="ctrl checks">
+        <label><input id="showNormal" type="checkbox" checked> แสดงเส้นปกติ</label>
+        <label><input id="showAngles" type="checkbox" checked> แสดงค่ามุมกำกับ</label>
+        <label><input id="showWave" type="checkbox" checked> แสดงคลื่นย่อส่วนตามสีแสง</label>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><a href="https://www.facebook.com/resolvephysics" target="_blank">ศึกษาเพิ่มเติมที่เพจคลายปมฟิสิกส์</a></div>
+</div>
+<div class="btnbar">
+  <button class="btn reset" id="resetBtn">🔄 รีเซ็ต</button>
+  <button class="btn formulaBtn" id="formulaBtn">Σ สูตรสำคัญ</button>
+  <button class="btn quizBtn" id="quizBtn">📝 แบบฝึกหัด</button>
+</div>
+<div class="modal" id="formulaModal"><button class="close" data-close>❌</button><div class="sheet formulaSheet"><h2>Σ สูตรสำคัญ</h2>
+<div class="box"><h3>1) ดัชนีหักเหและความยาวคลื่นในตัวกลาง</h3><p>เมื่อแสงเข้าไปในปริซึม ความถี่คงเดิม แต่อัตราเร็วและความยาวคลื่นลดลง</p>\[ n=\frac{c}{v} \qquad \lambda_{prism}=\frac{\lambda_{air}}{n} \]<p>โดย \(\lambda_{air}\) คือความยาวคลื่นในอากาศ และ \(\lambda_{prism}\) คือความยาวคลื่นในปริซึม</p></div>
+<div class="box"><h3>2) กฎของสเนลล์</h3><p>ใช้หามุมหักเหเมื่อแสงผ่านรอยต่อระหว่างตัวกลาง</p>\[ n_1\sin i=n_2\sin r \]<p>ในผิวที่สอง แสงเดินทางจากปริซึมสู่อากาศ จึงใช้</p>\[ n\sin i_2=1\sin r_2 \]</div>
+<div class="box"><h3>3) การสะท้อนกลับหมด</h3><p>ถ้าแสงออกจากปริซึมสู่อากาศ และมุมตกกระทบมากกว่ามุมวิกฤต จะไม่เกิดรังสีหักเหออก</p>\[ \theta_c=\sin^{-1}\left(\frac{1}{n}\right) \]<p class="warn">เงื่อนไข: \(i_2>\theta_c\) เกิดการสะท้อนกลับหมด</p></div>
+<div class="box"><h3>แนวคิดสำคัญ</h3><p>แสงความยาวคลื่นสั้น เช่น ม่วง/น้ำเงิน มีดัชนีหักเหมากกว่า จึงเบนมากกว่า ส่วนแสงแดงมีดัชนีหักเหน้อยกว่า จึงเบนน้อยกว่า</p><p>เมื่อเลือกโหมดแสงขาว โปรแกรมจะแทนแสงขาวด้วย 7 สี แล้วคำนวณค่า \(n\) และ \(\lambda_{prism}\) ของแต่ละสี เพื่อให้เห็นการแยกสเปกตรัม</p></div>
+</div></div>
+<div class="modal" id="quizModal"><button class="close" data-close>❌</button><div class="sheet quizSheet"><h2>📝 แบบฝึกหัด</h2><p><b>หัวข้อแบบฝึกหัด:</b> เลือกคำตอบ A–E แล้วกดตรวจคำตอบเพื่อดูเฉลย</p><div id="quizBox"></div><button class="btn quizBtn" id="checkQuiz">ตรวจคำตอบ</button></div></div>
+<script>
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+const $=id=>document.getElementById(id);
+const qs=[
+ {q:'เมื่อแสงเข้าไปในปริซึม ความถี่ของแสงเปลี่ยนหรือไม่',c:['A เปลี่ยนมากขึ้น','B เปลี่ยนลดลง','C คงเดิม','D กลายเป็นศูนย์','E ขึ้นกับมุมเท่านั้น'],a:'C',ex:'ความถี่ถูกกำหนดโดยแหล่งกำเนิด จึงคงเดิมเมื่อผ่านตัวกลาง'},
+ {q:'ถ้าดัชนีหักเหของปริซึมเพิ่มขึ้น ความยาวคลื่นในปริซึมเป็นอย่างไร',c:['A เพิ่มขึ้น','B ลดลง','C คงเดิม','D เป็นศูนย์','E สรุปไม่ได้'],a:'B',ex:'เพราะ \(\lambda_{prism}=\lambda_{air}/n\)'},
+ {q:'สีใดโดยทั่วไปมีดัชนีหักเหมากกว่าในปริซึม',c:['A แดง','B ส้ม','C เหลือง','D เขียว','E ม่วง'],a:'E',ex:'แสงม่วงมีความยาวคลื่นสั้นกว่า จึงมักมีดัชนีหักเหมากกว่า'},
+ {q:'ถ้า \(i_2\) มากกว่า \(\theta_c\) จะเกิดอะไรที่ผิวที่สอง',c:['A หักเหออกปกติ','B สะท้อนกลับหมด','C แสงหายไปทันที','D ความถี่กลายเป็นศูนย์','E ความยาวคลื่นเพิ่มไม่จำกัด'],a:'B',ex:'เมื่อแสงออกจากตัวกลางหนาแน่นกว่าไปตัวกลางเบากว่า และ \(i_2>\theta_c\) จะเกิดการสะท้อนกลับหมด'},
+ {q:'สมการใดใช้หาความยาวคลื่นของแสงในปริซึม',c:['A λ_prism = nλ_air','B λ_prism = λ_air / n','C λ_prism = n / λ_air','D λ_prism = cλ_air','E λ_prism = 0'],a:'B',ex:'เมื่อเข้าไปในตัวกลางที่มี n > 1 ความยาวคลื่นลดลง โดย λ_prism = λ_air / n'}
+];
+function buildQuiz(){ $('quizBox').innerHTML=qs.map((o,i)=>`<div class="q"><h3>ข้อ ${i+1}</h3><p>${o.q}</p>${o.c.map(ch=>`<label class="choice"><input type="radio" name="q${i}" value="${ch[0]}"> ${ch}</label>`).join('')}<div class="answer" id="ans${i}"></div></div>`).join(''); if(window.MathJax) MathJax.typesetPromise();}
+buildQuiz();
+$('checkQuiz').onclick=()=>{qs.forEach((o,i)=>{let v=document.querySelector(`input[name=q${i}]:checked`)?.value||'-';let el=$('ans'+i);el.style.display='block';el.innerHTML=`เฉลยคือ <b>${o.a}</b> — ${o.ex} ${v===o.a?'✅':'❌'}`;}); if(window.MathJax) MathJax.typesetPromise();};
+function wlColor(w){let r=0,g=0,b=0;if(w<440){r=-(w-440)/(440-400);b=1}else if(w<490){g=(w-440)/(490-440);b=1}else if(w<510){g=1;b=-(w-510)/(510-490)}else if(w<580){r=(w-510)/(580-510);g=1}else if(w<645){r=1;g=-(w-645)/(645-580)}else{r=1}let f=w<420?0.55+0.45*(w-400)/20:w>680?0.55+0.45*(700-w)/20:1;return `rgb(${Math.round(255*r*f)},${Math.round(255*g*f)},${Math.round(255*b*f)})`}
+function nFor(w){return 1.50 + 0.055*(700-w)/300} // simple normal dispersion model
+const spectrum=[
+  {name:'ม่วง',w:410},{name:'คราม',w:445},{name:'น้ำเงิน',w:470},{name:'เขียว',w:530},{name:'เหลือง',w:580},{name:'ส้ม',w:610},{name:'แดง',w:650}
+];
+function isWhiteMode(){return $('lightMode') && $('lightMode').value==='white'}
+function avg(arr){return arr.reduce((a,b)=>a+b,0)/arr.length}
+function norm(v){let l=Math.hypot(v.x,v.y);return {x:v.x/l,y:v.y/l}} function dot(a,b){return a.x*b.x+a.y*b.y} function sub(a,b){return{x:a.x-b.x,y:a.y-b.y}} function add(a,b){return{x:a.x+b.x,y:a.y+b.y}} function mul(a,s){return{x:a.x*s,y:a.y*s}}
+function refract(I,N,n1,n2){I=norm(I);N=norm(N);let cosi=-dot(N,I);if(cosi<0){N=mul(N,-1);cosi=-dot(N,I)}let eta=n1/n2;let k=1-eta*eta*(1-cosi*cosi);if(k<0)return null;return norm(add(mul(I,eta),mul(N,eta*cosi-Math.sqrt(k))));}
+function lineIntersection(P,d,A,B){let v=sub(B,A), den=d.x*v.y-d.y*v.x;if(Math.abs(den)<1e-9)return null;let AP=sub(A,P);let t=(AP.x*v.y-AP.y*v.x)/den;let u=(AP.x*d.y-AP.y*d.x)/den;if(t>=0&&u>=0&&u<=1)return {p:add(P,mul(d,t)),t,u};return null}
+function drawArrow(a,b,color,w=3,label){ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();let ang=Math.atan2(b.y-a.y,b.x-a.x),h=13;ctx.beginPath();ctx.moveTo(b.x,b.y);ctx.lineTo(b.x-h*Math.cos(ang-.45),b.y-h*Math.sin(ang-.45));ctx.lineTo(b.x-h*Math.cos(ang+.45),b.y-h*Math.sin(ang+.45));ctx.closePath();ctx.fill();if(label){ctx.font='bold 18px system-ui';ctx.fillText(label,b.x+8,b.y-8)}}
+function drawWave(x,y,color,lam){ctx.strokeStyle=color;ctx.lineWidth=2;ctx.beginPath();for(let i=0;i<160;i++){let xx=x+i, yy=y+10*Math.sin(i/lam*2*Math.PI); if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy)}ctx.stroke();}
+function drawAngle(p,baseDir,rayDir,text,color){ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=2;let a1=Math.atan2(baseDir.y,baseDir.x),a2=Math.atan2(rayDir.y,rayDir.x);let r=36;ctx.beginPath();ctx.arc(p.x,p.y,r,a1,a2,a2<a1);ctx.stroke();ctx.font='bold 16px system-ui';ctx.fillText(text,p.x+44*Math.cos((a1+a2)/2),p.y+44*Math.sin((a1+a2)/2));}
+let rayOffsets=[0];
+let dragRayIndex=null;
+let dragMode=null;
+
+function ensureRayOffsets(){
+  let count=+$('rayCount').value;
+  while(rayOffsets.length<count){
+    const k=rayOffsets.length;
+    const sign=k%2?1:-1;
+    const level=Math.ceil(k/2);
+    rayOffsets.push(sign*level*24);
+  }
+  rayOffsets=rayOffsets.slice(0,count);
+}
+function closestPointOnSegment(P,A,B){
+  const AB=sub(B,A); const len2=dot(AB,AB); if(len2===0) return {p:A,t:0,d:Math.hypot(P.x-A.x,P.y-A.y)};
+  let t=dot(sub(P,A),AB)/len2; t=Math.max(0,Math.min(1,t));
+  const Q=add(A,mul(AB,t)); return {p:Q,t,d:Math.hypot(P.x-Q.x,P.y-Q.y)};
+}
+function drawFlashlight(yTop,yBot,color){
+  const x=55, w=78, h=Math.max(30,yBot-yTop+28), y=(yTop+yBot)/2-h/2;
+  ctx.save();
+  ctx.fillStyle='#0d2742';ctx.strokeStyle='#12304f';ctx.lineWidth=3;
+  ctx.beginPath();ctx.roundRect(x,y,w,h,8);ctx.fill();ctx.stroke();
+  ctx.fillStyle='#111';ctx.fillRect(x+8,y+8,w-18,h-16);
+  ctx.fillStyle='#284966';ctx.beginPath();ctx.roundRect(x+w-6,y+5,18,h-10,7);ctx.fill();
+  if(color==='white'){const grad=ctx.createLinearGradient(x+w+10,yTop,325,yBot);grad.addColorStop(0,'rgba(255,255,255,.75)');grad.addColorStop(.18,'rgba(148,80,255,.22)');grad.addColorStop(.35,'rgba(40,120,255,.22)');grad.addColorStop(.52,'rgba(0,180,90,.20)');grad.addColorStop(.68,'rgba(255,220,0,.22)');grad.addColorStop(.84,'rgba(255,128,0,.22)');grad.addColorStop(1,'rgba(255,50,35,.22)');ctx.fillStyle=grad;}else{ctx.fillStyle=color;ctx.globalAlpha=.22;}ctx.beginPath();ctx.moveTo(x+w+10,yTop);ctx.lineTo(325,yTop);ctx.lineTo(325,yBot);ctx.lineTo(x+w+10,yBot);ctx.closePath();ctx.fill();ctx.globalAlpha=1;
+  ctx.restore();
+}
+function angleBetweenDeg(a,b){
+  const aa=norm(a),bb=norm(b); return Math.acos(Math.max(-1,Math.min(1,Math.abs(dot(aa,bb)))))*180/Math.PI;
+}
+function drawAngleSmall(p,d1,d2,text,color,rad=32){
+  d1=norm(d1); d2=norm(d2);
+  let a1=Math.atan2(d1.y,d1.x), a2=Math.atan2(d2.y,d2.x);
+  let diff=((a2-a1+Math.PI*3)%(Math.PI*2))-Math.PI;
+  ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=2;
+  ctx.beginPath();ctx.arc(p.x,p.y,rad,a1,a1+diff,diff<0);ctx.stroke();
+  const mid=a1+diff/2;
+  ctx.font='bold 16px system-ui';
+  ctx.fillText(text,p.x+(rad+14)*Math.cos(mid),p.y+(rad+14)*Math.sin(mid));
+}
+function drawOneRay(hitY,color,n,apex,primary=false){
+  let A={x:330,y:90}, B={x:330,y:460};let base=260;let C={x:B.x+base,y:B.y};let rise=base*Math.tan(apex*Math.PI/180);A={x:B.x,y:B.y-rise};
+  let start={x:145,y:hitY}, I={x:1,y:0};let hit1={x:B.x,y:hitY};
+  const lineW=primary?3.4:2.2;
+  drawArrow(start,hit1,color,lineW,'');
+  let N1={x:-1,y:0};let T1=refract(I,N1,1,n); if(!T1)T1={x:1,y:0};let hit2=lineIntersection(hit1,T1,A,C); if(!hit2){hit2=lineIntersection(hit1,T1,B,C)};
+  if(!hit2) return null;
+  drawArrow(hit1,hit2.p,color,lineW,'');
+  let edge=sub(C,A);
+  let normal=norm({x:-edge.y,y:edge.x});
+  if(dot(normal,T1)>0) normal=mul(normal,-1); // normal pointing against incident ray inside prism
+  let i2=angleBetweenDeg(T1,normal);
+  let out=refract(T1,normal,n,1);
+  if(out){drawArrow(hit2.p,add(hit2.p,mul(out,260)),color,lineW,'');}
+  else {let refl=norm(sub(T1,mul(normal,2*dot(T1,normal))));drawArrow(hit2.p,add(hit2.p,mul(refl,210)),'#ff8a00',lineW,'TIR');}
+  if(primary){
+    $('i2Val').textContent=i2.toFixed(1)+'°';
+    if(out){let r2=Math.asin(Math.min(1,n*Math.sin(i2*Math.PI/180)))*180/Math.PI;$('r2Val').textContent=r2.toFixed(1)+'°';$('status').textContent='หักเหออก';}
+    else {$('r2Val').textContent='ไม่มี';$('status').textContent='สะท้อนกลับหมด';}
+    if($('showNormal').checked){ctx.setLineDash([8,8]);ctx.strokeStyle='#999';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(hit2.p.x-normal.x*80,hit2.p.y-normal.y*80);ctx.lineTo(hit2.p.x+normal.x*80,hit2.p.y+normal.y*80);ctx.stroke();ctx.setLineDash([])}
+    if($('showAngles').checked){
+      // i₂: วัดระหว่าง “รังสีตกกระทบในปริซึม” กับ “เส้นปกติ (เส้นปะ)” เท่านั้น
+      const incidentBack = mul(T1,-1);      // เส้นรังสีที่ย้อนจากจุดตกกระทบกลับไปทางภายในปริซึม
+      const normalToIncidentSide = normal; // เส้นปกติด้านเดียวกับรังสีตกกระทบ
+      drawAngleSmall(hit2.p, incidentBack, normalToIncidentSide, `i₂=${i2.toFixed(1)}°`, '#1e88e5', 36);
+      if(out){
+        let r2=Math.asin(Math.min(1,n*Math.sin(i2*Math.PI/180)))*180/Math.PI;
+        drawAngleSmall(hit2.p, out, mul(normal,-1), `r₂=${r2.toFixed(1)}°`, '#e53935', 52);
+      }
+    }
+  }
+  return {hit1,hit2:hit2.p,T1};
+}
+function draw(){
+let apex=+$('apex').value, wave=+$('wave').value, y=+$('rayY').value;ensureRayOffsets();
+const white=isWhiteMode();
+$('modeText').textContent=white?'แสงขาว':'แสงสีเดี่ยว';
+$('waveCtrl').style.opacity=white?.45:1;
+$('waveCtrl').style.pointerEvents=white?'none':'auto';
+$('apexText').textContent=apex;$('apexNum').value=apex;$('waveText').textContent=wave;$('waveNum').value=wave;$('rayYNum').value=y;$('yText').textContent=y;$('rayCountText').textContent=$('rayCount').value;$('rayCountNum').value=$('rayCount').value;
+let color=wlColor(wave), n=nFor(wave), lamP=wave/n;
+if(white){
+  const ns=spectrum.map(o=>nFor(o.w));
+  const lams=spectrum.map(o=>o.w/nFor(o.w));
+  $('colorTag').style.background='linear-gradient(90deg, violet, indigo, blue, green, yellow, orange, red)';
+  $('legendText').textContent='แสงขาว → แยกสเปกตรัม 7 สี';
+  $('lamAir').textContent='400–650';
+  $('nVal').textContent=avg(ns).toFixed(3);
+  $('lamPrism').textContent=`${Math.min(...lams).toFixed(1)}–${Math.max(...lams).toFixed(1)}`;
+}else{
+  $('colorTag').style.background=color;
+  $('legendText').textContent='แสงสีตามความยาวคลื่น';
+  $('lamAir').textContent=wave.toFixed(0);$('nVal').textContent=n.toFixed(3);$('lamPrism').textContent=lamP.toFixed(1);
+}
+ctx.clearRect(0,0,cv.width,cv.height);let A={x:330,y:90}, B={x:330,y:460};let base=260;let C={x:B.x+base,y:B.y};let rise=base*Math.tan(apex*Math.PI/180);A={x:B.x,y:B.y-rise};
+ctx.fillStyle='rgba(230,242,255,.45)';ctx.strokeStyle='#12304f';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);ctx.lineTo(C.x,C.y);ctx.closePath();ctx.fill();ctx.stroke();ctx.font='bold 26px system-ui';ctx.fillStyle='#111';ctx.fillText(`${apex}°`,C.x-105,C.y-28);
+const ys=rayOffsets.map(o=>Math.max(90,Math.min(430,y+o))).sort((a,b)=>a-b);
+drawFlashlight(ys[0],ys[ys.length-1],white?'white':color);
+if(white){
+  const sourceCount=rayOffsets.length;
+  rayOffsets.forEach((off,rayIdx)=>{
+    const baseHitY=Math.max(90,Math.min(430,y+off));
+    // กระจายตำแหน่งเล็กน้อยให้เห็น 7 สีชัด แต่ยังมาจากลำแสงขาวเส้นเดียวกัน
+    spectrum.forEach((sp,j)=>{
+      const spread=(j-3)*1.6;
+      const primary=(rayIdx===0 && j===6); // ใช้สีแดงเป็นค่ากำกับหลักบน readout
+      drawOneRay(Math.max(90,Math.min(430,baseHitY+spread)),wlColor(sp.w),nFor(sp.w),apex,primary);
+    });
+  });
+  ctx.fillStyle='#333';ctx.font='bold 16px system-ui';ctx.fillText('อากาศ',70,80);ctx.fillText('ปริซึม',380,410);ctx.fillText('แสงขาวประกอบด้วย 7 สี: ม่วง คราม น้ำเงิน เขียว เหลือง ส้ม แดง',315,132);
+  ctx.font='bold 15px system-ui';
+  spectrum.forEach((sp,j)=>{ctx.fillStyle=wlColor(sp.w);ctx.fillText(`${sp.name} ${sp.w} nm`,640,170+j*22);});
+  if($('showWave').checked){spectrum.forEach((sp,j)=>drawWave(72,478+j*10,wlColor(sp.w),Math.max(16,sp.w/28)));}
+}else{
+  rayOffsets.forEach((off,idx)=>drawOneRay(Math.max(90,Math.min(430,y+off)),color,n,apex,idx===0));
+  ctx.fillStyle='#333';ctx.font='bold 16px system-ui';ctx.fillText('อากาศ',70,80);ctx.fillText('ปริซึม',380,410);ctx.fillText(`λ ในปริซึม = ${lamP.toFixed(1)} nm`,390,135); if($('showWave').checked) drawWave(80,500,color,Math.max(16,wave/28));
+}
+}
+
+cv.addEventListener('pointerdown',e=>{
+  const r=cv.getBoundingClientRect();
+  const p={x:(e.clientX-r.left)*cv.width/r.width,y:(e.clientY-r.top)*cv.height/r.height};
+  const baseY=+$('rayY').value; ensureRayOffsets();
+  const rayYs=rayOffsets.map(o=>Math.max(90,Math.min(430,baseY+o))).sort((a,b)=>a-b);
+  const yTop=rayYs[0], yBot=rayYs[rayYs.length-1];
+  const fx=55, fw=96, fh=Math.max(30,yBot-yTop+28), fy=(yTop+yBot)/2-fh/2;
+
+  // จับตัวแท่งไฟฉายสีดำแล้วลากขึ้น–ลงได้ทั้งชุด
+  if(p.x>=fx-10 && p.x<=fx+fw+16 && p.y>=fy-16 && p.y<=fy+fh+16){
+    dragMode='flashlight'; dragRayIndex=null; cv.setPointerCapture(e.pointerId); return;
+  }
+
+  let best={i:-1,d:999};
+  rayOffsets.forEach((off,i)=>{
+    const yy=Math.max(90,Math.min(430,baseY+off));
+    const c=closestPointOnSegment(p,{x:145,y:yy},{x:330,y:yy});
+    if(c.d<best.d) best={i,d:c.d};
+  });
+  if(best.d<20){dragMode='ray'; dragRayIndex=best.i; cv.setPointerCapture(e.pointerId);}
+});
+cv.addEventListener('pointermove',e=>{
+  if(dragMode===null) return;
+  const r=cv.getBoundingClientRect();
+  const py=(e.clientY-r.top)*cv.height/r.height;
+
+  if(dragMode==='flashlight'){
+    const meanOffset=rayOffsets.reduce((a,b)=>a+b,0)/rayOffsets.length;
+    const newBase=Math.max(90,Math.min(430,py-meanOffset));
+    $('rayY').value=newBase; $('rayYNum').value=newBase;
+    draw(); return;
+  }
+
+  if(dragRayIndex===null) return;
+  let baseY=+$('rayY').value;
+  rayOffsets[dragRayIndex]=Math.max(-180,Math.min(180,py-baseY));
+  if(dragRayIndex===0){
+    const newBase=Math.max(90,Math.min(430,py));
+    $('rayY').value=newBase; $('rayYNum').value=newBase; rayOffsets[0]=0;
+  }
+  draw();
+});
+function endDrag(){dragRayIndex=null;dragMode=null;}
+cv.addEventListener('pointerup',endDrag);
+cv.addEventListener('pointercancel',endDrag);
+['apex','wave','rayY','rayCount'].forEach(id=>$(id).addEventListener('input',draw));$('lightMode').addEventListener('change',draw);[['apexNum','apex'],['waveNum','wave'],['rayYNum','rayY'],['rayCountNum','rayCount']].forEach(([num,ran])=>$(num).addEventListener('change',()=>{let el=$(ran);el.value=Math.max(+el.min,Math.min(+el.max,+$(num).value));draw()}));['showNormal','showAngles','showWave'].forEach(id=>$(id).addEventListener('change',draw));
+$('addRay').onclick=()=>{const v=Math.min(+$('rayCount').max,+$('rayCount').value+1);$('rayCount').value=v;$('rayCountNum').value=v;ensureRayOffsets();draw();};
+$('removeRay').onclick=()=>{const v=Math.max(+$('rayCount').min,+$('rayCount').value-1);$('rayCount').value=v;$('rayCountNum').value=v;rayOffsets=rayOffsets.slice(0,v);draw();};
+$('resetBtn').onclick=()=>{$('apex').value=45;$('wave').value=650;$('lightMode').value='single';$('rayY').value=220;$('rayCount').value=1;rayOffsets=[0];$('showNormal').checked=true;$('showAngles').checked=true;$('showWave').checked=true;draw()};
+$('formulaBtn').onclick=()=>{$('formulaModal').classList.add('show'); if(window.MathJax)MathJax.typesetPromise();};$('quizBtn').onclick=()=>{$('quizModal').classList.add('show'); if(window.MathJax)MathJax.typesetPromise();};document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>b.parentElement.classList.remove('show'));
+draw();
+</script>
+</body>
+</html>

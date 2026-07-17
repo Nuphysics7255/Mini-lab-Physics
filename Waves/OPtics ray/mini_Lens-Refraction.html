@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Mini Lab : ลำแสงเดียวผ่านเลนส์</title>
+<style>
+  :root{
+    --bg:#f8fbff;
+    --card:#ffffff;
+    --ink:#16324f;
+    --sub:#58728d;
+    --line:#d7e4f3;
+    --blue:#2f6fd6;
+    --blueSoft:#edf4ff;
+    --orange:#fff1de;
+    --orangeLine:#f1cb93;
+    --green:#eef9ea;
+    --greenLine:#b8ddb0;
+    --shadow:0 10px 28px rgba(33,74,125,.10);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Inter,"Noto Sans Thai",sans-serif}
+  body{min-height:100vh}
+  .wrap{max-width:1200px;margin:0 auto;padding:16px 16px 120px}
+  .hero{
+    display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+    margin-bottom:14px;
+  }
+  .heroIcon{
+    width:58px;height:58px;border-radius:18px;background:linear-gradient(135deg,#edf4ff,#dcecff);
+    display:flex;align-items:center;justify-content:center;font-size:30px;box-shadow:var(--shadow);flex:0 0 auto;
+  }
+  .heroText h1{margin:0;font-size:clamp(24px,3.2vw,40px);line-height:1.08;color:var(--blue);font-weight:900}
+  .heroText h2{margin:3px 0 0;font-size:clamp(20px,2.5vw,30px);line-height:1.14;color:#204d7c;font-weight:900}
+
+  .layout{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(320px,.85fr);gap:16px;align-items:start}
+  .panel,.side{background:var(--card);border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow)}
+
+  .labPanel{padding:12px 12px 14px}
+  .labTopRow{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+  .pill{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:999px;background:var(--blueSoft);color:#2e5f93;font-weight:800;font-size:16px}
+  .miniTag{background:var(--orange);border:1px solid var(--orangeLine);color:#8a5c12}
+  .valueBar{display:flex;gap:8px;flex-wrap:wrap}
+  .valueChip{padding:10px 14px;border-radius:999px;background:#f7fbff;border:1px solid var(--line);font-weight:800;color:#315a84}
+
+  .viewport{
+    width:100%;height:min(62vh,620px);min-height:380px;
+    border-radius:22px;border:1px solid var(--line);overflow:hidden;
+    background:linear-gradient(180deg,#ffffff,#f7fbff);
+    position:relative;
+  }
+  svg{width:100%;height:100%;display:block;touch-action:none}
+  svg text{font-family:inherit}
+
+  .hintBadge{
+    position:absolute;left:12px;right:12px;bottom:12px;z-index:5;
+    padding:11px 14px;border-radius:18px;background:rgba(255,247,235,.92);border:1px solid var(--orangeLine);
+    color:#875200;font-size:14px;font-weight:700;box-shadow:0 8px 24px rgba(96,64,0,.08);
+    display:flex;align-items:flex-start;justify-content:space-between;gap:10px;
+  }
+  .hintBadge button{
+    border:none;background:#fff;border:1px solid #ebd0a8;color:#7b5c2b;border-radius:12px;
+    width:34px;height:34px;font-size:18px;cursor:pointer;flex:0 0 auto
+  }
+
+  .side{padding:14px}
+  .sectionTitle{font-size:18px;font-weight:900;color:#204d7c;margin:2px 0 12px;display:flex;align-items:center;gap:10px}
+  .controls{display:grid;gap:12px}
+  .ctrl{background:#fbfdff;border:1px solid var(--line);border-radius:18px;padding:12px}
+  .ctrl label{display:flex;justify-content:space-between;gap:12px;align-items:center;font-weight:800;color:#2e5f93;font-size:15px;margin-bottom:10px}
+  .ctrl small{display:block;color:var(--sub);line-height:1.45}
+  select,input[type="range"]{width:100%}
+  select{
+    height:42px;border-radius:12px;border:1px solid var(--line);padding:0 12px;background:#fff;color:var(--ink);font-weight:700
+  }
+  input[type="range"]{accent-color:var(--blue);cursor:pointer}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .readout{font-weight:900;color:#1f4b79}
+
+  .btnRow{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px}
+  .btn{
+    min-height:52px;border:none;border-radius:18px;padding:12px 16px;cursor:pointer;
+    font-size:16px;font-weight:900;box-shadow:var(--shadow)
+  }
+  .btn.blue{background:rgba(114,167,219,.88);color:#fff}
+  .btn.gray{background:#eef3f8;color:#35597d}
+
+  .infoBox{margin-top:14px;padding:14px;border-radius:18px;background:var(--green);border:1px solid var(--greenLine);color:#245f2b;line-height:1.55}
+  .infoBox b{color:#1f5e25}
+
+  .footerLink{margin-top:14px;text-align:center;font-weight:800;color:#345d88}
+  .footerLink a{color:#2f6fd6}
+
+  @media (max-width: 920px){
+    .layout{grid-template-columns:1fr}
+    .viewport{height:42vh;min-height:300px}
+  }
+
+  @media (max-width: 640px){
+    html,body{height:100%}
+    body{overflow:hidden}
+    .wrap{height:100vh;height:100dvh;padding:12px 12px calc(120px + env(safe-area-inset-bottom));display:flex;flex-direction:column;overflow:hidden}
+    .hero{align-items:flex-start;flex:0 0 auto}
+    .heroIcon{width:46px;height:46px;border-radius:15px;font-size:24px}
+    .layout{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:10px}
+    .labPanel{padding:10px;flex:0 0 auto}
+    .viewport{height:33vh;min-height:255px;max-height:33vh}
+    .side{flex:1 1 auto;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;padding-bottom:130px}
+    .labTopRow{gap:8px}
+    .pill{font-size:14px;padding:9px 12px}
+    .valueChip{font-size:13px;padding:9px 12px}
+    .row2{grid-template-columns:1fr}
+    .hintBadge{font-size:12px;left:8px;right:8px;bottom:8px}
+  }
+
+.miniTopControls .miniResetBtn{
+  border:none; border-radius:999px; padding:10px 18px;
+  background:#eef3f8; color:#35597d; font-weight:900; cursor:pointer;
+  box-shadow:var(--shadow); min-height:42px;
+}
+
+</style>
+
+<style>
+.side { display:none !important; }
+.hintBadge { display:none !important; }
+.layout { grid-template-columns: 1fr !important; }
+.miniTopControls{
+  display:flex; flex-wrap:wrap; gap:10px; align-items:center;
+}
+.miniTopControls > *{flex:0 0 auto}
+
+.miniTopControls .miniSelectWrap,
+.miniTopControls .miniSliderWrap{
+  display:flex; align-items:center; gap:10px;
+  background:#f7fbff; border:1px solid #d7e4f3; border-radius:999px;
+  padding:10px 14px; font-weight:800; color:#2e5f93;
+}
+.miniTopControls label{font-weight:900; color:#2e5f93}
+.miniTopControls select{
+  width:auto; min-width:132px; height:38px; border-radius:999px;
+  border:1px solid #d7e4f3; padding:0 12px; font-weight:800;
+}
+.miniTopControls input[type="range"]{
+  width:180px;
+}
+@media (max-width:640px){
+  .miniTopControls{flex-direction:column; align-items:stretch}
+  .miniTopControls .miniSelectWrap,
+  .miniTopControls .miniSliderWrap{justify-content:space-between}
+  .miniTopControls input[type="range"]{width:140px}
+}
+
+.miniTopControls .miniResetBtn{
+  border:none; border-radius:999px; padding:10px 18px;
+  background:#eef3f8; color:#35597d; font-weight:900; cursor:pointer;
+  box-shadow:var(--shadow); min-height:42px;
+}
+
+</style>
+
+</head>
+<body>
+  <div class="wrap">
+    <div class="hero">
+      <div class="heroIcon">🔦</div>
+      <div class="heroText">
+        <h1>Mini Lab</h1>
+        <h2>รังสีแสงผ่านเลนส์(บาง)</h2>
+      </div>
+    </div>
+
+    <div class="layout">
+      <section class="panel labPanel">
+        <div class="labTopRow">
+          
+<div class="miniTopControls">
+  <div class="miniSelectWrap">
+    <label for="lensTypeMini">เลือกชนิดของเลนส์</label>
+    <select id="lensTypeMini">
+      <option value="convex">เลนส์นูน</option>
+      <option value="concave">เลนส์เว้า</option>
+    </select>
+  </div>
+  <div class="miniSliderWrap">
+    <label for="focusSliderMini">โฟกัส f</label>
+    <input id="focusSliderMini" type="range" min="4" max="30" step="0.5" value="12" />
+    <span id="focusReadoutMini">12 cm</span>
+  </div>
+  <button id="resetTopBtn" class="miniResetBtn">รีเซ็ต</button>
+</div>
+
+        </div>
+
+        <div class="viewport">
+          <svg id="svg" viewBox="-620 -300 1240 600" xmlns="http://www.w3.org/2000/svg" aria-label="การทดลองลำแสงผ่านเลนส์">
+            <defs>
+              <linearGradient id="lensGrad" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stop-color="#d7ebff" />
+                <stop offset="50%" stop-color="#ffffff" />
+                <stop offset="100%" stop-color="#d7ebff" />
+              </linearGradient>
+              <marker id="arrowRed" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+                <path d="M0,0 L10,5 L0,10 Z" fill="#ef4444"></path>
+              </marker>
+              <marker id="arrowBlue" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+                <path d="M0,0 L10,5 L0,10 Z" fill="#2563eb"></path>
+              </marker>
+            </defs>
+
+            <rect x="-620" y="-300" width="1240" height="600" fill="transparent"></rect>
+            <g id="grid"></g>
+
+            <line x1="-600" y1="0" x2="600" y2="0" stroke="#e7c447" stroke-width="2.6"></line>
+            <text x="560" y="-10" font-size="18" fill="#8b6d00" font-weight="800">แกนหลัก</text>
+
+            <line x1="0" y1="-240" x2="0" y2="240" stroke="#8bc5ff" stroke-width="3" stroke-dasharray="8 8"></line>
+            <text x="10" y="-220" font-size="18" fill="#2e6ba8" font-weight="800">เลนส์</text>
+
+            <g id="focusGroup">
+              <circle id="focusL" r="6" fill="#2563eb"></circle>
+              <circle id="focusR" r="6" fill="#2563eb"></circle>
+              <text id="focusLT" font-size="18" fill="#1d4f8c" font-weight="800"></text>
+              <text id="focusRT" font-size="18" fill="#1d4f8c" font-weight="800"></text>
+            </g>
+
+            <path id="lensShape" fill="url(#lensGrad)" fill-opacity="0.72" stroke="#4d9ae8" stroke-width="3"></path>
+
+            <g id="flashlight" style="cursor:grab">
+              <g id="flashBody">
+                <rect x="-26" y="-14" width="56" height="28" rx="10" fill="#475569"></rect>
+                <rect x="-46" y="-10" width="22" height="20" rx="6" fill="#1f2937"></rect>
+                <circle cx="-36" cy="0" r="5.8" fill="#facc15"></circle>
+                <polygon points="30,-18 58,-10 58,10 30,18" fill="#94a3b8"></polygon>
+              </g>
+              <circle id="dragKnob" cx="-4" cy="0" r="34" fill="transparent"></circle>
+              <circle id="rotateHandleHit" cx="72" cy="0" r="42" fill="transparent" style="cursor:grab"></circle>
+              <circle id="rotateHandleRing" cx="72" cy="0" r="16" fill="#fff7ed" stroke="#fb923c" stroke-width="3" opacity="0.98"></circle>
+              <circle id="rotateHandleDot" cx="72" cy="0" r="5.5" fill="#ea580c"></circle>
+            </g>
+
+            <line id="incidentRay" stroke="#ef4444" stroke-width="4" marker-end="url(#arrowRed)"></line>
+            <line id="refractedRay" stroke="#ef4444" stroke-width="4" marker-end="url(#arrowRed)"></line>
+            <line id="straightGuideRay" stroke="#ef4444" stroke-width="3" stroke-dasharray="10 8" opacity="0.9"></line>
+            <circle id="hitPoint" r="6" fill="#ef4444"></circle>
+
+            <path id="angleArc" fill="none" stroke="#ef4444" stroke-width="3"></path>
+            <text id="angleLabel" font-size="18" fill="#b91c1c" font-weight="900"></text>
+
+            <text id="incidentLabel" font-size="18" fill="#b91c1c" font-weight="900">รังสีตกกระทบ</text>
+            <text id="refractedLabel" font-size="18" fill="#b91c1c" font-weight="900">รังสีหลังผ่านเลนส์</text>
+            <text id="flashLabel" font-size="18" fill="#334155" font-weight="900">ไฟฉาย</text>
+          </svg>
+
+          <div class="hintBadge" id="hintBadge">
+            <div>🎯 ลองเลื่อนตำแหน่งไฟฉาย + หมุนมุมลำแสง แล้วสังเกตว่าเมื่อเปลี่ยนชนิดเลนส์หรือค่า <b>f</b> ทิศของลำแสงหลังผ่านเลนส์จะเปลี่ยนอย่างไร</div>
+            <button id="closeHint" aria-label="ปิดคำแนะนำ">✕</button>
+          </div>
+        </div>
+      </section>
+
+      <aside class="side">
+        <div class="sectionTitle">⚙️ แผงควบคุม</div>
+        <div class="controls">
+          <div class="ctrl">
+            <label><span>ชนิดของเลนส์</span><span class="readout" id="typeReadout">เลนส์นูน</span></label>
+            <select id="lensType">
+              <option value="convex">เลนส์นูน</option>
+              <option value="concave">เลนส์เว้า</option>
+            </select>
+            <small>เลือกให้เห็นความต่างระหว่างลำแสงที่ถูกรวมกับลำแสงที่กระจายออก</small>
+          </div>
+
+          <div class="ctrl">
+            <label><span>โฟกัสของเลนส์</span><span class="readout" id="focusReadout">12 cm</span></label>
+            <input id="focusSlider" type="range" min="4" max="30" step="0.5" value="12" />
+            <small>ค่า <b>f</b> มาก → เลนส์มีผลต่อมุมน้อยลง, ค่า <b>f</b> น้อย → เบนลำแสงแรงขึ้น</small>
+          </div>
+
+          <div class="ctrl">
+            <label><span>มุมลำแสงจากไฟฉาย</span><span class="readout" id="angleReadout">0°</span></label>
+            <input id="angleSlider" type="range" min="-35" max="35" step="1" value="0" />
+            <small>หมุนได้ทั้งขึ้นและลง เพื่อดูทิศทางลำแสงก่อนและหลังผ่านเลนส์</small>
+          </div>
+
+          <div class="row2">
+            <div class="ctrl">
+              <label><span>ตำแหน่งไฟฉาย X</span><span class="readout" id="xReadout">-42 cm</span></label>
+              <input id="xSlider" type="range" min="-90" max="-8" step="1" value="-42" />
+              <small>เลื่อนเข้าใกล้หรือถอยห่างจากเลนส์</small>
+            </div>
+            <div class="ctrl">
+              <label><span>ตำแหน่งไฟฉาย Y</span><span class="readout" id="yReadout">0 cm</span></label>
+              <input id="ySlider" type="range" min="-26" max="26" step="1" value="0" />
+              <small>เลื่อนสูง–ต่ำ เพื่อให้ลำแสงตกกระทบที่ตำแหน่งต่างกัน</small>
+            </div>
+          </div>
+
+          <div class="btnRow">
+            <button class="btn blue" id="centerBtn">จัดไฟฉายกลับกึ่งกลาง</button>
+            <button class="btn gray" id="resetBtn">รีเซ็ต</button>
+          </div>
+        </div>
+
+        <div class="infoBox">
+          <b>แนวคิดที่อยากให้สังเกต</b><br>
+          เลนส์นูนทำให้ลำแสงโน้มเข้าใกล้แกนหลักมากขึ้น ส่วนเลนส์เว้าทำให้ลำแสงเบนออกจากแกนหลักมากขึ้น และตำแหน่งที่ลำแสงตกกระทบบนเลนส์ก็มีผลต่อทิศทางหลังผ่านเลนส์ด้วย
+        </div>
+
+        <div class="footerLink">ศึกษาเพิ่มเติมที่ <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">เพจคลายปมฟิสิกส์</a></div>
+      </aside>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const svg = document.getElementById('svg');
+  const lensShape = document.getElementById('lensShape');
+  const incidentRay = document.getElementById('incidentRay');
+  const refractedRay = document.getElementById('refractedRay');
+  const straightGuideRay = document.getElementById('straightGuideRay');
+  const hitPoint = document.getElementById('hitPoint');
+  const angleArc = document.getElementById('angleArc');
+  const angleLabel = document.getElementById('angleLabel');
+  const flashlight = document.getElementById('flashlight');
+  const flashBody = document.getElementById('flashBody');
+  const dragKnob = document.getElementById('dragKnob');
+  const rotateHandleHit = document.getElementById('rotateHandleHit');
+  const rotateHandleRing = document.getElementById('rotateHandleRing');
+  const flashLabel = document.getElementById('flashLabel');
+  const incidentLabel = document.getElementById('incidentLabel');
+  const refractedLabel = document.getElementById('refractedLabel');
+  const focusL = document.getElementById('focusL');
+  const focusR = document.getElementById('focusR');
+  const focusLT = document.getElementById('focusLT');
+  const focusRT = document.getElementById('focusRT');
+
+  const lensType = document.getElementById('lensType');
+  const lensTypeMini = document.getElementById('lensTypeMini');
+  const focusSlider = document.getElementById('focusSlider');
+  const focusSliderMini = document.getElementById('focusSliderMini');
+  const focusReadoutMini = document.getElementById('focusReadoutMini');
+  const resetTopBtn = document.getElementById('resetTopBtn');
+  const angleSlider = document.getElementById('angleSlider');
+  const xSlider = document.getElementById('xSlider');
+  const ySlider = document.getElementById('ySlider');
+  const centerBtn = document.getElementById('centerBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const closeHint = document.getElementById('closeHint');
+  const hintBadge = document.getElementById('hintBadge');
+
+  const typeReadout = document.getElementById('typeReadout');
+  const focusReadout = document.getElementById('focusReadout');
+  const angleReadout = document.getElementById('angleReadout');
+  const xReadout = document.getElementById('xReadout');
+  const yReadout = document.getElementById('yReadout');
+  const lensSummary = null;
+
+  const PX_PER_CM = 8;
+  const LENS_X = 0;
+  const OUTPUT_LEN = 550;
+  const state = {
+    type: 'convex',
+    fcm: 12,
+    angleDeg: 0,
+    xcm: -42,
+    ycm: 0,
+  };
+
+  function fmt(v){ return (Math.round(v * 10) / 10).toFixed(1).replace('.0',''); }
+  function clamp(v,min,max){ return Math.min(max,Math.max(min,v)); }
+  function degToRad(d){ return d * Math.PI / 180; }
+  function radToDeg(r){ return r * 180 / Math.PI; }
+
+  function lensPath(type){
+    const H = 212;
+    if(type === 'convex'){
+      return `M 0 ${-H} C 42 ${-118} 42 118 0 ${H} C -42 118 -42 -118 0 ${-H} Z`;
+    }
+    return `M -25 ${-H} C -7 ${-118} -7 118 -25 ${H} L 25 ${H} C 7 118 7 -118 25 ${-H} Z`;
+  }
+
+  function arcPath(cx, cy, r, a0, a1){
+    const x1 = cx + r * Math.cos(a0), y1 = cy + r * Math.sin(a0);
+    const x2 = cx + r * Math.cos(a1), y2 = cy + r * Math.sin(a1);
+    let da = a1 - a0;
+    while(da < 0) da += Math.PI * 2;
+    while(da > Math.PI * 2) da -= Math.PI * 2;
+    const large = da > Math.PI ? 1 : 0;
+    const sweep = 1;
+    return `M ${x1} ${y1} A ${r} ${r} 0 ${large} ${sweep} ${x2} ${y2}`;
+  }
+
+  function buildGrid(){
+    const grid = document.getElementById('grid');
+    let html = '';
+    for(let x=-600; x<=600; x+=50){
+      html += `<line x1="${x}" y1="-300" x2="${x}" y2="300" stroke="#eef4fb" stroke-width="1" />`;
+    }
+    for(let y=-300; y<=300; y+=50){
+      html += `<line x1="-620" y1="${y}" x2="620" y2="${y}" stroke="#eef4fb" stroke-width="1" />`;
+    }
+    grid.innerHTML = html;
+  }
+
+  function syncInputs(){
+    lensType.value = state.type;
+    lensTypeMini.value = state.type;
+    focusSlider.value = state.fcm;
+    focusSliderMini.value = state.fcm;
+    angleSlider.value = state.angleDeg;
+    xSlider.value = state.xcm;
+    ySlider.value = state.ycm;
+  }
+
+  function updateReadouts(){
+    const typeText = state.type === 'convex' ? 'เลนส์นูน' : 'เลนส์เว้า';
+    typeReadout.textContent = typeText;
+    focusReadout.textContent = `${fmt(state.fcm)} cm`;
+    angleReadout.textContent = `${fmt(state.angleDeg)}°`;
+    xReadout.textContent = `${fmt(state.xcm)} cm`;
+    yReadout.textContent = `${fmt(state.ycm)} cm`;
+    if (focusReadoutMini) focusReadoutMini.textContent = `${fmt(state.fcm)} cm`;
+    if (lensSummary) lensSummary.textContent = `${typeText} • f = ${fmt(state.fcm)} cm`;
+  }
+
+  function render(){
+    syncInputs();
+    updateReadouts();
+
+    const fx = state.xcm * PX_PER_CM;
+    const fy = -state.ycm * PX_PER_CM;
+    const thetaIn = degToRad(-state.angleDeg);
+    const dxToLens = LENS_X - fx;
+    const hitY = fy + Math.tan(thetaIn) * dxToLens;
+
+    const fSignedPx = (state.type === 'convex' ? 1 : -1) * state.fcm * PX_PER_CM;
+    const thetaOut = Math.atan(Math.tan(thetaIn) - hitY / fSignedPx);
+
+    const outX = LENS_X + OUTPUT_LEN;
+    const outY = hitY + Math.tan(thetaOut) * OUTPUT_LEN;
+
+    lensShape.setAttribute('d', lensPath(state.type));
+    lensShape.setAttribute('transform', `translate(${LENS_X},0)`);
+    lensShape.setAttribute('stroke', state.type === 'convex' ? '#4d9ae8' : '#34a37d');
+
+    const focusPx = Math.abs(state.fcm * PX_PER_CM);
+    focusL.setAttribute('cx', -focusPx);
+    focusL.setAttribute('cy', 0);
+    focusR.setAttribute('cx', focusPx);
+    focusR.setAttribute('cy', 0);
+    focusLT.setAttribute('x', -focusPx - 16);
+    focusLT.setAttribute('y', -14);
+    focusRT.setAttribute('x', focusPx + 8);
+    focusRT.setAttribute('y', -14);
+    focusLT.textContent = 'F';
+    focusRT.textContent = 'F′';
+
+    flashlight.setAttribute('transform', `translate(${fx},${fy}) rotate(${-state.angleDeg})`);
+    flashLabel.setAttribute('x', fx - 18);
+    flashLabel.setAttribute('y', fy - 26);
+
+    incidentRay.setAttribute('x1', fx + Math.cos(thetaIn) * 58);
+    incidentRay.setAttribute('y1', fy + Math.sin(thetaIn) * 58);
+    incidentRay.setAttribute('x2', LENS_X);
+    incidentRay.setAttribute('y2', hitY);
+
+    refractedRay.setAttribute('x1', LENS_X);
+    refractedRay.setAttribute('y1', hitY);
+    refractedRay.setAttribute('x2', outX);
+    refractedRay.setAttribute('y2', outY);
+
+    const guideX2 = LENS_X + OUTPUT_LEN;
+    const guideY2 = hitY + Math.tan(thetaIn) * OUTPUT_LEN;
+    straightGuideRay.setAttribute('x1', LENS_X);
+    straightGuideRay.setAttribute('y1', hitY);
+    straightGuideRay.setAttribute('x2', guideX2);
+    straightGuideRay.setAttribute('y2', guideY2);
+
+    hitPoint.setAttribute('cx', LENS_X);
+    hitPoint.setAttribute('cy', hitY);
+
+    const a0 = 0;
+    const a1 = thetaIn;
+    angleArc.setAttribute('d', arcPath(fx, fy, 58, a0, a1));
+    angleLabel.setAttribute('x', fx + 68);
+    angleLabel.setAttribute('y', fy + (state.angleDeg >= 0 ? -14 : 24));
+    angleLabel.textContent = `θ = ${fmt(Math.abs(state.angleDeg))}°`;
+
+    incidentLabel.setAttribute('x', (fx + LENS_X)/2 - 36);
+    incidentLabel.setAttribute('y', (fy + hitY)/2 - 16);
+    refractedLabel.setAttribute('x', LENS_X + 110);
+    refractedLabel.setAttribute('y', hitY - 18);
+  }
+
+  function applyFromInputs(){
+    state.type = lensTypeMini ? lensTypeMini.value : lensType.value;
+    state.fcm = +(focusSliderMini ? focusSliderMini.value : focusSlider.value);
+    state.angleDeg = +angleSlider.value;
+    state.xcm = +xSlider.value;
+    state.ycm = +ySlider.value;
+    render();
+  }
+
+  [lensTypeMini, focusSliderMini].forEach(el => el && el.addEventListener('input', applyFromInputs));
+  [lensType, focusSlider, angleSlider, xSlider, ySlider].forEach(el => el.addEventListener('input', applyFromInputs));
+
+  centerBtn.addEventListener('click', () => {
+    state.xcm = -42;
+    state.ycm = 0;
+    render();
+  });
+
+  resetBtn.addEventListener('click', () => {
+    state.type = 'convex';
+    state.fcm = 12;
+    state.angleDeg = 0;
+    state.xcm = -42;
+    state.ycm = 0;
+    render();
+  });
+
+  closeHint.addEventListener('click', () => { hintBadge.style.display = 'none'; });
+
+  function clientToSvg(evt){
+    const pt = svg.createSVGPoint();
+    pt.x = evt.clientX;
+    pt.y = evt.clientY;
+    return pt.matrixTransform(svg.getScreenCTM().inverse());
+  }
+
+  let dragging = false;
+  let dragMode = null; // 'move' | 'rotate'
+  let dragOffsetX = 0;
+  let dragOffsetY = 0;
+
+  function startMove(evt){
+    dragging = true;
+    dragMode = 'move';
+    flashlight.style.cursor = 'grabbing';
+    const p = clientToSvg(evt);
+    dragOffsetX = p.x - state.xcm * PX_PER_CM;
+    dragOffsetY = p.y - (-state.ycm * PX_PER_CM);
+    try { evt.target.setPointerCapture(evt.pointerId); } catch(_) {}
+    evt.preventDefault();
+  }
+
+  function startRotate(evt){
+    dragging = true;
+    dragMode = 'rotate';
+    rotateHandleHit.style.cursor = 'grabbing';
+    const p = clientToSvg(evt);
+    const fx = state.xcm * PX_PER_CM;
+    const fy = -state.ycm * PX_PER_CM;
+    const ang = Math.atan2(p.y - fy, p.x - fx);
+    state.angleDeg = clamp(-radToDeg(ang), -35, 35);
+    render();
+    try { evt.target.setPointerCapture(evt.pointerId); } catch(_) {}
+    evt.preventDefault();
+  }
+
+  dragKnob.addEventListener('pointerdown', startMove);
+  flashBody.addEventListener('pointerdown', startMove);
+  rotateHandleHit.addEventListener('pointerdown', startRotate);
+  rotateHandleRing.addEventListener('pointerdown', startRotate);
+
+  svg.addEventListener('pointermove', (evt) => {
+    if(!dragging) return;
+    const p = clientToSvg(evt);
+
+    if(dragMode === 'move'){
+      const nx = (p.x - dragOffsetX) / PX_PER_CM;
+      const ny = -(p.y - dragOffsetY) / PX_PER_CM;
+      state.xcm = clamp(nx, -90, -8);
+      state.ycm = clamp(ny, -26, 26);
+      render();
+      evt.preventDefault();
+      return;
+    }
+
+    if(dragMode === 'rotate'){
+      const fx = state.xcm * PX_PER_CM;
+      const fy = -state.ycm * PX_PER_CM;
+      const ang = Math.atan2(p.y - fy, p.x - fx);
+      state.angleDeg = clamp(-radToDeg(ang), -35, 35);
+      render();
+      evt.preventDefault();
+    }
+  }, { passive:false });
+
+  function stopDrag(evt){
+    dragging = false;
+    dragMode = null;
+    flashlight.style.cursor = 'grab';
+    rotateHandleHit.style.cursor = 'grab';
+    try { evt.target.releasePointerCapture(evt.pointerId); } catch(_) {}
+  }
+
+  svg.addEventListener('pointerup', stopDrag);
+  svg.addEventListener('pointercancel', stopDrag);
+  svg.addEventListener('pointerleave', () => {
+    dragging = false;
+    dragMode = null;
+    flashlight.style.cursor = 'grab';
+    rotateHandleHit.style.cursor = 'grab';
+  });
+
+
+  resetTopBtn && resetTopBtn.addEventListener('click', () => {
+    state.type = 'convex';
+    state.fcm = 12;
+    state.angleDeg = 0;
+    state.xcm = -42;
+    state.ycm = 0;
+    render();
+  });
+
+  buildGrid();
+  render();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>ทดลองผสมแสง RGB — ห้องมืด (Interactive v1)</title>
+<style>
+  :root{
+    --ink:#e5e7eb; --muted:#94a3b8; --line:#334155; --bg:#0b1020;
+    --panel:#0f172a; --accent:#38bdf8; --btn:#1f2937; --btnOn:#22c55e;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; touch-action:manipulation}
+  html,body{height:100%;}
+  body{margin:0;font-family:system-ui, Inter, 'Noto Sans Thai', sans-serif;color:var(--ink);background:radial-gradient(1200px 800px at 50% 60%, #0f1225 0%, #0b1020 50%, #060912 100%)}
+  header{padding:12px 14px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#0f172a,#0b1325)}
+  header h1{margin:0;font-size:18px;font-weight:700}
+  .wrap{display:grid; grid-template-columns: 320px 1fr; gap:12px; height:calc(100% - 58px)}
+  @media (max-width:900px){ .wrap{grid-template-columns:1fr; grid-auto-rows:min-content 1fr;} }
+  .panel{padding:12px;border-right:1px solid var(--line); background:var(--panel)}
+  .row{display:grid;grid-template-columns:1fr auto; align-items:center; gap:8px; margin:8px 0}
+  .switches{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .sw{display:flex;gap:8px;align-items:center;padding:8px;border:1px solid var(--line);border-radius:12px;background:#0b1222}
+  .sw input{appearance:none; width:36px; height:22px; border-radius:999px; background:#111827; position:relative; outline:none; cursor:pointer}
+  .sw input::after{content:""; position:absolute; width:16px; height:16px; top:3px; left:4px; background:#cbd5e1; border-radius:50%; transition:transform .18s ease}
+  .sw input:checked{background:var(--btnOn)}
+
+  /* ✅ สวิตช์: สีตามสถานะของแสง */
+  .R input:checked{background:#ff0040 !important;}
+  .G input:checked{background:#00ff66 !important;}
+  .B input:checked{background:#3399ff !important;}
+
+  .sw input:checked::after{transform:translateX(14px); background:#fff}
+  .sw .dot{width:14px;height:14px;border-radius:50%}
+  .R .dot{background:#ff0040}
+  .G .dot{background:#00ff66}
+  .B .dot{background:#3399ff}
+  .tags{display:flex; gap:6px; flex-wrap:wrap; font-size:12px; color:var(--muted)}
+  .tags span{padding:2px 8px;border:1px dashed #334155;border-radius:999px}
+
+  main{height:100%; min-height:420px}
+  @media (max-width:900px){ main{min-height:55vh} }
+  canvas{width:100%; height:100%; display:block; background:transparent; cursor:grab}
+  canvas.dragging{cursor:grabbing}
+
+  .meter{display:grid;grid-template-columns: 1fr auto; gap:8px; align-items:center}
+  .meter input[type="range"]{width:100%}
+  .swatch{width:46px; height:24px; border-radius:6px; border:1px solid var(--line)}
+
+  .help{font-size:13px;color:var(--muted)}
+  .btns{display:flex; gap:8px; flex-wrap:wrap}
+  button{background:var(--btn); color:var(--ink); border:1px solid var(--line); border-radius:12px; padding:8px 12px; font-weight:600}
+  button:hover{filter:brightness(1.1)}
+
+  .playBtn{background:#0ea5e9; border-color:#1d4ed8; color:#fff}
+  .missionBtn{background:#ffffff; color:#111827; border-color:#cbd5e1}
+  .missionBtn:hover{filter:brightness(0.98)}
+
+  .link{color:#93c5fd; text-decoration:none}
+  .pill{font-size:12px; padding:4px 8px; border-radius:999px; background:#0b1222; border:1px solid var(--line)}
+
+  .legend{display:grid;grid-template-columns:repeat(3,1fr); gap:6px; font-size:12px; margin-top:8px}
+  .legend div{display:flex; gap:6px; align-items:center}
+  .legend i{display:inline-block; width:16px; height:10px; border-radius:3px}
+  .iR{background:#ff2a4d}
+  .iG{background:#22ff88}
+  .iB{background:#66aaff}
+  .iC{background:#00ffff}
+  .iM{background:#ff00ff}
+  .iY{background:#ffff00}
+  .iW{background:#ffffff}
+
+/* overlays & quiz styles */
+  .overlay{position:fixed; inset:0; display:grid; place-items:center; background:rgba(2,6,23,0.7); backdrop-filter: blur(4px); opacity:0; pointer-events:none; transition:opacity .2s ease}
+  .overlay.active{opacity:1; pointer-events:auto}
+  .sheet{ width:min(860px,92vw); max-height:90vh; overflow:auto; background:linear-gradient(180deg,#0f172a,#0b122a); color:var(--ink); border:1px solid var(--line); border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,.5)}
+  .sheet header{padding:12px 14px; display:flex; justify-content:space-between; align-items:center; background:linear-gradient(90deg,#1e293b,#0ea5e9); border-bottom:1px solid var(--line)}
+  .sheet header h2{margin:0; font-size:18px}
+  .sheet .content{padding:16px; display:grid; gap:12px}
+  .sheet .chips{display:flex; gap:8px; flex-wrap:wrap}
+  .chip{display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; border:1px solid var(--line); background:#0b1222}
+  .chip i{width:16px; height:10px; border-radius:3px; display:inline-block}
+  .btn-close{background:#0b1222; border:1px solid var(--line); color:#fff; border-radius:10px; padding:6px 10px}
+  .cta{background:#0ea5e9; border-color:#0284c7}
+  .cta:hover{filter:brightness(1.05)}
+  .info-block{background:#0b1222; border:1px solid var(--line); border-radius:12px; padding:12px; line-height:1.6}
+  .info-block b{color:#ffffff}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+  @media (max-width:780px){ .grid2{grid-template-columns:1fr} }
+  .quiz .q{background:#0b1222; border:1px solid var(--line); border-radius:12px; padding:12px; display:grid; gap:10px}
+  .quiz .q h4{margin:0 0 4px 0; font-size:15px}
+  .option{display:flex; align-items:center; gap:10px; border:1px dashed #334155; padding:8px 10px; border-radius:10px; cursor:pointer}
+  .option input{appearance:none; width:18px; height:18px; border-radius:50%; border:2px solid #94a3b8; display:grid; place-items:center}
+  .option input:checked{border-color:#38bdf8; box-shadow:0 0 0 3px rgba(14,165,233,.25) inset}
+  .choice{flex:1}
+  .correct .choice{border-bottom:1px dashed #22c55e}
+  .wrong{background:rgba(220,38,38,.08)}
+  .correct{background:rgba(34,197,94,.08)}
+  .explain{display:none; font-size:13px; color:#cbd5e1}
+  .explain.show{display:block}
+  .quiz .actions{display:flex; gap:8px; flex-wrap:wrap}
+  .score{font-weight:700}
+
+  /* Mission bar (minimal, non-blocking) */
+  .missionBar{
+    position:fixed;
+    top:64px;
+    left:50%;
+    transform:translateX(-50%);
+    width:min(860px, calc(100vw - 16px));
+    z-index:9999;
+    display:none;
+    gap:10px;
+    align-items:center;
+    justify-content:space-between;
+    padding:8px 10px;
+    border-radius:14px;
+    background:rgba(2,6,23,.35);
+    border:1px solid rgba(148,163,184,.35);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    color:var(--ink);
+    font-size:13px;
+  }
+  .missionBar.show{display:flex}
+  .mb-left{display:flex; flex-wrap:wrap; align-items:center; gap:8px; min-width:0}
+  .mb-pill{font-size:12px; padding:3px 8px; border-radius:999px; background:rgba(15,23,42,.45); border:1px solid rgba(148,163,184,.35); white-space:nowrap}
+  .mb-title{font-weight:700; white-space:nowrap}
+  .mb-hint{color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:52vw}
+  .mb-msg{margin-left:4px; font-weight:700}
+  .mb-right{display:flex; align-items:center; gap:8px; flex:0 0 auto}
+  .mb-swatchWrap{display:flex; flex-direction:column; align-items:flex-end}
+  .mb-swatch{width:36px; height:20px; border-radius:6px; border:1px solid rgba(226,232,240,.45); background:#111827}
+  .mb-btn{
+    border-radius:10px;
+    padding:6px 10px;
+    font-size:12px;
+    border:1px solid rgba(148,163,184,.35);
+    background:rgba(15,23,42,.35);
+    color:var(--ink);
+    cursor:pointer;
+  }
+  .mb-btn:disabled{opacity:.45; cursor:not-allowed}
+  .mb-next{background:rgba(34,197,94,.18); border-color:rgba(34,197,94,.45)}
+  .mb-close{padding:6px 10px}
+  @media (max-width:520px){
+    .missionBar{top:58px; padding:7px 9px}
+    .mb-hint{max-width:44vw}
+  }
+
+
+  /* ===== Resolve tweaks (hide unused buttons; colorize Explain/Exercise) ===== */
+  #playToggle, #toggleBG{display:none !important;}
+  #showInfo{background:#fdba74 !important; border-color:#fb923c !important; color:#111827 !important;}
+  #showQuiz{background:#bbf7d0 !important; border-color:#86efac !important; color:#111827 !important;}
+  /* Mission: no check button, next always available */
+  #missionCheck{display:none !important;}
+  #missionNext{background:rgba(34,197,94,.22) !important; border-color:rgba(34,197,94,.55) !important;}
+
+
+  /* ===== Layout: split panel into Top/Bottom (desktop left column; mobile stacks) ===== */
+  .panelTop{grid-column:1; grid-row:1;}
+  .panelBottom{grid-column:1; grid-row:2;}
+  .wrap main{grid-column:2; grid-row:1 / span 2; min-height:420px;}
+  @media (max-width:900px){
+    .wrap{height:auto; grid-template-columns:1fr; grid-auto-rows:min-content auto min-content;}
+    .wrap main{grid-column:1; grid-row:2; min-height:52vh;}
+    .panelTop{grid-column:1; grid-row:1;}
+    .panelBottom{grid-column:1; grid-row:3;}
+  }
+
+</style>
+</head>
+<body>
+  <header>
+    <h1>ทดลองผสมแสงสี RGB — ห้องมืด (ลากแสงมาผสมกันได้)</h1>
+  </header>
+  <div class="wrap">
+    <aside class="panel panelTop">
+      <h3 style="margin:14px 0 6px">ตั้งค่าแสง</h3>
+      <div class="row meter">
+        <div>รัศมีวงแสง (px)</div>
+        <input id="rad" type="range" min="80" max="420" value="260" step="1">
+      </div>
+      <div class="row meter">
+        <div>ความนุ่มขอบ (softness)</div>
+        <input id="soft" type="range" min="0.15" max="0.8" value="0.8" step="0.01">
+      </div>
+      <div class="row meter">
+        <div>ความสว่าง (intensity)</div>
+        <input id="inten" type="range" min="0.2" max="1.0" value="1.0" step="0.01">
+      </div>
+      <div class="row meter">
+        <div>สีผสม ณ เคอร์เซอร์</div>
+        <div class="swatch" id="swatch"></div>
+      </div>
+      <h3 style="margin:12px 0 6px">สวิตช์เปิด–ปิดแสง</h3>
+      <div class="switches">
+        <label class="sw R"> <span class="dot"></span> R
+          <input id="swR" type="checkbox" checked>
+        </label>
+        <label class="sw G"> <span class="dot"></span> G
+          <input id="swG" type="checkbox" checked>
+        </label>
+        <label class="sw B"> <span class="dot"></span> B
+          <input id="swB" type="checkbox" checked>
+        </label>
+      </div>
+
+    </aside>
+
+    <main style="position:relative">
+      <canvas id="cv"></canvas>
+      <div id="cursorColor" style="position:absolute; inset:auto 12px 12px auto; background:#0b1222cc; border:1px solid var(--line); padding:6px 8px; border-radius:8px; font-size:12px; pointer-events:none;">RGB(—, —, —)</div>
+    </main>
+
+    <aside class="panel panelBottom">
+      <div class="btns" style="margin-top:10px">
+        <button id="playToggle" class="playBtn">▶️ เล่น</button>
+        <button id="missionBtn" class="missionBtn" title="ภารกิจ">🎯 ภารกิจ</button>
+        <button id="reset">รีเซ็ตตำแหน่ง</button>
+        <button id="toggleBG" title="สลับความมืดห้อง">สลับพื้นหลัง</button>
+        <button id="showInfo" class="cta">อธิบายหลักการ</button>
+        <button id="showQuiz" class="cta">แบบฝึกหัด</button>
+        <span class="pill">ลากวงแสงด้วยนิ้ว/เมาส์</span>
+      </div>
+      <div class="legend">
+        <div><i class="iR"></i> แดง (R)</div>
+        <div><i class="iG"></i> เขียว (G)</div>
+        <div><i class="iB"></i> น้ำเงิน (B)</div>
+        <div><i class="iY"></i> เหลือง (R+G)</div>
+        <div><i class="iC"></i> ฟ้า (G+B)</div>
+        <div><i class="iM"></i> ม่วงแดง (B+R)</div>
+        <div style="grid-column: span 3"><i class="iW"></i> ขาว (R+G+B)</div>
+      </div>
+
+            <p class="help">ศึกษาเพิ่มเติมที่ <a class="link" href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">เพจ คลายปมฟิสิกส์</a></p>
+    </aside>
+  </div>
+<!-- Info & Quiz overlays -->
+
+  <div id="missionBar" class="missionBar" aria-live="polite">
+    <div class="mb-left">
+      <span class="mb-pill" id="missionStepPill">ภารกิจ 1 / 5</span>
+      <span class="mb-title" id="missionTitle">—</span>
+      <span class="mb-hint" id="missionHint">—</span>
+      <span class="mb-msg" id="missionMsg"></span>
+    </div>
+    <div class="mb-right">
+      <div class="mb-swatchWrap">
+        <div class="mb-swatch" id="goalSwatch" title="สีเป้าหมาย"></div>
+      </div>
+      <button id="missionCheck" class="mb-btn">ตรวจ</button>
+      <button id="missionNext" class="mb-btn mb-next" >ภารกิจถัดไป</button>
+      <button id="missionClose" class="mb-btn mb-close" title="ซ่อน">✕</button>
+    </div>
+  </div>
+
+
+<div id="infoLayer" class="overlay" aria-modal="true" role="dialog">
+    <div class="sheet">
+      <header>
+        <h2>อธิบายหลักการผสมแสง (Additive) 💡</h2>
+        <button class="btn-close" data-close>ปิด</button>
+      </header>
+      <div class="content">
+        <div class="grid2">
+          <div class="info-block">
+            <b>แนวคิดหลัก (สั้นๆ):</b>
+            <ul>
+              <li>แสงทำงานแบบ “บวกความสว่าง” — เปิดไฟมากขึ้น = สว่างขึ้น</li>
+              <li>สีหลักของแสงมี 3 สี: R (แดง), G (เขียว), B (น้ำเงิน)</li>
+              <li>เมื่อแสงซ้อนกัน สีผสมจะเปลี่ยนตามสัดส่วนของ R, G, B</li>
+            </ul>
+            <div class="chips" style="margin-top:8px">
+              <span class="chip"><i class="iR"></i> R + <i class="iG"></i> G = <b>เหลือง</b></span>
+              <span class="chip"><i class="iG"></i> G + <i class="iB"></i> B = <b>ฟ้า (Cyan)</b></span>
+              <span class="chip"><i class="iB"></i> B + <i class="iR"></i> R = <b>ม่วงแดง (Magenta)</b></span>
+              <span class="chip"><i class="iR"></i> R + <i class="iG"></i> G + <i class="iB"></i> B = <b>ขาว</b></span>
+            </div>
+          </div>
+          <div class="info-block">
+            <b>วิธีทดลองในหน้านี้:</b>
+            <ol>
+              <li>ใช้เมาส์/นิ้ว <b>ลากวงแสง</b> R, G, B ให้มาซ้อนกัน</li>
+              <li>สลับสวิตช์ R/G/B เพื่อดูผลของการเปิด–ปิดแต่ละสี</li>
+              <li>ปรับ <b>รัศมี/ขอบนุ่ม/ความสว่าง</b> แล้วสังเกตสีผสม</li>
+            </ol>
+            <div class="help">ตัวอย่างในชีวิตจริง: หน้าจอทีวี/มือถือ และโปรเจ็กเตอร์ผสมแสงแบบนี้เลย 🖥️✨</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="quizLayer" class="overlay" aria-modal="true" role="dialog">
+    <div class="sheet quiz">
+      <header>
+        <h2>แบบฝึกหัด — ผสมแสง RGB 🎯</h2>
+        <button class="btn-close" data-close>ปิด</button>
+      </header>
+      <div class="content">
+        <div class="q" data-name="q1" data-ans="Y">
+          <h4>1) ถ้าเปิด R และ G แต่ปิด B สีในบริเวณซ้อนทับคืออะไร?</h4>
+          <label class="option"><input type="radio" name="q1" value="Y"><span class="choice">เหลือง (Yellow)</span></label>
+          <label class="option"><input type="radio" name="q1" value="M"><span class="choice">ม่วงแดง (Magenta)</span></label>
+          <label class="option"><input type="radio" name="q1" value="C"><span class="choice">ฟ้า (Cyan)</span></label>
+          <label class="option"><input type="radio" name="q1" value="W"><span class="choice">ขาว (White)</span></label>
+          <div class="explain">เฉลย: <b>เหลือง</b> เพราะ R + G = Yellow</div>
+        </div>
+
+        <div class="q" data-name="q2" data-ans="W">
+          <h4>2) ถ้าเปิด R, G, B พร้อมกันในบริเวณเดียวกัน ผลลัพธ์คือ?</h4>
+          <label class="option"><input type="radio" name="q2" value="W"><span class="choice">สว่างขึ้นจนเป็น <b>สีขาว</b></span></label>
+          <label class="option"><input type="radio" name="q2" value="D"><span class="choice">มืดลง</span></label>
+          <label class="option"><input type="radio" name="q2" value="G"><span class="choice">เขียวล้วน</span></label>
+          <label class="option"><input type="radio" name="q2" value="R"><span class="choice">แดงล้วน</span></label>
+          <div class="explain">เฉลย: <b>ขาว</b> เพราะการผสมแสงเป็นการ <i>บวกความสว่าง</i> ของ R, G, B</div>
+        </div>
+
+        <div class="q" data-name="q3" data-ans="M">
+          <h4>3) อยากได้ <b>สีม่วงแดง (Magenta)</b> ควรทำอย่างไร?</h4>
+          <label class="option"><input type="radio" name="q3" value="M"><span class="choice">เปิด R + B</span></label>
+          <label class="option"><input type="radio" name="q3" value="C"><span class="choice">เปิด G + B</span></label>
+          <label class="option"><input type="radio" name="q3" value="Y"><span class="choice">เปิด R + G</span></label>
+          <label class="option"><input type="radio" name="q3" value="N"><span class="choice">ปิด R และ G</span></label>
+          <div class="explain">เฉลย: <b>R + B</b> จะได้ Magenta</div>
+        </div>
+
+        <div class="actions">
+          <button id="doCheck" class="cta">ตรวจคำตอบ</button>
+          <button id="doReveal">เฉลย</button>
+          <button id="doReset">รีเซ็ตคำตอบ</button>
+          <span id="score" class="score"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(function(){
+  const cv = document.getElementById('cv');
+  const ctx = cv.getContext('2d');
+  const swR = document.getElementById('swR');
+  const swG = document.getElementById('swG');
+  const swB = document.getElementById('swB');
+  const rad = document.getElementById('rad');
+  
+
+  // ===== Mobile defaults (only on mobile/tablet widths) =====
+  const IS_MOBILE_LAYOUT = window.matchMedia('(max-width:900px)').matches;
+  // Start radius at ~20% of slider range on mobile
+  if(IS_MOBILE_LAYOUT && rad){
+    const rmin = parseFloat(rad.min), rmax = parseFloat(rad.max);
+    const r20 = Math.round(rmin + 0.20*(rmax - rmin));
+    rad.value = String(r20);
+  }
+const soft = document.getElementById('soft');
+  const inten = document.getElementById('inten');
+  const resetBtn = document.getElementById('reset');
+  const toggleBG = document.getElementById('toggleBG');
+  const swatch = document.getElementById('swatch');
+  const cursorColor = document.getElementById('cursorColor');
+  const playToggle = document.getElementById('playToggle');
+  const missionBtn = document.getElementById('missionBtn');
+
+
+  let DPR = Math.max(1, window.devicePixelRatio || 1);
+  let playing = false;
+  let dragging = null; // index of light
+  let pointer = {x:0, y:0};
+
+  const lights = [
+    { x: 0.22, y: 0.55, color: [255, 40, 77], on: true, key:'R' },
+    { x: 0.78, y: 0.45, color: [34, 255, 136], on: true, key:'G' },
+    { x: 0.50, y: 0.78, color: [102, 170, 255], on: true, key:'B' }
+  ];
+
+  function fit(){
+    const rect = cv.getBoundingClientRect();
+    const w = Math.floor(rect.width * DPR);
+    const h = Math.floor(rect.height * DPR);
+    if(cv.width !== w || cv.height !== h){
+      cv.width = w; cv.height = h;
+    }
+  }
+
+  function bg(){
+    // soft vignette background to mimic dark room
+    const w = cv.width, h = cv.height;
+    const g = ctx.createRadialGradient(w*0.5, h*0.6, Math.min(w,h)*0.1, w*0.5, h*0.6, Math.max(w,h)*0.7);
+    g.addColorStop(0, '#0f1225');
+    g.addColorStop(0.5, '#0b1020');
+    g.addColorStop(1, '#060912');
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,w,h);
+  }
+
+  function draw(){
+    fit();
+    bg();
+
+    // target marker (mission) — center of canvas
+    const tx = cv.width*0.5, ty = cv.height*0.5;
+    ctx.save();
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.strokeStyle = 'rgba(226,232,240,0.45)';
+    ctx.lineWidth = 1*DPR;
+    ctx.setLineDash([6*DPR, 6*DPR]);
+    ctx.beginPath(); ctx.arc(tx, ty, 22*DPR, 0, Math.PI*2); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(tx-30*DPR, ty); ctx.lineTo(tx+30*DPR, ty); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(tx, ty-30*DPR); ctx.lineTo(tx, ty+30*DPR); ctx.stroke();
+    ctx.restore();
+
+    const R = parseFloat(rad.value) * DPR;
+    const s = parseFloat(soft.value); // 0.15..0.8 (edge softness)
+    const I = parseFloat(inten.value); // 0.2..1.0
+
+    // Draw lights with additive blending
+    ctx.globalCompositeOperation = 'lighter';
+    for(let i=0;i<3;i++){
+      const L = lights[i];
+      if(!L.on) continue;
+      const cx = L.x * cv.width;
+      const cy = L.y * cv.height;
+      const grad = ctx.createRadialGradient(cx, cy, R*s, cx, cy, R);
+      const [r,g,b] = L.color;
+      const a1 = 0.85 * I; // inner alpha
+      const a0 = 0.0;      // outer alpha
+      grad.addColorStop(0, `rgba(${r},${g},${b},${a1})`);
+      grad.addColorStop(1, `rgba(${r},${g},${b},${a0})`);
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(cx, cy, R, 0, Math.PI*2);
+      ctx.fill();
+
+      // draw small handle
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.beginPath();
+      ctx.arc(cx, cy, 8*DPR, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(${r},${g},${b},0.9)`;
+      ctx.fill();
+      ctx.lineWidth = 2*DPR; ctx.strokeStyle = '#0b1020'; ctx.stroke();
+      ctx.globalCompositeOperation = 'lighter';
+    }
+
+    // restore comp mode
+    ctx.globalCompositeOperation = 'source-over';
+
+    // update swatch with color under cursor (approximate by sampling)
+    try{
+      const px = Math.max(0, Math.min(cv.width-1, Math.floor(pointer.x*DPR)));
+      const py = Math.max(0, Math.min(cv.height-1, Math.floor(pointer.y*DPR)));
+      const data = ctx.getImageData(px, py, 1, 1).data;
+      const [r,g,b] = data;
+      swatch.style.background = `rgb(${r},${g},${b})`;
+      cursorColor.textContent = `RGB(${r}, ${g}, ${b})`;
+    }catch(err){ /* ignore on cross-origin contexts */ }
+
+    requestAnimationFrame(draw);
+  }
+
+  function pick(mx, my){
+    // return nearest light within 26px device pixels
+    const mxx = mx * DPR, myy = my * DPR;
+    let best = -1, bd = 99999;
+    for(let i=0;i<3;i++){
+      const cx = lights[i].x * cv.width;
+      const cy = lights[i].y * cv.height;
+      const d2 = (cx - mxx)**2 + (cy - myy)**2;
+      if(d2 < ((IS_MOBILE_LAYOUT?52:30)*DPR)**2 && d2 < bd){ best=i; bd=d2; }
+    }
+    return best;
+  }
+
+  function toLocal(e){
+    const r = cv.getBoundingClientRect();
+    const x = (e.touches? e.touches[0].clientX : e.clientX) - r.left;
+    const y = (e.touches? e.touches[0].clientY : e.clientY) - r.top;
+    return {x,y, rx: x/r.width, ry: y/r.height};
+  }
+
+  function setBG(light){
+    document.body.style.background = light ? 'radial-gradient(1200px 800px at 50% 60%, #121633 0%, #0b1020 50%, #05070f 100%)' :
+      'radial-gradient(1200px 800px at 50% 60%, #0f1225 0%, #0b1020 50%, #060912 100%)';
+  }
+
+  // UI wiring
+  swR.addEventListener('change', ()=> lights[0].on = swR.checked);
+  swG.addEventListener('change', ()=> lights[1].on = swG.checked);
+  swB.addEventListener('change', ()=> lights[2].on = swB.checked);
+
+  resetBtn.addEventListener('click', ()=>{
+    if(window.__RGBLAB__?.resetSeparated) window.__RGBLAB__.resetSeparated();
+  });
+
+  let bgOn=true;
+  toggleBG.addEventListener('click', ()=>{ bgOn=!bgOn; setBG(bgOn); });
+
+  // ✅ Play/Stop (toggle label only)
+  if(playToggle){
+    const setPlayLabel=()=>{ playToggle.textContent = playing ? '⏸ หยุด' : '▶️ เล่น'; };
+    setPlayLabel();
+    playToggle.addEventListener('click', ()=>{ playing = !playing; setPlayLabel(); });
+  }
+
+
+  // ✅ Robust Pointer Events (mobile/desktop/tablet) — no global touch preventDefault
+  const state = { dragging:false, pointerId:null };
+
+  function downPointer(e){
+    if(e.button !== undefined && e.button !== 0) return; // left click only
+    const p = toLocal(e);
+    pointer.x = p.x; pointer.y = p.y;
+
+    const hit = pick(p.x, p.y);
+    if(hit >= 0){
+      dragging = hit;
+      state.dragging = true;
+      state.pointerId = e.pointerId ?? null;
+      try{ cv.setPointerCapture(e.pointerId); }catch(_){}
+      cv.classList.add('dragging');
+      // prevent scroll/zoom only when actually dragging a light
+      if(e.cancelable) e.preventDefault();
+    }else{
+      dragging = null;
+      state.dragging = false;
+      state.pointerId = null;
+    }
+  }
+
+  function movePointer(e){
+    const p = toLocal(e);
+    pointer.x = p.x; pointer.y = p.y;
+
+    if(state.dragging && dragging!==null && dragging>=0){
+      // Only accept movement from the active pointer
+      if(state.pointerId !== null && e.pointerId !== state.pointerId) return;
+      lights[dragging].x = Math.max(0, Math.min(1, p.rx));
+      lights[dragging].y = Math.max(0, Math.min(1, p.ry));
+      if(e.cancelable) e.preventDefault();
+    }
+  }
+
+  function upPointer(e){
+    if(state.pointerId !== null && e.pointerId !== state.pointerId) return;
+    state.dragging = false;
+    state.pointerId = null;
+    dragging = null;
+    cv.classList.remove('dragging');
+    try{ cv.releasePointerCapture(e.pointerId); }catch(_){}
+  }
+
+  cv.addEventListener('pointerdown', downPointer, {passive:false});
+  cv.addEventListener('pointermove', movePointer, {passive:false});
+  cv.addEventListener('pointerup', upPointer, {passive:true});
+  cv.addEventListener('pointercancel', upPointer, {passive:true});
+  cv.addEventListener('lostpointercapture', ()=> upPointer({pointerId: state.pointerId}), {passive:true});
+
+  // ensure canvas can control touch gestures only when needed
+  cv.style.touchAction = 'manipulation';
+
+  // Resize observer
+
+  if('ResizeObserver' in window){
+    const ro = new ResizeObserver(()=> fit());
+    ro.observe(cv);
+  }else{
+    window.addEventListener('resize', ()=> fit());
+  }
+
+
+  // ✅ expose helpers for Mission overlay
+  function sampleCenter(){
+    // sample pixel at target center (in CSS pixel coords)
+    const px = Math.floor((cv.width*0.5));
+    const py = Math.floor((cv.height*0.5));
+    const d = ctx.getImageData(px, py, 1, 1).data;
+    return { r:d[0], g:d[1], b:d[2] };
+  }
+
+  window.__RGBLAB__ = {
+    sampleCenter,
+    getSwitches: ()=>({R:swR.checked, G:swG.checked, B:swB.checked}),
+    setSwitches: (o)=>{
+      if(typeof o.R==='boolean'){swR.checked=o.R; lights[0].on=o.R;}
+      if(typeof o.G==='boolean'){swG.checked=o.G; lights[1].on=o.G;}
+      if(typeof o.B==='boolean'){swB.checked=o.B; lights[2].on=o.B;}
+    },
+    // ให้แสงเริ่มห่างกัน (เพื่อให้นักเรียนได้ "ลงมือ" ลากเอง)
+    resetSeparated: ()=>{
+      lights[0].x=0.22; lights[0].y=0.55; // R ซ้าย
+      lights[1].x=0.78; lights[1].y=0.45; // G ขวา
+      lights[2].x=0.50; lights[2].y=0.78; // B ล่างกลาง
+    }
+  };
+
+
+  // Kickoff
+  fit(); setBG(true); draw();
+})();
+</script>
+<script>
+// Overlay + Quiz logic
+(()=>{
+  const infoLayer = document.getElementById('infoLayer');
+  const quizLayer = document.getElementById('quizLayer');
+  const missionBtn = document.getElementById('missionBtn');
+  const showInfo = document.getElementById('showInfo');
+  const showQuiz = document.getElementById('showQuiz');
+
+  function open(L){ L.classList.add('active'); }
+  function closeAll(){ document.querySelectorAll('.overlay').forEach(o=> o.classList.remove('active')); }
+
+  // ✅ Mission (B) — แถบภารกิจแบบโปร่งใส (ไม่บังจอ) + ตรวจผ่าน/ไม่ผ่าน
+  const missionBar = document.getElementById('missionBar');
+  const missionTitle = document.getElementById('missionTitle');
+  const missionHint = document.getElementById('missionHint');
+  const missionStepPill = document.getElementById('missionStepPill');
+  const goalSwatch = document.getElementById('goalSwatch');
+  const missionMsg = document.getElementById('missionMsg');
+  const missionCheck = document.getElementById('missionCheck');
+  const missionNext = document.getElementById('missionNext');
+  const missionClose = document.getElementById('missionClose');
+
+  // เริ่มจาก “ผสม 2 แสง” เลย (ตามที่พี่ต้องการ)
+  const missions = [
+    { title:'ผสมให้ได้ “เหลือง” = R + G ✨', hint:'เปิด R และ G (ปิด B) แล้ว “ลาก 2 วง” ให้ซ้อนกันที่จุดเป้า', goal:[255,255,0], sw:{R:true,G:true,B:false} },
+    { title:'ผสมให้ได้ “ฟ้าอมเขียว (Cyan)” = G + B ✨', hint:'เปิด G และ B (ปิด R) แล้วลาก 2 วงให้ซ้อนกันที่จุดเป้า', goal:[0,255,255], sw:{R:false,G:true,B:true} },
+    { title:'ผสมให้ได้ “ม่วงแดง (Magenta)” = R + B ✨', hint:'เปิด R และ B (ปิด G) แล้วลาก 2 วงให้ซ้อนกันที่จุดเป้า', goal:[255,0,255], sw:{R:true,G:false,B:true} },
+    { title:'ผสมให้ได้ “ขาว” = R + G + B 🤍', hint:'เปิด R,G,B แล้วลากให้ 3 วงซ้อนกันที่จุดเป้า', goal:[255,255,255], sw:{R:true,G:true,B:true} },
+  ];
+  let step = 0;
+
+  function clamp255(x){ return Math.max(0, Math.min(255, x|0)); }
+  function setGoalSwatch(rgb){
+    const [r,g,b]=rgb.map(clamp255);
+    goalSwatch.style.background = `rgb(${r},${g},${b})`;
+  }
+  function setMsg(msg, kind){
+    missionMsg.textContent = msg || '';
+    if(kind==='ok') missionMsg.style.color = '#86efac';
+    else if(kind==='bad') missionMsg.style.color = '#fecaca';
+    else missionMsg.style.color = 'var(--ink)';
+  }
+  function resetMsg(){
+    setMsg('', 'neutral');
+  }
+
+  // เสียงเอฟเฟกต์สำเร็จ (ไม่ใช้ไฟล์ภายนอก)
+  function playSuccessSfx(){
+    try{
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      const ctx = new AudioCtx();
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(740, ctx.currentTime);
+      o.frequency.exponentialRampToValueAtTime(1175, ctx.currentTime + 0.12);
+      g.gain.setValueAtTime(0.0001, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.12, ctx.currentTime + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.18);
+      o.connect(g); g.connect(ctx.destination);
+      o.start(); o.stop(ctx.currentTime + 0.2);
+      o.onended = ()=>{ try{ctx.close();}catch(e){} };
+    }catch(e){}
+  }
+
+  function loadStep(i){
+    step = (i + missions.length) % missions.length;
+    const M = missions[step];
+    missionStepPill.textContent = `ภารกิจ ${step+1} / ${missions.length}`;
+    missionTitle.textContent = M.title;
+    missionHint.textContent = M.hint;
+    setGoalSwatch(M.goal);
+    resetMsg();
+
+    // ให้แสงเริ่มห่างกันทุกครั้งที่เปลี่ยนภารกิจ
+    if(window.__RGBLAB__?.resetSeparated) window.__RGBLAB__.resetSeparated();
+
+    // auto set switches to reduce confusion (still allows student to change)
+    if(window.__RGBLAB__?.setSwitches) window.__RGBLAB__.setSwitches(M.sw);
+  }
+
+  function dist(a,b){ return Math.sqrt((a.r-b[0])**2 + (a.g-b[1])**2 + (a.b-b[2])**2); }
+
+  function checkMission(){
+    const api = window.__RGBLAB__;
+    if(!api?.sampleCenter){
+      setMsg('ตรวจไม่ได้: ระบบยังไม่พร้อม', 'bad');
+      return;
+    }
+    const M = missions[step];
+    const c = api.sampleCenter();
+
+    // เกณฑ์ผ่าน: สีที่จุดเป้าใกล้สีเป้าหมาย (ยอมคลาดเคลื่อนเล็กน้อย)
+    const isWhite = (M.goal[0] + M.goal[1] + M.goal[2]) > 700;
+    const tol = isWhite ? 140 : 110; // ปรับให้เด็กทำได้จริงบนจอ/อุปกรณ์ต่างๆ
+    const d = dist(c, M.goal);
+    const ok = d <= tol;
+
+    if(ok){
+      setMsg('สำเร็จ! ✅ ลองสังเกตว่าสีนี้เกิดจากแสงอะไร', 'ok');
+      playSuccessSfx();
+    }else{
+      setMsg('ยังไม่ผ่าน ✍️ ลองลากให้ซ้อนกัน “ตรงจุดเป้า” มากขึ้น', 'bad');
+      }
+  }
+
+  if(missionCheck) missionCheck.addEventListener('click', checkMission);
+  if(missionNext) missionNext.addEventListener('click', ()=> loadStep(step+1));
+  if(missionClose) missionClose.addEventListener('click', ()=>{ if(missionBar) missionBar.classList.remove('show'); resetMsg(); });
+
+
+  if(showInfo) showInfo.addEventListener('click', ()=> open(infoLayer));
+  if(showQuiz) showQuiz.addEventListener('click', ()=> open(quizLayer));
+  if(missionBtn) missionBtn.addEventListener('click', ()=>{
+    if(!missionBar) return;
+    const showing = missionBar.classList.toggle('show');
+    if(showing){
+      loadStep(step);
+    }else{
+      resetMsg();
+    }
+  });
+  document.querySelectorAll('[data-close]').forEach(btn=> btn.addEventListener('click', closeAll));
+  document.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ closeAll(); if(missionBar) missionBar.classList.remove('show'); try{resetMsg();}catch(err){} } });
+
+  function grade(showAll=false){
+    let correct=0, total=0;
+    document.querySelectorAll('#quizLayer .q').forEach(q=>{
+      total++;
+      const ans = q.dataset.ans;
+      const name = q.getAttribute('data-name');
+      const sel = q.querySelector(`input[name="${name}"]:checked`);
+      q.querySelectorAll('.option').forEach(op=> op.classList.remove('correct','wrong'));
+      q.querySelectorAll('.explain').forEach(ex=> ex.classList.remove('show'));
+      const correctInput = q.querySelector(`input[value="${ans}"]`);
+      if(correctInput) correctInput.closest('.option').classList.add('correct');
+      if(sel){
+        if(sel.value===ans){ correct++; }
+        else { sel.closest('.option').classList.add('wrong'); }
+        const ex = q.querySelector('.explain'); if(ex) ex.classList.add('show');
+      }else if(showAll){
+        const ex = q.querySelector('.explain'); if(ex) ex.classList.add('show');
+      }
+    });
+    const score = document.getElementById('score');
+    if(score) score.textContent = `คะแนน: ${correct} / ${total}`;
+  }
+
+  const doCheck = document.getElementById('doCheck');
+  const doReveal = document.getElementById('doReveal');
+  const doReset = document.getElementById('doReset');
+  if(doCheck) doCheck.addEventListener('click', ()=> grade(false));
+  if(doReveal) doReveal.addEventListener('click', ()=> grade(true));
+  if(doReset) doReset.addEventListener('click', ()=>{
+    document.querySelectorAll('#quizLayer input[type="radio"]').forEach(i=> i.checked=false);
+    document.querySelectorAll('#quizLayer .option').forEach(op=> op.classList.remove('correct','wrong'));
+    document.querySelectorAll('#quizLayer .explain').forEach(ex=> ex.classList.remove('show'));
+    const score = document.getElementById('score'); if(score) score.textContent='';
+  });
+})();
+</script>
+
+<style>
+@media (max-width: 768px){
+  canvas, #canvas, .canvas, .lab-canvas { touch-action: none; }
+}
+</style>
+<script>
+(function(){
+  const isMobile = window.matchMedia('(max-width: 768px)').matches;
+  if(!isMobile) return;
+
+  function findRadiusSlider(){
+    // try common ids/names/classes
+    const candidates = [
+      '#radiusSlider', '#radius', 'input[name="radius"]',
+      'input[data-role="radius"]'
+    ];
+    for(const sel of candidates){
+      const el = document.querySelector(sel);
+      if(el && el.type === 'range') return el;
+    }
+    // fallback: find the first range whose label/text includes 'รัศมี' or 'radius'
+    const ranges = Array.from(document.querySelectorAll('input[type="range"]'));
+    if(ranges.length === 1) return ranges[0];
+    for(const r of ranges){
+      const wrap = r.closest('label, .row, .control, .controlRow, .sliderRow') || r.parentElement;
+      const txt = (wrap ? wrap.textContent : '') || '';
+      if(/รัศมี|radius/i.test(txt)) return r;
+    }
+    // fallback: pick the first range (best effort)
+    return ranges[0] || null;
+  }
+
+  function setInitialRadius10(){
+    const slider = findRadiusSlider();
+    if(!slider) return;
+    const min = Number(slider.min || 0);
+    const max = Number(slider.max || 100);
+    slider.value = min + (max - min) * 0.10; // 10%
+    // trigger any listeners
+    slider.dispatchEvent(new Event('input', {bubbles:true}));
+    slider.dispatchEvent(new Event('change', {bubbles:true}));
+    if(typeof window.updateRadius === 'function') window.updateRadius();
+    if(typeof window.render === 'function') window.render();
+    if(typeof window.draw === 'function') window.draw();
+  }
+
+  // Increase drag hit area by wrapping common hit-test functions if they exist
+  const DRAG_PADDING = 80; // more than before for "ลากง่ายกว่านี้"
+  function wrapHitTest(){
+    // 1) If there is a function hitTestLight(x,y,light) or isInsideLight
+    const fnNames = ['isInsideLight','hitTestLight','insideLight','isHitLight'];
+    fnNames.forEach(name => {
+      const fn = window[name];
+      if(typeof fn === 'function' && !fn.__wrappedForMobile){
+        const wrapped = function(x,y,light){
+          try{
+            // if fn returns boolean based on radius, we can short-circuit with padding
+            if(light && typeof light.x==='number' && typeof light.y==='number' && typeof light.radius==='number'){
+              const dx = x - light.x;
+              const dy = y - light.y;
+              if(Math.hypot(dx,dy) <= light.radius + DRAG_PADDING) return true;
+            }
+          }catch(e){}
+          return fn.apply(this, arguments);
+        };
+        wrapped.__wrappedForMobile = true;
+        window[name] = wrapped;
+      }
+    });
+
+    // 2) If there is an array `lights` and objects have a hit method
+    if(Array.isArray(window.lights)){
+      window.lights.forEach(l => {
+        const keys = ['hit','contains','hitTest','isInside','pick'];
+        keys.forEach(k=>{
+          if(typeof l[k] === 'function' && !l[k].__wrappedForMobile){
+            const original = l[k];
+            const wrapped = function(x,y){
+              try{
+                if(typeof this.x==='number' && typeof this.y==='number' && typeof this.radius==='number'){
+                  const dx = x - this.x;
+                  const dy = y - this.y;
+                  if(Math.hypot(dx,dy) <= this.radius + DRAG_PADDING) return true;
+                }
+              }catch(e){}
+              return original.apply(this, arguments);
+            };
+            wrapped.__wrappedForMobile = true;
+            l[k] = wrapped;
+          }
+        });
+      });
+    }
+  }
+
+  // 3) If selection happens in pointerdown, we expand by finding nearest light within padding
+  function installSmartPickFallback(){
+    const canvas = document.querySelector('canvas') || document.getElementById('canvas') || document.querySelector('.lab-canvas');
+    if(!canvas) return;
+
+    // If app already handles pointer events, we don't override; we only add a capturing listener
+    // that sets a global "activeLight" if none selected.
+    canvas.addEventListener('pointerdown', function(ev){
+      try{
+        if(!Array.isArray(window.lights)) return;
+        // If there is already an active/drag target, do nothing
+        if(window.activeLight || window.dragTarget || window.selectedLight) return;
+
+        const rect = canvas.getBoundingClientRect();
+        const x = (ev.clientX - rect.left) * (canvas.width / rect.width);
+        const y = (ev.clientY - rect.top) * (canvas.height / rect.height);
+
+        let best = null, bestD = Infinity;
+        for(const l of window.lights){
+          if(!l || typeof l.x!=='number' || typeof l.y!=='number') continue;
+          const dx = x - l.x, dy = y - l.y;
+          const d = Math.hypot(dx,dy);
+          const r = (typeof l.radius==='number' ? l.radius : 0);
+          if(d <= r + DRAG_PADDING && d < bestD){
+            best = l; bestD = d;
+          }
+        }
+        if(best){
+          window.activeLight = best;
+          window.selectedLight = best;
+          window.dragTarget = best;
+          // capture to prevent "ลากค้าง"
+          try{ canvas.setPointerCapture(ev.pointerId); }catch(e){}
+        }
+      }catch(e){}
+    }, {capture:true});
+  }
+
+  window.addEventListener('load', function(){
+    setInitialRadius10();
+    wrapHitTest();
+    installSmartPickFallback();
+  });
+})();
+</script>
+
+
+<style>
+/* Hide RGB readout badge (all devices, but especially mobile) */
+.rgbReadout, .rgb-readout, #rgbReadout, #rgbLabel, .rgbLabel,
+.badge-rgb, .color-readout, .readout-rgb {
+  display: none !important;
+}
+</style>
+<script>
+(function(){
+  // Remove any small floating badge whose text starts with "RGB("
+  function removeRGBBadges(){
+    const nodes = Array.from(document.querySelectorAll('div,span,p,button'));
+    for(const el of nodes){
+      const t = (el.textContent || '').trim();
+      if(/^RGB\s*\(/i.test(t)){
+        el.style.display = 'none';
+      }
+    }
+  }
+
+  const isMobile = window.matchMedia('(max-width: 900px)').matches;
+
+  function smoothDragInstall(){
+    if(!isMobile) return;
+    const canvas = document.querySelector('canvas') || document.getElementById('canvas') || document.querySelector('.lab-canvas');
+    if(!canvas) return;
+    canvas.style.touchAction = 'none';
+
+    // If there is no lights array, we cannot enhance dragging safely.
+    if(!Array.isArray(window.lights)) return;
+
+    const HIT_PAD = 110;          // bigger hit area
+    const MOVE_SMOOTH = 0.45;     // smoothing factor (0..1), higher = snappier
+
+    let dragging = false;
+    let pid = null;
+    let target = null;
+    let goalX = 0, goalY = 0;
+    let raf = 0;
+
+    function toCanvasXY(ev){
+      const rect = canvas.getBoundingClientRect();
+      const sx = canvas.width / rect.width;
+      const sy = canvas.height / rect.height;
+      return {
+        x: (ev.clientX - rect.left) * sx,
+        y: (ev.clientY - rect.top) * sy
+      };
+    }
+
+    function pickLight(x,y){
+      let best=null, bestD=Infinity;
+      for(const l of window.lights){
+        if(!l || typeof l.x!=='number' || typeof l.y!=='number') continue;
+        const r = (typeof l.radius==='number') ? l.radius : 0;
+        const d = Math.hypot(x-l.x, y-l.y);
+        if(d <= r + HIT_PAD && d < bestD){
+          best=l; bestD=d;
+        }
+      }
+      return best;
+    }
+
+    function tick(){
+      raf = 0;
+      if(!dragging || !target) return;
+      // Smooth follow
+      target.x = target.x + (goalX - target.x) * MOVE_SMOOTH;
+      target.y = target.y + (goalY - target.y) * MOVE_SMOOTH;
+
+      // Call any render/draw functions if present
+      if(typeof window.render === 'function') window.render();
+      else if(typeof window.draw === 'function') window.draw();
+      else if(typeof window.redraw === 'function') window.redraw();
+
+      // Continue while dragging
+      raf = requestAnimationFrame(tick);
+    }
+
+    // Capture-phase listeners so we win over other handlers without breaking desktop.
+    canvas.addEventListener('pointerdown', function(ev){
+      // Only primary touch/pen/mouse
+      const {x,y} = toCanvasXY(ev);
+      const picked = pickLight(x,y);
+      if(!picked) return;
+
+      dragging = true;
+      pid = ev.pointerId;
+      target = picked;
+      goalX = x; goalY = y;
+
+      try{ canvas.setPointerCapture(pid); }catch(e){}
+      ev.preventDefault();
+      ev.stopPropagation();
+
+      if(!raf) raf = requestAnimationFrame(tick);
+    }, {capture:true, passive:false});
+
+    canvas.addEventListener('pointermove', function(ev){
+      if(!dragging || ev.pointerId !== pid) return;
+      const {x,y} = toCanvasXY(ev);
+      goalX = x; goalY = y;
+      ev.preventDefault();
+      ev.stopPropagation();
+      if(!raf) raf = requestAnimationFrame(tick);
+    }, {capture:true, passive:false});
+
+    function end(ev){
+      if(ev && ev.pointerId !== pid) return;
+      dragging = false;
+      try{ canvas.releasePointerCapture(pid); }catch(e){}
+      pid = null;
+      target = null;
+      if(raf){ cancelAnimationFrame(raf); raf=0; }
+    }
+
+    canvas.addEventListener('pointerup', function(ev){ end(ev); }, {capture:true});
+    canvas.addEventListener('pointercancel', function(ev){ end(ev); }, {capture:true});
+    window.addEventListener('blur', function(){ end(null); });
+  }
+
+  window.addEventListener('load', function(){
+    removeRGBBadges();
+    smoothDragInstall();
+  });
+})();
+</script>
+
+</body>
+</html>

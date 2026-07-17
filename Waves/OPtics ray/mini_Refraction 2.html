@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mini Lab:การหักเหของแสง — v94</title>
+<style>
+  :root{ --ink:#0b1220; --line:#e5e7eb; --accent:#ef4444; --brand:#2563eb; }
+  *{box-sizing:border-box}
+  body{margin:0;background:#fff;color:var(--ink);
+       font-family:system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans Thai",sans-serif;}
+  header{padding:10px 14px;border-bottom:1px solid var(--line);background:#fff;position:sticky;top:0;z-index:5}
+  h1{font-size:18px;margin:0;color:#2563eb}
+  .wrap{display:grid;gap:12px;place-items:center;padding:12px}
+  #stage{position:relative;border:1px solid var(--line);border-radius:12px;overflow:hidden;
+         touch-action:none;background:#fff;max-width:100%}
+  canvas{display:block;background:#fff}
+  .hint{font-size:12px;color:#64748b;margin-top:-4px}
+  .controls{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;align-items:center}
+  @media (min-width: 900px){
+    .wrap{display:grid;grid-template-columns:minmax(0,416px) 320px;align-items:start;justify-content:center;gap:16px}
+    #stage{grid-column:1;grid-row:1 / span 2}
+    .hint{grid-column:1}
+    .controls{grid-column:2;grid-row:1;flex-direction:column;align-items:stretch;justify-content:flex-start}
+    .controls .ctrl{justify-content:space-between}
+  }
+  .ctrl{display:flex;gap:6px;align-items:center;font-size:15px;color:#334155}
+  .ctrl label{min-width:26px}
+  input[type=number]{width:100px;padding:9px;border:1px solid var(--line);border-radius:10px;background:#fff}
+  button.switch, .btn{padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:#0f172a;color:#fff;cursor:pointer;font-weight:600}
+  button.switch.on{background:#16a34a;} button.switch.off{background:#dc2626;}
+  .btn.secondary{background:#fff;color:#0f172a;border-color:#cbd5e1}
+  #btn-reset{background:#9ca3af;color:#fff;border-color:#9ca3af}
+  #btn-theory{background:#fed7aa;color:#8b5a00;border-color:#fdba74}
+  .panel.fullscreen{position:fixed;inset:0;z-index:1200;max-width:none;height:100dvh;border-radius:0;padding:24px 18px 120px;overflow:auto}
+  .panel-close-row{display:flex;justify-content:flex-end;margin-bottom:8px}
+  #back-from-theory{background:#0f172a;color:#fff;border-color:#0f172a}
+  .panel{max-width:1000px;width:100%;background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:0 8px 20px rgba(2,6,23,.06)}
+  .panel h2{font-size:18px;margin:0 0 8px 0}
+  .panel p{font-size:16px;line-height:1.7;margin:8px 0}
+  .formula{background:#f1f5f9;border:1px solid #e2e8f0;border-radius:10px;padding:10px;margin:8px 0;overflow:auto}
+  .hidden{display:none}
+  math{font-size:20px}
+  .sol{background:#f8fafc;border:1px dashed #cbd5e1;border-radius:10px;padding:10px;margin-top:8px}
+  .sol.hidden{display:none}
+  #footer{position:fixed;bottom:0;left:0;width:100%;background:var(--brand);color:#fff;text-align:center;padding:10px 12px;font-size:14px;z-index:1000}
+  #footer a{color:#fff;font-weight:700;text-decoration:underline}
+  .footer-spacer{height:56px}
+</style>
+</head>
+<body>
+<header>
+    <h1>Mini lab การหักเหของแสง</h1>
+</header>
+
+<div class="wrap">
+  <div id="stage" style="width:min(100%,416px);height:auto;">
+    <canvas id="cnv" width="416" height="390" aria-label="Mini Refraction Lab"></canvas>
+  </div>
+  <div class="hint">
+    นิ้วที่ 1 จับใกล้ไฟฉายเพื่อ “ลากไฟฉาย” • 2 นิ้ว หมุน , zoom/เลื่อน • แตะ 2 ครั้ง: รีเซ็ตซีน
+  </div>
+
+  <div class="controls">
+    <div class="ctrl"><label>n<sub>1</sub>:</label> <input type="number" id="n1" value="1.00" step="0.01" min="1.00" max="3.00"></div>
+    <div class="ctrl"><label>n<sub>2</sub>:</label> <input type="number" id="n2" value="1.50" step="0.01" min="1.00" max="3.00"></div>
+    <button id="toggle" class="switch on">สวิตช์ไฟฉาย: เปิด</button>
+    <button id="btn-reset" class="btn secondary">รีเซ็ตมุม</button>
+    <button id="btn-theory" class="btn secondary">สูตรสำคัญ</button>
+  </div>
+
+  <!-- แผงสูตรสำคัญ -->
+  <div id="panel-theory" class="panel fullscreen hidden">
+    <div class="panel-close-row"><button id="back-from-theory" class="btn">ปิด</button></div>
+    <h2>สรุปทฤษฎี &amp; สูตรสำคัญ</h2>
+    <div class="formula" id="eq-ncv"></div>
+    <p><strong>ตัวแปร</strong>: c = 3.00×10<sup>8</sup> m/s, v = ความเร็วในตัวกลาง, n = ดัชนีหักเห</p>
+    <div class="formula" id="eq-snell2"></div>
+    <div class="formula" id="eq-crit"></div>
+      </div>
+
+  <div class="footer-spacer"></div>
+</div>
+
+<div id="footer">
+  ศึกษาเพิ่มเติมที่เพจ <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">คลายปมฟิสิกส์</a>
+</div>
+
+<script>
+// ======= DOM refs =======
+const canvas = document.getElementById("cnv");
+const stage  = document.getElementById("stage");
+const ctx    = canvas.getContext("2d");
+const n1Input= document.getElementById("n1");
+const n2Input= document.getElementById("n2");
+const toggleBtn = document.getElementById("toggle");
+const panelTheory= document.getElementById("panel-theory");
+
+// Buttons
+document.getElementById("btn-reset").onclick = ()=>{ angleDeg=45; scale=1; panX=0; panY=0; torchX = baseW*0.5 - 100; torchY = baseH*0.5 - 100; draw(); };
+document.getElementById("btn-theory").onclick= ()=>{ renderTheory(); showView("theory"); };
+document.getElementById("back-from-theory").onclick = ()=> showView("experiment");
+
+// ======= View switching =======
+let view = "experiment";
+function showView(v){
+  view = v;
+  const exp = (v==="experiment");
+  stage.classList.toggle("hidden", !exp);
+  panelTheory.classList.toggle("hidden", v!=="theory");
+  if(exp) draw();
+  if(v==="theory") renderTheory();
+}
+
+// ======= Math helpers =======
+function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
+function deg(rad){ return rad*180/Math.PI; }
+function rad(deg){ return deg*Math.PI/180; }
+function fmtDeg(d){ return d.toFixed(2); }
+
+// ======= Fresnel (unpolarized) =======
+function fresnelUnpolarized(nIn,nOut,theta_i){
+  const s = Math.sin(theta_i);
+  const st = (nIn/nOut)*s;
+  if (st>1) return {R:1, T:0, tir:true};
+  const theta_t = Math.asin(st);
+  const cosi = Math.cos(theta_i), cost = Math.cos(theta_t);
+  const denom_s = nIn*cosi + nOut*cost;
+  const denom_p = nIn*cost + nOut*cosi;
+  const Rs = denom_s===0 ? 1 : Math.pow((nIn*cosi - nOut*cost)/denom_s, 2);
+  const Rp = denom_p===0 ? 1 : Math.pow((nIn*cost - nOut*cosi)/denom_p, 2);
+  const R  = clamp(0.5*(Rs+Rp), 0, 1);
+  return {R, T:1-R, tir:false, theta_t};
+}
+
+// ======= Scene / Geometry =======
+const baseW=416, baseH=390;
+let scale=1, minScale=0.6, maxScale=2.8;
+let panX=0, panY=0;
+let angleDeg = 45;
+let beamOn = true;
+let torchX = baseW*0.5 - 100;
+let torchY = baseH*0.5 - 100;
+
+function lineToEdge(x,y,dx,dy,W,H){
+  const ts=[]; if(dx>0) ts.push((W-x)/dx); if(dx<0) ts.push((0-x)/dx);
+  if(dy>0) ts.push((H-y)/dy); if(dy<0) ts.push((0-y)/dy);
+  let tMin=Infinity; for(const t of ts){ if(t>0 && t<tMin) tMin=t; }
+  if(!isFinite(tMin)) tMin=0; return {x:x+dx*tMin, y:y+dy*tMin};
+}
+function drawRay(x1,y1,x2,y2,intensity=1){
+  const aGlow = clamp(0.15 + 0.70*intensity, 0, 0.85);
+  const aCore = clamp(0.35 + 0.55*intensity, 0.15, 0.95);
+  const wGlow = 6 + 10*intensity;
+  const wCore = 2 + 2.2*intensity;
+
+  ctx.save();
+  ctx.strokeStyle=`rgba(239,68,68,${aGlow*0.6})`;
+  ctx.lineWidth=wGlow*2; ctx.lineCap="round"; ctx.shadowColor="rgba(239,68,68,0.9)"; ctx.shadowBlur=28*intensity;
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); ctx.restore();
+
+  ctx.save();
+  ctx.strokeStyle=`rgba(239,68,68,${aGlow})`;
+  ctx.lineWidth=wGlow; ctx.lineCap="round"; ctx.shadowColor="rgba(239,68,68,0.7)"; ctx.shadowBlur=14*intensity;
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); ctx.restore();
+
+  ctx.save();
+  ctx.strokeStyle=`rgba(239,68,68,${aCore})`;
+  ctx.lineWidth=wCore; ctx.lineCap="round";
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); ctx.restore();
+}
+function drawFlashlightAtTail(xStart,yStart,ux,uy,scaleF=1){
+  const L=60*scaleF, Hh=22*scaleF;
+  const midX=xStart-ux*(L/2), midY=yStart-uy*(L/2);
+  const rot=Math.atan2(uy,ux);
+  ctx.save(); ctx.translate(midX,midY); ctx.rotate(rot);
+  ctx.fillStyle="#111"; ctx.fillRect(-L/2,-Hh/2,L,Hh);
+  const swW=Math.max(12,16*scaleF), swH=Math.max(7,10*scaleF);
+  ctx.fillStyle=beamOn?"#22c55e":"#dc2626"; ctx.fillRect(-L/4,-Hh/2 - swH - 2, swW, swH);
+  ctx.restore();
+}
+
+function draw(){
+  if(view!=="experiment") return;
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  const sx = canvas.width / baseW;
+  const sy = canvas.height / baseH;
+  ctx.scale(sx, sy);
+  ctx.translate(panX, panY);
+  ctx.scale(scale, scale);
+
+  const W=baseW, H=baseH, midY=H*0.5;
+  const xCenter=W*0.5;
+
+  ctx.fillStyle="#f1f5f9"; ctx.fillRect(0,0,W,midY);
+  ctx.fillStyle="#e2e8f0"; ctx.fillRect(0,midY,W,H-midY);
+  ctx.beginPath(); ctx.moveTo(0,midY); ctx.lineTo(W,midY);
+  ctx.strokeStyle="#64748b"; ctx.lineWidth=2; ctx.stroke();
+
+  const n1v = Math.max(1.0, parseFloat(n1Input.value)||1.0);
+  const n2v = Math.max(1.0, parseFloat(n2Input.value)||1.0);
+
+  const fromTop = (torchY < midY);
+  const sgnY = fromTop ? +1 : -1;
+
+  const ang = clamp(angleDeg, 0, 90);
+  const a = Math.max(1e-6, rad(ang));
+  const sgnX = currentSgnX !== 0 ? currentSgnX : ((xCenter - torchX)>=0 ? +1 : -1);
+
+  const dxIn = Math.sin(a)*sgnX;
+  const dyIn = Math.cos(a)*sgnY;
+
+  drawFlashlightAtTail(torchX, torchY, dxIn, dyIn, 1);
+
+  let xi, yi;
+  const tI = (midY - torchY)/dyIn;
+  if (beamOn && tI>0 && isFinite(tI)){
+    xi = torchX + dxIn*tI; yi = midY;
+
+    ctx.setLineDash([8,8]);
+    ctx.beginPath(); ctx.moveTo(xi, 0); ctx.lineTo(xi, H);
+    ctx.strokeStyle="#94a3b8"; ctx.lineWidth=1.6; ctx.stroke();
+    ctx.setLineDash([]);
+
+    drawRay(torchX, torchY, xi, yi, 1.0);
+
+    const nIn = fromTop ? n1v : n2v;
+    const nOut= fromTop ? n2v : n1v;
+
+    const F = fresnelUnpolarized(nIn, nOut, a);
+    const R = F.R, T = F.T;
+
+    const dxR = dxIn, dyR = -dyIn;
+    const endR = lineToEdge(xi, yi, dxR, dyR, W, H);
+    drawRay(xi, yi, endR.x, endR.y, R);
+
+    if (!F.tir){
+      const refrAngle = Math.asin((nIn/nOut)*Math.sin(a));
+      const dxT = Math.sin(refrAngle)*sgnX;
+      const dyT = Math.cos(refrAngle)*sgnY;
+      const endT = lineToEdge(xi, yi, dxT, dyT, W, H);
+      drawRay(xi, yi, endT.x, endT.y, T);
+
+      const posX = xi - 10, posY = fromTop ? (yi + 78) : (yi - 62);
+      ctx.fillStyle="#0b1220"; ctx.font="16px system-ui, -apple-system, Segoe UI, Roboto, 'Noto Sans Thai', sans-serif";
+      ctx.fillText(`θ₂ = ${fmtDeg(deg(refrAngle))}°`, posX, posY);
+    } else {
+      ctx.setTransform(1,0,0,1,0,0);
+      ctx.fillStyle="#b91c1c"; ctx.font="14px system-ui";
+      ctx.fillText("เกิดการสะท้อนกลับทั้งหมด (TIR): ไม่มีรังสีหักเห", 14, 48);
+      ctx.scale(canvas.width/baseW, canvas.height/baseH);
+    }
+
+    const r = 64, midA = a*0.88;
+    const baseX = xi - (r+10) * Math.sin(midA) * sgnX;
+    const baseY = yi - (r+10) * Math.cos(midA) * sgnY - (fromTop ? 40 : -40);
+    ctx.fillStyle="#0b1220"; ctx.font="16px system-ui, -apple-system, Segoe UI, Roboto, 'Noto Sans Thai', sans-serif";
+    ctx.fillText(`θ₁ = ${fmtDeg(ang)}°`, baseX, baseY);
+
+  } else if (beamOn){
+    ctx.setTransform(1,0,0,1,0,0);
+    ctx.fillStyle="#b91c1c"; ctx.font="14px system-ui";
+    ctx.fillText("รังสีไม่ตัดรอยต่อ: ลองหมุนมุมหรือเลื่อนตำแหน่งไฟฉาย", 12, 28);
+    ctx.scale(canvas.width/baseW, canvas.height/baseH);
+  }
+
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.fillStyle="#0b1220"; ctx.font="14px system-ui, -apple-system, Segoe UI, Roboto, 'Noto Sans Thai', sans-serif";
+  ctx.fillText(`n₁=${(parseFloat(n1Input.value)||1).toFixed(2)}  n₂=${(parseFloat(n2Input.value)||1).toFixed(2)}  ไฟฉาย:${beamOn?"เปิด":"ปิด"}  θ₁=${fmtDeg(clamp(angleDeg,0,90))}°`, 12, 24);
+}
+
+// ======= Inputs / Toggle =======
+;n1Input.addEventListener("input", ()=>{ draw(); });
+n2Input.addEventListener("input", ()=>{ draw(); });
+toggleBtn.addEventListener("click", ()=>{
+  beamOn=!beamOn;
+  toggleBtn.textContent = `สวิตช์ไฟฉาย: ${beamOn ? "เปิด" : "ปิด"}`;
+  toggleBtn.classList.toggle("on", beamOn);
+  toggleBtn.classList.toggle("off", !beamOn);
+  draw();
+});
+
+// ======= Multi-touch =======
+let pointers = new Map();
+let lastPinchDist=null, lastMid=null, lastTapTime=0;
+let torchFingerId=null, angleFingerId=null;
+let dragOffX=0, dragOffY=0;
+let currentSgnX = 0;
+
+stage.addEventListener("pointerdown", onPointerDown);
+stage.addEventListener("pointermove", onPointerMove);
+stage.addEventListener("pointerup", onPointerUp);
+stage.addEventListener("pointercancel", onPointerUp);
+stage.addEventListener("pointerleave", onPointerUp);
+
+function worldFromClient(clientX, clientY){
+  const rect = canvas.getBoundingClientRect();
+  const x = (clientX - rect.left) / rect.width * baseW;
+  const y = (clientY - rect.top)  / rect.height * baseH;
+  const wx = (x - panX) / scale;
+  const wy = (y - panY) / scale;
+  return {x:wx, y:wy};
+}
+
+function onPointerDown(e){
+  stage.setPointerCapture(e.pointerId);
+  pointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+
+  const now = performance.now();
+  if(now - lastTapTime < 300 && pointers.size===1){
+    scale=1; panX=0; panY=0; draw();
+  }
+  lastTapTime = now;
+
+  if(pointers.size===1){
+    const p = worldFromClient(e.clientX,e.clientY);
+    const dist = Math.hypot(p.x - torchX, p.y - torchY);
+    if (dist <= 48){
+      torchFingerId = e.pointerId; angleFingerId = null;
+      dragOffX = p.x - torchX; dragOffY = p.y - torchY;
+    } else {
+      torchFingerId = null; angleFingerId = e.pointerId;
+      updateAngleFromPoint(p.x, p.y);
+    }
+  } else if(pointers.size===2){
+    const ids = [...pointers.keys()];
+    const pA = worldFromClient(pointers.get(ids[0]).x, pointers.get(ids[0]).y);
+    const pB = worldFromClient(pointers.get(ids[1]).x, pointers.get(ids[1]).y);
+    const dA = Math.hypot(pA.x - torchX, pA.y - torchY);
+    const dB = Math.hypot(pB.x - torchX, pB.y - torchY);
+    if (dA <= dB && dA <= 64){ torchFingerId=ids[0]; angleFingerId=ids[1]; dragOffX=pA.x-torchX; dragOffY=pA.y-torchY; }
+    else if (dB < dA && dB <= 64){ torchFingerId=ids[1]; angleFingerId=ids[0]; dragOffX=pB.x-torchX; dragOffY=pB.y-torchY; }
+    else {
+      torchFingerId=null; angleFingerId=null;
+      const [p1,p2]=ids.map(id=>pointers.get(id));
+      lastPinchDist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+      lastMid = {x:(p1.x+p2.x)/2, y:(p1.y+p2.y)/2};
+    }
+  }
+}
+
+function onPointerMove(e){
+  if(!pointers.has(e.pointerId)) return;
+  pointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+
+  const n = pointers.size;
+
+  if(n===1){
+    const pClient = pointers.get(e.pointerId);
+    const p = worldFromClient(pClient.x,pClient.y);
+    if (torchFingerId===e.pointerId){
+      torchX = clamp(p.x - dragOffX, 8, baseW-8);
+      torchY = clamp(p.y - dragOffY, 8, baseH-8);
+      draw();
+    } else if (angleFingerId===e.pointerId){
+      updateAngleFromPoint(p.x,p.y);
+      draw();
+    } else {
+      updateAngleFromPoint(p.x,p.y);
+      draw();
+    }
+  } else if(n===2){
+    if (torchFingerId!==null || angleFingerId!==null){
+      const pTorch = pointers.get(torchFingerId);
+      if (pTorch){
+        const wp = worldFromClient(pTorch.x, pTorch.y);
+        torchX = clamp(wp.x - dragOffX, 8, baseW-8);
+        torchY = clamp(wp.y - dragOffY, 8, baseH-8);
+      }
+      const pAng = pointers.get(angleFingerId);
+      if (pAng){
+        const wp2 = worldFromClient(pAng.x, pAng.y);
+        updateAngleFromPoint(wp2.x, wp2.y);
+      }
+      draw();
+    } else {
+      const ids=[...pointers.keys()]; const p1=pointers.get(ids[0]); const p2=pointers.get(ids[1]);
+      const newDist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+      const mid = {x:(p1.x+p2.x)/2, y:(p1.y+p2.y)/2};
+      if(lastPinchDist){
+        const rect = canvas.getBoundingClientRect();
+        const wxBefore = ( (mid.x - rect.left)/rect.width*baseW - panX ) / scale;
+        const wyBefore = ( (mid.y - rect.top )/rect.height*baseH - panY ) / scale;
+        const factor = newDist / lastPinchDist;
+        scale = clamp(scale*factor, minScale, maxScale);
+        panX = (mid.x - rect.left)/rect.width*baseW - wxBefore*scale;
+        panY = (mid.y - rect.top )/rect.height*baseH - wyBefore*scale;
+        const dx = mid.x - lastMid.x, dy = mid.y - lastMid.y;
+        panX += dx / rect.width * baseW;
+        panY += dy / rect.height * baseH;
+        draw();
+      }
+      lastPinchDist = newDist; lastMid = mid;
+    }
+  }
+}
+
+function onPointerUp(e){
+  pointers.delete(e.pointerId);
+  if (e.pointerId===torchFingerId)  torchFingerId=null;
+  if (e.pointerId===angleFingerId)  angleFingerId=null;
+  if(pointers.size<2){ lastPinchDist=null; lastMid=null; }
+}
+
+function updateAngleFromPoint(px,py){
+  const towardsTop = torchY < baseH*0.5;
+  const sgnY = towardsTop ? +1 : -1;
+  const dyLocal = sgnY*(py - torchY);
+  const dxLocal = Math.abs(px - torchX);
+  let ang = Math.atan2(dxLocal, Math.max(0, dyLocal));
+  ang = clamp(ang, 0, Math.PI/2);
+  angleDeg = clamp(deg(ang), 0, 90);
+  currentSgnX = (px >= torchX) ? +1 : -1;
+}
+
+// ======= fit / HiDPI =======
+function fitStage(){
+  const maxW = Math.min(416, window.innerWidth - 24);
+  const scaleCss = maxW / baseW;
+  canvas.style.width = (baseW * scaleCss) + "px";
+  canvas.style.height= (baseH * scaleCss) + "px";
+  const dpr = Math.max(1, window.devicePixelRatio || 1);
+  canvas.width  = Math.round(baseW * dpr);
+  canvas.height = Math.round(baseH * dpr);
+  draw();
+}
+window.addEventListener("resize", fitStage, {passive:true});
+
+// ======= Render panels =======
+function renderTheory(){
+  const n1v = Math.max(1.0, parseFloat(n1Input.value)||1.0);
+  const n2v = Math.max(1.0, parseFloat(n2Input.value)||1.0);
+  document.getElementById('eq-ncv').innerHTML = `<math display="block"><mi>n</mi><mo>=</mo><mfrac><mi>c</mi><mi>v</mi></mfrac></math>`;
+  document.getElementById('eq-snell2').innerHTML = `<math display="block"><msub><mi>n</mi><mn>1</mn></msub><mo>·</mo><mi>sin</mi><mo>&#x2061;</mo><msub><mi>&#x03B8;</mi><mn>1</mn></msub><mo>=</mo><msub><mi>n</mi><mn>2</mn></msub><mo>·</mo><mi>sin</mi><mo>&#x2061;</mo><msub><mi>&#x03B8;</mi><mn>2</mn></msub></math>`;
+  document.getElementById('eq-crit').innerHTML = `
+    <div>
+      <p style="margin:6px 0"><strong>นิยามมุมวิกฤติ</strong>: มุมตกกระทบในตัวกลางที่มีดัชนีมากกว่า (<em>n<sub>1</sub> &gt; n<sub>2</sub></em>) ซึ่งทำให้มุมหักเหเป็น 90°</p>
+      <math display="block"><msub><mi>&#x03B8;</mi><mi>c</mi></msub><mo>=</mo><mi>arcsin</mi><mo>&#x2061;</mo><mfrac><msub><mi>n</mi><mn>2</mn></msub><msub><mi>n</mi><mn>1</mn></msub></mfrac></math>
+      <p style="margin:6px 0;color:#334155">ถ้ามุมตกกระทบ (θ<sub>1</sub>) &gt; θ<sub>c</sub> ⇒ <strong>แสงจะเกิดการสะท้อนกลับหมด (Total internal reflection, TIR)</strong></p>
+      <p style="margin:6px 0;color:#64748b">* สูตรมุมวิกฤติใช้ได้เมื่อ n<sub>1</sub> &gt; n<sub>2</sub></p>
+    </div>`;
+}
+
+// ======= Start =======
+function fitAndStart(){ fitStage(); renderTheory(); draw(); }
+window.addEventListener("load", fitAndStart, {once:true});
+window.addEventListener("resize", fitStage, {passive:true});
+</script>
+</body>
+</html>
