@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Mini Lab: ความเค้น ความเครียด และมอดุลัสของยัง</title>
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['\\(','\\)'], ['$', '$']], displayMath: [['\\[','\\]']] },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+  <style>
+    :root{
+      --blue:#2f6fd6; --blue2:#204d7c; --softblue:#edf3fb; --green:#eaf8e6;
+      --orange:#fff3df; --orangeLine:#efc58f; --red:#d92828; --dark:#16243a;
+      --gray:#eef2f6; --line:#d7e2ef; --shadow:0 12px 35px rgba(30,60,100,.14);
+      --safeTop: env(safe-area-inset-top, 0px); --safeBottom: env(safe-area-inset-bottom, 0px);
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0; min-height:100%; font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Tahoma,sans-serif; color:var(--dark); background:linear-gradient(180deg,#f7fbff,#eef5fb); overflow-x:hidden;}
+    body{padding-bottom:calc(96px + var(--safeBottom));}
+    .app{max-width:1220px; margin:0 auto; padding:16px 16px 24px;}
+    header{display:flex; align-items:center; justify-content:space-between; gap:12px; margin:4px 0 12px;}
+    .titleBox{display:flex; align-items:center; gap:12px; min-width:0;}
+    .icon{width:58px;height:58px;border-radius:13px;background:#fff;display:grid;place-items:center;font-size:32px;box-shadow:var(--shadow)}
+    h1{margin:0; line-height:1.12; color:var(--blue); font-size:clamp(22px,3vw,38px); font-weight:950;}
+    h1 span{display:block;color:var(--blue2);font-size:clamp(18px,2.3vw,28px)}
+    .brand{font-weight:850;color:#2f6fd6;text-align:right;font-size:14px}
+    .grid{display:grid; grid-template-columns:minmax(0,1.35fr) minmax(310px,.85fr); gap:14px; align-items:start;}
+    .card{background:rgba(255,255,255,.9); border:1px solid var(--line); border-radius:24px; box-shadow:var(--shadow); overflow:hidden;}
+    .labCard{padding:12px;}
+    .canvasWrap{position:relative; border-radius:20px; background:linear-gradient(180deg,#fdfefe,#edf6ff); border:1px solid #d7e5f2; overflow:hidden;}
+    canvas{display:block;width:100%;height:auto; touch-action:none; cursor:grab;}
+    canvas.dragging{cursor:grabbing;}
+    .statusPill{position:absolute; left:14px; top:14px; border-radius:999px; padding:8px 14px; font-weight:900; font-size:14px; background:#eaf8e6; border:1px solid #acd39c; color:#23621f; box-shadow:0 6px 18px rgba(0,0,0,.1)}
+    .statusPill.plastic{background:#fff3df;border-color:#efc58f;color:#9a6500}
+    .statusPill.break{background:#ffe9e9;border-color:#ffaaaa;color:#b40000; animation:flash .65s ease-in-out 3}
+    @keyframes flash{50%{filter:brightness(1.25); transform:scale(1.04)}}
+    .smallNote{font-size:13px; color:#49637d; padding:10px 4px 0; line-height:1.45;}
+    .panel{padding:14px;}
+    .sectionTitle{margin:0 0 10px; font-weight:950; color:#2d5f90; font-size:18px; display:flex; align-items:center; gap:8px;}
+    .controls{display:grid; gap:10px;}
+    .control{background:#f7fbff;border:1px solid #dbe7f4;border-radius:18px;padding:10px;}
+    .control label{display:flex;justify-content:space-between;gap:10px;font-size:14px;font-weight:850;color:#274968;margin-bottom:8px;}
+    .value{color:#174f9a; font-variant-numeric:tabular-nums;}
+    .row{display:grid; grid-template-columns:42px 1fr 42px; gap:8px; align-items:center;}
+    button,select,input{font:inherit}
+    .stepBtn{height:38px;border:0;border-radius:13px;background:#dcebf9;color:#24577f;font-weight:950;box-shadow:inset 0 -2px 0 rgba(0,0,0,.08);cursor:pointer}
+    input[type=range]{width:100%; accent-color:#2f6fd6;}
+    select{width:100%;border:1px solid #cbdbea;background:#fff;border-radius:14px;padding:9px 10px;font-weight:800;color:#1d4265}
+    .readouts{display:grid;grid-template-columns:1fr 1fr; gap:8px;margin-top:12px;}
+    .read{border-radius:16px;background:#fff;border:1px solid #dde9f4;padding:9px 10px;min-height:58px;}
+    .read b{display:block;color:#345f87;font-size:13px;margin-bottom:3px}.read span{font-size:16px;font-weight:950;color:#152d48; font-variant-numeric:tabular-nums;}
+    .graphCard{margin-top:12px; padding:12px;}
+    #graph{height:250px;}
+    .btnBar{position:fixed;left:50%;bottom:calc(10px + var(--safeBottom));transform:translateX(-50%);z-index:20;width:min(980px,calc(100vw - 20px));display:grid;grid-template-columns:repeat(6,1fr);gap:8px;background:rgba(235,241,247,.68);backdrop-filter:blur(9px);border:1px solid #d8e3ef;border-radius:24px;padding:8px;box-shadow:var(--shadow)}
+    .mainBtn{min-height:52px;border:1.5px solid transparent;border-radius:18px;font-weight:950;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;color:#21486c;box-shadow:inset 0 -2px 0 rgba(0,0,0,.08)}
+    .play{background:#72a7db;color:white}.reset{background:#e7e9ed}.removeForce{background:#fff;border-color:#f0cfaa;color:#9a6500}.concept{background:#ffe4c4;color:#8b4d00}.quiz{background:#dff2da;color:#1f6f25}
+    .modal{position:fixed;inset:0;z-index:50;background:rgba(13,30,52,.48);display:none;align-items:stretch;justify-content:center;padding:calc(18px + var(--safeTop)) 14px calc(18px + var(--safeBottom));}
+    .modal.show{display:flex}.modalBox{width:min(920px,100%);background:#fff;border-radius:28px;box-shadow:0 20px 70px rgba(0,0,0,.25);overflow:auto;position:relative;padding:22px;line-height:1.7;}
+    .modal.conceptModal .modalBox{background:#fff3df}.modal.quizModal .modalBox{background:#f4fff0}.close{position:sticky;top:0;float:right;width:48px;height:48px;border:0;border-radius:16px;background:#e7eef6;font-size:22px;font-weight:950;cursor:pointer;z-index:3}
+    .modal h2{margin:0 0 14px;color:#123d70;font-size:28px}.box{border-radius:20px;border:1.5px solid #efc58f;background:#fffaf2;padding:14px;margin:12px 0}.quizModal .box{border-color:#b8dca8;background:#fff}
+    .formula{font-size:18px}.thai{font-weight:800;color:#243d58}.question{background:#fff;border:1px solid #d8e7d2;border-radius:18px;padding:12px;margin:12px 0}.choices{display:grid;gap:8px;margin-top:9px}.choice{border:1px solid #cddfd0;background:#fff;border-radius:14px;padding:10px 12px;text-align:left;cursor:pointer;font-weight:750}.choice.correct{background:#e5f7df;border-color:#67b85c}.choice.wrong{background:#f1f2f4;border-color:#c6cbd1}.explain{display:none;margin-top:8px;color:#294763}.explain.show{display:block}.footerLink{text-align:center;margin:18px 0 6px;font-weight:900}.footerLink a{color:#2f6fd6;text-decoration:underline;}
+
+    /* Floating readout: small, draggable, clean and constrained inside experiment screen */
+    .floatingReadout{
+      position:absolute;
+      right:14px;
+      bottom:14px;
+      top:auto;
+      left:auto;
+      width:158px;
+      max-width:calc(100% - 28px);
+      background:rgba(255,255,255,.92);
+      border:1px solid #cfddea;
+      border-radius:18px;
+      box-shadow:0 12px 30px rgba(23,53,87,.18);
+      overflow:hidden;
+      z-index:6;
+      backdrop-filter:blur(8px);
+      font-size:10.2px;
+      color:#16324d;
+      user-select:none;
+    }
+    .readoutHandle{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:8px;
+      padding:5px 24px 4px 7px;
+      background:linear-gradient(180deg,#edf6ff,#e4f0fb);
+      border-bottom:1px solid #d5e3ef;
+      color:#225783;
+      font-size:10.2px;
+      line-height:1.18;
+      font-weight:950;
+      cursor:move;
+      touch-action:none;
+    }
+    .readoutClose{
+      position:absolute;
+      right:4px;
+      top:4px;
+      width:18px;
+      height:18px;
+      border:0;
+      border-radius:7px;
+      background:#ffffff;
+      color:#45627d;
+      font-weight:950;
+      line-height:1;
+      cursor:pointer;
+      box-shadow:0 1px 4px rgba(0,0,0,.08);
+      z-index:7;
+    }
+    .readoutClose:hover{background:#eef5fb;}
+    .miniGrid{display:grid;grid-template-columns:1fr;gap:0;padding:3px 6px 5px;}
+    .miniGrid div{
+      display:flex;
+      align-items:baseline;
+      justify-content:space-between;
+      gap:6px;
+      padding:2.5px 0;
+      border-bottom:1px dashed rgba(150,170,190,.35);
+      min-width:0;
+    }
+    .miniGrid div:last-child{border-bottom:0;}
+    .miniGrid b{font-size:9.6px;font-weight:850;color:#41617f;white-space:nowrap;}
+    .miniGrid span{font-size:10.2px;font-weight:900;color:#0d2b4b;text-align:right;white-space:nowrap;}
+    .miniGrid span.phaseElastic{color:#138a2e;}
+    .miniGrid span.phasePlastic,.miniGrid span.phaseBreak{color:#d92828;}
+    .miniGrid span.ultimateRed{color:#d92828;}
+    .readouts{display:none !important;}
+
+    @media(max-width:850px){
+      body{padding-bottom:calc(86px + var(--safeBottom));}.app{padding:10px 10px 18px}.grid{grid-template-columns:1fr}.icon{width:46px;height:46px;font-size:26px}header{align-items:flex-start}.brand{display:none}.labCard{padding:8px}.panel{padding:11px}.readouts{grid-template-columns:1fr 1fr}.btnBar{grid-template-columns:repeat(6,1fr);gap:6px;border-radius:18px;padding:6px}.mainBtn{min-height:46px;font-size:13px;border-radius:14px;flex-direction:column;gap:1px}.floatingReadout{font-size:9.6px;right:10px;bottom:10px;top:auto;width:132px}.miniGrid span{font-size:8.5px}.miniGrid b{font-size:8px}.readoutHandle{font-size:8.5px}.modalBox{border-radius:22px;padding:16px}.modal h2{font-size:23px}#graph{height:210px}.smallNote{font-size:12px}
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="titleBox"><div class="icon">🔩</div><h1>Mini Lab<span>ความเค้น ความเครียด และมอดุลัสของยัง</span></h1></div>
+      <div class="brand">เพจคลายปมฟิสิกส์</div>
+    </header>
+    <div class="grid">
+      <section class="card labCard">
+        <div class="canvasWrap">
+          <canvas id="scene" width="900" height="680"></canvas>
+          <div id="floatingReadout" class="floatingReadout">
+            <button id="closeReadout" class="readoutClose" title="ปิดป้าย">×</button>
+            <div id="readoutHandle" class="readoutHandle">📌 ค่าที่วัดได้</div>
+            <div class="miniGrid">
+              <div><b>F</b><span id="floatForce">-</span></div>
+              <div><b>ความเค้น</b><span id="floatStress">-</span></div>
+              <div><b>ความเครียด</b><span id="floatStrain">-</span></div>
+              <div><b>ΔL</b><span id="floatElong">-</span></div>
+              <div><b>สถานะ</b><span id="floatPhase">-</span></div>
+              <div><b>σ ยืดหยุ่น</b><span id="floatElastic">-</span></div>
+              <div><b>σ สูงสุด</b><span id="floatUltimate">-</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="smallNote">วิธีใช้: ใช้สไลเดอร์ปรับแรงดึง \(F\) เท่านั้น ถ้ายังไม่เกินขีดจำกัดยืดหยุ่น เมื่อกด “เอาแรงออก” จะคืนความยาวเดิม แต่ถ้าเกินขีดจำกัด จะเหลือการยืดถาวร หรือถ้าดึงมากเกินไปจะฉีกขาด</div>
+      </section>
+      <aside class="card panel">
+        <h3 class="sectionTitle">⚙️ ตั้งค่าการทดลอง</h3>
+        <div class="controls">
+          <div class="control"><label>ชนิดโลหะ <span id="matInfo" class="value"></span></label><select id="material"></select></div>
+          <div class="control"><label>แรงดึง \(F\) <span id="forceVal" class="value"></span></label><div class="row"><button class="stepBtn" data-step="force" data-delta="-500">−</button><input id="force" type="range" min="0" max="25000" step="500" value="0"><button class="stepBtn" data-step="force" data-delta="500">+</button></div></div>
+          <div class="control"><label>ความยาวเดิม \(L_0\) <span id="lengthVal" class="value"></span></label><div class="row"><button class="stepBtn" data-step="length" data-delta="-0.1">−</button><input id="length" type="range" min="0.5" max="5" step="0.1" value="2"><button class="stepBtn" data-step="length" data-delta="0.1">+</button></div></div>
+          <div class="control"><label>พื้นที่หน้าตัด \(A\) <span id="areaVal" class="value"></span></label><div class="row"><button class="stepBtn" data-step="area" data-delta="-1">−</button><input id="area" type="range" min="5" max="100" step="1" value="35"><button class="stepBtn" data-step="area" data-delta="1">+</button></div></div>
+        </div>
+        <div class="readouts">
+          <div class="read"><b>ความเค้น</b><span id="stressOut">-</span></div>
+          <div class="read"><b>ความเครียด</b><span id="strainOut">-</span></div>
+          <div class="read"><b>ยืดเพิ่ม \(\Delta L\)</b><span id="elongOut">-</span></div>
+          <div class="read"><b>สถานะ</b><span id="phaseOut">-</span></div>
+          <div class="read"><b>ขีดจำกัดยืดหยุ่น</b><span id="elasticStressOut">-</span></div>
+          <div class="read"><b>ความเค้นสูงสุด</b><span id="ultimateStressOut">-</span></div>
+        </div>
+        <div id="graphCard" class="card graphCard" style="display:none"><h3 class="sectionTitle">📈 กราฟ Stress–Strain</h3><canvas id="graph" width="620" height="300"></canvas></div>
+      </aside>
+    </div>
+    <div class="footerLink"><a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">ศึกษาเพิ่มเติมที่เพจคลายปมฟิสิกส์</a></div>
+  </div>
+
+  <nav class="btnBar">
+    <button id="playBtn" class="mainBtn play">▶️<span>เล่น</span></button>
+    <button id="resetBtn" class="mainBtn reset">🔄<span>รีเซ็ต</span></button>
+    <button id="removeForceBtn" class="mainBtn removeForce">🖐️<span>เอาแรงออก</span></button>
+    <button id="conceptBtn" class="mainBtn concept">Σ<span>สูตรสำคัญ</span></button>
+    <button id="showGraphBtn" class="mainBtn reset">📈<span>แสดงกราฟ</span></button><button id="quizBtn" class="mainBtn quiz">📝<span>แบบฝึกหัด</span></button>
+  </nav>
+
+  <div id="conceptModal" class="modal conceptModal"><div class="modalBox"><button class="close" data-close>❌</button><h2>สูตรสำคัญ</h2>
+    <div class="box"><div class="thai">ความเค้น (Stress) คือ แรงดึงต่อพื้นที่หน้าตัด</div><div class="formula">\[\sigma=\frac{F}{A}\]</div></div>
+    <div class="box"><div class="thai">ความเครียด (Strain) คือ สัดส่วนความยาวที่ยืดเพิ่มเทียบกับความยาวเดิม</div><div class="formula">\[\varepsilon=\frac{\Delta L}{L_0}\]</div></div>
+    <div class="box">
+<div class="thai">
+มอดุลัสของยัง (Young's Modulus) คือ ความชันของกราฟความเค้น–ความเครียด
+ในช่วงขีดจำกัดการแปรผันตรง (Proportional Limit)
+</div>
+<div class="formula">\[Y=\frac{\sigma}{\varepsilon}=\frac{FL_0}{A\Delta L}\]</div>
+<div style="margin-top:10px;color:#204d7c;font-weight:700">
+ใช้ได้เฉพาะช่วงที่ความเค้นแปรผันตรงกับความเครียด ตามกฎของฮุก (Hooke's Law)
+</div>
+</div>
+    <div class="box"><b>ข้อควรระวัง</b><br>ค่าใน Mini Lab นี้ใช้เพื่อการเรียนรู้เชิงแนวคิด ค่าจริงของโลหะขึ้นกับชนิดโลหะ กระบวนการผลิต อุณหภูมิ และรูปทรงชิ้นงาน</div>
+  </div></div>
+
+  <div id="quizModal" class="modal quizModal"><div class="modalBox"><button class="close" data-close>❌</button><h2>แบบฝึกหัด</h2>
+    <div class="box"><b>หัวข้อแบบฝึกหัด</b><br>เลือกคำตอบ A–E แล้วกดดูเฉลยจากผลตอบทันที</div>
+    <div id="quizList"></div>
+  </div></div>
+
+<script>
+const $=id=>document.getElementById(id);
+const scene=$('scene'), ctx=scene.getContext('2d'), graph=$('graph'), gtx=graph.getContext('2d');
+const materials=[
+ // ค่าเป็นค่าประมาณเพื่อการเรียนรู้: E, proportional limit, elastic limit, ultimate stress, strain ที่ UTS และ fracture
+ // หลัง proportional limit กราฟจะโค้งและความชันลดลงต่อเนื่อง ไม่เกิดมุมหัก
+ {name:'เหล็กกล้า (Steel)',E:200e9,proportional:170e6,elastic:250e6,elasticStrain:.0040,ultimate:520e6,utsStrain:.16,fractureStrain:.30,fractureStressRatio:.22, color:'#6f7f8d'},
+ {name:'อะลูมิเนียม (Aluminium)',E:69e9,proportional:62e6,elastic:95e6,elasticStrain:.0045,ultimate:310e6,utsStrain:.12,fractureStrain:.18,fractureStressRatio:.20, color:'#a7b1ba'},
+ {name:'ทองแดง (Copper)',E:110e9,proportional:45e6,elastic:70e6,elasticStrain:.0032,ultimate:220e6,utsStrain:.28,fractureStrain:.43,fractureStressRatio:.22, color:'#c46a2d'},
+ {name:'ทองเหลือง (Brass)',E:100e9,proportional:82e6,elastic:120e6,elasticStrain:.0038,ultimate:360e6,utsStrain:.18,fractureStrain:.27,fractureStressRatio:.20, color:'#c59b34'},
+ {name:'ไทเทเนียม (Titanium)',E:116e9,proportional:680e6,elastic:830e6,elasticStrain:.0105,ultimate:950e6,utsStrain:.075,fractureStrain:.14,fractureStressRatio:.24, color:'#778899'}
+];
+const matSel=$('material'), force=$('force'), length=$('length'), area=$('area');
+let playing=false;
+let residualStrain=0;
+let maxPlasticStrain=0;
+let broken=false;
+let lastGrip={x:650,y:260};
+materials.forEach((m,i)=>{const o=document.createElement('option');o.value=i;o.textContent=m.name;matSel.appendChild(o)});
+matSel.value=1;
+function updateForceRange(){ const m=materials[+matSel.value]; const A=(+area.value)*1e-6; const suggested=Math.max(8000, m.ultimate*A*1.35); const step=Math.max(100, Math.round(suggested/80/100)*100); force.max=Math.round(suggested/step)*step; force.step=step; document.querySelectorAll('[data-step=\"force\"]').forEach(b=>b.dataset.delta=(b.textContent.trim()==='−'?-step:step)); if(+force.value>+force.max) force.value=force.max; }
+function safeFractureStrain(m){return m.fractureStrain || 0.25;}
+function fmt(x,unit=''){
+ if(Math.abs(x)>=1e9)return (x/1e9).toFixed(2)+' G'+unit;
+ if(Math.abs(x)>=1e6)return (x/1e6).toFixed(2)+' M'+unit;
+ if(Math.abs(x)>=1e3)return (x/1e3).toFixed(2)+' k'+unit;
+ return x.toFixed(2)+' '+unit;
+}
+function calcState(updateHistory=false){
+  const m=materials[+matSel.value]; const F=+force.value; const L=+length.value; const A_mm2=+area.value; const A=A_mm2*1e-6;
+  const stress=F/A; const elasticLimitStrain=m.elastic/m.E; let strain=0, phase='elastic';
+  if(broken){
+    phase='break'; strain=Math.max(residualStrain, safeFractureStrain(m));
+  }else if(stress>=m.ultimate){
+    phase='break'; strain=safeFractureStrain(m); broken=true; residualStrain=strain; maxPlasticStrain=strain; ding(false);
+  }else if(stress>m.elastic){
+    const plasticRatio=(stress-m.elastic)/(m.ultimate-m.elastic);
+    const plasticStrain=elasticLimitStrain + 0.006 + plasticRatio*(safeFractureStrain(m)*0.72);
+    if(updateHistory) maxPlasticStrain=Math.max(maxPlasticStrain, plasticStrain);
+    strain=Math.max(plasticStrain, residualStrain + stress/m.E);
+    phase='plastic';
+  }else{
+    strain=residualStrain + stress/m.E;
+    phase=residualStrain>0 ? 'permanent' : 'elastic';
+  }
+  const elong=strain*L;
+  return {m,F,L,A,A_mm2,stress,strain,elong,phase,elasticLimitStrain};
+}
+function state(){ return calcState(true); }
+function releaseSpecimen(){
+  const s=calcState(false);
+  if(!broken && maxPlasticStrain>0){
+    residualStrain=Math.max(residualStrain, maxPlasticStrain - s.elasticLimitStrain*0.45);
+  }
+  force.value=0;
+  render();
+}
+function updateText(){
+ updateForceRange();
+ const s=state(); $('forceVal').textContent=(s.F/1000).toFixed(0)+' kN'; $('lengthVal').textContent=s.L.toFixed(1)+' m'; $('areaVal').textContent=s.A_mm2.toFixed(0)+' mm²'; $('matInfo').textContent='Y ≈ '+fmt(s.m.E,'Pa');
+ $('stressOut').textContent=fmt(s.stress,'Pa'); $('strainOut').textContent=s.strain.toFixed(5); $('elongOut').textContent=(s.elong*1000).toFixed(1)+' mm'; $('elasticStressOut').textContent=fmt(s.m.elastic,'Pa'); $('ultimateStressOut').textContent=fmt(s.m.ultimate,'Pa');
+ let ph='ช่วงยืดหยุ่น';
+ if(s.phase==='permanent'){ph='เสียรูปถาวร'}
+ if(s.phase==='plastic'){ph='สภาพพลาสติก'}
+ if(s.phase==='break'){ph='ฉีกขาด'}
+ $('phaseOut').textContent=ph;
+ $('floatForce').textContent=(s.F/1000).toFixed(0)+' kN';
+ $('floatStress').textContent=fmt(s.stress,'Pa');
+ $('floatStrain').textContent=s.strain.toFixed(5);
+ $('floatElong').textContent=(s.elong*1000).toFixed(1)+' mm';
+ $('floatPhase').textContent=ph;
+ $('floatPhase').className = (s.phase==='plastic' || s.phase==='permanent') ? 'phasePlastic' : (s.phase==='break' ? 'phaseBreak' : 'phaseElastic');
+ $('floatElastic').textContent=fmt(s.m.elastic,'Pa');
+ $('floatUltimate').textContent=fmt(s.m.ultimate,'Pa');
+ $('floatUltimate').className='ultimateRed';
+}
+function drawArrow(x0,y,x1,lineW,label){
+ const len=Math.max(0,x1-x0); if(len<8)return;
+ ctx.strokeStyle='#2f6fd6'; ctx.lineWidth=lineW; ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(x0,y); ctx.lineTo(x1,y); ctx.stroke();
+ ctx.fillStyle='#2f6fd6'; const head=Math.max(14,lineW*2.4); ctx.beginPath();ctx.moveTo(x1+2,y);ctx.lineTo(x1-head,y-head*0.62);ctx.lineTo(x1-head,y+head*0.62);ctx.closePath();ctx.fill();
+ ctx.font='900 24px system-ui'; ctx.fillText(label, x0+Math.max(18,len*.38), y-20);
+}
+function drawScene(){
+ const s=state(); const w=scene.width,h=scene.height; ctx.clearRect(0,0,w,h);
+ ctx.fillStyle='#f4f9ff'; ctx.fillRect(0,0,w,h);
+ ctx.strokeStyle='#dfeaf5'; ctx.lineWidth=1; for(let x=40;x<w;x+=40){ctx.beginPath();ctx.moveTo(x,320);ctx.lineTo(x,430);ctx.stroke()}
+ ctx.fillStyle='#c9d3df'; ctx.fillRect(80,180,44,190); ctx.fillStyle='#7c8795'; ctx.fillRect(70,175,64,18); ctx.fillRect(70,360,64,18);
+ const x0=124;
+ const baseLen=300 + (s.L-0.5)/(5-0.5)*330;
+ const extra=Math.min(190, s.strain*1550);
+ const x1=x0+baseLen+extra; const y=260; lastGrip={x:x1,y};
+ const rodThick = 12 + (s.A_mm2-5)/(100-5)*30;
+ const halfT = rodThick/2;
+ ctx.setLineDash([8,8]); ctx.strokeStyle='#9aa8b6'; ctx.lineWidth=3; ctx.beginPath();ctx.moveTo(x0,y+68);ctx.lineTo(x0+baseLen,y+68);ctx.stroke(); ctx.beginPath();ctx.moveTo(x0+baseLen,y-86);ctx.lineTo(x0+baseLen,y+112);ctx.stroke(); ctx.setLineDash([]);
+ ctx.fillStyle='#5f7082'; ctx.font='700 20px system-ui'; ctx.fillText('ความยาวเดิม L₀', x0+baseLen/2-70, y+98); ctx.fillText('ตำแหน่งปลายเดิม', x0+baseLen-70, y-96);
+ if(residualStrain>0 && s.phase!=='break'){
+   const rx=x0+baseLen+Math.min(210,residualStrain*1850);
+   ctx.setLineDash([4,6]); ctx.strokeStyle='#f2a319'; ctx.lineWidth=3; ctx.beginPath();ctx.moveTo(rx,y-55);ctx.lineTo(rx,y+85);ctx.stroke(); ctx.setLineDash([]);
+   ctx.fillStyle='#9a6500'; ctx.font='800 17px system-ui'; ctx.fillText('ความยาวใหม่หลังเสียรูปถาวร', Math.min(rx-60,w-270), y-68);
+ }
+ ctx.lineCap='round'; ctx.lineWidth=rodThick; ctx.strokeStyle=s.m.color;
+ if(s.phase!=='break'){
+   ctx.beginPath();ctx.moveTo(x0,y);ctx.lineTo(x1,y);ctx.stroke();
+ }else{
+   const tearL=x0+baseLen*.56, gap=54, rightStart=tearL+gap+Math.min(70,extra*.18), rightEnd=Math.min(x1,w-72);
+   const neckT=Math.max(8, rodThick*0.48);
+   function jaggedEnd(x, flip, color, cy){
+     const amp=flip?-1:1, ht=neckT/2;
+     ctx.fillStyle=color; ctx.beginPath();
+     ctx.moveTo(x,cy-ht);
+     ctx.lineTo(x+amp*12,cy-ht*.55);
+     ctx.lineTo(x+amp*4,cy);
+     ctx.lineTo(x+amp*15,cy+ht*.55);
+     ctx.lineTo(x,cy+ht);
+     ctx.closePath(); ctx.fill();
+     ctx.strokeStyle='#4f5b66'; ctx.lineWidth=2; ctx.beginPath();
+     ctx.moveTo(x,cy-ht); ctx.lineTo(x+amp*12,cy-ht*.55); ctx.lineTo(x+amp*4,cy); ctx.lineTo(x+amp*15,cy+ht*.55); ctx.lineTo(x,cy+ht); ctx.stroke();
+   }
+   ctx.beginPath();ctx.moveTo(x0,y);ctx.lineTo(tearL-26,y);ctx.stroke();
+   ctx.lineWidth=neckT; ctx.beginPath();ctx.moveTo(tearL-26,y);ctx.lineTo(tearL,y);ctx.stroke();
+   jaggedEnd(tearL,1,s.m.color,y);
+   ctx.strokeStyle='#9ca3ad'; ctx.lineWidth=rodThick;
+   ctx.beginPath();ctx.moveTo(rightStart+26,y);ctx.lineTo(rightEnd,y);ctx.stroke();
+   ctx.lineWidth=neckT; ctx.beginPath();ctx.moveTo(rightStart,y);ctx.lineTo(rightStart+26,y);ctx.stroke();
+   jaggedEnd(rightStart,-1,'#9ca3ad',y);
+ }
+ if(s.phase==='plastic' || s.phase==='permanent'){
+   ctx.fillStyle='rgba(255,163,26,.22)'; ctx.beginPath();ctx.ellipse(x0+baseLen*.58,y,80,32,0,0,Math.PI*2);ctx.fill();
+   ctx.fillStyle='#9a6500'; ctx.font='900 22px system-ui'; ctx.fillText(s.phase==='permanent'?'เหลือการยืดถาวร':'เปลี่ยนรูปถาวร', x0+baseLen*.45, y-48);
+ }
+ ctx.fillStyle='#33465a'; ctx.fillRect(x1-10,y-52,24,104);
+ ctx.fillStyle='#46627f'; ctx.beginPath();ctx.arc(x1+6,y,13,0,Math.PI*2);ctx.fill();
+ const forceRatio=Math.min(1,s.F/(+force.max)); const arrowLen=28+forceRatio*125; const arrowW=3+forceRatio*11;
+ drawArrow(x1+36,y,Math.min(w-42,x1+36+arrowLen),arrowW,'F = '+(s.F/1000).toFixed(0)+' kN');
+ ctx.strokeStyle='#d92828'; ctx.lineWidth=3; ctx.beginPath();ctx.moveTo(x0+baseLen,y+42);ctx.lineTo(x1,y+42);ctx.stroke(); ctx.fillStyle='#d92828'; ctx.font='900 20px system-ui'; ctx.fillText('ΔL', x0+baseLen+(x1-x0-baseLen)/2-12, y+32);
+ ctx.fillStyle='#152d48'; ctx.font='900 24px system-ui'; ctx.fillText(s.m.name, 86, 76); ctx.font='800 20px system-ui'; ctx.fillText('F = '+(s.F/1000).toFixed(0)+' kN', 86, 108); ctx.fillText('A = '+s.A_mm2.toFixed(0)+' mm²', 86, 136);
+ ctx.fillStyle='#49637d'; ctx.font='800 18px system-ui'; ctx.fillText('ปรับแรงดึงด้วยสไลเดอร์ด้านขวา', 86, 164);
+ if(s.phase==='break'){ctx.fillStyle='#b40000';ctx.font='950 30px system-ui';ctx.fillText('ความเค้นเกินจุดขาด → ชิ้นงานฉีกขาด', 250, 96)}
+}
+function graphElasticStrain(m){
+ const propStress=(m.proportional || m.elastic*0.72);
+ const propStrain=propStress/m.E;
+ // ใช้ค่า strain ที่มากกว่า sigma/E เพื่อให้หลัง proportional limit ความชันลดลงจริง
+ return m.elasticStrain || Math.max(m.elastic/m.E*1.9, propStrain + (m.elastic-propStress)/(0.42*m.E));
+}
+function smooth01(t){
+ t=Math.max(0,Math.min(1,t));
+ return t*t*(3-2*t);
+}
+function hermite(t,y0,y1,m0,m1,dx){
+ t=Math.max(0,Math.min(1,t));
+ const h00=2*t*t*t-3*t*t+1;
+ const h10=t*t*t-2*t*t+t;
+ const h01=-2*t*t*t+3*t*t;
+ const h11=t*t*t-t*t;
+ return h00*y0 + h10*m0*dx + h01*y1 + h11*m1*dx;
+}
+function curveStressAt(m,e){
+ const propStress=(m.proportional || m.elastic*0.72);
+ const propStrain=propStress/m.E;
+ const elasticStrain=graphElasticStrain(m);
+ const utsStrain=m.utsStrain || safeFractureStrain(m)*0.55;
+ const fracture=safeFractureStrain(m);
+ const fractureStress=m.ultimate*(m.fractureStressRatio || 0.22);
+
+ // 1) ช่วงแปรผันตรง: เป็นเส้นตรง แต่ไม่ดิ่ง เพราะแกน x ซูมให้เห็นช่วงต้น
+ if(e<=propStrain) return m.E*e;
+
+ // 2) หลังขีดจำกัดการแปรผันตรง: โค้งต่อเนื่องและความชันลดลง
+ // ใช้ ease-out power curve: stress ยังเพิ่ม แต่เพิ่มช้ากว่าช่วงเส้นตรง
+ if(e<=elasticStrain){
+   // หลัง proportional limit ความชันลดลงแบบต่อเนื่อง
+   const t=Math.max(0,Math.min(1,(e-propStrain)/(elasticStrain-propStrain || 1)));
+   const u=t*(2-t); // ease-out ต่อเนื่องจากเส้นตรง
+   return propStress + (m.elastic-propStress)*u;
+ }
+
+ // 3) Plastic / strain hardening: โค้งขึ้นต่อเนื่องไปหา UTS ความชันค่อย ๆ ลดลงจนเกือบศูนย์
+ if(e<=utsStrain){
+   const t=Math.max(0,Math.min(1,(e-elasticStrain)/(utsStrain-elasticStrain || 1)));
+   const u=1-Math.pow(1-t,2.15);
+   return m.elastic + (m.ultimate-m.elastic)*u;
+ }
+
+ // 4) หลัง UTS: necking ค่อย ๆ ลดลง เฉพาะเมื่อกราฟแสดงไปถึงช่วงขาด
+ if(e<=fracture){
+   const t=Math.max(0,Math.min(1,(e-utsStrain)/(fracture-utsStrain || 1)));
+   const u=t*t*(3-2*t);
+   return m.ultimate - (m.ultimate-fractureStress)*u;
+ }
+ return fractureStress;
+}
+
+function strainOnCurveForStress(m,stress,phase){
+ const propStress=(m.proportional || m.elastic*0.72);
+ const propStrain=propStress/m.E;
+ const elasticStrain=graphElasticStrain(m);
+ const utsStrain=m.utsStrain || safeFractureStrain(m)*0.55;
+ const fracture=safeFractureStrain(m);
+ if(phase==='break') return fracture;
+ if(stress<=0) return 0;
+ if(stress<=propStress) return stress/m.E;
+ let lo=propStrain, hi=elasticStrain;
+ if(stress>m.elastic){ lo=elasticStrain; hi=utsStrain; }
+ for(let i=0;i<42;i++){
+   const mid=(lo+hi)/2;
+   const val=curveStressAt(m,mid);
+   if(val<stress) lo=mid; else hi=mid;
+ }
+ return (lo+hi)/2;
+}
+
+function drawGraph(){
+ const s=state(); const m=s.m; const w=graph.width,h=graph.height; gtx.clearRect(0,0,w,h); gtx.fillStyle='#fff';gtx.fillRect(0,0,w,h);
+ const padL=64,padR=24,padT=18,padB=48, gw=w-padL-padR, gh=h-padT-padB;
+ const elasticStrain=graphElasticStrain(m);
+ const proportionalStress=(m.proportional || m.elastic*0.72);
+ const proportionalStrain=proportionalStress/m.E;
+ const fracture=safeFractureStrain(m);
+ // แกนตั้งให้เกินค่าความเค้นสูงสุดเพียง 10% เพื่อไม่ให้กราฟเตี้ยและยังเห็นช่วงเส้นตรงชัด
+ const maxStress=m.ultimate*1.10;
+ // แกนนอนซูมอัตโนมัติ: เริ่มต้นเน้นช่วงเส้นตรงให้เห็นความเอียง แล้วค่อยขยายเมื่อเข้าสู่ plastic/break
+ let maxStrain;
+ if(s.phase==='break'){
+   maxStrain=fracture*1.03;
+ }else{
+   // เน้นช่วงต้นและช่วง strain hardening ถึง UTS โดยขยายเลยจุดสูงสุดประมาณ 10%
+   maxStrain=Math.max((m.utsStrain || fracture*0.55)*1.10, elasticStrain*30.0, 0.020);
+ }
+ const xScale=e=>{
+   const r=Math.max(0,Math.min(1,e/maxStrain));
+   // ใช้มาตราส่วนเชิงเส้น เพื่อให้ช่วง Hooke's law เป็นเส้นตรงจริง
+   return r;
+ };
+ const X=e=>padL+xScale(e)*gw, Y=st=>padT+gh-Math.min(st,maxStress)/maxStress*gh;
+ gtx.strokeStyle='#d9e4ef'; gtx.lineWidth=1; gtx.font='700 12px system-ui'; gtx.fillStyle='#52708c';
+ for(let i=0;i<=5;i++){
+   const y=padT+gh*i/5; gtx.beginPath();gtx.moveTo(padL,y);gtx.lineTo(w-padR,y);gtx.stroke();
+   const st=(maxStress/1e6)*(1-i/5); gtx.fillText(st.toFixed(0),10,y+4);
+   const ev=maxStrain*i/5;
+   const x=X(ev);gtx.beginPath();gtx.moveTo(x,padT);gtx.lineTo(x,padT+gh);gtx.stroke();
+   gtx.fillText(ev.toFixed(ev<0.01?4:3),x-12,h-22);
+ }
+ // พื้นหลังช่วงยืดหยุ่นอ่อน ๆ เพื่อเน้นช่วงเส้นตรง
+ const ex=Math.min(X(proportionalStrain),w-padR);
+ gtx.fillStyle='rgba(90,190,90,.08)'; gtx.fillRect(padL,padT,Math.max(0,ex-padL),gh);
+ // เส้นกราฟจริงเชิงประมาณของวัสดุที่เลือก: ช่วงต้นเป็นเส้นตรง แล้วโค้งต่อเนื่องเข้าสู่ plastic, UTS และ necking
+ gtx.strokeStyle=m.color; gtx.lineWidth=4; gtx.beginPath();
+ const steps=900;
+ for(let i=0;i<=steps;i++){
+   let e=i/steps*Math.min(fracture,maxStrain);
+   let st=curveStressAt(m,e);
+   if(i===0)gtx.moveTo(X(e),Y(st)); else gtx.lineTo(X(e),Y(st));
+ }
+ gtx.stroke();
+
+ // เส้นอ้างอิง 3 ค่า: ขีดจำกัดการแปรผันตรง / ขีดจำกัดสภาพยืดหยุ่น / ความเค้นสูงสุด
+ gtx.strokeStyle='#2f6fd6'; gtx.lineWidth=2; gtx.setLineDash([5,5]);
+ gtx.beginPath();gtx.moveTo(padL,Y(proportionalStress));gtx.lineTo(w-padR,Y(proportionalStress));gtx.stroke();
+ gtx.setLineDash([]);
+ gtx.strokeStyle='#16a34a'; gtx.lineWidth=2; gtx.setLineDash([6,5]); gtx.beginPath();gtx.moveTo(padL,Y(m.elastic));gtx.lineTo(w-padR,Y(m.elastic));gtx.stroke();
+ gtx.strokeStyle='#d92828'; gtx.setLineDash([6,5]); gtx.beginPath();gtx.moveTo(padL,Y(m.ultimate));gtx.lineTo(w-padR,Y(m.ultimate));gtx.stroke();
+ gtx.setLineDash([]);
+ // จุดสำคัญบนกราฟ
+ const utsE=m.utsStrain || fracture*0.55;
+ function mark(e,st,color,label,dx=8,dy=-8){
+   if(e<=maxStrain*1.001){
+     gtx.fillStyle=color; gtx.beginPath(); gtx.arc(X(e),Y(st),5.5,0,Math.PI*2); gtx.fill();
+   }
+ }
+ mark(proportionalStrain,proportionalStress,'#2f6fd6','ขีดจำกัดการแปรผันตรง');
+ mark(elasticStrain,m.elastic,'#16a34a','ขีดจำกัดสภาพยืดหยุ่น');
+ mark(utsE,m.ultimate,'#d92828','ความเค้นสูงสุด');
+ if(fracture<=maxStrain*1.001) mark(fracture,curveStressAt(m,fracture),'#d92828','Fracture',-70,-8);
+ if(residualStrain>0){gtx.fillStyle='#9a6500';gtx.beginPath();gtx.arc(X(Math.min(residualStrain,maxStrain)),Y(0),6,0,Math.PI*2);gtx.fill(); gtx.font='800 12px system-ui'; gtx.fillText('strain คงค้าง',Math.min(X(residualStrain)+8,w-110),Y(0)-8)}
+ const pointStress = s.phase==='break' ? curveStressAt(m, fracture) : Math.min(s.stress,maxStress);
+ const pointStrain = strainOnCurveForStress(m, pointStress, s.phase);
+ gtx.fillStyle=s.phase==='break'?'#d92828':(s.phase==='plastic'||s.phase==='permanent')?'#f2a319':'#1f8f3a';
+ gtx.beginPath();gtx.arc(X(Math.min(pointStrain,maxStrain)),Y(pointStress),8,0,Math.PI*2);gtx.fill();
+ gtx.strokeStyle='#1e2c3a'; gtx.lineWidth=2; gtx.beginPath();gtx.moveTo(padL,padT);gtx.lineTo(padL,padT+gh);gtx.lineTo(w-padR,padT+gh);gtx.stroke();
+ gtx.fillStyle='#243d58'; gtx.font='800 15px system-ui'; gtx.fillText('stress (MPa)', 10, 11); gtx.fillText('strain', w-78, h-14);
+ gtx.fillStyle='#d92828'; gtx.fillText('ความเค้นสูงสุด', padL+8, Math.max(padT+16,Y(m.ultimate)+18));
+ gtx.fillStyle='#16a34a'; gtx.fillText('ขีดจำกัดสภาพยืดหยุ่น', padL+8, Math.max(padT+16,Y(m.elastic)-10));
+ gtx.fillStyle='#2f6fd6'; gtx.fillText('ขีดจำกัดการแปรผันตรง', padL+8, Math.min(padT+gh-8,Y(proportionalStress)+18));
+}
+
+function setupFloatingReadout(){
+  const box=$('floatingReadout'), handle=$('readoutHandle'), close=$('closeReadout'), wrap=document.querySelector('.canvasWrap');
+  let dragging=false, sx=0, sy=0, bx=0, by=0;
+  const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
+  function start(e){
+    dragging=true; const p=e.touches?e.touches[0]:e; sx=p.clientX; sy=p.clientY; bx=box.offsetLeft; by=box.offsetTop; e.preventDefault();
+  }
+  function move(e){
+    if(!dragging)return; const p=e.touches?e.touches[0]:e; const r=wrap.getBoundingClientRect();
+    box.style.right='auto';
+    box.style.left=clamp(bx+p.clientX-sx,6,r.width-box.offsetWidth-6)+'px';
+    box.style.top=clamp(by+p.clientY-sy,6,r.height-box.offsetHeight-6)+'px';
+  }
+  function end(){dragging=false;}
+  handle.addEventListener('mousedown',start); handle.addEventListener('touchstart',start,{passive:false});
+  window.addEventListener('mousemove',move); window.addEventListener('touchmove',move,{passive:false});
+  window.addEventListener('mouseup',end); window.addEventListener('touchend',end);
+  close.onclick=()=>{box.style.display='none';};
+}
+setupFloatingReadout();
+function render(){ updateText(); drawScene(); drawGraph(); }
+function tick(){ if(playing){ const s=state(); if(s.phase!=='break'){ force.value=Math.min(+force.max,+force.value+(+force.max/180)); } else { playing=false; $('playBtn').innerHTML='▶️<span>เล่น</span>'; } render(); } requestAnimationFrame(tick); }
+function ding(success=true){ try{ const ac=new (window.AudioContext||window.webkitAudioContext)(); const o=ac.createOscillator(); const g=ac.createGain(); o.type=success?'sine':'sawtooth'; o.frequency.value=success?880:150; g.gain.setValueAtTime(.001,ac.currentTime); g.gain.exponentialRampToValueAtTime(.18,ac.currentTime+.02); g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+.25); o.connect(g); g.connect(ac.destination); o.start(); o.stop(ac.currentTime+.28);}catch(e){} }
+[force,length,area,matSel].forEach(el=>el.addEventListener('input',()=>{ if(el===matSel){residualStrain=0;maxPlasticStrain=0;broken=false;} if(el===area||el===matSel) updateForceRange(); render();}));
+document.querySelectorAll('.stepBtn').forEach(b=>b.addEventListener('click',()=>{const id=b.dataset.step, el=$(id), d=+b.dataset.delta; el.value=Math.max(+el.min,Math.min(+el.max,+el.value+d)); if(id==='area') updateForceRange(); render();}));
+$('playBtn').onclick=()=>{playing=!playing; $('playBtn').innerHTML=playing?'⏸<span>หยุด</span>':'▶️<span>เล่น</span>'; if(playing) ding(true);};
+$('removeForceBtn').onclick=()=>{ releaseSpecimen(); };
+$('resetBtn').onclick=()=>{playing=false; $('playBtn').innerHTML='▶️<span>เล่น</span>'; length.value=2; area.value=35; matSel.value=1; updateForceRange(); force.value=0; residualStrain=0; maxPlasticStrain=0; broken=false; const fr=$('floatingReadout'); fr.style.display='block'; fr.style.left='auto'; fr.style.right='14px'; fr.style.bottom='14px'; fr.style.top='auto'; render();};
+$('conceptBtn').onclick=()=>{ $('conceptModal').classList.add('show'); if(window.MathJax) MathJax.typesetPromise(); };
+$('quizBtn').onclick=()=>{ $('quizModal').classList.add('show'); if(window.MathJax) MathJax.typesetPromise(); };
+document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>b.closest('.modal').classList.remove('show'));
+const quiz=[
+ {q:'ถ้าเพิ่มแรงดึง แต่พื้นที่หน้าตัดเท่าเดิม ความเค้นเปลี่ยนอย่างไร',ans:'B',cs:['A ลดลง','B เพิ่มขึ้น','C เท่าเดิม','D เป็นศูนย์','E บอกไม่ได้'],ex:'เพราะความเค้นเท่ากับแรงดึงหารด้วยพื้นที่หน้าตัด เมื่อ F เพิ่ม และ A คงที่ ความเค้นจึงเพิ่มขึ้น'},
+ {q:'โลหะที่มีมอดุลัสของยังมาก หมายความว่าอย่างไร',ans:'C',cs:['A ยืดง่ายมาก','B ขาดง่ายเสมอ','C ยืดยากกว่าเมื่อรับความเค้นเท่ากัน','D มีพื้นที่หน้าตัดมากกว่า','E มีความยาวมากกว่า'],ex:'ในช่วงยืดหยุ่น ความชันกราฟ stress–strain คือ Y ถ้า Y มาก แปลว่าต้องใช้ความเค้นมากจึงจะเกิดความเครียดเท่าเดิม'},
+ {q:'เมื่อความเค้นเกินขีดจำกัดยืดหยุ่น วัตถุจะเป็นอย่างไร',ans:'D',cs:['A กลับสู่ความยาวเดิมได้สมบูรณ์','B ความเค้นเป็นศูนย์ทันที','C ความเครียดหายไป','D เกิดการเปลี่ยนรูปถาวรได้','E มอดุลัสของยังเป็นลบ'],ex:'เมื่อเกินขีดจำกัดยืดหยุ่น วัตถุเข้าสู่สภาพพลาสติก จึงอาจไม่กลับสู่รูปร่างเดิมทั้งหมด'},
+ {q:'กราฟ stress–strain ช่วงเส้นตรงมีความชันเท่ากับอะไร',ans:'A',cs:['A มอดุลัสของยัง','B แรงดึง','C พื้นที่หน้าตัด','D ความยาวเดิม','E มวลของวัตถุ'],ex:'ช่วงเส้นตรงมีความสัมพันธ์ σ = Yε ดังนั้นความชันของกราฟ σ กับ ε คือ Y'}
+];
+function buildQuiz(){ const root=$('quizList'); root.innerHTML=''; quiz.forEach((it,idx)=>{const q=document.createElement('div');q.className='question';q.innerHTML=`<b>ข้อ ${idx+1}</b> ${it.q}<div class="choices"></div><div class="explain">เฉลย: <b style="color:#d92828">${it.ans}</b><br>${it.ex}</div>`; const ch=q.querySelector('.choices'); it.cs.forEach(c=>{const btn=document.createElement('button');btn.className='choice';btn.textContent=c;btn.onclick=()=>{q.querySelectorAll('.choice').forEach(x=>x.disabled=true); if(c.startsWith(it.ans))btn.classList.add('correct'); else{btn.classList.add('wrong'); q.querySelectorAll('.choice').forEach(x=>{if(x.textContent.startsWith(it.ans))x.classList.add('correct')})} q.querySelector('.explain').classList.add('show');}; ch.appendChild(btn)}); root.appendChild(q)}); }
+buildQuiz(); updateForceRange(); render(); tick();
+
+document.getElementById('showGraphBtn').onclick=()=>{
+  const m=document.getElementById('graphModal');
+  m.classList.add('show');
+  const src=document.getElementById('graph');
+  const dst=document.getElementById('graphFull');
+  const dctx=dst.getContext('2d');
+  dctx.clearRect(0,0,dst.width,dst.height);
+  dctx.drawImage(src,0,0,dst.width,dst.height);
+};
+
+</script>
+
+<div id="graphModal" class="modal">
+  <div class="modalBox" style="width:100%;max-width:none;height:100%;padding:10px">
+    <button class="close" onclick="document.getElementById('graphModal').classList.remove('show')">❌</button>
+    <canvas id="graphFull" width="1400" height="900" style="width:100%;height:90vh"></canvas>
+  </div>
+</div>
+</body>
+</html>
+
+<script>
+document.addEventListener('DOMContentLoaded',()=>{
+ const b=document.getElementById('btnShowGraph');
+ if(b){
+   b.onclick=()=>{
+     showGraph=true;
+     const modal=document.getElementById('graphModal');
+     if(modal) modal.style.display='flex';
+     if(typeof drawGraph==='function') drawGraph();
+   };
+ }
+});
+</script>
