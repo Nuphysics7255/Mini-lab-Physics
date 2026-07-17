@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>การพาความร้อนของอากาศจากเทียน — ลมวนในห้องเปิด</title>
+  <style>
+    :root{
+      --ink:#0f172a;
+      --muted:#64748b;
+      --bg:#f8fafc;
+      --accent:#0ea5e9;
+      --hot:#f97316;
+      --cold:#3b82f6;
+      --panel:#ffffff;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      padding:10px 6px 20px;
+      font-family:system-ui,"Noto Sans Thai",sans-serif;
+      background:#fff;
+      color:var(--ink);
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:10px;
+    }
+    h1{
+      margin:0 0 4px;
+      font-size:1.1rem;
+      text-align:center;
+    }
+    p.lead{
+      margin:0;
+      font-size:0.9rem;
+      color:var(--muted);
+      text-align:center;
+    }
+    #panel{
+      width:100%;
+      max-width:960px;
+      background:var(--bg);
+      border-radius:12px;
+      border:1px solid #e5e7eb;
+      padding:8px 10px 10px;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+    #controls{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      align-items:center;
+      justify-content:flex-start;
+      font-size:0.85rem;
+    }
+    #controls button{
+      border:none;
+      border-radius:999px;
+      padding:6px 14px;
+      font-size:0.85rem;
+      cursor:pointer;
+      background:var(--accent);
+      color:#fff;
+      display:inline-flex;
+      align-items:center;
+      gap:4px;
+    }
+    #controls button.secondary{
+      background:#e5e7eb;
+      color:var(--ink);
+    }
+    #controls button.info{
+      background:#f97316;
+      color:#fff;
+    }
+    #controls label{
+      display:inline-flex;
+      align-items:center;
+      gap:4px;
+      white-space:nowrap;
+    }
+    input[type="range"]{
+      width:140px;
+    }
+    #vp{
+      width:100%;
+      max-width:960px;
+      overflow-x:auto;
+      overflow-y:hidden;
+      border-radius:10px;
+      border:1px solid #e2e8f0;
+      background:#0f172a08;
+    }
+    canvas{
+      display:block;
+      border-radius:10px;
+      background:#f8fafc;
+      touch-action:none;
+    }
+    #legend{
+      font-size:0.8rem;
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-items:center;
+      margin-top:2px;
+    }
+    .dot{
+      width:10px;height:10px;border-radius:999px;display:inline-block;
+    }
+    #explain{
+      font-size:0.8rem;
+      color:var(--muted);
+      line-height:1.4;
+      margin-top:2px;
+    }
+    #credit{
+      margin-top:4px;
+      font-size:0.8rem;
+      color:var(--muted);
+      text-align:right;
+    }
+    #credit a{
+      color:var(--accent);
+      text-decoration:none;
+    }
+    #credit a:hover{
+      text-decoration:underline;
+    }
+
+    /* ===== โมดัลคำอธิบาย ===== */
+    #explainOverlay{
+      position:fixed;
+      inset:0;
+      background:rgba(15,23,42,0.35);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      z-index:50;
+    }
+    #explainOverlay.hidden{
+      display:none;
+    }
+    #explainCard{
+      background:var(--panel);
+      border-radius:16px;
+      box-shadow:0 18px 45px rgba(15,23,42,0.25);
+      max-width:520px;
+      width:90%;
+      padding:14px 16px 12px;
+      border:2px solid #f97316;
+      position:relative;
+    }
+    #explainCardHeader{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:8px;
+      margin-bottom:4px;
+    }
+    #explainCardTitle{
+      font-size:0.95rem;
+      font-weight:600;
+      color:#c2410c;
+      display:flex;
+      align-items:center;
+      gap:6px;
+    }
+    #closeExplain{
+      border:none;
+      background:#fee2e2;
+      color:#b91c1c;
+      border-radius:999px;
+      padding:4px 10px;
+      font-size:0.8rem;
+      cursor:pointer;
+      white-space:nowrap;
+    }
+    #explainBody{
+      font-size:0.8rem;
+      color:var(--ink);
+      line-height:1.5;
+    }
+    #explainBody p{
+      margin:4px 0;
+    }
+    #explainBody ul{
+      margin:4px 0 4px 18px;
+      padding:0;
+    }
+    #explainBody li{
+      margin-bottom:2px;
+    }
+    #explainTag{
+      display:inline-block;
+      margin-top:6px;
+      font-size:0.75rem;
+      padding:3px 8px;
+      border-radius:999px;
+      background:#eff6ff;
+      color:#1d4ed8;
+    }
+
+    @media (max-width:480px){
+      #explainCard{
+        padding:12px 12px 10px;
+        border-radius:14px;
+      }
+      #explainCardTitle{
+        font-size:0.9rem;
+      }
+      #closeExplain{
+        font-size:0.75rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>การพาความร้อน</h1>
+  <p class="lead">
+    การพาความร้อน คือการถ่ายโอนความร้อน ที่เกิดจาก การเคลื่อนที่ของโมเลกุลตัวกลาง ซึ่งมีสถานะเป็นของเหลว หรือ แก๊ส เป็นตัวพาความร้อนจากจุดหนึ่งไปอีกจุดหนึ่ง
+  </p>
+
+  <div id="panel">
+    <div id="controls">
+      <button id="playBtn">▶ เล่น (จุดเทียน)</button>
+      <button id="resetBtn" class="secondary">⟲ รีเซ็ต</button>
+
+      <label>
+        <input type="checkbox" id="showMol" checked />
+        แสดงโมเลกุลอากาศ
+      </label>
+      <label>
+        <input type="checkbox" id="showFlow" checked />
+        แสดงทิศทางการไหลของอากาศ
+      </label>
+
+      <label>
+        ความแรงของเทียน
+        <input type="range" id="heatSlider" min="1" max="3" step="1" value="1" />
+      </label>
+
+      <button id="explainBtn" class="info">คำอธิบาย</button>
+    </div>
+
+    <div id="vp">
+      <canvas id="cv" width="900" height="500"></canvas>
+    </div>
+
+    <div id="legend">
+      <span><span class="dot" style="background:var(--cold)"></span> โมเลกุลอากาศเย็น (ฟ้า) ฟุ้งอยู่ในห้อง</span>
+      <span><span class="dot" style="background:var(--hot)"></span> โมเลกุลอากาศร้อน (ส้ม/แดง) ใกล้เทียน ลอยออกด้านบนเมื่อจุดเทียน</span>
+      <span>ลูกศรเส้นปะสีอ่อน: แนวลมเย็นไหลลงมุมซ้าย–ขวา และลมร้อนลอยขึ้นกลางจอ (เมื่อจุดเทียน)</span>
+    </div>
+
+    <div id="explain">
+      <strong>แนวคิด:</strong>
+      ก่อนจุดเทียน อากาศเย็นฟุ้งอยู่ทั่วไปในห้อง เมื่อจุดเทียนแล้ว บริเวณใกล้เปลวไฟร้อนขึ้น อากาศเบาและลอยขึ้น อากาศเย็นจากด้านข้างและด้านบนจึงไหลเข้ามาแทนที่
+    </div>
+
+    <div id="credit">
+      ศึกษาเพิ่มเติมได้ที่
+      <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener noreferrer">
+        เพจ คลายปมฟิสิกส์
+      </a>
+    </div>
+  </div>
+
+  <!-- โมดัลคำอธิบาย -->
+  <div id="explainOverlay" class="hidden">
+    <div id="explainCard">
+      <div id="explainCardHeader">
+        <div id="explainCardTitle">
+          🔥 การพาความร้อน & การเกิดลม
+        </div>
+        <button id="closeExplain">✕ ปิด</button>
+      </div>
+      <div id="explainBody">
+        <p><strong>การพาความร้อน (Convection)</strong></p>
+        <ul>
+          <li>เกิดจาก <strong>โมเลกุลของตัวกลางเคลื่อนที่ทั้งก้อน</strong> แล้วพาความร้อนไปด้วย เช่น อากาศ หรือน้ำ</li>
+          <li>บริเวณที่ร้อน โมเลกุลเคลื่อนที่เร็วขึ้น ห่างกันมากขึ้น ความหนาแน่นลดลง → เบา → ลอยขึ้น</li>
+          <li>บริเวณที่เย็นกว่า หนักกว่า จะไหลเข้ามาแทนที่ → เกิดการหมุนเวียนของตัวกลาง</li>
+        </ul>
+
+        <p><strong>ต่างจากการนำความร้อน (Conduction)</strong></p>
+        <ul>
+          <li>ความร้อนส่งผ่านจากโมเลกุลหนึ่งไปอีกโมเลกุลหนึ่งโดยการสั่น แต่ <strong>ตัวกลางโดยรวมไม่ไหล</strong></li>
+          <li>เหมือนความร้อนลามไปตามแท่งโลหะ โดยตัวโลหะไม่ได้ไหลไปไหนทั้งแท่ง</li>
+        </ul>
+
+        <p><strong>ความรู้เรื่องการพาความร้อนอธิบายการเกิด “ลม” ได้อย่างไร?</strong></p>
+        <ul>
+          <li>บริเวณที่ <strong>อุณหภูมิสูงกว่า</strong> อากาศจะเบาและลอยขึ้น ทำให้ความดันบริเวณนั้นลดลง</li>
+          <li>อากาศเย็นจากบริเวณที่ <strong>อุณหภูมิต่ำกว่า</strong> (ความดันสูงกว่า) จะไหลเข้าไปแทนที่</li>
+          <li>การไหลของอากาศจากบริเวณเย็นไปหาบริเวณร้อนนี่แหละ ที่เราเรียกว่า “ลม” 💨</li>
+        </ul>
+
+        <span id="explainTag">สรุปสั้น ๆ: ลม = อากาศไหลจากที่เย็น/ความดันสูง ไปที่ร้อน/ความดันต่ำ ด้วยหลักการพาความร้อน</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('cv');
+    const ctx = canvas.getContext('2d');
+
+    const playBtn = document.getElementById('playBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const showMolChk = document.getElementById('showMol');
+    const showFlowChk = document.getElementById('showFlow');
+    const heatSlider = document.getElementById('heatSlider');
+
+    const explainBtn = document.getElementById('explainBtn');
+    const explainOverlay = document.getElementById('explainOverlay');
+    const closeExplain = document.getElementById('closeExplain');
+
+    let lastTime = 0;
+    let lit = false;  // ยังไม่จุดเทียนตอนเริ่ม
+
+    const airBox = { x:80, y:60, w:740, h:360 };
+
+    const candle = {
+      x: airBox.x + airBox.w/2,
+      baseY: airBox.y + airBox.h - 6,
+      bodyH: 100,
+      bodyW: 40,
+      flameH: 60
+    };
+
+    const NUM_MOL = 230;
+    const molecules = [];
+    const ambientTemp = 0;
+    const MAX_TEMP = 3;
+
+    function rand(a,b){ return a + Math.random()*(b-a); }
+
+    function initMolecules(){
+      molecules.length = 0;
+      for(let i=0;i<NUM_MOL;i++){
+        molecules.push({
+          x: rand(airBox.x+8, airBox.x+airBox.w-8),
+          y: rand(airBox.y+8, airBox.y+airBox.h-8),
+          vx: rand(-20,20),
+          vy: rand(-20,20),
+          temp: ambientTemp + Math.random()*0.2
+        });
+      }
+    }
+
+    function getHeatFactor(){ return parseInt(heatSlider.value); }
+
+    function colorForTemp(T){
+      const t = Math.max(0,Math.min(1,T/MAX_TEMP));
+      if(t<0.33) return "#3b82f6";     // เย็น → ฟ้า
+      else if(t<0.66) return "#fb923c"; // อุ่น → ส้ม
+      return "#ef4444";                 // ร้อน → แดง
+    }
+
+    function respawnMol(m){
+      const {x,y,w,h}=airBox;
+      const r=Math.random();
+      m.temp=ambientTemp;
+
+      if(r<0.4){
+        m.x=x-8; m.y=rand(y+10,y+h-10);
+      }else if(r<0.8){
+        m.x=x+w+8; m.y=rand(y+10,y+h-10);
+      }else{
+        m.x=rand(x+40,x+w-40); m.y=y-8;
+      }
+
+      m.vx=rand(-20,20);
+      m.vy=rand(-20,20);
+    }
+
+    function getFlowVector(x,y){
+      const {x:bx,y:by,w,h}=airBox;
+      const cx=candle.x;
+      const relX=(x-cx)/(w*0.5);
+      const relY=(y-by)/h;
+      const central=Math.abs(relX)<0.18;
+      let vx=0,vy=0;
+
+      if(relY>0.7){
+        vx=-80*relX; vy=-15*(1-Math.abs(relX));
+      }else if(relY>0.3 && central){
+        vx=-25*relX; vy=-140;
+      }else if(relY<=0.3 && central){
+        vx=60*(relX===0 ? (Math.random()<0.5?-1:1) : Math.sign(relX));
+        vy=-10;
+      }else if(relY<=0.3){
+        const side=(relX<0)?-1:1;
+        vx=10*side; vy=80;
+      }else{
+        vx=-60*relX;
+        vy=-20*(1-Math.abs(relX))+10*Math.abs(relX);
+      }
+      return {vx,vy};
+    }
+
+    function updateMolecules(dt){
+      const {x:bx,y:by,w,h}=airBox;
+      const floorY = by + h - 4;
+
+      // กรณียังไม่จุดเทียน: โมเลกุลสีฟ้าฟุ้งไปมา
+      if(!lit){
+        for(const m of molecules){
+          // ทำให้อุณหภูมิค่อย ๆ วิ่งเข้าใกล้ค่าต่ำ (ฟ้า)
+          m.temp += (ambientTemp - m.temp)*0.8*dt;
+
+          // random walk เล็กน้อย
+          m.vx += rand(-15,15)*dt;
+          m.vy += rand(-15,15)*dt;
+
+          m.x += m.vx*dt;
+          m.y += m.vy*dt;
+
+          // กระเด้งเบา ๆ จากขอบกล่องอากาศ
+          if(m.x < bx+6){ m.x = bx+6; m.vx = Math.abs(m.vx); }
+          if(m.x > bx+w-6){ m.x = bx+w-6; m.vx = -Math.abs(m.vx); }
+          if(m.y < by+6){ m.y = by+6; m.vy = Math.abs(m.vy); }
+          if(m.y > floorY-2){ m.y = floorY-2; m.vy = -Math.abs(m.vy); }
+
+          // ถ้าเผลอหลุดขอบไปไกลมาก ให้เกิดใหม่
+          if(m.x<bx-60 || m.x>bx+w+60 || m.y<by-60 || m.y>by+h+60){
+            respawnMol(m);
+          }
+        }
+        return;
+      }
+
+      // กรณีจุดเทียนแล้ว: ใช้กฎการพาความร้อนเดิม
+      const hf=getHeatFactor();
+      const heatRate=2.2*hf;
+      const buoy=40;
+      const cool=0.6;
+
+      const bodyTop = candle.baseY - candle.bodyH;
+      const heatCx = candle.x;
+      const heatCy = bodyTop - 50;   // ศูนย์กลางรัศมี ขยับขึ้น 50 px
+
+      const baseR=110;
+      const radius = baseR + hf*45;
+      const rSq = radius*radius;
+
+      for(const m of molecules){
+        const dx=m.x-heatCx;
+        const dy=m.y-heatCy;
+        const d2=dx*dx+dy*dy;
+        if(d2<rSq){
+          const closeness=1-d2/rSq;
+          m.temp+=heatRate*(0.5+closeness)*dt;
+        }
+
+        m.temp+=(ambientTemp-m.temp)*cool*dt;
+        if(m.temp<0) m.temp=0;
+        if(m.temp>MAX_TEMP) m.temp=MAX_TEMP;
+
+        m.vy -= buoy*(m.temp/MAX_TEMP)*dt;
+
+        const fl=getFlowVector(m.x,m.y);
+        m.vx+=fl.vx*0.18*dt;
+        m.vy+=fl.vy*0.18*dt;
+
+        m.x+=m.vx*dt;
+        m.y+=m.vy*dt;
+
+        if(m.y>floorY){ m.y=floorY; if(m.vy>0)m.vy=0; }
+
+        if(m.x<bx-40 || m.x>bx+w+40 || m.y<by-40 || m.y>by+h+40){
+          respawnMol(m);
+        }
+      }
+    }
+
+    function drawBackground(){
+      ctx.fillStyle="#f1f5f9";
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+
+      const {x,y,w,h}=airBox;
+      ctx.fillStyle="rgba(224,242,254,0.8)";
+      ctx.fillRect(x,y,w,h);
+
+      ctx.fillStyle="#cbd5e1";
+      ctx.fillRect(x-40,y+h+10,w+80,18);
+
+      ctx.fillStyle="#0f172a";
+      ctx.font="14px system-ui";
+      ctx.fillText("ด้านบนและด้านข้างเปิดสู่อากาศภายนอก", x, y-18);
+    }
+
+    function drawHeatAura(){
+      if(!lit) return; // ยังไม่จุดเทียน ไม่ต้องมีรัศมี
+      const hf=getHeatFactor();
+      const bodyTop = candle.baseY - candle.bodyH;
+      const cx = candle.x;
+      const cy = bodyTop - 50;  // ศูนย์กลางรัศมี ขยับขึ้น 50 px
+
+      const baseR=110;
+      const auraR = baseR + 45*(hf-1);
+
+      const t = performance.now()/1000;
+      const flicker = 1 + 0.06*Math.sin(t*6);
+      const r = auraR * flicker;
+
+      ctx.save();
+
+      const g = ctx.createRadialGradient(cx,cy,10, cx,cy,r);
+      g.addColorStop(0.0, "rgba(251,191,36,0.95)");
+      g.addColorStop(0.35,"rgba(249,115,22,0.80)");
+      g.addColorStop(0.70,"rgba(248,113,113,0.45)");
+      g.addColorStop(1.0, "rgba(248,113,113,0.0)");
+
+      ctx.fillStyle=g;
+      ctx.beginPath();
+      ctx.arc(cx,cy,r,0,Math.PI*2);
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    function drawCandle(){
+      const c=candle;
+      const bodyTop=c.baseY-c.bodyH;
+
+      // ตัวเทียน
+      ctx.fillStyle="#fde68a";
+      ctx.strokeStyle="#b45309";
+      ctx.lineWidth=2;
+      ctx.beginPath();
+      ctx.roundRect(c.x-c.bodyW/2,bodyTop,c.bodyW,c.bodyH,10);
+      ctx.fill();
+      ctx.stroke();
+
+      // ไส้เทียน
+      ctx.strokeStyle="#111";
+      ctx.beginPath();
+      ctx.moveTo(c.x,bodyTop);
+      ctx.lineTo(c.x,bodyTop-10);
+      ctx.stroke();
+
+      // ถ้ายังไม่จุดเทียน ไม่ต้องวาดเปลวไฟ
+      if(!lit) return;
+
+      // เปลวไฟ
+      const t=performance.now()/1000;
+      const wob=Math.sin(t*7)*5;
+      const midY=(bodyTop+(bodyTop-c.flameH))/2;
+
+      ctx.beginPath();
+      ctx.moveTo(c.x+wob, bodyTop-c.flameH);
+      ctx.quadraticCurveTo(c.x+18, midY, c.x+wob, bodyTop-6);
+      ctx.quadraticCurveTo(c.x-18, midY, c.x+wob, bodyTop-c.flameH);
+
+      const grad=ctx.createRadialGradient(c.x,midY,4,c.x,midY,26);
+      grad.addColorStop(0,'#fef9c3');
+      grad.addColorStop(0.3,'#fde047');
+      grad.addColorStop(0.6,'#fb923c');
+      grad.addColorStop(1,'rgba(248,113,113,0.2)');
+      ctx.fillStyle=grad;
+      ctx.fill();
+    }
+
+    const PI=Math.PI;
+    function drawDashedArrow(x1,y1,x2,y2){
+      ctx.beginPath();
+      ctx.moveTo(x1,y1);
+      ctx.lineTo(x2,y2);
+      ctx.stroke();
+
+      const ang=Math.atan2(y2-y1,x2-x1);
+      const L=8;
+      ctx.beginPath();
+      ctx.moveTo(x2,y2);
+      ctx.lineTo(x2-L*Math.cos(ang-PI/6), y2-L*Math.sin(ang-PI/6));
+      ctx.lineTo(x2-L*Math.cos(ang+PI/6), y2-L*Math.sin(ang+PI/6));
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    function drawFlowArrows(){
+      if(!showFlowChk.checked || !lit) return; // ยังไม่จุดเทียนไม่ต้องแสดงลูกศร
+      const {x,y,w,h}=airBox;
+      const hf=getHeatFactor();
+      const t=performance.now()/1000;
+      const amp=8+hf*3;
+
+      ctx.save();
+      ctx.setLineDash([8,6]);
+      ctx.lineWidth=2;
+
+      const warm="rgba(249,115,22,0.4)";
+      const cool="rgba(59,130,246,0.4)";
+
+      const cx=candle.x;
+      const bottom=y+h;
+      const top=y;
+
+      ctx.strokeStyle=warm; ctx.fillStyle=warm;
+      for(let i=0;i<4;i++){
+        const baseY=bottom-40-i*55;
+        const offset=Math.sin(t*2+i)*amp;
+        drawDashedArrow(cx, baseY+offset, cx, baseY+offset-40);
+      }
+
+      ctx.strokeStyle=cool; ctx.fillStyle=cool;
+      const L=x+w*0.05, R=x+w*0.95;
+      for(let i=0;i<3;i++){
+        const baseY=top+20+i*40;
+        const offset=Math.cos(t*1.4+i)*amp;
+        drawDashedArrow(L,baseY+offset, L+10, baseY+offset+28);
+        drawDashedArrow(R,baseY+offset, R-10, baseY+offset+28);
+      }
+
+      ctx.restore();
+    }
+
+    function drawMol(){
+      if(!showMolChk.checked) return;
+      for(const m of molecules){
+        ctx.fillStyle=colorForTemp(m.temp);
+        ctx.beginPath();
+        ctx.arc(m.x,m.y,4,0,Math.PI*2);
+        ctx.fill();
+      }
+    }
+
+    function draw(){
+      drawBackground();
+      drawHeatAura();
+      drawCandle();
+      drawFlowArrows();
+      drawMol();
+    }
+
+    function update(dt){
+      updateMolecules(dt);
+    }
+
+    function loop(t){
+      if(!lastTime) lastTime=t;
+      const dt=(t-lastTime)/1000;
+      lastTime=t;
+      update(dt);  // อัปเดตตลอดเวลา ทั้งก่อนและหลังจุดเทียน
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    playBtn.onclick=()=>{
+      lit = !lit;
+      playBtn.textContent = lit ? "⏸ หยุด (ดับเทียน)" : "▶ เล่น (จุดเทียน)";
+    };
+
+    resetBtn.onclick=()=>{
+      initMolecules();
+      lit = false;
+      playBtn.textContent = "▶ เล่น (จุดเทียน)";
+    };
+
+    // โมดัลคำอธิบาย
+    explainBtn.onclick = ()=>{
+      explainOverlay.classList.remove('hidden');
+    };
+    closeExplain.onclick = ()=>{
+      explainOverlay.classList.add('hidden');
+    };
+    explainOverlay.addEventListener('click', (e)=>{
+      if(e.target === explainOverlay){
+        explainOverlay.classList.add('hidden');
+      }
+    });
+
+    initMolecules();
+    draw();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

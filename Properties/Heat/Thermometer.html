@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>แล็บวัดอุณหภูมิน้ำ — °C · K · °F</title>
+<style>
+  :root{
+    --ink:#0f172a; --muted:#475569; --line:#e5e7eb; --bg:#ffffff;
+    --accent:#2563eb; --good:#16a34a; --warn:#dc2626;
+    --tube:#cbd5e1; --mercury:#ef4444; --glass:#ffffffcc;
+    --waterCold:#b3e5ff; --waterHot:#8cc6ff;
+    --pot:#374151; --flame1:#ff6a00; --flame2:#ffb300; --flame3:#ffd54a;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  body{margin:0; font-family:system-ui, Inter, 'Noto Sans Thai', ui-sans-serif; color:var(--ink); background:var(--bg)}
+  header{padding:12px 16px; border-bottom:1px solid var(--line); display:flex; flex-wrap:wrap; align-items:center; gap:10px}
+  h1{font-size:18px; margin:0; font-weight:700}
+  .brand{margin-left:auto; font-size:14px}
+  .brand a{color:var(--accent); text-decoration:none; font-weight:600}
+  main{display:grid; grid-template-columns: 360px 1fr; gap:16px; padding:16px; align-items:start}
+  @media (max-width: 980px){ main{grid-template-columns:1fr;}}
+
+  /* Left: Scene */
+  .scene{border:1px solid var(--line); border-radius:12px; padding:16px; background:#f8fafc}
+  .rig{position:relative; height:420px; border:1px dashed #e2e8f0; border-radius:10px; background:linear-gradient(#eef6ff,#f8fbff)}
+  .pot{position:absolute; left:50%; transform:translateX(-50%); bottom:110px; width:280px; height:150px; border-radius:14px 14px 10px 10px; background:linear-gradient(180deg, var(--pot) 0%, #2a313b 100%); box-shadow:0 8px 18px rgba(0,0,0,.25) inset}
+  .water{position:absolute; left:10px; right:10px; bottom:28px; height:95px; border-radius:10px; overflow:hidden; background:var(--waterCold); box-shadow:inset 0 6px 10px rgba(255,255,255,.7), inset 0 -6px 12px rgba(0,0,0,.12)}
+  .water .wave{position:absolute; left:-50%; width:200%; height:200%; opacity:.22; background:radial-gradient( circle at 50% 40%, #fff 0 10%, transparent 12%), radial-gradient(circle at 35% 55%, #fff 0 9%, transparent 11%), radial-gradient(circle at 60% 65%, #fff 0 8%, transparent 10%)}
+  .water .w1{animation: drift 9s linear infinite}
+  .water .w2{animation: drift 13s linear infinite reverse; opacity:.12}
+  @keyframes drift{to{transform:translateX(25%)}}
+  .steam{position:absolute; left:50%; transform:translateX(-50%); bottom:140px; width:220px; height:120px; pointer-events:none}
+  .steam span{position:absolute; bottom:0; left:50%; width:10px; height:10px; border-radius:50%; background:linear-gradient(#ffffff, #ffffff00); filter:blur(1.2px); opacity:0; animation:steam 3s linear infinite}
+  .steam span:nth-child(2){animation-delay:.6s}
+  .steam span:nth-child(3){animation-delay:1.2s}
+  @keyframes steam{0%{transform:translate(-50%,0) scale(.8); opacity:0} 10%{opacity:.5} 60%{opacity:.1} 100%{transform:translate(-50%,-120px) scale(1.6); opacity:0}}
+
+  .burner{position:absolute; left:50%; transform:translateX(-50%); bottom:40px; width:280px; height:50px; border-radius:12px; background:#1f2937; box-shadow:0 6px 12px rgba(0,0,0,.25)}
+  .flame{position:absolute; left:50%; transform:translateX(-50%); bottom:70px; width:260px; height:60px; display:flex; justify-content:space-between; pointer-events:none}
+  .flame .tongue{width:18px; height:100%; background:radial-gradient(ellipse at 50% 80%, var(--flame3) 0%, var(--flame2) 35%, var(--flame1) 70%, transparent 72%); mix-blend-mode:screen; filter:blur(.6px); opacity:.9; transform-origin:50% 100%; animation:flick .9s ease-in-out infinite}
+  .flame .tongue:nth-child(odd){height:70%; animation-duration:.72s}
+  .flame .tongue:nth-child(3n){height:90%; animation-duration:1.05s}
+  @keyframes flick{0%{transform:scaleY(.9) rotate(-3deg)} 50%{transform:scaleY(1.1) rotate(3deg)} 100%{transform:scaleY(.9) rotate(-2deg)}}
+
+  .stand{position:absolute; left:50%; transform:translateX(-50%); bottom:16px; width:320px; height:16px; border-radius:10px; background:#0f172a}
+
+  .controls{margin-top:12px; display:grid; gap:8px}
+  .slider{display:grid; grid-template-columns:auto 1fr auto; gap:10px; align-items:center}
+  input[type=range]{width:100%}
+
+  /* Right: Thermometers */
+  .panel{border:1px solid var(--line); border-radius:12px; padding:16px; background:#fff}
+  .thermos{display:grid; grid-template-columns:repeat(3, 1fr); gap:14px; align-items:end}
+  .thermo{display:grid; justify-items:center; gap:8px}
+  .tube{position:relative; width:48px; height:260px; background:linear-gradient(180deg,#ffffff 0,#f8fafc 100%); border:2px solid var(--tube); border-radius:28px; box-shadow: inset 0 8px 10px rgba(0,0,0,.06)}
+  .bulb{position:absolute; left:50%; transform:translateX(-50%); bottom:-22px; width:66px; height:66px; background:radial-gradient(circle at 50% 35%, #fff 0 18%, #ffe4e4 22%, #ffaaaa 35%, #ff8888 48%, #ff6b6b 58%, #ff4d4d 70%, #ff2b2b 86%, #ff1b1b 100%); border:2px solid var(--tube); border-radius:50%; box-shadow: inset 0 8px 18px rgba(0,0,0,.15)}
+  .mercury{position:absolute; left:8px; right:8px; bottom:10px; height:0px; background:linear-gradient(180deg, #ff7676 0%, #eb1f1f 90%); border-radius:16px; box-shadow: inset 0 6px 10px rgba(0,0,0,.18)}
+  .mark{position:absolute; left:-4px; right:-4px; height:2px; background:var(--accent)}
+  .mark-label{position:absolute; right:50%; transform:translateX(100px); font-size:11px; color:var(--accent); background:#e8f0ff; padding:2px 6px; border-radius:999px}
+  .unit{font-size:14px; font-weight:700; margin-top:30px}
+  .value{font-size:16px; font-weight:800}
+
+  .eq{margin-top:14px; padding:12px; border:1px dashed #cbd5e1; border-radius:10px; background:#f8fafc}
+  .eq code{background:#e2e8f0; padding:2px 6px; border-radius:6px}
+
+  /* Relationship box */
+  .relation{margin-top:12px; padding:16px; border:1px solid var(--line); border-radius:12px; background:#fcfcff}
+  .relation h3{margin:0 0 10px 0; font-size:16px}
+  .rel-row{display:flex; flex-wrap:wrap; gap:10px; align-items:center; font-size:18px}
+  .frac{display:inline-grid; grid-template-rows:auto auto; line-height:1}
+  .frac .top{border-bottom:1.8px solid #0f172a; padding:0 4px; text-align:center}
+  .frac .bottom{padding:2px 4px; text-align:center}
+  .eqsign{padding:0 6px}
+
+  .footer{margin-top:12px; font-size:13px; color:var(--muted)}
+  .footer a{color:var(--accent); font-weight:700; text-decoration:none}
+</style>
+</head>
+<body>
+  <header>
+    <h1>การวัดอุณหภูมิน้ำ — °C · K · °F</h1>
+    <div class="brand">ศึกษาเพิ่มเติมที่เพจ <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">คลายปมฟิสิกส์</a></div>
+  </header>
+
+  <main>
+    <!-- Left: Scene with pot, water and gas flame -->
+    <section class="scene">
+      <div class="rig">
+        <div class="pot">
+          <div class="water" id="water">
+            <div class="wave w1"></div>
+            <div class="wave w2"></div>
+          </div>
+        </div>
+        <div class="flame" aria-hidden="true" id="flame"></div>
+        <div class="burner"></div>
+        <div class="stand"></div>
+        <div class="steam" id="steam">
+          <span></span><span></span><span></span>
+        </div>
+      </div>
+      <div class="controls">
+        <div class="slider">
+          <label for="celsius"><strong>ปรับอุณหภูมิ (°C)</strong></label>
+          <input type="range" id="celsius" min="-50" max="150" step="0.1" value="25">
+          <output id="cOut">25.0 °C</output>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right: Thermometers and equations -->
+    <section class="panel">
+      <div class="thermos">
+        <!-- Celsius -->
+        <div class="thermo" data-scale="C">
+          <div class="tube">
+            <div class="bulb"></div>
+            <div class="mercury"></div>
+            <div class="mark mark-freeze"></div>
+            <div class="mark-label ml-freeze">จุดเยือกแข็ง</div>
+            <div class="mark mark-boil"></div>
+            <div class="mark-label ml-boil">จุดเดือด</div>
+          </div>
+          <div class="unit">°C (เซลเซียส)</div>
+          <div class="value" id="vC">25.0</div>
+        </div>
+        <!-- Kelvin -->
+        <div class="thermo" data-scale="K">
+          <div class="tube">
+            <div class="bulb"></div>
+            <div class="mercury"></div>
+            <div class="mark mark-freeze"></div>
+            <div class="mark-label ml-freeze">จุดเยือกแข็ง</div>
+            <div class="mark mark-boil"></div>
+            <div class="mark-label ml-boil">จุดเดือด</div>
+          </div>
+          <div class="unit">K (เคลวิน)</div>
+          <div class="value" id="vK">298.15</div>
+        </div>
+        <!-- Fahrenheit -->
+        <div class="thermo" data-scale="F">
+          <div class="tube">
+            <div class="bulb"></div>
+            <div class="mercury"></div>
+            <div class="mark mark-freeze"></div>
+            <div class="mark-label ml-freeze">จุดเยือกแข็ง</div>
+            <div class="mark mark-boil"></div>
+            <div class="mark-label ml-boil">จุดเดือด</div>
+          </div>
+          <div class="unit">°F (ฟาเรนไฮต์)</div>
+          <div class="value" id="vF">77.0</div>
+        </div>
+      </div>
+
+      <div class="eq">
+        <strong>ค่าที่อ่านได้ (อัปเดตตามสไลเดอร์ °C)</strong>
+        <div id="reads" style="margin-top:8px; font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, 'Noto Sans Mono', monospace; font-size:13px"></div>
+      </div>
+
+      <div class="relation">
+        <h3>ความสัมพันธ์ระหว่างค่าที่อ่านได้จากเทอร์โมมิเตอร์แต่ละชนิด</h3>
+        <div class="rel-row">
+          <div class="frac"><span class="top">ค่าที่อ่านได้ − จุดเยือกแข็ง</span><span class="bottom">จุดเดือด − จุดเยือกแข็ง</span></div>
+          <span class="eqsign">=</span>
+          <div class="frac"><span class="top">°C − 0</span><span class="bottom">100 − 0</span></div>
+          <span class="eqsign">=</span>
+          <div class="frac"><span class="top">K − 273.15</span><span class="bottom">373.15 − 273.15</span></div>
+          <span class="eqsign">=</span>
+          <div class="frac"><span class="top">°F − 32</span><span class="bottom">212 − 32</span></div>
+        </div>
+      </div>
+
+      <div class="footer">เส้น “จุดเยือกแข็ง/เดือด” ของทุกหลอดอยู่ที่ <em>ระดับความสูงเดียวกัน</em> (อ้างอิงจาก °C) ทำให้เห็นว่า “ระดับปรอท” เท่ากัน แต่ค่าที่อ่านต่างกัน</div>
+    </section>
+  </main>
+
+<script>
+  const slider = document.getElementById('celsius');
+  const cOut = document.getElementById('cOut');
+  const water = document.getElementById('water');
+  const steam = document.getElementById('steam');
+  const flame = document.getElementById('flame');
+
+  // Build flames
+  for(let i=0;i<12;i++){
+    const t=document.createElement('div'); t.className='tongue'; flame.appendChild(t);
+  }
+
+  function clamp(v,min,max){return Math.max(min, Math.min(max,v));}
+
+  // Height mapping: map °C in [-50,150] to px in [0, 220]
+  const PIX_MAX=220, C_MIN=-50, C_MAX=150;
+  function cToHeight(c){
+    const p = (c - C_MIN) / (C_MAX - C_MIN);
+    return clamp(p,0,1) * PIX_MAX;
+  }
+
+  // Conversions
+  const cToK = c => c + 273.15;
+  const cToF = c => (9/5)*c + 32;
+
+  // Update thermometers
+  function update(c){
+    const k = cToK(c), f = cToF(c);
+
+    // Output bar
+    cOut.textContent = c.toFixed(1) + ' °C';
+
+    // Visual: water color + steam intensity
+    const t = clamp((c+50)/200, 0, 1); // 0 at -50°C, 1 at 150°C
+    const cold = [179,229,255]; // #b3e5ff
+    const hot = [140,198,255];  // #8cc6ff
+    const mix = cold.map((v,i)=>Math.round(v+(hot[i]-v)*t));
+    water.style.background = `rgb(${mix[0]},${mix[1]},${mix[2]})`;
+    steam.style.opacity = c >= 80 ? (0.15 + 0.7*Math.min((c-80)/70,1)) : 0;
+
+    // Mercury heights (same height across all scales)
+    const h = cToHeight(c);
+    document.querySelectorAll('.thermo .mercury').forEach(m=>{ m.style.height = h + 'px'; });
+
+    // Values
+    document.getElementById('vC').textContent = c.toFixed(1);
+    document.getElementById('vK').textContent = k.toFixed(2);
+    document.getElementById('vF').textContent = f.toFixed(1);
+
+    // Readout block
+    const reads = `°C = ${c.toFixed(2)}\nK  = ${(k).toFixed(2)}\n°F = ${(f).toFixed(2)}`;
+    document.getElementById('reads').textContent = reads;
+  }
+
+  // Place freezing/boiling markers per thermometer (same heights, labels by scale)
+  function placeMarkers(){
+    const hFreeze = cToHeight(0);
+    const hBoil = cToHeight(100);
+
+    document.querySelectorAll('.thermo').forEach(th=>{
+      const mkF = th.querySelector('.mark-freeze');
+      const mlF = th.querySelector('.ml-freeze');
+      const mkB = th.querySelector('.mark-boil');
+      const mlB = th.querySelector('.ml-boil');
+
+      mkF.style.bottom = (10 + hFreeze) + 'px';
+      mkB.style.bottom = (10 + hBoil) + 'px';
+
+      const scale = th.dataset.scale;
+      function label(valC){
+        switch(scale){
+          case 'C': return `${valC}\u00B0C`;
+          case 'K': return `${(valC+273.15).toFixed(2)} K`;
+          case 'F': return `${((9/5)*valC + 32).toFixed(1)}\u00B0F`;
+        }
+      }
+      mlF.textContent = `จุดเยือกแข็ง (${label(0)})`;
+      mlB.textContent = `จุดเดือด (${label(100)})`;
+
+      mlF.style.bottom = (10 + hFreeze - 10) + 'px';
+      mlB.style.bottom = (10 + hBoil - 10) + 'px';
+    });
+  }
+
+  slider.addEventListener('input', e=> update(parseFloat(e.target.value)) );
+
+  // Build flames once
+  placeMarkers();
+  update(parseFloat(slider.value));
+</script>
+</body>
+</html>

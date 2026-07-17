@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+
+<html lang="th">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>Mini Lab : แก๊สอุดมคติ — งานของแก๊สที่ความดันคงที่ (P คงที่)</title>
+<style>
+  :root{
+    --bg:#ffffff; --panel:#f8fafc; --ink:#0f172a; --muted:#475569; --line:#e2e8f0;
+    --accent:#22d3ee; --cyl:#334155; --piston:#64748b; --gas:#2563eb;
+    --thermoTrack:#f1f5f9; --ok:#16a34a; --warn:#f59e0b; --danger:#ef4444; --sky:#93c5fd; --canvas:#ffffff; --arrow:#2563eb;
+    --dash:#94a3b8;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{margin:0;font-family:system-ui,Segoe UI,Inter,'Noto Sans Thai',sans-serif;background:var(--bg);color:var(--ink)}
+  header{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:#ffffff}
+  header h1{margin:0;font-size:18px;color:#1d4ed8;font-weight:800}
+  .badges{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  .badge{border:1px solid var(--line);padding:6px 10px;border-radius:999px;font-size:12px;color:#0f172a;background:#ffffff;text-decoration:none}
+  .badge.linkBadge{background:#1d4ed8;color:#ffffff;border-color:#1d4ed8}
+  button{background:var(--accent);color:#001018;border:none;border-radius:10px;padding:8px 12px;font-weight:600;cursor:pointer}
+  #infoBtn{background:#fed7aa;color:#7c2d12}
+  #quizBtn{background:#dcfce7;color:#166534}
+  #resetBtn{background:#e5e7eb;color:#334155;border:1px solid #cbd5e1}
+  button.secondary{background:transparent;color:#0f172a;border:1px solid var(--line)}
+  .btnSky{background:var(--sky);color:#001018;border:none}
+
+  .wrap{display:grid;grid-template-columns:1fr;gap:16px;align-items:stretch;padding:16px;max-width:1200px;margin:0 auto}
+  .panel{background:#ffffff;border:1px solid var(--line);border-radius:12px;padding:12px}
+
+  .sim{position:relative;min-height:560px}
+  canvas.simCanvas{display:block;width:100%;height:auto;aspect-ratio:800/560;max-height:560px;background:var(--canvas);border:1px solid var(--line);border-radius:10px}
+  canvas.pvCanvas{display:block;width:100%;height:320px;background:var(--canvas);border:1px solid var(--line);border-radius:10px;margin-top:5px}
+
+  /* Tools */
+  .tool{position:absolute;width:70px;height:70px;border:1px solid var(--line);border-radius:10px;background:#eef2ff;display:flex;align-items:center;justify-content:center;flex-direction:column;user-select:none;touch-action:none;cursor:pointer;z-index:5}
+  .tool .label{font-size:12px;color:#0f172a}
+  .lampIcon{width:24px;height:36px;background:#fde68a;border:1px solid #f59e0b;border-radius:6px 6px 4px 4px;position:relative;margin-bottom:4px}
+  .lampIcon:after{content:"";position:absolute;left:50%;top:-12px;transform:translateX(-50%);width:10px;height:18px;border-radius:50% 50% 50% 50%/60% 60% 40% 40%;background:radial-gradient(ellipse at 50% 70%, #fff 0%, #fde68a 35%, #f59e0b 60%, #ef4444 100%)}
+  .bathIcon{width:50px;height:30px;border:1px solid #60a5fa;border-radius:6px;background:linear-gradient(180deg,#1d4ed8aa,#60a5fa55);margin-bottom:4px}
+
+  .statusbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:8px}
+  .pill{background:#ffffff;border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-size:12px}
+  .mono{font-variant-numeric:tabular-nums; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace}
+  .note{font-size:14px;margin-top:6px}
+
+  /* Dialogs */
+  dialog{background:#ffffff;color:#0f172a;border:1px solid #e2e8f0;border-radius:12px;padding:12px;width:min(92vw,880px);max-width:880px;max-height:calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px);overflow:auto}
+  dialog::backdrop{background:rgba(0,0,0,.5)}
+  .dialogHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+  .dialogHead h2{margin:0;font-size:18px;color:#0f172a}
+  .callout{background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;padding:10px}
+  .highlight{background:linear-gradient(135deg,#e6fffa,#e0f2fe);border:2px solid #bae6fd;border-radius:12px;padding:12px;color:#0f172a;box-shadow:0 4px 12px rgba(14,165,233,.15);margin-bottom:12px;overflow:auto}
+  .highlight b{color:#0b1020}
+  .tbl{width:100%;border-collapse:collapse;font-size:14px}
+  .tbl th,.tbl td{border:1px solid #e2e8f0;padding:6px 8px;text-align:left;color:#0f172a}
+  .tbl th{background:#f1f5f9}
+  .quiz .q{margin:10px 0;padding:10px;border:1px solid #c7d2fe;border-radius:8px;background:#eef2ff;color:#111827}
+  .quiz .q h4{margin:0 0 6px 0;font-size:14px}
+  .quiz .opts label{display:block;margin:4px 0}
+  .score{font-weight:700;color:var(--ok)}
+  .explain{font-size:13px;color:#334155;margin-top:6px}
+
+  /* Force checkbox */
+  .forceBox{position:absolute;left:16px;top:16px;background:#ffffff;border:1px solid var(--line);border-radius:10px;padding:8px 10px;display:flex;gap:10px;align-items:center}
+
+  @media (max-width: 768px){
+    header{padding-top:calc(12px + env(safe-area-inset-top));}
+    header h1{font-size:16px;line-height:1.45}
+    .wrap{padding:12px}
+    .sim{min-height:auto}
+    canvas.simCanvas{max-height:none}
+    canvas.pvCanvas{height:260px}
+    .statusbar{gap:8px}
+    .pill{font-size:11px;padding:6px 8px}
+    .forceBox{position:static;margin-bottom:10px;display:flex;flex-wrap:wrap}
+    #infoDialog .highlight{font-size:14px;line-height:1.6;padding:10px}
+    #infoDialog .highlight div[style*="font-size:16px"]{font-size:14px !important}
+    dialog{padding:10px;padding-top:calc(10px + env(safe-area-inset-top));padding-bottom:calc(14px + env(safe-area-inset-bottom))}
+    .dialogHead{position:sticky;top:0;background:#fff;padding-bottom:8px;z-index:2}
+  }
+
+</style>
+<!-- MathJax -->
+<script>
+  window.MathJax = { tex: { inlineMath: [["\\(","\\)"],["$","$"]] }, svg: {fontCache: 'global'} };
+</script>
+<script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<style>
+@media (max-width:768px){
+  .lamp-button, .water-button, .btn-lamp, .btn-water{
+    transform: scale(0.8) translateY(30px);
+  }
+}
+</style><style>
+@media (max-width: 768px){
+  .formula-mobile{display:block;margin-top:6px;}
+}
+</style>
+<style id="mobile-tool-fix-v7">
+@media (max-width: 768px){
+  #lampTool, #bathTool{
+    transform: translate(-5px, 30px) scale(0.8);
+    transform-origin: top right;
+  }
+}
+</style>
+
+</head>
+<body>
+<header>
+<h1>Mini Lab : แก๊สอุดมคติ — งานของแก๊สที่ความดันคงที่ (P คงที่)</h1>
+<div class="badges">
+<button id="infoBtn">สูตรสำคัญ</button>
+<button id="quizBtn">แบบฝึกหัด</button>
+<button class="secondary" id="resetBtn">รีเซ็ต</button>
+</div></header>
+<div class="wrap">
+<section class="panel sim">
+<div class="forceBox"><label><input id="showForce" type="checkbox"/> <span>แสดงแรงที่แก๊สทำกับลูกสูบ </span><span class="mono formula-mobile">(\(F_{\text{gas}}=PA\))</span></label></div>
+<canvas class="simCanvas" height="560" id="sim" width="800"></canvas>
+<div class="tool" id="lampTool" style="right:16px; top:70px;">
+<div class="lampIcon"></div>
+<div class="label">ตะเกียง</div>
+</div>
+<div class="tool" id="bathTool" style="right:16px; top:160px;">
+<div class="bathIcon"></div>
+<div class="label">อ่างน้ำ</div>
+</div>
+<canvas class="pvCanvas" height="320" id="pvInline" width="1000"></canvas>
+<div class="statusbar">
+<div class="pill mono">n = <span id="nRead">2.00</span> mol (คงที่)</div>
+<div class="pill mono">P = <span id="pRead">101325</span> Pa (คงที่)</div>
+<div class="pill mono">R = <span id="rRead">8.31</span> J·mol⁻¹·K⁻¹</div>
+<div class="pill mono">T = <span id="tRead">—</span> K</div>
+<div class="pill mono">V = <span id="vRead">—</span> m³ (<span id="vReadL">—</span> L)</div>
+<div class="pill mono">ΔV = <span id="dVRead">—</span> m³</div>
+<div class="pill mono">W = <span id="wRead">—</span> J</div>
+</div>
+<div class="note mono">กรณี <b>P คงที่</b>: \(V \propto T\) และ \(\displaystyle W = \int_{V_1}^{V_2} P\,dV = P\,\Delta V\)</div>
+<div class="note mono" id="workRemark" style="color:#0f172a"></div>
+</section>
+</div>
+<!-- Info Dialog -->
+<dialog id="infoDialog">
+<div class="dialogHead">
+<h2>สูตรสำคัญ — งานของแก๊ส \(W\)</h2>
+<button class="btnSky" id="closeInfo">ปิด</button>
+</div>
+<div class="highlight mono">
+<div style="font-size:14px;opacity:.9">ที่มาของสูตร (ทั่วไป → กรณี P คงที่)</div>
+<div style="font-size:16px">
+<p><b>นิยามงานจุลภาค:</b> \(\,dW = F\,ds = P\,A\,ds = P\,dV\)</p>
+<p><b>รวมตลอดกระบวนการ:</b> \(\displaystyle W = \int_{V_1}^{V_2} P(V)\,dV\)</p>
+<p><b>กรณีความดันคงที่:</b> \(\displaystyle W = P\int_{V_1}^{V_2} dV = P\,(V_2 - V_1) = P\,\Delta V\)</p>
+<p><b>ความหมายสัญลักษณ์:</b> \(W&gt;0\) = แก๊สทำงาน (ผลักลูกสูบ, ปริมาตรเพิ่ม), \(W&lt;0\) = แก๊สได้รับงาน (ถูกกด, ปริมาตรลด)</p>
+<p><b>ถ้าโจทย์ให้กราฟ \(P\!-\!V\):</b> ขนาดของงานเท่ากับ <u>พื้นที่ใต้กราฟ</u> ระหว่าง \(V_1\) ถึง \(V_2\)</p>
+</div>
+</div>
+</dialog>
+<!-- Quiz Dialog -->
+<dialog id="quizDialog">
+<div class="dialogHead">
+<h2>แบบฝึกหัด: งานของแก๊ส (P คงที่)</h2>
+<button class="btnSky" id="closeQuiz">ปิด</button>
+</div>
+<div class="quiz" id="quizBox"></div>
+<div style="display:flex;gap:8px;align-items:center;margin-top:10px">
+<button id="submitQuiz">ตรวจคำตอบ</button>
+<button class="secondary" id="retryQuiz" style="display:none">ทำใหม่</button>
+<div class="score" id="scoreBox" style="margin-left:auto"></div>
+</div>
+</dialog>
+<script>
+(function(){
+  // ---------- Constants ----------
+  const R = 8.31;            // J·mol^-1·K^-1
+  const P = 101325;          // Pa (1 atm) — fixed
+  const n = 2.0;             // mol — fixed
+  let A = 0.1;               // m^2 (visual cross-section)
+
+  const T_MIN = 200, T_MAX = 700, T0 = 304.8285198556; // so V1=0.0500 m^3
+  const HEAT_RATE = 30;      // K/s when lamp active
+  const COOL_RATE = 30;      // K/s when bath active
+
+  // ---------- DOM ----------
+  const cvs = document.getElementById('sim');
+  const ctx = cvs.getContext('2d');
+  const lampTool = document.getElementById('lampTool');
+  const bathTool = document.getElementById('bathTool');
+  const resetBtn = document.getElementById('resetBtn');
+  const infoBtn = document.getElementById('infoBtn');
+  const quizBtn = document.getElementById('quizBtn');
+  const showForceChk = document.getElementById('showForce');
+
+  // PV graph
+  const gCvs = document.getElementById('pvInline');
+  const gCtx = gCvs ? gCvs.getContext('2d') : null;
+
+  // Status
+  const nRead = document.getElementById('nRead');
+  const pRead = document.getElementById('pRead');
+  const rRead = document.getElementById('rRead');
+  const tRead = document.getElementById('tRead');
+  const vRead = document.getElementById('vRead');
+  const vReadL = document.getElementById('vReadL');
+  const dVRead = document.getElementById('dVRead');
+  const wRead  = document.getElementById('wRead');
+  const workRemark = document.getElementById('workRemark');
+
+  nRead.textContent = n.toFixed(2);
+  pRead.textContent = P.toString();
+  rRead.textContent = R.toFixed(2);
+
+  // ---------- State ----------
+  let T = T0;
+  let V = (n*R*T)/P;    // m^3
+  let V1 = 0.0500;      // start volume
+  let W = 0;            // J
+  let targetH = V/A;    // m
+
+  // Cylinder geometry (px)
+  const pxLeft = 140;
+  const pxRight = pxLeft + 200;
+  const pyTop = 60;
+  const baseY = 530;
+  let pistonY = (baseY + pyTop)/2; // temp init
+  let pistonY0 = pistonY;          // initial trace
+
+  // Particles
+  let particles = [];
+  function resetParticles(){
+    const countBase = 30;
+    particles = new Array(countBase).fill(0).map(()=>({
+      x: Math.random()*(pxRight-pxLeft-14)+pxLeft+7,
+      y: Math.random()*((baseY - (pistonY + 10)) - 14) + (pistonY + 10) + 7,
+      vx: (Math.random()*2-1)*60,
+      vy: (Math.random()*2-1)*60,
+      r: 3
+    }));
+  }
+
+  let heating=false, cooling=false;
+  let showLamp=false, showBath=false;
+
+  // ---------- Helpers ----------
+  function updateReads(){
+    V = (n*R*T)/P;    // m^3
+    targetH = V/A;    // m
+    W = P * (V - V1);
+
+    tRead.textContent = Math.round(T).toString();
+    vRead.textContent = V.toFixed(4);
+    vReadL.textContent = (V*1000).toFixed(2);
+    dVRead.textContent = (V - V1).toFixed(4);
+    wRead.textContent  = W.toFixed(1);
+
+    const expanding = (V - V1) > 1e-6;
+    const compress  = (V1 - V) > 1e-6;
+    if(expanding){
+      workRemark.textContent = 'ปริมาตรเพิ่ม — งานเป็นบวก (แก๊สทำงาน)';
+      workRemark.style.color = '#16a34a';
+    }else if(compress){
+      workRemark.textContent = 'ปริมาตรลด — งานเป็นลบ (แก๊สได้รับงาน)';
+      workRemark.style.color = '#ef4444';
+    }else{
+      workRemark.textContent = 'ปริมาตรคงเดิม — งาน ≈ 0';
+      workRemark.style.color = '#0f172a';
+    }
+  }
+
+  function mapHtoPixels(hm){
+    const usable = baseY - pyTop - 30;
+    const maxH = 1.2; // m visual
+    const ratio = Math.min(1, hm/maxH);
+    return ratio*usable;
+  }
+
+  // snap initial piston to initial volume position & set trace
+  pistonY = baseY - mapHtoPixels(V/A);
+  pistonY0 = pistonY;
+
+  // ---------- Drawing ----------
+  function drawThermometer(){
+    const x=pxRight+30, y=pyTop, w=20, h=(baseY-pyTop);
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--thermoTrack');
+    ctx.fillRect(x,y,w,h);
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.strokeRect(x,y,w,h);
+    const fill = Math.max(0, Math.min(1, (T - T_MIN)/(T_MAX - T_MIN)));
+    const fh = fill*h;
+    ctx.fillStyle = '#ef4444';
+    ctx.fillRect(x+2, y+h-fh+2, w-4, fh-4);
+    ctx.fillStyle = '#0f172a';
+    const isMobileTemp = window.matchMedia('(max-width: 768px)').matches;
+    ctx.font = (isMobileTemp ? '17px' : '12px') + ' system-ui, Segoe UI';
+    ctx.fillText(`T=${Math.round(T)}K`, x-2, y-8);
+  }
+
+  function drawCylinder(){
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--canvas') || '#ffffff';
+    ctx.fillRect(0,0,cvs.width,cvs.height);
+
+    // show previous piston footprint only after movement
+    if(Math.abs(pistonY - pistonY0) > 0.5){
+      const rectY = pistonY0 - 10, rectH = 20, rectW = (pxRight - pxLeft);
+      ctx.fillStyle = 'rgba(148,163,184,0.28)';
+      ctx.fillRect(pxLeft, rectY, rectW, rectH);
+      ctx.setLineDash([6,6]);
+      ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--dash');
+      ctx.strokeRect(pxLeft, rectY, rectW, rectH);
+      ctx.setLineDash([]);
+    }
+
+    // cylinder walls & base
+    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--cyl');
+    ctx.beginPath(); ctx.moveTo(pxLeft,pyTop); ctx.lineTo(pxLeft,baseY);
+    ctx.moveTo(pxRight,pyTop); ctx.lineTo(pxRight,baseY); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(pxLeft-8,baseY); ctx.lineTo(pxRight+8,baseY); ctx.stroke();
+
+    // piston
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--piston');
+    ctx.fillRect(pxLeft, pistonY-10, (pxRight-pxLeft), 20);
+
+    // force arrow (gas on piston)
+    if(showForceChk && showForceChk.checked){
+      const xMid = (pxLeft+pxRight)/2;
+      const tipY = pistonY + 10;     // bottom face of piston (inside gas)
+      const shaft = 70;              // length of arrow shaft
+      const baseYY = tipY + shaft;   // tail deeper into gas
+      ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--arrow');
+      ctx.fillStyle   = ctx.strokeStyle;
+      ctx.lineWidth = 6;
+      // shaft
+      ctx.beginPath(); ctx.moveTo(xMid, baseYY); ctx.lineTo(xMid, tipY); ctx.stroke();
+      // arrow head (touching piston bottom)
+      ctx.beginPath(); ctx.moveTo(xMid, tipY);
+      ctx.lineTo(xMid-10, tipY+18);
+      ctx.lineTo(xMid+10, tipY+18);
+      ctx.closePath(); ctx.fill();
+      // label 'F' (bigger, blue, shifted down 30px)
+      ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--arrow');
+      ctx.font='22px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
+      ctx.fillText('F', xMid+16, tipY+36);
+
+      // displacement arrow s (black) from previous position to current
+      if(Math.abs(pistonY - pistonY0) > 0.5){
+        const yStart = pistonY0, yEnd = pistonY;
+        const up = yEnd < yStart;
+        ctx.strokeStyle = '#111827';
+        ctx.fillStyle   = '#111827';
+        ctx.lineWidth = 3.5;
+        ctx.beginPath(); ctx.moveTo(xMid+40, yStart); ctx.lineTo(xMid+40, yEnd); ctx.stroke();
+        ctx.beginPath();
+        if(up){ ctx.moveTo(xMid+40, yEnd); ctx.lineTo(xMid+32, yEnd+12); ctx.lineTo(xMid+48, yEnd+12); }
+        else  { ctx.moveTo(xMid+40, yEnd); ctx.lineTo(xMid+32, yEnd-12); ctx.lineTo(xMid+48, yEnd-12); }
+        ctx.closePath(); ctx.fill();
+        ctx.font='18px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
+        ctx.fillText('s', xMid+48, (yStart+yEnd)/2 + 6);
+      }
+    }
+
+    // heating/cooling glow
+    if(heating){ ctx.save(); ctx.globalAlpha=0.18; ctx.fillStyle='#f87171aa'; ctx.fillRect(pxLeft, baseY-60, pxRight-pxLeft, 60); ctx.restore(); }
+    if(cooling){ ctx.save(); ctx.globalAlpha=0.18; ctx.fillStyle='#60a5faaa'; ctx.fillRect(pxLeft, baseY-80, pxRight-pxLeft, 80); ctx.restore(); }
+
+    // tools hint visuals
+    if(showLamp){ ctx.fillStyle='#f59e0b'; ctx.fillRect((pxLeft+pxRight)/2-18, baseY+4,36,22); ctx.fillStyle='#ef4444'; ctx.beginPath(); ctx.arc((pxLeft+pxRight)/2, baseY+4,12,0,Math.PI*2); ctx.fill(); }
+    if(showBath){ ctx.fillStyle='#1d4ed8dd'; ctx.fillRect(pxLeft-14, baseY-36, (pxRight-pxLeft)+28,48); }
+  }
+
+  function drawParticles(dt){
+    const speedScale = (heating ? 4 : 1) * Math.max(0.2, Math.sqrt(Math.max(1, T)) / Math.sqrt(300));
+    const left = pxLeft+2, right = pxRight-2, bottom = baseY-2;
+    const ceiling = pistonY + 10;
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--gas');
+    for(const p of particles){
+      p.x += p.vx * speedScale * dt;
+      p.y += p.vy * speedScale * dt;
+      if(p.x < left + p.r){ p.x = left + p.r; p.vx *= -1; }
+      if(p.x > right - p.r){ p.x = right - p.r; p.vx *= -1; }
+      if(p.y < ceiling + p.r){ p.y = ceiling + p.r; p.vy *= -1; }
+      if(p.y > bottom - p.r){ p.y = bottom - p.r; p.vy *= -1; }
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
+    }
+  }
+
+  // ---------- PV Graph (inline) ----------
+  function renderPV(){
+    if(!gCtx||!gCvs) return;
+    // responsive size
+    const cssW = gCvs.clientWidth; const cssH = gCvs.clientHeight;
+    if(gCvs.width!==cssW) gCvs.width = cssW; if(gCvs.height!==cssH) gCvs.height = cssH;
+    const W=gCvs.width, H=gCvs.height; gCtx.clearRect(0,0,W,H);
+    gCtx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--canvas')||'#ffffff'; gCtx.fillRect(0,0,W,H);
+
+    // ranges
+    const Vmin = Math.max(0, Math.min(V1,V)*0.8);
+    const Vmax = Math.max(V1,V)*1.2 + 1e-6; // avoid zero span
+    const Pmin = 0, Pmax = P*1.2;
+
+    const L=60, Rm=20, Tm=30, B=44;
+    const plotW=W-L-Rm, plotH=H-Tm-B;
+    const xOfV = (v)=> L + (v - Vmin)/(Vmax - Vmin)*plotW;
+    const yOfP = (p)=> Tm + (Pmax - p)/(Pmax - Pmin)*plotH;
+
+    // grid
+    gCtx.strokeStyle = '#e2e8f0'; gCtx.lineWidth=1;
+    for(let i=0;i<=8;i++){ const vv=Vmin + (Vmax-Vmin)*i/8; const x=xOfV(vv); gCtx.beginPath(); gCtx.moveTo(x,Tm); gCtx.lineTo(x,H-B); gCtx.stroke(); }
+    for(let j=0;j<=6;j++){ const pp=Pmin + (Pmax-Pmin)*j/6; const y=yOfP(pp); gCtx.beginPath(); gCtx.moveTo(L,y); gCtx.lineTo(W-Rm,y); gCtx.stroke(); }
+
+    // axes
+    gCtx.strokeStyle = '#0f172a'; gCtx.lineWidth=1.5;
+    gCtx.beginPath(); gCtx.moveTo(L,H-B); gCtx.lineTo(W-Rm, H-B); gCtx.stroke();
+    gCtx.beginPath(); gCtx.moveTo(L,Tm);   gCtx.lineTo(L, H-B);   gCtx.stroke();
+
+    // labels
+    gCtx.fillStyle = '#0f172a'; gCtx.font='12px system-ui, Segoe UI';
+    gCtx.fillText('V (m³)', W-56, H-14);
+    gCtx.save(); gCtx.translate(24, H/2); gCtx.rotate(-Math.PI/2); gCtx.fillText('P (Pa)', 0, 0); gCtx.restore();
+
+    // constant P line (dashed)
+    gCtx.strokeStyle = '#22d3ee'; gCtx.lineWidth=2; gCtx.setLineDash([8,6]);
+    gCtx.beginPath(); gCtx.moveTo(xOfV(Vmin), yOfP(P)); gCtx.lineTo(xOfV(Vmax), yOfP(P)); gCtx.stroke(); gCtx.setLineDash([]);
+
+    // shade area (W = PΔV)
+    const x1 = xOfV(V1), x2 = xOfV(V); const yP = yOfP(P);
+    gCtx.fillStyle = (V>V1) ? 'rgba(59,130,246,0.18)' : (V<V1) ? 'rgba(239,68,68,0.18)' : 'rgba(0,0,0,0.06)';
+    gCtx.fillRect(Math.min(x1,x2), yP, Math.abs(x2-x1), (H-B)-yP);
+
+    // write W inside area
+    gCtx.fillStyle = '#0f172a'; gCtx.font='13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
+    const Wval = P*(V - V1);
+    const Wtxt = `${Wval.toFixed(1)} J`;
+    const signTxt = (V>V1)? 'บวก: แก๊สทำงาน' : (V<V1)? 'ลบ: แก๊สได้รับงาน' : '≈0';
+    const tx = Math.min(x1,x2) + Math.abs(x2-x1)/2 - 70;
+    const ty = yP + 18;
+    gCtx.fillText(`W = ${Wtxt} (${signTxt})`, tx, ty);
+
+    // start & end points + direction arrow
+    gCtx.fillStyle = '#111827'; gCtx.beginPath(); gCtx.arc(x1,yP,4,0,Math.PI*2); gCtx.fill(); gCtx.fillText('เริ่มต้น', x1-20, yP-10);
+    gCtx.fillStyle = '#ef4444'; gCtx.beginPath(); gCtx.arc(x2,yP,4,0,Math.PI*2); gCtx.fill(); gCtx.fillText('สุดท้าย', x2-16, yP-10);
+
+    gCtx.strokeStyle = '#111827'; gCtx.lineWidth=3; gCtx.beginPath(); gCtx.moveTo(x1,yP); gCtx.lineTo(x2,yP); gCtx.stroke();
+    const dir = Math.sign(x2 - x1) || 1; gCtx.beginPath(); gCtx.moveTo(x2, yP); gCtx.lineTo(x2 - dir*10, yP - 6); gCtx.lineTo(x2 - dir*10, yP + 6); gCtx.closePath(); gCtx.fillStyle = '#111827'; gCtx.fill();
+  }
+
+  // ---------- Quiz (short) ----------
+  const quiz = [
+    { q:'ที่ P คงที่ ถ้า V เพิ่มขึ้น 0.010 m³ งานของแก๊สเท่าใด? (ใช้ P=1.01325×10⁵ Pa)', opts:['101.3 J','1.01 kJ','1.01×10⁶ J','10.1 J'], ans:1, why:'W = PΔV = 1.01325×10⁵ × 0.010 = 1.01×10³ J' },
+    { q:'ข้อใดถูกต้องเกี่ยวกับงาน(W)ที่แก๊สทำ?', opts:['W>0 เมื่ออัดแก๊ส','W<0 เมื่อแก๊สขยายตัว','W>0 เมื่อแก๊สขยายตัว','W=0 เสมอเมื่อ T คงที่'], ans:2, why:'เราใช้ dW=P dV โดยกำหนดให้ขยายตัว → W>0' },
+    { q:'จากกราฟ P–V ปริมาตรลดลง หมายถึงอะไร?', opts:['แก๊สทำงานบวก','แก๊สได้รับงาน (W<0)','อุณหภูมิลดลงเสมอ','P ต้องเพิ่มเสมอ'], ans:1, why:'ที่ P คงที่ การลด V ทำให้ ΔV<0 ⇒ W=PΔV<0' }
+  ];
+  const quizDialog = document.getElementById('quizDialog');
+  const quizBox   = document.getElementById('quizBox');
+  const submitQuiz= document.getElementById('submitQuiz');
+  const retryQuiz = document.getElementById('retryQuiz');
+  const scoreBox  = document.getElementById('scoreBox');
+  const closeQuiz = document.getElementById('closeQuiz');
+
+  function renderQuiz(){
+    quizBox.innerHTML='';
+    quiz.forEach((it,idx)=>{
+      const q=document.createElement('div'); q.className='q';
+      q.innerHTML = `<h4>${idx+1}. ${it.q}</h4><div class="opts">${it.opts.map((t,i)=>`<label><input type="radio" name="q${idx}" value="${i}"> ${t}</label>`).join('')}</div><div class="explain" id="exp${idx}" style="display:none"></div>`;
+      quizBox.appendChild(q);
+    });
+    scoreBox.textContent=''; submitQuiz.style.display='inline-block'; retryQuiz.style.display='none';
+    if(window.MathJax){ MathJax.typesetPromise && MathJax.typesetPromise([quizBox]); }
+  }
+  function gradeQuiz(){
+    let score=0; quiz.forEach((it,idx)=>{
+      const sel = quizBox.querySelector(`input[name="q${idx}"]:checked`);
+      const exp = document.getElementById(`exp${idx}`);
+      const ok = sel && (+sel.value===it.ans); if(ok) score++;
+      exp.style.display='block';
+      exp.innerHTML = `เฉลย: ${it.opts[it.ans]} • เหตุผล: ${it.why}`;
+    });
+    scoreBox.textContent = `คะแนน: ${score}/${quiz.length}`;
+    submitQuiz.style.display='none'; retryQuiz.style.display='inline-block';
+  }
+
+  // ---------- Controls ----------
+  function activateTool(kind){
+    if(kind==='lamp'){
+      if(heating){ heating=false; showLamp=false; }
+      else { heating=true; cooling=false; showLamp=true; showBath=false; }
+    }
+    if(kind==='bath'){
+      if(cooling){ cooling=false; showBath=false; }
+      else { cooling=true; heating=false; showBath=true; showLamp=false; }
+    }
+  }
+  function bindDouble(el, kind){
+    let last=0;
+    el.addEventListener('dblclick', ()=> activateTool(kind));
+    el.addEventListener('click', (e)=>{ if(e.detail===1){ activateTool(kind); } });
+    el.addEventListener('touchend', (e)=>{
+      const now = Date.now(); if(now-last < 300){ activateTool(kind); e.preventDefault(); } last = now;
+    }, {passive:false});
+  }
+  bindDouble(lampTool,'lamp');
+  bindDouble(bathTool,'bath');
+
+  // Dialogs
+  const infoDialog = document.getElementById('infoDialog');
+  const closeInfo  = document.getElementById('closeInfo');
+  if(infoBtn){ infoBtn.addEventListener('click',()=>{ infoDialog.showModal(); if(window.MathJax){ MathJax.typesetPromise && MathJax.typesetPromise([infoDialog]); } }); }
+  if(closeInfo){ closeInfo.addEventListener('click',()=> infoDialog.close()); }
+
+  if(quizBtn){ quizBtn.addEventListener('click',()=>{ renderQuiz(); quizDialog.showModal(); }); }
+  if(submitQuiz){ submitQuiz.addEventListener('click', gradeQuiz); }
+  if(retryQuiz){ retryQuiz.addEventListener('click', renderQuiz); }
+  if(closeQuiz){ closeQuiz.addEventListener('click',()=> quizDialog.close()); }
+
+  // ---------- Main loop ----------
+  let last=performance.now();
+  function tick(now){
+    const dt = Math.min(32, now-last); last = now; const dtS = dt/1000;
+    if(heating) T = Math.min(T_MAX, T + HEAT_RATE*dtS);
+    if(cooling) T = Math.max(T_MIN, T - COOL_RATE*dtS);
+
+    updateReads();
+
+    const ph = mapHtoPixels(V/A);
+    const targetY = baseY - ph; // smaller Y = piston goes up when V increases
+    pistonY += (targetY - pistonY)*0.05;
+
+    drawCylinder(); drawThermometer(); drawParticles(dtS); renderPV();
+    requestAnimationFrame(tick);
+  }
+
+  // reset
+  resetBtn.addEventListener('click',()=>{
+    T=T0; V=(n*R*T)/P; V1=V; W=0; heating=false; cooling=false; showLamp=false; showBath=false; resetParticles();
+    pistonY = baseY - mapHtoPixels(V/A);
+    pistonY0 = pistonY;
+  });
+
+  // init
+  resetParticles();
+  // responsive PV canvas sizing
+  function fitPV(){ if(!gCvs) return; gCvs.width = gCvs.clientWidth; gCvs.height = gCvs.clientHeight; }
+  window.addEventListener('resize', ()=>{ fitPV(); renderPV(); });
+  fitPV();
+  if(window.MathJax){ MathJax.typesetPromise && MathJax.typesetPromise([document.querySelector('.forceBox')]); }
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>การแผ่รังสีความร้อน</title>
+  <style>
+    :root{
+      --ink:#0f172a;
+      --muted:#64748b;
+      --bg:#e0f2fe;
+      --panel:#ffffff;
+      --accent:#0ea5e9;
+      --accent-soft:#e0f2fe;
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family:system-ui,"Noto Sans Thai","Segoe UI",sans-serif;
+      background:var(--bg);
+      color:var(--ink);
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      padding:10px 6px 18px;
+    }
+    .page{
+      width:100%;
+      max-width:1000px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    header{
+      background:var(--panel);
+      border-radius:12px;
+      padding:10px 12px;
+      box-shadow:0 8px 20px rgba(15,23,42,0.06);
+      border:1px solid #e2e8f0;
+    }
+    header h1{
+      font-size:1.1rem;
+      margin:0 0 4px;
+    }
+    header p{
+      margin:0;
+      font-size:0.85rem;
+      color:var(--muted);
+    }
+
+    .layout{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    @media(min-width:800px){
+      .layout{ flex-direction:row; }
+    }
+
+    .canvas-wrapper{
+      flex:1.2;
+      background:var(--panel);
+      border-radius:14px;
+      padding:6px;
+      box-shadow:0 8px 20px rgba(15,23,42,0.06);
+      border:1px solid #e2e8f0;
+      min-height:260px;
+    }
+    canvas{
+      display:block;
+      width:100%;
+      height:auto;
+      border-radius:10px;
+      background:#e0f2fe;
+      touch-action:none;
+    }
+
+    .side-panel{
+      flex:0.9;
+      background:var(--panel);
+      border-radius:14px;
+      padding:10px 10px 12px;
+      box-shadow:0 8px 20px rgba(15,23,42,0.06);
+      border:1px solid #e2e8f0;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .panel-section-title{
+      font-size:0.9rem;
+      font-weight:600;
+      margin-bottom:4px;
+    }
+
+    .controls-row{
+      display:flex;
+      flex-wrap:wrap;
+      gap:6px;
+      align-items:center;
+    }
+    button{
+      border:none;
+      border-radius:999px;
+      padding:6px 12px;
+      font-size:0.85rem;
+      cursor:pointer;
+      background:#0f172a;
+      color:#fff;
+      display:inline-flex;
+      align-items:center;
+      gap:4px;
+      transition:transform 0.05s ease, box-shadow 0.05s ease, background 0.15s;
+      box-shadow:0 4px 10px rgba(15,23,42,0.3);
+      white-space:nowrap;
+    }
+    button.secondary{
+      background:var(--accent-soft);
+      color:var(--ink);
+      box-shadow:none;
+      border:1px solid #bae6fd;
+    }
+    button:hover{
+      transform:translateY(-1px);
+      box-shadow:0 6px 16px rgba(15,23,42,0.4);
+    }
+    button.secondary:hover{
+      box-shadow:0 4px 10px rgba(148,163,184,0.4);
+    }
+    button:active{
+      transform:translateY(0);
+      box-shadow:0 2px 6px rgba(15,23,42,0.3);
+    }
+
+    .checkbox-row{
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+      font-size:0.8rem;
+    }
+    .checkbox-row label{
+      display:flex;
+      align-items:center;
+      gap:6px;
+      cursor:pointer;
+    }
+    .checkbox-row input[type="checkbox"]{
+      width:14px;
+      height:14px;
+    }
+
+    .legend{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      font-size:0.8rem;
+    }
+    .legend-row{
+      display:flex;
+      align-items:center;
+      gap:6px;
+    }
+    .color-dot{
+      width:14px;
+      height:14px;
+      border-radius:999px;
+      border:1px solid #cbd5f5;
+    }
+    .dot-black{background:#000000;}
+    .dot-white{background:#ffffff;}
+    .dot-wave{
+      background:radial-gradient(circle at 30% 30%,#f97316,#ea580c 40%,#0b1120 75%);
+    }
+
+    .note-text{
+      font-size:0.78rem;
+      color:var(--muted);
+      line-height:1.5;
+    }
+
+    /* modal */
+    .modal-backdrop{
+      position:fixed;
+      inset:0;
+      background:rgba(15,23,42,0.55);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:10px;
+      z-index:40;
+    }
+    .modal-backdrop.show{ display:flex; }
+    .modal-card{
+      max-width:520px;
+      width:100%;
+      background:var(--panel);
+      border-radius:16px;
+      padding:12px 14px 14px;
+      box-shadow:0 18px 45px rgba(15,23,42,0.6);
+      border:1px solid #e2e8f0;
+      position:relative;
+    }
+    .modal-title{
+      font-size:0.98rem;
+      font-weight:700;
+      margin-bottom:6px;
+      display:flex;
+      align-items:center;
+      gap:6px;
+    }
+    .chip{
+      font-size:0.7rem;
+      background:var(--accent-soft);
+      color:var(--accent);
+      border-radius:999px;
+      padding:2px 8px;
+    }
+    .modal-body{
+      font-size:0.8rem;
+      line-height:1.6;
+      color:var(--ink);
+    }
+    .modal-body p{ margin:0 0 4px; }
+    .modal-body ul{
+      margin:2px 0 4px 16px;
+      padding:0;
+    }
+    .modal-body li{ margin-bottom:2px; }
+    .modal-footer{
+      margin-top:8px;
+      display:flex;
+      justify-content:flex-end;
+    }
+
+    .pill-tag{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:3px 8px;
+      border-radius:999px;
+      background:#0f172a;
+      color:#e5e7eb;
+      font-size:0.7rem;
+      margin-top:4px;
+    }
+    .pill-tag span.wave-icon{
+      display:inline-block;
+      width:12px;
+      height:12px;
+      border-radius:999px;
+      background:radial-gradient(circle at 30% 30%,#f97316,#ea580c 40%,#0b1120 75%);
+    }
+
+    .learn-more{
+      font-size:0.78rem;
+      margin-top:4px;
+    }
+    .learn-more a{
+      color:var(--accent);
+      text-decoration:none;
+      font-weight:600;
+    }
+    .learn-more a:hover{ text-decoration:underline; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <h1>การแผ่รังสีความร้อน</h1>
+      <p>
+        <strong>การแผ่รังสีความร้อน</strong>  คือ การถ่ายโอนพลังงานความร้อนในรูปของคลื่นแม่เหล็กไฟฟ้า<br>
+          <strong>ไม่ต้องอาศัยตัวกลาง</strong> : สามารถแผ่รังสีผ่านสุญญากาศได้ ต่างจากการนำและการพาความร้อน
+      </p>
+    </header>
+
+    <div class="layout">
+      <div class="canvas-wrapper">
+        <canvas id="simCanvas"></canvas>
+      </div>
+
+      <aside class="side-panel">
+        <div>
+          <div class="panel-section-title">การควบคุมการทดลอง</div>
+          <div class="controls-row" style="margin-bottom:6px;">
+            <button id="playPauseBtn">▶ เล่น</button>
+            <button id="resetBtn" class="secondary">🔄 รีเซ็ต</button>
+          </div>
+          <div class="checkbox-row">
+            <label>
+              <input type="checkbox" id="showRadiation" checked />
+              แสดงคลื่นแม่เหล็กไฟฟ้า (คลื่นไซน์สีแดงจากเทียนไปยังแผ่นรับ)
+            </label>
+          </div>
+        </div>
+
+        <div>
+          <div class="panel-section-title">แผ่นรับรังสีและอุณหภูมิ</div>
+          <div class="legend">
+            <div class="legend-row">
+              <div class="color-dot dot-black"></div>
+              <span>แผ่นดำด้าน — ดูดกลืนรังสีดี ร้อนเร็วที่สุด</span>
+            </div>
+            <div class="legend-row">
+              <div class="color-dot dot-white"></div>
+              <span>แผ่นขาว — สะท้อนบางส่วน ร้อนช้ากว่าแผ่นดำ</span>
+            </div>
+            <div class="legend-row">
+              <div class="color-dot dot-wave"></div>
+              <span>คลื่นไซน์สีแดง แทนคลื่นแม่เหล็กไฟฟ้า (Infrared: IR)</span>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="panel-section-title">คำอธิบายหลักการ</div>
+          <p class="note-text">
+            ลองกดเล่นดู แล้วสังเกตว่าแผ่นดำด้านจะร้อนขึ้นเร็วที่สุด
+            (เส้นสีแดงในเทอร์โมมิเตอร์ถีบขึ้นสูงกว่าแผ่นขาว)
+          </p>
+          <div class="controls-row">
+            <button id="infoBtn" class="secondary">ℹ คำอธิบายการแผ่รังสีความร้อน</button>
+          </div>
+          <div class="learn-more">
+            ศึกษาเพิ่มเติมที่
+            <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener noreferrer">
+              เพจคลายปมฟิสิกส์
+            </a>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- Modal คำอธิบายหลักการ -->
+  <div class="modal-backdrop" id="infoModal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true">
+      <div class="modal-title">
+        🔥 การแผ่รังสีความร้อนจากเทียน
+        <span class="chip">สรุปฟิสิกส์แบบกระชับ</span>
+      </div>
+      <div class="modal-body">
+        <p><strong>1. รังสีความร้อนคืออะไร?</strong></p>
+        <p>
+          รังสีความร้อนคือการถ่ายโอนพลังงานความร้อนในรูปของ
+          <strong>คลื่นแม่เหล็กไฟฟ้า</strong> โดยส่วนใหญ่เป็นคลื่น
+          <strong>อินฟราเรด</strong> (ความยาวคลื่นยาวกว่าแสงสีแดงที่ตามองเห็น)
+        </p>
+
+        <p><strong>2. รังสีนี้เกิดจากอะไร?</strong></p>
+        <p>
+          อนุภาคประจุไฟฟ้าภายในวัตถุที่มีอุณหภูมิสูง (เช่น เปลวเทียน โลหะร้อน
+          ดวงอาทิตย์) จะสั่นและเคลื่อนที่แบบสุ่ม ทำให้ปล่อยคลื่นแม่เหล็กไฟฟ้าออกมา
+          พลังงานนี้เดินทางออกจากวัตถุในทุกทิศทางในรูป
+          <em>รังสีความร้อน</em>
+        </p>
+
+        <p><strong>3. ต้องอาศัยตัวกลางไหม?</strong></p>
+        <p>
+          การแผ่รังสีความร้อนไม่จำเป็นต้องมีตัวกลาง คลื่นแม่เหล็กไฟฟ้าสามารถเดินทางใน
+          <strong>สูญญากาศ</strong> ได้ เช่น พลังงานจากดวงอาทิตย์เดินทางผ่านอวกาศมาถึงโลก
+          แม้ในอวกาศแทบไม่มีอากาศให้พา หรือให้สื่อนำความร้อนเลย
+        </p>
+
+        <p><strong>4. แตกต่างจากการนำและการพาอย่างไร?</strong></p>
+        <ul>
+          <li>
+            <strong>การนำความร้อน (conduction)</strong> –
+            พลังงานถ่ายโอนผ่านการชนของอนุภาคในวัตถุเดียวกัน
+            มักเกิดดีในของแข็ง เช่น แท่งโลหะปลายหนึ่งแตะเปลวเทียน อีกปลายร้อนตาม
+            <br />
+            👉 ต้องมีตัวกลาง (วัตถุ) และตัวกลางไม่เคลื่อนที่ไปไหน
+          </li>
+          <li>
+            <strong>การพาความร้อน (convection)</strong> –
+            พลังงานถูกพาไปพร้อมกับการเคลื่อนที่ของตัวกลาง เช่น
+            อากาศร้อนลอยขึ้น อากาศเย็นไหลเข้ามาแทน เกิดเป็นลมวน
+            <br />
+            👉 ต้องมีตัวกลางที่เคลื่อนที่ (ของเหลว หรือแก๊ส)
+          </li>
+          <li>
+            <strong>การแผ่รังสีความร้อน (radiation)</strong> –
+            พลังงานเดินทางในรูปคลื่นแม่เหล็กไฟฟ้า เช่น อินฟราเรดจากเทียน
+            หรือจากดวงอาทิตย์
+            <br />
+            👉 <strong>ไม่จำเป็นต้องมีตัวกลาง</strong> เดินทางในสูญญากาศได้
+          </li>
+        </ul>
+
+        <p><strong>5. ทำไมผิวต่างกันถึงร้อนไม่เท่ากัน?</strong></p>
+        <p>
+          ผิวสีดำ ผิวด้าน <strong>ดูดกลืนรังสีได้ดี</strong> จึงร้อนเร็ว
+          ส่วนผิวมันหรือโลหะเงา
+          <strong>สะท้อนรังสีได้มาก</strong> จึงดูดกลืนน้อยและร้อนช้ากว่า
+          ในการทดลองจริงจึงพบว่าแผ่นดำร้อนเร็วที่สุด
+        </p>
+
+        <div class="pill-tag">
+          <span class="wave-icon"></span>
+          <span>พลังงานความร้อนเดินทางมาถึงเราได้ แม้อยู่ห่างจากเปลวเทียน</span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="closeInfoBtn" class="secondary">ปิด</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function(){
+      const canvas = document.getElementById("simCanvas");
+      const ctx = canvas.getContext("2d");
+
+      const dpr = window.devicePixelRatio || 1;
+      let widthCss = 600;
+      let heightCss = 360;
+
+      let lastTime = null;
+      let running = false;
+      let candleLit = false; // เทียนติดไฟแล้วหรือยัง
+
+      const playPauseBtn = document.getElementById("playPauseBtn");
+      const resetBtn = document.getElementById("resetBtn");
+      const showRadiationCheckbox = document.getElementById("showRadiation");
+
+      const infoModal = document.getElementById("infoModal");
+      const infoBtn = document.getElementById("infoBtn");
+      const closeInfoBtn = document.getElementById("closeInfoBtn");
+
+      let globalTime = 0;
+      const ambientTemp = 24; // °C
+
+      // แผ่นรับรังสี 2 แผ่น: ซ้ายดำ ขวาขาว
+      const plates = [
+        { label:"ดำด้าน", baseColor:"#000000", hotOverlay:"#b91c1c", absorptivity:0.9, temp:ambientTemp },
+        { label:"ขาว",   baseColor:"#ffffff", hotOverlay:"#f97316", absorptivity:0.55, temp:ambientTemp }
+      ];
+
+      function resetState(){
+        globalTime = 0;
+        candleLit = false;
+        plates.forEach(p => p.temp = ambientTemp);
+        resizeCanvas();
+      }
+
+      function resizeCanvas(){
+        const wrapper = document.querySelector(".canvas-wrapper");
+        const w = wrapper.clientWidth - 4;
+        const h = Math.min(w*0.6, 480);
+        widthCss = Math.max(260, w);
+        heightCss = Math.max(260, h);
+
+        canvas.width = widthCss * dpr;
+        canvas.height = heightCss * dpr;
+        canvas.style.width = widthCss + "px";
+        canvas.style.height = heightCss + "px";
+
+        ctx.setTransform(dpr,0,0,dpr,0,0);
+      }
+
+      window.addEventListener("resize", ()=>{
+        resizeCanvas();
+        draw();
+      });
+
+      resizeCanvas();
+      resetState();
+      draw();
+
+      function togglePlay(){
+        const wasRunning = running;
+        running = !running;
+        playPauseBtn.textContent = running ? "⏸ หยุด" : "▶ เล่น";
+
+        if(!wasRunning && running){
+          // เริ่มเล่นครั้งแรก จุดเทียน
+          candleLit = true;
+        }
+
+        if(running){
+          lastTime = performance.now();
+          requestAnimationFrame(loop);
+        }
+      }
+
+      function loop(timestamp){
+        if(!running) return;
+        const dt = Math.min((timestamp - lastTime)/1000, 0.05);
+        lastTime = timestamp;
+        update(dt);
+        draw();
+        requestAnimationFrame(loop);
+      }
+
+      function update(dt){
+        globalTime += dt;
+
+        // ถ้าเทียนยังไม่ติด อุณหภูมิไม่ต้องขึ้น
+        if(!candleLit) return;
+
+        const baseRise = 80;
+        const tau = 6;
+
+        plates.forEach((p)=>{
+          const targetTemp = ambientTemp + p.absorptivity * baseRise;
+          p.temp += (targetTemp - p.temp) * (dt / tau);
+          if(p.temp < ambientTemp) p.temp = ambientTemp;
+          if(p.temp > ambientTemp + baseRise + 10) p.temp = ambientTemp + baseRise + 10;
+        });
+      }
+
+      function draw(){
+        const cw = widthCss;
+        const ch = heightCss;
+
+        const floorY = ch*0.86;
+        const centerX = cw*0.5;
+        const candleX = centerX + 15;   // ขยับเทียนไปทางขวาจากกลางจอ 15px (ซ้ายลงจากของเดิม 5px)
+        const candleY = floorY;
+
+        const plateY = ch*0.4 + 30;
+        const plateXs = [cw*0.25, cw*0.75];
+
+        // จุดกำเนิดคลื่น: ยึดตำแหน่งกลางจอ (ไม่ขยับตามเทียน)
+        const originX = centerX + cw*0.02;
+        const originY = candleY - ch*0.36;
+
+        ctx.clearRect(0,0,cw,ch);
+
+        // พื้นหลังห้อง
+        const grd = ctx.createLinearGradient(0,0,0,ch);
+        grd.addColorStop(0,"#e0f2fe");
+        grd.addColorStop(1,"#bae6fd");
+        ctx.fillStyle = grd;
+        ctx.fillRect(0,0,cw,ch);
+
+        // พื้น
+        ctx.fillStyle = "#93c5fd";
+        ctx.fillRect(0,floorY,cw,ch-floorY);
+
+        // แผ่นรับรังสี
+        const plateWidth = cw*0.14;
+        const plateHeight = ch*0.25;
+
+        plates.forEach((p,index)=>{
+          const x = plateXs[index];
+          const y = plateY;
+
+          ctx.save();
+          ctx.translate(x,y);
+
+          // แผ่นพื้นฐาน: ซ้ายดำล้วน ขวาขาวล้วน
+          ctx.fillStyle = p.baseColor;
+          const radius = 10;
+          roundRect(ctx,-plateWidth/2,-plateHeight/2,plateWidth,plateHeight,radius);
+          ctx.fill();
+
+          // เงาใต้แผ่น
+          ctx.fillStyle = "rgba(15,23,42,0.35)";
+          ctx.beginPath();
+          ctx.ellipse(0,plateHeight/2+6,plateWidth*0.6,6,0,0,Math.PI*2);
+          ctx.fill();
+
+          // เทอร์โมมิเตอร์
+          drawMiniThermometer(ctx, plateWidth, plateHeight, p.temp, ambientTemp);
+
+          ctx.restore();
+
+          // ป้ายอุณหภูมิด้านบน
+          ctx.fillStyle = "#0f172a";
+          ctx.font = "11px 'Noto Sans Thai', system-ui";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "bottom";
+          const label = `${p.label} ~ ${p.temp.toFixed(0)}°C`;
+          ctx.fillText(label,x,y - plateHeight*0.7);
+        });
+
+        // คลื่นแม่เหล็กไฟฟ้า แสดงเฉพาะเมื่อเทียนติด + ติ๊กแสดงคลื่น
+        if(showRadiationCheckbox.checked && candleLit){
+          drawRadiationWaves(cw,ch,originX,originY,plateXs,plateY);
+        }
+
+        // เทียน
+        drawCandle(cw,ch,candleX,candleY,candleLit);
+      }
+
+      function drawCandle(cw,ch,x,y,lit){
+        const bodyW = cw*0.055;
+        const bodyH = ch*0.28;
+        ctx.save();
+        ctx.translate(x,y);
+
+        // แท่งเทียน
+        ctx.fillStyle = "#e5e7eb";
+        roundRect(ctx,-bodyW/2,-bodyH,bodyW,bodyH,bodyW*0.18);
+        ctx.fill();
+
+        ctx.strokeStyle = "rgba(148,163,184,0.6)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(-bodyW*0.1,-bodyH*0.6);
+        ctx.lineTo(-bodyW*0.1,-bodyH*0.2);
+        ctx.moveTo(bodyW*0.15,-bodyH*0.8);
+        ctx.lineTo(bodyW*0.15,-bodyH*0.3);
+        ctx.stroke();
+
+        // ไส้เทียนสีดำ
+        ctx.strokeStyle = "#020617";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(0,-bodyH);
+        ctx.lineTo(0,-bodyH-8);
+        ctx.stroke();
+
+        if(lit){
+          // เปลวเทียนเต้นวิบวับ
+          const t = globalTime;
+          const flameH = ch*0.12 + Math.sin(t*6)*2;
+          const flameW = bodyW*0.7;
+          const flameTopY = -bodyH - flameH;
+          const gradient = ctx.createLinearGradient(0,flameTopY,0,-bodyH);
+          gradient.addColorStop(0,"#f97316");
+          gradient.addColorStop(0.5,"#facc15");
+          gradient.addColorStop(1,"#fee2e2");
+          ctx.fillStyle = gradient;
+          ctx.beginPath();
+          ctx.moveTo(flameW*0.2,flameTopY);
+          ctx.quadraticCurveTo(-flameW/2,-bodyH-flameH*0.4,0,-bodyH);
+          ctx.quadraticCurveTo(flameW/2,-bodyH-flameH*0.4,flameW*0.2,flameTopY);
+          ctx.closePath();
+          ctx.fill();
+        }
+
+        // เงาเทียน
+        ctx.fillStyle = "rgba(15,23,42,0.4)";
+        ctx.beginPath();
+        ctx.ellipse(0,6,bodyW*0.9,6,0,0,Math.PI*2);
+        ctx.fill();
+
+        ctx.restore();
+      }
+
+      function drawMiniThermometer(ctx, plateW, plateH, temp, ambient){
+        const maxTemp = ambient + 80;
+        const minTemp = ambient;
+        const tNorm = Math.min(Math.max((temp-minTemp)/(maxTemp-minTemp),0),1);
+
+        const x = plateW*0.33;
+        const y = -plateH*0.35;
+        const w = plateW*0.22;
+        const h = plateH*0.7;
+
+        ctx.save();
+        ctx.translate(x,y);
+
+        // กรอบเทอร์โมมิเตอร์สีเทาอ่อน (จากเดิมสีดำ)
+        ctx.fillStyle = "#e5e7eb";
+        roundRect(ctx,-w/2,-h/2,w,h,4);
+        ctx.fill();
+
+        const innerW = w*0.34;
+        const innerH = h*0.64;
+        const innerX = 0;
+        const innerY = -h*0.02;
+
+        // ช่องด้านในสีดำเข้มเล็ก ๆ ให้ตัดกับแท่งแดง
+        ctx.fillStyle = "#020617";
+        roundRect(ctx,innerX-innerW/2,innerY-innerH/2,innerW,innerH,innerW/2);
+        ctx.fill();
+
+        const baseY = innerY+innerH*0.32;
+        const topY = baseY - innerH*0.9*tNorm;
+
+        ctx.strokeStyle = "#ef4444";
+        ctx.lineWidth = innerW*0.6;
+        ctx.beginPath();
+        ctx.moveTo(innerX,baseY);
+        ctx.lineTo(innerX,topY);
+        ctx.stroke();
+
+        ctx.strokeStyle = "#f97316";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(innerX-innerW*0.5,topY);
+        ctx.lineTo(innerX+innerW*0.5,topY);
+        ctx.stroke();
+
+        ctx.restore();
+      }
+
+      function drawRadiationWaves(cw,ch,originX,originY,plateXs,plateY){
+        const platesCount = plateXs.length;
+        const waveAmp = 8;
+        const waveFreq = 4;
+        const waveSpeed = 1.0;
+
+        for(let i=0;i<platesCount;i++){
+          const targetX = plateXs[i];
+          const targetY = plateY;
+
+          const dx = targetX - originX;
+          const dy = targetY - originY;
+          const dist = Math.sqrt(dx*dx + dy*dy);
+          const ux = dx/dist;
+          const uy = dy/dist;
+
+          const nx = -uy;
+          const ny = ux;
+
+          const segments = 70;
+          const phase = globalTime*waveSpeed + i*0.7;
+
+          ctx.strokeStyle = "rgba(248,113,113,0.98)";
+          ctx.lineWidth = 2;
+
+          ctx.beginPath();
+          for(let k=0;k<=segments;k++){
+            const s = k/segments;
+            const baseX = originX + ux*dist*s;
+            const baseY = originY + uy*dist*s;
+
+            const offset = Math.sin(2*Math.PI*waveFreq*(s - phase))*waveAmp;
+            const x = baseX + nx*offset;
+            const y = baseY + ny*offset;
+
+            if(k===0) ctx.moveTo(x,y);
+            else ctx.lineTo(x,y);
+          }
+          ctx.stroke();
+
+          const midX = (originX + targetX)/2;
+          const midY = (originY + targetY)/2 - 20;
+          const label = "Infrared (IR)";
+          ctx.font = "11px 'Noto Sans Thai', system-ui";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillStyle = "rgba(220,38,38,0.98)";
+          ctx.fillText(label, midX, midY);
+        }
+      }
+
+      function roundRect(ctx,x,y,w,h,r){
+        const radius = typeof r === "number" ? {tl:r,tr:r,br:r,bl:r} : r;
+        ctx.beginPath();
+        ctx.moveTo(x+radius.tl,y);
+        ctx.lineTo(x+w-radius.tr,y);
+        ctx.quadraticCurveTo(x+w,y,x+w,y+radius.tr);
+        ctx.lineTo(x+w,y+h-radius.br);
+        ctx.quadraticCurveTo(x+w,y+h,x+w-radius.br,y+h);
+        ctx.lineTo(x+radius.bl,y+h);
+        ctx.quadraticCurveTo(x,y+h,x,y+h-radius.bl);
+        ctx.lineTo(x,y+radius.tl);
+        ctx.quadraticCurveTo(x,y,x+radius.tl,y);
+        ctx.closePath();
+      }
+
+      function hexWithAlpha(hex, alpha){
+        const r = parseInt(hex.slice(1,3),16);
+        const g = parseInt(hex.slice(3,5),16);
+        const b = parseInt(hex.slice(5,7),16);
+        return `rgba(${r},${g},${b},${alpha})`;
+      }
+
+      playPauseBtn.addEventListener("click", togglePlay);
+      resetBtn.addEventListener("click", ()=>{
+        running = false;
+        playPauseBtn.textContent = "▶ เล่น";
+        resetState();
+        draw();
+      });
+      showRadiationCheckbox.addEventListener("change", ()=> draw());
+
+      infoBtn.addEventListener("click", ()=>{
+        infoModal.classList.add("show");
+        infoModal.setAttribute("aria-hidden","false");
+      });
+      closeInfoBtn.addEventListener("click", closeModal);
+      infoModal.addEventListener("click", (e)=>{
+        if(e.target === infoModal){ closeModal(); }
+      });
+      function closeModal(){
+        infoModal.classList.remove("show");
+        infoModal.setAttribute("aria-hidden","true");
+      }
+    })();
+  </script>
+</body>
+</html>

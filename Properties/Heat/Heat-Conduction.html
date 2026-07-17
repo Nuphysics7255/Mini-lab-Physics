@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>การนำความร้อน</title>
+<style>
+  body{margin:0;font-family:"Noto Sans Thai",sans-serif;background:#fff;color:#111;text-align:center}
+  canvas{background:#f8fafc;border:1px solid #ddd;border-radius:12px;margin-top:8px;max-width:95vw;height:auto}
+  button{padding:8px 14px;border:none;border-radius:10px;cursor:pointer;background:#2563eb;color:#fff;margin:6px;font-weight:600;transition:0.2s}
+  button:hover{background:#1d4ed8}
+  .panel{margin-top:10px}
+  #infoBox{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff8dc;border:2px solid #facc15;padding:20px;border-radius:16px;max-width:420px;display:none;box-shadow:0 4px 16px rgba(0,0,0,0.3)}
+  #infoBox button{background:#facc15;color:#000;margin-top:10px}
+</style>
+</head>
+<body>
+<h2>การนำความร้อน</h2>
+<canvas id="lab" width="900" height="420"></canvas><br>
+<div class="panel">
+  <button id="play">เล่น</button>
+  <button id="reset">รีเซ็ต</button>
+  <label><input type="checkbox" id="showParticles"> แสดงอนุภาค</label>
+  <button id="explain">อธิบาย</button>
+</div>
+<div id="infoBox">
+  <h3>การนำความร้อนคืออะไร?</h3>
+  <p>การนำความร้อนคือกระบวนการที่พลังงานความร้อนส่งต่อจากอนุภาคหนึ่งไปยังอนุภาคข้างเคียงโดยที่อนุภาคเหล่านั้น <b>ไม่เคลื่อนที่ไปกับความร้อน</b> แต่สั่นและถ่ายทอดพลังงานต่อกันไปทีละจุด.</p>
+  <p>ตัวกลางไม่เคลื่อนที่ ความร้อนเท่านั้นที่เดินทาง!</p>
+  <a href="https://www.facebook.com/resolvephysics" target="_blank">ศึกษาเพิ่มเติมที่เพจคลายปมฟิสิกส์</a><br>
+  <button id="closeInfo">ปิด</button>
+</div>
+
+<script>
+const c=document.getElementById('lab'),ctx=c.getContext('2d');
+let play=false,t=0,showParticles=false;
+const segs=24;let temps=new Array(segs).fill(0);
+function draw(dt){ctx.clearRect(0,0,c.width,c.height);const w=c.width,h=c.height;
+// candle
+const cx=90,cy=h*0.72,candleW=40,candleH=70;
+ctx.fillStyle='#facc15';ctx.fillRect(cx-candleW/2,cy-candleH,candleW,candleH);
+ctx.fillStyle='#fde68a';ctx.beginPath();ctx.ellipse(cx,cy-candleH,18,6,0,0,Math.PI*2);ctx.fill();
+// flame twinkle
+const flick=1+Math.sin(t*8+Math.sin(t*2))*0.25;const sway=Math.sin(t*3)*0.05;const fh=80*flick;
+ctx.save();ctx.translate(cx,cy-candleH);ctx.rotate(sway);
+ctx.scale(1,1.2);
+const grd=ctx.createRadialGradient(0,-fh*0.4,4,0,-fh*0.4,fh);
+grd.addColorStop(0,'rgba(255,200,120,0.7)');grd.addColorStop(1,'rgba(255,120,0,0)');ctx.fillStyle=grd;
+ctx.beginPath();ctx.ellipse(0,-fh*0.4,25,fh*0.7,0,0,Math.PI*2);ctx.fill();
+ctx.fillStyle='#fb923c';ctx.beginPath();ctx.moveTo(0,-5);ctx.quadraticCurveTo(10,-fh*0.7,0,-fh);ctx.quadraticCurveTo(-10,-fh*0.7,0,-5);ctx.fill();
+ctx.fillStyle='#fff';ctx.beginPath();ctx.moveTo(0,-5);ctx.quadraticCurveTo(5,-fh*0.4,0,-fh*0.55);ctx.quadraticCurveTo(-5,-fh*0.4,0,-5);ctx.fill();ctx.restore();
+// sparks
+for(let i=0;i<6;i++){ctx.fillStyle='rgba(255,220,150,0.8)';ctx.beginPath();ctx.arc(cx+(Math.random()-0.5)*20,cy-candleH-10-Math.random()*fh*0.8,Math.random()*2+1,0,Math.PI*2);ctx.fill();}
+// metal bar shifted left slightly overlapping flame
+const bx0=100,bx1=w-60,by=h*0.42,bh=30;
+if(play){temps=temps.map((v,i)=>{const x=i/(segs-1);const tgt=x<(t*0.05)?1:0;return v+(tgt-v)*0.05;});}
+for(let i=0;i<segs;i++){const x=bx0+(bx1-bx0)*i/(segs-1);const tw=(bx1-bx0)/(segs-1)+1;const T=temps[i];const r=200+T*40,g=200-T*120,b=200-T*180;ctx.fillStyle=`rgb(${r},${g},${b})`;ctx.fillRect(x,by-bh/2,tw,bh);}ctx.strokeStyle='#111';ctx.strokeRect(bx0,by-bh/2,bx1-bx0,bh);
+// particles vibration (horizontal)
+if(showParticles){
+  const rows=2,cols=24,spacing=(bx1-bx0)/(cols-1);
+  for(let j=0;j<rows;j++){
+    for(let i=0;i<cols;i++){
+      const px=bx0+i*spacing;const py=by+(j-0.5)*18;
+      const localT=temps[i];
+      const amp=localT*3;
+      const osc=Math.sin(t*20+i)*amp;
+      ctx.fillStyle=`rgb(${200+localT*55},${100+localT*55},${100})`;
+      ctx.beginPath();ctx.arc(px+osc,py,5,0,Math.PI*2);ctx.fill();
+    }
+  }
+}
+}
+function loop(now){if(play)t+=0.016;draw(0.016);requestAnimationFrame(loop);}requestAnimationFrame(loop);
+document.getElementById('play').onclick=()=>play=!play;
+document.getElementById('reset').onclick=()=>{t=0;temps=new Array(segs).fill(0);play=false;};
+document.getElementById('showParticles').onchange=e=>showParticles=e.target.checked;
+const info=document.getElementById('infoBox');
+document.getElementById('explain').onclick=()=>info.style.display='block';
+document.getElementById('closeInfo').onclick=()=>info.style.display='none';
+</script>
+</body>
+</html>
