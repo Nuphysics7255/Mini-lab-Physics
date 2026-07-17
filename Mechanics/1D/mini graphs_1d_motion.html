@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Mini Lab : กราฟการเคลื่อนที่แนวตรง</title>
+<style>
+  :root{--blue:#2f6fd6;--dark:#204d7c;--red:#d43b2a;--green:#32a852;--soft:#edf3fb;--line:#d8e3ef;--orange:#c94300;}
+  *{box-sizing:border-box} body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;background:#f7f9fc;color:#1d2733;padding-bottom:calc(92px + env(safe-area-inset-bottom));}
+  .wrap{max-width:1180px;margin:auto;padding:18px 14px 24px}
+  header{text-align:center;margin:4px 0 12px}.title{font-weight:900;color:var(--blue);font-size:clamp(24px,4vw,42px);line-height:1.1}.sub{font-weight:900;color:var(--dark);font-size:clamp(19px,3vw,30px);margin-top:4px}
+  .lab{background:white;border:1px solid #d9e2ec;border-radius:26px;box-shadow:0 12px 30px rgba(30,70,120,.10);overflow:hidden}
+  .topbar{display:none;align-items:center;justify-content:space-between;gap:10px;background:#fff7ef;border-bottom:1px solid #f0d1b7;padding:10px 12px;color:var(--orange);font-weight:900}.topbar .topic{font-size:20px}.pageDots{display:flex;gap:8px;align-items:center}.dot{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;border:1px solid #e2b693;color:#a85018;background:#fff;font-size:13px}.dot.active{background:#ffefe4;border-color:#e0561f;color:#e0561f;font-weight:900}
+  .motionText{display:none; text-align:center;color:#d9471c;font-weight:900;margin:8px 0 4px;font-size:16px}
+  .controls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:14px;background:#fbfdff;border-bottom:1px solid #e7eef6}.control{background:var(--soft);border:1px solid #d8e3ef;border-radius:18px;padding:10px;text-align:center}.control label{display:block;font-weight:850;font-size:14px;color:#254b70;margin-bottom:8px}.row{display:flex;justify-content:center;align-items:center;gap:8px}.num{width:86px;border:1px solid #b8c8d8;border-radius:10px;padding:7px;text-align:center;font-size:16px;background:white}.step{border:0;background:#fff;border-radius:12px;padding:6px 9px;font-size:19px;box-shadow:inset 0 0 0 1px #d8e3ef;color:#d22;font-weight:900}
+  .stage{padding:10px 12px 4px}.trackBox{position:relative;background:linear-gradient(#fff,#fff),repeating-linear-gradient(90deg,#e7ebef 0,#e7ebef 1px,transparent 1px,transparent 18px);border:1px solid #ccd7e2;border-radius:16px;height:136px;overflow:hidden}.axis{position:absolute;left:16px;right:16px;bottom:38px;height:2px;background:#8894a0}.ticklabel{position:absolute;bottom:14px;font-size:12px;color:#697789}.car{position:absolute;bottom:42px;left:20px;width:74px;height:34px;transform:translateX(-50%) scale(.5);transform-origin:center bottom;transition:left .04s linear;filter:drop-shadow(0 3px 2px rgba(0,0,0,.18));}
+  .car::before{content:"";position:absolute;left:5px;right:4px;bottom:7px;height:19px;background:#e9281e;border:2px solid #b8120c;border-radius:10px 16px 7px 7px;}
+  .car::after{content:"";position:absolute;left:20px;top:1px;width:31px;height:18px;background:#e9281e;border:2px solid #b8120c;border-bottom:0;border-radius:16px 19px 0 0;clip-path:polygon(0 100%,18% 15%,72% 0,100% 100%);}
+  .wheel{position:absolute;bottom:2px;width:14px;height:14px;border-radius:50%;background:#222;border:3px solid #777;z-index:2}.wheel.w1{left:13px}.wheel.w2{right:10px}.win{position:absolute;top:6px;left:28px;width:18px;height:10px;background:#bfe4ff;border-radius:8px 11px 1px 1px;z-index:3}.headlight{position:absolute;right:0;bottom:16px;width:8px;height:6px;background:#ffe58b;border-radius:50%;z-index:3}.posDot{position:absolute;bottom:56px;width:7px;height:7px;border-radius:50%;background:#e24a2a;transform:translateX(-50%);box-shadow:0 0 0 2px rgba(226,74,42,.10)}.posDot span{position:absolute;top:-20px;left:50%;transform:translateX(-50%);font-size:10px;color:#b13b23;font-weight:800;background:rgba(255,255,255,.75);padding:0 2px;border-radius:5px}.velArrow{position:absolute;bottom:104px;height:0;border-top:3px solid #32a852;transform-origin:left center;transition:width .08s linear,left .08s linear,transform .08s linear}.velArrow:after{content:"";position:absolute;right:-1px;top:-7px;border-left:11px solid #32a852;border-top:6px solid transparent;border-bottom:6px solid transparent}.velLabel{position:absolute;bottom:111px;font-weight:900;font-size:15px;color:#32a852;background:rgba(255,255,255,.82);padding:1px 5px;border-radius:8px;transform:translateX(-50%);pointer-events:none;transition:left .08s linear}.accArrow{position:absolute;bottom:71px;height:0;border-top:3px solid #2f6fd6;transform-origin:left center}.accArrow:after{content:"";position:absolute;right:-1px;top:-7px;border-left:11px solid #2f6fd6;border-top:6px solid transparent;border-bottom:6px solid transparent}.accLabel{position:absolute;bottom:78px;font-weight:900;font-size:15px;color:#2f6fd6;background:rgba(255,255,255,.82);padding:1px 5px;border-radius:8px;transform:translateX(-50%);pointer-events:none}.timeText{position:absolute;right:16px;top:10px;font-size:13px;color:#333;font-weight:800;background:rgba(255,255,255,.8);padding:3px 8px;border-radius:999px}
+  .graphTools{display:none;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;padding:10px 12px 0;font-weight:800;color:#315474}.chip{display:inline-flex;align-items:center;gap:6px;background:#f4f7fb;border:1px solid #d8e3ef;border-radius:999px;padding:7px 10px}.chip input{width:17px;height:17px;accent-color:#2f6fd6}
+  .graphs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:12px}.card{border:1px solid #d8e3ef;border-radius:18px;padding:8px;background:#fff}.card.hidden{display:none}canvas{width:100%;height:230px;display:block}.caption{text-align:center;font-weight:900;color:#244b74;margin-top:3px}.formula{margin:12px;padding:12px;border-radius:18px;background:#eef7ea;border:1px solid #bfdcaf;color:#235a2f;font-weight:750;line-height:1.55}.formula b{color:#123d70}.brand{text-align:center;margin:14px 0 2px}.brand a{color:#1f6fe5;text-decoration:underline;font-weight:900}
+  .bottomNav{position:fixed;left:50%;bottom:calc(10px + env(safe-area-inset-bottom));transform:translateX(-50%);width:min(720px,calc(100vw - 18px));display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;background:rgba(235,241,247,.72);backdrop-filter:blur(8px);border:1px solid #d8e3ef;border-radius:22px;padding:8px;z-index:50}.btn{border:1.5px solid #89b6e1;border-radius:17px;min-height:50px;font-weight:900;font-size:16px;background:#dceeff;color:#244b74}.btn.play{background:#69aee8;color:white}.btn.reset{background:#e8edf2;color:#53616f}.btn.mission{background:#ffe4c4;color:#8b4d00;border-color:#f0c28b}.btn.pause{background:#4f96d8;color:white}
+  .modal{position:fixed;inset:0;background:rgba(17,28,42,.45);z-index:80;display:none;align-items:center;justify-content:center;padding:calc(22px + env(safe-area-inset-top)) 14px calc(22px + env(safe-area-inset-bottom))}.modal.show{display:flex}.panel{width:min(760px,100%);max-height:86vh;overflow:auto;background:#fff7ee;border:2px solid #efc58f;border-radius:24px;padding:18px;position:relative}.close{position:sticky;top:0;float:right;border:0;background:#e7eef6;color:#45688f;border-radius:16px;width:48px;height:48px;font-size:28px;font-weight:900}.panel h2{color:#c04b00;margin:6px 0 12px;font-size:24px}.panel p,.panel li{font-size:17px;line-height:1.7}.missionBox{background:white;border:1px solid #f0cfaa;border-radius:18px;padding:12px;margin:10px 0}
+  @media(max-width:760px){.wrap{padding:10px 8px}.controls{display:flex;overflow-x:auto;gap:8px;padding:10px}.control{min-width:220px}.graphs{grid-template-columns:repeat(3,minmax(290px,1fr))!important;overflow-x:auto;scroll-snap-type:x proximity}.card{scroll-snap-align:start}.trackBox{height:118px}.topbar .topic{font-size:17px}canvas{height:205px}.bottomNav{grid-template-columns:1fr 1fr 1fr}.btn{font-size:14px;min-height:46px}.num{width:78px}.dot{width:22px;height:22px}.pageDots{gap:5px}.chip{font-size:13px}.car{font-size:34px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><div class="sub">Mini Lab : กราฟการเคลื่อนที่แนวตรง</div></header>
+  <main class="lab">
+    <div class="topbar"><div class="topic">The Basic 6 : Graphing</div><div class="pageDots"><span>1</span><span>2</span><span class="dot active">3</span><span>4</span><span>5</span><span>6</span></div></div>
+    <div class="motionText" id="motionText">เคลื่อนที่ทิศ + และเร็วขึ้น</div>
+    <section class="controls">
+      <div class="control"><label>ความเร็วต้น u (m/s)</label><div class="row"><button class="step" onclick="bump('v0',-0.2)">▼</button><input class="num" id="v0" type="number" step="0.1" value="0.0"><button class="step" onclick="bump('v0',0.2)">▲</button></div></div>
+      <div class="control"><label>ความเร่ง a (m/s²)</label><div class="row"><button class="step" onclick="bump('a',-0.2)">▼</button><input class="num" id="a" type="number" step="0.1" value="1.4"><button class="step" onclick="bump('a',0.2)">▲</button></div></div>
+      <div class="control"><label>เวลาสูงสุด t<sub>max</sub> (s)</label><div class="row"><button class="step" onclick="bump('tmax',-0.5)">▼</button><input class="num" id="tmax" type="number" step="0.5" value="5.0"><button class="step" onclick="bump('tmax',0.5)">▲</button></div></div>
+    </section>
+    <section class="stage">
+      <div class="trackBox" id="track"><div class="timeText" id="timeText">Time: 0.00 s</div><div class="axis"></div><div class="ticklabel" style="left:18px">0 m</div><div class="ticklabel" style="right:18px" id="rangeText">12 m</div><div class="car" id="car"><span class="win"></span><span class="headlight"></span><span class="wheel w1"></span><span class="wheel w2"></span></div><div class="velArrow" id="velArrow"></div><div class="velLabel" id="velLabel">v</div><div class="accArrow" id="accArrow"></div><div class="accLabel" id="accLabel">a</div></div>
+    </section>
+    <section class="graphTools" aria-hidden="true"></section>
+
+    <section class="graphs" id="graphs">
+      <div class="card" id="cardX"><canvas id="xGraph"></canvas><div class="caption">กราฟตำแหน่ง x–t</div></div>
+      <div class="card" id="cardV"><canvas id="vGraph"></canvas><div class="caption">กราฟความเร็ว v–t</div></div>
+      <div class="card" id="cardA"><canvas id="aGraph"></canvas><div class="caption">กราฟความเร่ง a–t</div></div>
+    </section>
+    <div class="formula"><b>หลักการ:</b> รถยนต์จะเคลื่อนที่ตามค่าที่ปรับไว้ จุดสีแดงบนรางจะค่อย ๆ แสดงตำแหน่งของรถทุก ๆ 1 วินาที และเส้นกราฟจะค่อย ๆ ถูกวาดตามเวลาจริงจากความสัมพันธ์ <b>Δx = ut + ½at²</b>, <b>v = u + at</b> และ <b>a = ค่าคงที่</b></div>
+    <div class="brand"><a href="https://www.facebook.com/resolvephysics" target="_blank">ศึกษาเพิ่มเติมที่เพจคลายปมฟิสิกส์</a></div>
+  </main>
+</div>
+<div class="bottomNav"><button class="btn play" id="playBtn" onclick="togglePlay()">▶️ เล่น</button><button class="btn reset" onclick="resetLab()">🔄 รีเซ็ต</button><button class="btn mission" onclick="openMission()">🎯 ภารกิจ</button></div>
+<div class="modal" id="missionModal"><div class="panel"><button class="close" onclick="closeMission()">×</button><h2>🎯 ภารกิจ Mini Lab</h2><div class="missionBox"><b>ภารกิจที่ 1</b><br>ตั้งค่า u = 0 m/s และ a เป็นบวก (m/s²) แล้วสังเกตว่าระยะห่างระหว่างจุดตำแหน่งทุก 1 วินาทีห่างขึ้นเรื่อย ๆ</div><div class="missionBox"><b>ภารกิจที่ 2</b><br>ตั้งค่า u = 10 m/s และ a = 0 m/s² แล้วดูว่า x–t กลายเป็นเส้นตรง และจุดตำแหน่งบนรางห่างเท่า ๆ กัน</div><div class="missionBox"><b>ภารกิจที่ 3</b><br>ตั้งค่า u = 10 m/s และ a = -2 m/s² สังเกตกราฟแต่ละกราฟ</div></div></div>
+<script>
+const $=id=>document.getElementById(id);let running=false,t=0,last=0,raf=null;
+function val(id){return parseFloat($(id).value)||0}function clamp(x,a,b){return Math.max(a,Math.min(b,x))}
+function bump(id,d){let x=val(id)+d;if(id==='tmax')x=clamp(x,1,12);else x=clamp(x,-8,8);$(id).value=x.toFixed(1);resetLab(false);}
+['v0','a','tmax'].forEach(id=>$(id).addEventListener('input',()=>resetLab(false)));
+function stateAt(tt){let v0=val('v0'),a=val('a');return {x:v0*tt+0.5*a*tt*tt,v:v0+a*tt,a:a}}
+function bounds(){let tm=val('tmax'),arr=[];for(let i=0;i<=80;i++)arr.push(stateAt(tm*i/80).x);let mn=Math.min(0,...arr),mx=Math.max(1,...arr);return {mn,mx,range:mx-mn}}
+function xposToPct(x){let b=bounds();return clamp((x-b.mn)/b.range,.03,.97)}
+function classify(){let a=val('a'),s=stateAt(Math.min(1,val('tmax')));let dir=s.v>=0?'ทิศ +':'ทิศ −';let speed=(Math.abs(a)<.05)?'ความเร็วคงที่':(s.v*a>0?'เร็วขึ้น':'ช้าลง');$('motionText').textContent=`เคลื่อนที่${dir} และ${speed}`}
+function drawDots(){const track=$('track');track.querySelectorAll('.posDot').forEach(e=>e.remove());let tm=val('tmax');let lastSec=Math.min(Math.floor(t),Math.floor(tm));for(let sec=0;sec<=lastSec;sec++){let dot=document.createElement('div');dot.className='posDot';dot.style.left=(xposToPct(stateAt(sec).x)*100)+'%';dot.innerHTML='<span>'+sec+'s</span>';track.appendChild(dot)}}
+function niceStep(raw){
+  if(!isFinite(raw) || raw<=0) return 1;
+  const pow = Math.pow(10, Math.floor(Math.log10(raw)));
+  const f = raw / pow;
+  const nf = f <= 1 ? 1 : (f <= 2 ? 2 : (f <= 2.5 ? 2.5 : (f <= 5 ? 5 : 10)));
+  return nf * pow;
+}
+function decimalsForStep(step){
+  step = Math.abs(step);
+  if(!isFinite(step) || step === 0) return 0;
+  if(step >= 1 && Math.abs(step - Math.round(step)) < 1e-9) return 0;
+  return Math.min(4, Math.max(1, Math.ceil(-Math.log10(step)) + 1));
+}
+function formatTick(v,step){
+  if(Math.abs(v) < 1e-9) v = 0;
+  const d = decimalsForStep(step);
+  let txt = v.toFixed(d);
+  txt = txt.replace(/\.0+$/,'').replace(/(\.\d*?)0+$/,'$1');
+  return txt === '-0' ? '0' : txt;
+}
+function makeNiceAxis(minVal,maxVal,targetIntervals=6){
+  if(!isFinite(minVal) || !isFinite(maxVal)){minVal=-1;maxVal=1;}
+  if(minVal > maxVal){ const tmp=minVal; minVal=maxVal; maxVal=tmp; }
+  if(Math.abs(maxVal-minVal) < 1e-9){
+    const c = minVal || 0;
+    minVal = c - 1; maxVal = c + 1;
+  }
+  const range = maxVal - minVal;
+  let step = niceStep(range / targetIntervals);
+  let niceMin = Math.floor(minVal / step) * step;
+  let niceMax = Math.ceil(maxVal / step) * step;
+  let intervals = Math.round((niceMax - niceMin) / step);
+
+  // ให้จำนวนช่องพอดี อ่านง่าย และทุกช่องห่างเท่ากันจริง
+  while(intervals > 7){
+    step = niceStep(step * 1.51);
+    niceMin = Math.floor(minVal / step) * step;
+    niceMax = Math.ceil(maxVal / step) * step;
+    intervals = Math.round((niceMax - niceMin) / step);
+  }
+  while(intervals < 4){
+    step = step / 2;
+    niceMin = Math.floor(minVal / step) * step;
+    niceMax = Math.ceil(maxVal / step) * step;
+    intervals = Math.round((niceMax - niceMin) / step);
+  }
+
+  // สร้าง tick จาก index คูณ step ไม่ใช้การปัดเป็นจำนวนเต็ม จึงไม่ซ้ำ เช่น 2, 1.5, 1, 0.5, 0, -0.5, -1
+  const ticks=[];
+  for(let i=0;i<=intervals;i++){
+    let value = niceMin + i * step;
+    if(Math.abs(value) < 1e-9) value = 0;
+    ticks.push(value);
+  }
+  return {min:niceMin,max:niceMax,step,ticks};
+}
+function drawAxes(ctx,w,h,xmin,xmax,ymin,ymax,ylab){
+  ctx.clearRect(0,0,w,h);
+  ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);
+  const L=54,R=28,T=16,B=42;
+  const plotW=w-L-R, plotH=h-T-B;
+  ctx.lineWidth=1;
+  ctx.font='11px system-ui';
+  ctx.textBaseline='middle';
+  ctx.fillStyle='#596877';
+
+  const yAxis = makeNiceAxis(ymin,ymax,6);
+  function px(x){return L+(x-xmin)/(xmax-xmin)*plotW}
+  function py(y){return T+(yAxis.max-y)/(yAxis.max-yAxis.min)*plotH}
+
+  // แกนเวลา: ตำแหน่งตามสัดส่วนจริง และข้อความไม่ซ้ำ
+  const xStep = xmax <= 6 ? 1 : (xmax <= 12 ? 2 : Math.ceil(xmax/6));
+  const xTicks=[];
+  for(let tt=0; tt<=xmax+1e-9; tt+=xStep) xTicks.push(tt);
+  if(Math.abs(xTicks[xTicks.length-1]-xmax)>1e-9) xTicks.push(xmax);
+  for(const tt of xTicks){
+    const x=px(tt);
+    ctx.strokeStyle='#d4dce5';ctx.beginPath();ctx.moveTo(x,T);ctx.lineTo(x,T+plotH);ctx.stroke();
+    ctx.fillStyle='#596877';ctx.textAlign='center';ctx.fillText(formatTick(tt,xStep),x,h-16);
+  }
+
+  // แกนตั้ง: ใช้ค่า tick จริงจาก makeNiceAxis ระยะ y คำนวณจากสเกลเดียวกันทุกช่อง จึงห่างเท่ากันและเลขไม่ซ้ำ
+  for(const yy of yAxis.ticks){
+    const y=py(yy);
+    ctx.strokeStyle='#d4dce5';ctx.beginPath();ctx.moveTo(L,y);ctx.lineTo(L+plotW,y);ctx.stroke();
+    ctx.fillStyle='#596877';ctx.textAlign='right';ctx.fillText(formatTick(yy,yAxis.step),L-12,y);
+  }
+
+  // แกนหลัก x=0, y=0
+  ctx.strokeStyle='#222';ctx.lineWidth=1.4;
+  const y0=clamp(py(0),T,T+plotH);
+  ctx.beginPath();ctx.moveTo(L,y0);ctx.lineTo(L+plotW,y0);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(L,T);ctx.lineTo(L,T+plotH);ctx.stroke();
+
+  ctx.fillStyle='#4e6277';ctx.textAlign='right';ctx.textBaseline='alphabetic';ctx.fillText('t (s)',w-12,h-14);
+  ctx.save();ctx.translate(22,44);ctx.rotate(-Math.PI/2);ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(ylab,0,0);ctx.restore();
+  return {px,py,L,R,T,B,yAxis};
+}
+function plot(canvasId,fn,ymin,ymax,ylab){
+let graphColor='#e24a2a';
+if(canvasId==='vGraph') graphColor='#32a852';
+if(canvasId==='aGraph') graphColor='#2f6fd6';const c=$(canvasId),dpr=devicePixelRatio||1,w=c.clientWidth*dpr,h=c.clientHeight*dpr;c.width=w;c.height=h;const ctx=c.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);const W=c.clientWidth,H=c.clientHeight,tm=val('tmax');let ax=drawAxes(ctx,W,H,0,tm,ymin,ymax,ylab);ctx.strokeStyle=graphColor;ctx.lineWidth=3;ctx.beginPath();let now=clamp(t,0,tm),steps=Math.max(2,Math.ceil(180*now/tm));for(let i=0;i<=steps;i++){let tt=now*i/steps,y=fn(tt),x=ax.px(tt),yy=ax.py(y); if(i===0)ctx.moveTo(x,yy); else ctx.lineTo(x,yy);}ctx.stroke();ctx.fillStyle=graphColor;for(let sec=0;sec<=Math.floor(now);sec++){let y=fn(sec);ctx.beginPath();ctx.arc(ax.px(sec),ax.py(y),3,0,Math.PI*2);ctx.fill();}}
+function updateGraphVisibility(){['cardX','cardV','cardA'].forEach(id=>$(id).classList.remove('hidden'));}
+function redraw(){classify();drawDots();updateGraphVisibility();let tm=val('tmax'),v0=val('v0'),a=val('a');let b=bounds();$('rangeText').textContent=Math.ceil(b.mx)+' m';let pad=(b.range)*.25+1;plot('xGraph',tt=>stateAt(tt).x,b.mn-pad,b.mx+pad,'x(m)');let vs=[v0,v0+a*tm],vymin=Math.min(-1,...vs),vymax=Math.max(1,...vs),vpad=(vymax-vymin)*.25+1;plot('vGraph',tt=>stateAt(tt).v,vymin-vpad,vymax+vpad,'v(m/s)');let amin=Math.min(-1,a-1),amax=Math.max(1,a+1);plot('aGraph',tt=>a,amin,amax,'a(m/s²)');updateCar();}
+function updateCar(){let st=stateAt(t),pct=xposToPct(st.x);$('car').style.left=(pct*100)+'%';$('timeText').textContent='Time: '+t.toFixed(2)+' s';
+  let v=st.v,arrow=$('velArrow'),vLab=$('velLabel'),vLen=clamp(Math.abs(v)*12,12,170),vDir=v>=0?1:-1;
+  arrow.style.width=vLen+'px';arrow.style.left=`calc(${pct*100}% + ${vDir>0?12:-12}px)`;arrow.style.transform=vDir>0?'scaleX(1)':'scaleX(-1)';
+  vLab.style.left=`calc(${pct*100}% + ${vDir*(12+vLen/2)}px)`;
+  vLab.textContent = `v = ${v.toFixed(1)} m/s`;
+  let vShow=Math.abs(v)>=.05;arrow.style.display=vShow?'block':'none';vLab.style.display=vShow?'block':'none';
+  let a=st.a,aArrow=$('accArrow'),aLab=$('accLabel'),aLen=clamp(Math.abs(a)*30,20,90),aDir=a>=0?1:-1;
+  aArrow.style.width=aLen+'px';aArrow.style.left=`calc(${pct*100}% + ${aDir>0?12:-12}px)`;aArrow.style.transform=aDir>0?'scaleX(1)':'scaleX(-1)';
+  aLab.style.left=`calc(${pct*100}% + ${aDir*(12+aLen/2)}px)`;
+  aLab.textContent = `a = ${a.toFixed(1)} m/s²`;
+  let aShow=Math.abs(a)>=.05;aArrow.style.display=aShow?'block':'none';aLab.style.display=aShow?'block':'none';
+}
+function loop(ts){if(!last)last=ts;let dt=(ts-last)/1000;last=ts;t+=dt;if(t>val('tmax')){t=val('tmax');running=false;$('playBtn').textContent='▶️ เล่น';$('playBtn').className='btn play'}redraw();if(running)raf=requestAnimationFrame(loop)}
+function togglePlay(){running=!running;if(running){last=0;$('playBtn').textContent='⏸ หยุด';$('playBtn').className='btn pause';raf=requestAnimationFrame(loop)}else{$('playBtn').textContent='▶️ เล่น';$('playBtn').className='btn play';cancelAnimationFrame(raf)}}
+function resetLab(stop=true){t=0;if(stop){running=false;$('playBtn').textContent='▶️ เล่น';$('playBtn').className='btn play';cancelAnimationFrame(raf)}redraw()}
+function openMission(){$('missionModal').classList.add('show')}function closeMission(){$('missionModal').classList.remove('show')}
+window.addEventListener('resize',redraw);redraw();
+</script>
+</body></html>
