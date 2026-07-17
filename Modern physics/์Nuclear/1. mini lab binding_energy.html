@@ -1,0 +1,1548 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Mini Lab : พลังงานยึดเหนี่ยว (Binding Energy)</title>
+
+<!-- MathJax -->
+<script>
+  window.MathJax = {
+    tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']] },
+    svg: { fontCache: 'global' }
+  };
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+
+<style>
+  :root{
+    --bg:#f8fafc; --ink:#0f172a; --panel:#ffffff; --line:#e2e8f0;
+    --accent:#2563eb; --good:#16a34a; --warn:#ca8a04; --bad:#dc2626;
+    --proton:#ef4444; --neutron:#16a34a; --dash:#64748b;
+    --energy:#e11d48; --energy2:#fb923c; --formula-bg:#f8fbff;
+    --card:#eef2ff;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,Segoe UI,Inter,"Noto Sans Thai",sans-serif}
+  header{
+    position:sticky; top:0; z-index:5;
+    padding:10px 12px;border-bottom:1px solid var(--line);background:var(--panel);
+    display:flex;gap:8px;align-items:center;flex-wrap:wrap
+  }
+  .selector-pill{display:inline-flex;align-items:center;gap:8px}
+  .control-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  header h1{margin:0;font-size:20px;font-weight:800}
+  .wrap{max-width:1200px;margin:0 auto}
+  .row{display:grid;grid-template-columns:1.4fr 1fr;gap:12px;padding:12px}
+  @media (max-width: 980px){
+    .row{grid-template-columns:1fr}
+  }
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px}
+  .pill{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:#fff;border:1px solid var(--line);font-size:12px}
+  select,button{background:transparent;border:1px solid var(--line);color:var(--ink);padding:8px 10px;border-radius:10px font-size:20px; padding:16px 22px; }
+  button{background:var(--accent);border-color:transparent;color:#fff;cursor:pointer font-size:20px; padding:16px 22px; }
+  button.ghost{background:transparent;border:1px solid var(--line);color:var(--ink)}
+  .reset-btn{background:#e5e7eb !important;border-color:#cbd5e1 !important;color:#334155 !important}
+  .theory-btn{background:#ffedd5 !important;border-color:#fdba74 !important;color:#9a3412 !important}
+  .quiz-btn{background:#dcfce7 !important;border-color:#86efac !important;color:#166534 !important}
+  .legend{display:flex;gap:8px;flex-wrap:wrap}
+  .dot{width:12px;height:12px;border-radius:50%}
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;font-size:14px}
+  .kv .val{font-variant-numeric:tabular-nums}
+  .section-title{margin:6px 0 0;font-weight:800}
+  .grid{display:grid;gap:8px}
+  .bar{height:10px;background:var(--line);border-radius:999px;position:relative;overflow:hidden}
+  .bar>i{position:absolute;inset:0 0 0 auto;width:0;background:var(--accent)}
+  /* Canvas responsive */
+  #lab{
+    width:100%;
+    height:clamp(480px,72vh,780px);
+    display:block;
+    border-radius:12px;
+    background:linear-gradient(180deg,rgba(0,0,0,.03),transparent 20%,transparent 80%,rgba(0,0,0,0.05));
+    border:1px solid var(--line)
+  }
+  .formula-card{background:var(--formula-bg);border:1px solid #dbeafe;border-radius:12px;padding:12px;overflow-wrap:anywhere}
+  .formula-eq{display:grid;gap:8px}
+  .formula-line{display:block;overflow-x:auto;overflow-y:hidden;padding-bottom:2px}
+
+  /* Modal (scroll ได้, ไม่ล้นจอ) */
+  .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);padding:16px;z-index:50}
+  .modal.show{display:flex}
+  .modal-card{width:min(1100px,96vw);max-height:92vh;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+  .fullscreen-card{
+    width:100vw;
+    max-width:100vw;
+    height:100vh;
+    max-height:100vh;
+    border-radius:0;
+    padding:calc(env(safe-area-inset-top) + 18px) 18px calc(env(safe-area-inset-bottom) + 140px);
+    overflow:auto;
+    position:relative;
+  }
+  .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px}
+  .fullscreen-card .modal-header{
+    position:sticky;
+    top:calc(env(safe-area-inset-top));
+    background:#fff;
+    z-index:5;
+    padding:6px 84px 10px 0;
+  }
+  .modal-title{font-weight:900;font-size:20px}
+  .close-btn{background:transparent;border:1px solid var(--line);color:#111827}
+  .fullscreen-card .close-btn{
+    position:fixed;
+    top:calc(env(safe-area-inset-top) + 14px);
+    right:16px;
+    z-index:60;
+    background:#fff;
+    border:1px solid #cbd5e1;
+    box-shadow:0 8px 24px rgba(0,0,0,.16);
+  }
+
+  /* Theory content cards */
+  .cards{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width: 780px){ .cards{grid-template-columns:1fr} }
+  .card{background:var(--card);border:1px solid #dbeafe;border-radius:12px;padding:12px}
+  .card h4{margin:0 0 6px 0}
+
+  .lab-note{display:none !important;}
+
+  .stem,.card,.formula-card,.modal-card,.modal-title,.kv,.panel,.choices label span{
+    overflow-wrap:anywhere;
+    word-break:break-word;
+    min-width:0;
+  }
+  .card, .panel { overflow:hidden; }
+  .card mjx-container,
+  .stem mjx-container,
+  .formula-card mjx-container,
+  .explain mjx-container,
+  .choices mjx-container{
+    max-width:100% !important;
+    overflow-x:auto !important;
+    overflow-y:hidden !important;
+    display:block !important;
+  }
+  @media (max-width:780px){
+    html,body{
+      padding-top:env(safe-area-inset-top);
+      padding-bottom:env(safe-area-inset-bottom);
+    }
+    .modal-card.fullscreen-card{
+      width:100vw !important;
+      height:100svh !important;
+      max-height:100svh !important;
+      border-radius:0 !important;
+      padding-top:calc(env(safe-area-inset-top) + 18px) !important;
+      padding-bottom:calc(env(safe-area-inset-bottom) + 130px) !important;
+      overflow:auto !important;
+    }
+    .modal-header{
+      position:sticky !important;
+      top:0 !important;
+      z-index:20 !important;
+      background:var(--panel) !important;
+      padding-top:4px !important;
+      margin-bottom:10px !important;
+    }
+    .close-btn{
+      top:calc(env(safe-area-inset-top) + 10px) !important;
+      right:14px !important;
+      position:fixed !important;
+      z-index:30 !important;
+    }
+    .cards{padding-bottom:130px !important;}
+    .card{padding:14px !important;}
+    .card h4{
+      font-size:20px !important;
+      line-height:1.4 !important;
+      margin:0 0 8px 0 !important;
+    }
+    .card, .stem, .explain{
+      font-size:16px !important;
+      line-height:1.6 !important;
+    }
+    mjx-container[jax="SVG"]{
+      font-size:92% !important;
+    }
+    .choices{gap:10px !important;}
+    .choices label{padding:10px !important;}
+  }
+
+
+  .stem,.explain,.card,.formula-card,.modal-card,.modal-title,.kv,.panel{
+    overflow-wrap:anywhere;
+    word-break:break-word;
+  }
+  .stem{font-size:clamp(18px,2.8vw,22px);line-height:1.55}
+  .choices label span{min-width:0;overflow-wrap:anywhere;word-break:break-word}
+  .choices label{align-items:center}
+  .explain mjx-container,.stem mjx-container,.formula-card mjx-container,.card mjx-container{
+    max-width:100% !important;
+    overflow-x:auto;
+    overflow-y:hidden;
+  }
+  @media (max-width:780px){
+    .fullscreen-card{
+      padding-top:calc(env(safe-area-inset-top) + 24px) !important;
+      padding-bottom:calc(env(safe-area-inset-bottom) + 150px) !important;
+    }
+    .fullscreen-card .modal-header{
+      top:calc(env(safe-area-inset-top) + 2px) !important;
+      padding-top:4px;
+      margin-bottom:14px;
+    }
+    .fullscreen-card .close-btn{
+      top:calc(env(safe-area-inset-top) + 16px) !important;
+      right:14px !important;
+    }
+    .modal-card{
+      padding-bottom:calc(env(safe-area-inset-bottom) + 120px);
+    }
+    .stem{font-size:16px;line-height:1.6}
+    .modal-title{font-size:16px;line-height:1.35}
+  }
+
+
+  @media (max-width: 780px){
+    html,body{height:auto;min-height:100%}
+    body{
+      padding-top:calc(env(safe-area-inset-top) + 8px);
+      padding-bottom:calc(env(safe-area-inset-bottom) + 120px);
+    }
+    .wrap{max-width:none}
+    header{
+      padding:10px 8px;
+      gap:8px;
+      align-items:flex-start;
+      top:0;
+    }
+    header h1{font-size:20px;line-height:1.35;flex:1 0 100%}
+    .selector-pill{font-size:14px;padding:9px 12px}
+    .selector-pill select{font-size:16px;padding:10px 14px;min-height:44px}
+    .control-bar{
+      position:fixed;
+      left:10px;
+      right:10px;
+      bottom:calc(env(safe-area-inset-bottom) + 12px);
+      z-index:30;
+      display:grid;
+      grid-template-columns:repeat(5,minmax(0,1fr));
+      gap:8px;
+      padding:8px;
+      border:1px solid #d8e3ef;
+      border-radius:22px;
+      background:rgba(235,241,247,.92);
+      backdrop-filter:blur(8px);
+      box-shadow:0 10px 28px rgba(0,0,0,.14);
+    }
+    .control-bar button{
+      min-height:46px;
+      padding:8px 6px;
+      font-size:13px;
+      border-radius:16px;
+      white-space:normal;
+      line-height:1.2;
+     font-size:20px; padding:16px 22px; }
+    .row{padding:0;gap:0}
+    .row > .panel:first-child{
+      border-radius:0;border-left:none;border-right:none;
+      min-height:auto;
+      padding:10px 10px 18px;
+      display:flex;flex-direction:column
+    }
+    .row > .panel:first-child #lab{
+      flex:0 0 auto;
+      height:clamp(300px,41svh,420px);
+      min-height:0;
+    }
+    .row > .panel:last-child{
+      border-radius:0;border-left:none;border-right:none;border-bottom:none;
+      padding:12px 10px 24px
+    }
+    .pill{font-size:12px}
+    #lab{height:clamp(300px,41svh,420px)}
+    .fullscreen-card{padding:calc(env(safe-area-inset-top) + 16px) 14px calc(env(safe-area-inset-bottom) + 130px)}
+    .modal-title{font-size:17px}
+    .lab-note{font-size:13px}
+    .kv{grid-template-columns:minmax(0,1fr) auto;gap:8px 10px;font-size:15px}
+    .formula-card{padding:12px 10px}
+    .formula-card mjx-container{max-width:100% !important;overflow-x:auto;overflow-y:hidden}
+
+    #graphCanvas{
+      height:clamp(220px,32svh,280px) !important;
+      max-height:280px !important;
+    }
+    #graphModal .modal-card{
+      width:min(96vw,1100px);
+      max-height:90svh;
+      padding:14px;
+    }
+  }
+
+  /* Graph modal */
+  #graphCanvas{width:100%;height:420px;background:linear-gradient(180deg,#f3f4f6,#ffffff);border:1px solid var(--line);border-radius:12px}
+  .vline-tag{position:absolute;pointer-events:none;background:rgba(253,224,71,0.9);color:#1f2937;padding:8px 12px;border-radius:12px;font-size:12px;border:1px solid rgba(251,191,36,.95);box-shadow:0 6px 18px rgba(0,0,0,.15);white-space:nowrap}
+
+  footer{margin:0;padding:10px 12px;border-top:1px solid var(--line);background:#fff;color:#0f172a;font-size:14px;display:flex;justify-content:center}
+  footer a{color:#2563eb;font-weight:700;text-decoration:none}
+  footer a:hover{text-decoration:underline}
+
+  /* Graph modal fullscreen + safe area */
+  .graph-fullscreen{
+    width:100vw !important;
+    max-width:100vw !important;
+    height:100svh !important;
+    max-height:100svh !important;
+    border-radius:0 !important;
+    padding:calc(env(safe-area-inset-top) + 18px) 14px calc(env(safe-area-inset-bottom) + 120px) !important;
+    overflow:auto !important;
+    position:relative;
+    background:#fff;
+  }
+  #graphModal .modal-header{
+    position:sticky;
+    top:calc(env(safe-area-inset-top));
+    background:#fff;
+    z-index:10;
+    padding:6px 84px 10px 0;
+  }
+  #graphModal .close-btn{
+    position:fixed !important;
+    top:calc(env(safe-area-inset-top) + 14px) !important;
+    right:16px !important;
+    z-index:80 !important;
+    background:#fff !important;
+    border:1px solid #cbd5e1 !important;
+    color:#111827 !important;
+    box-shadow:0 8px 24px rgba(0,0,0,.16);
+  }
+  #graphCanvas{
+    width:100% !important;
+    height:min(72svh, 560px) !important;
+    max-height:none !important;
+    display:block;
+  }
+  @media (max-width:780px){
+    #graphCanvas{
+      height:min(68svh, 460px) !important;
+    }
+    #graphModal .graph-legend{
+      font-size:14px;
+      line-height:1.5;
+      overflow-wrap:anywhere;
+      word-break:break-word;
+    }
+  }
+
+
+  .stem sub, .choices sub, .explain sub { font-size:.8em; vertical-align:sub; }
+  .stem sup, .choices sup, .explain sup { font-size:.75em; }
+  .stem b, .explain b { font-weight:800; }
+  .choices label span { line-height:1.5; }
+  #quizModal .panel { overflow:hidden; }
+  #quizModal .explain { overflow-wrap:anywhere; word-break:break-word; line-height:1.6; }
+  #graphModal.show { display:flex !important; align-items:stretch; justify-content:center; }
+  #graphModal .close-btn { pointer-events:auto !important; touch-action:manipulation; }
+
+
+  .modal{pointer-events:none !important;}
+  .modal.show{pointer-events:auto !important;}
+  .control-bar{z-index:120; position:relative;}
+  #graphModal[aria-hidden="true"],
+  #theoryModal[aria-hidden="true"],
+  #quizModal[aria-hidden="true"]{
+    display:none !important;
+    pointer-events:none !important;
+  }
+  #graphModal.show,
+  #theoryModal.show,
+  #quizModal.show{
+    display:flex !important;
+    pointer-events:auto !important;
+  }
+
+
+  /* keep main controls at bottom always */
+  .control-bar{
+    position:fixed !important;
+    left:50% !important;
+    bottom:calc(env(safe-area-inset-bottom) + 12px) !important;
+    transform:translateX(-50%) !important;
+    z-index:200 !important;
+    width:min(96vw,760px) !important;
+  }
+
+  /* modal layers */
+  #graphModal, #theoryModal, #quizModal{
+    position:fixed !important;
+    inset:0 !important;
+    z-index:300 !important;
+  }
+
+  /* modal close buttons must always be clickable */
+  #graphModal .close-btn,
+  #theoryModal .close-btn,
+  #quizModal .close-btn{
+    position:fixed !important;
+    top:calc(env(safe-area-inset-top) + 14px) !important;
+    right:16px !important;
+    z-index:500 !important;
+    pointer-events:auto !important;
+    touch-action:manipulation !important;
+  }
+
+  /* modal cards below close button */
+  #graphModal .modal-card,
+  #theoryModal .modal-card,
+  #quizModal .modal-card{
+    position:relative !important;
+    z-index:310 !important;
+    margin-top:0 !important;
+    padding-top:calc(env(safe-area-inset-top) + 52px) !important;
+    padding-bottom:calc(env(safe-area-inset-bottom) + 120px) !important;
+    max-height:100svh !important;
+    overflow:auto !important;
+  }
+
+
+  /* tighten top space in theory/quiz full-screen pages */
+  #theoryModal .modal-card,
+  #quizModal .modal-card{
+    padding-top:calc(env(safe-area-inset-top) + 8px) !important;
+  }
+  #theoryModal .modal-header,
+  #quizModal .modal-header{
+    margin-bottom:4px !important;
+    padding-top:0 !important;
+  }
+  #theoryModal .modal-title,
+  #quizModal .modal-title{
+    margin-top:0 !important;
+  }
+
+  /* keep control buttons floating at bottom */
+  .control-bar{
+    position:fixed !important;
+    left:50% !important;
+    transform:translateX(-50%) !important;
+    bottom:calc(env(safe-area-inset-bottom) + 12px) !important;
+    z-index:999 !important;
+  }
+
+
+  /* fix selector usability */
+  .selector-pill{
+    position:relative !important;
+    z-index:1200 !important;
+    pointer-events:auto !important;
+  }
+  #nuclideSel{
+    position:relative !important;
+    z-index:1201 !important;
+    pointer-events:auto !important;
+    -webkit-appearance:auto !important;
+    appearance:auto !important;
+    background:#fff !important;
+  }
+
+  /* graph should keep aspect ratio instead of stretching */
+  #graphCanvas{
+    width:100% !important;
+    height:auto !important;
+    aspect-ratio: 980 / 420 !important;
+    max-height:70svh !important;
+    display:block !important;
+  }
+  @media (max-width:780px){
+    #graphCanvas{
+      max-height:52svh !important;
+      aspect-ratio: 980 / 420 !important;
+    }
+  }
+
+
+  /* enlarge graph and allow horizontal scroll if needed */
+  #graphModal .graph-scroll{
+    width:100%;
+    overflow-x:auto !important;
+    overflow-y:hidden !important;
+    -webkit-overflow-scrolling:touch;
+    padding-bottom:8px;
+  }
+  #graphCanvas{
+    width:max(600px, 100%) !important;
+    height:auto !important;
+    aspect-ratio:980 / 420 !important;
+    max-height:none !important;
+    display:block !important;
+  }
+  @media (max-width:780px){
+    #graphCanvas{
+      width:max(600px, 100%) !important;
+    }
+  }
+
+
+#graphBtn, #quizBtn { display:none !important; }
+
+
+.control-bar{
+  position:fixed !important;
+  left:50% !important;
+  transform:translateX(-50%) !important;
+  bottom:calc(env(safe-area-inset-bottom) + 12px) !important;
+
+  display:grid !important;
+  grid-template-columns: 1fr 1fr 1fr !important;
+  gap:10px !important;
+
+  width:min(95vw, 900px) !important;
+  padding:8px !important;
+  z-index:999 !important;
+}
+
+.control-bar button{
+  width:100% !important;
+  height:60px !important;
+
+  border-radius:18px !important;
+  font-size:16px !important;
+
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:center !important;
+  justify-content:center !important;
+
+  box-shadow:0 6px 16px rgba(0,0,0,0.15) !important;
+}
+
+</style>
+</head>
+
+<body>
+<div class="wrap">
+  <header>
+    <h1 style="color:#2563eb">Mini Lab : พลังงานยึดเหนี่ยว (Binding Energy)</h1>
+    <span class="pill selector-pill">เลือกนิวเคลียส: <select id="nuclideSel"></select></span>
+    <div class="control-bar">
+      <button id="playBtn">▶ เล่น</button>
+      <button id="resetBtn" class="reset-btn">↺ รีเซ็ต</button>
+      <button id="theoryBtn" class="theory-btn">สูตรสำคัญ</button>
+      <button id="graphBtn" class="ghost">กราฟ Eb/A</button>
+      <button id="quizBtn" class="quiz-btn">แบบฝึกหัด</button>
+    </div>
+  </header>
+
+  <div class="row">
+    <div class="panel" style="position:relative">
+      <canvas id="lab" width="900" height="480" aria-label="ห้องทดลองนิวเคลียส"></canvas>
+</div>
+
+    <div class="panel grid">
+      <div class="legend">
+        <span class="pill"><span class="dot" style="background:var(--proton)"></span>โปรตอน (p)</span>
+        <span class="pill"><span class="dot" style="background:var(--neutron)"></span>นิวตรอน (n)</span>
+        <span class="pill">วงกลมเส้นประ = นิวเคลียส</span>
+      </div>
+
+      <div class="kv" id="facts"></div>
+
+      <div class="grid">
+        <h3 class="section-title">มวล &amp; พลังงาน (ภาพรวม)</h3>
+        <div class="kv" id="calc"></div>
+        <div class="grid" id="bars"></div>
+      </div>
+
+      <div class="grid">
+        <h3 class="section-title">สูตรที่ใช้ในสื่อ (สรุปย่อ)</h3>
+        <div class="formula-card">
+          <div class="formula-eq">
+            <div class="formula-line">\[ \Delta m(\text{u}) = Z\,m_p + N\,m_n - M_{\text{nucleus}}(\text{u}) \]</div>
+            <div class="formula-line">\[ E_b(\text{MeV}) = \Delta m(\text{u}) \times 931.494 \]</div>
+            <div class="formula-line">\[ \frac{E_b}{A} = \frac{E_b}{A} \]</div>
+          </div>
+          <div style="font-size:12px;color:#475569;margin-top:6px">รายละเอียดแบบเต็มดูที่ปุ่ม “สูตรสำคัญ”</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- สูตรสำคัญ (อธิบายเต็ม+สมการ Latex) -->
+<div id="theoryModal" class="modal" aria-hidden="true">
+  <div class="modal-card fullscreen-card">
+    <div class="modal-header">
+      <div class="modal-title" style="color:#2563eb">สูตรสำคัญ & คำอธิบาย (Binding Energy)</div>
+      <button class="close-btn" id="closeTheory">ปิด</button>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <h4>พลังงานยึดเหนี่ยวคืออะไร?</h4>
+        คือพลังงานที่ต้องใช้เพื่อ “แยก” นิวเคลียสออกเป็นนิวคลีออนเดี่ยว ๆ หรือเท่ากับพลังงานที่ “ปล่อยออกมา” เมื่อโปรตอนและนิวตรอนรวมตัวเป็นนิวเคลียสใหม่:
+        \[
+          E_b \;=\; \Delta m\,c^2
+        \]
+        โดย \(\Delta m\) เรียกว่า “มวลพร่อง” (mass defect)
+      </div>
+
+      <div class="card">
+        <h4>มวลก่อนรวม & มวลพร่อง</h4>
+        มวลรวมก่อนรวมตัว (หน่วย u):
+        \[
+          m_{\text{before}}(\text{u}) \;=\; Z\,m_p + N\,m_n
+        \]
+        มวลพร่อง:
+        \[
+          \Delta m(\text{u}) \;=\; m_{\text{before}} - M_{\text{nucleus}}(\text{u})
+        \]
+        ถ้า \(\Delta m>0\) แปลว่ามีพลังงานยึดเหนี่ยวถูกปล่อยออกมา
+      </div>
+
+      <div class="card">
+        <h4>สูตร m หน่วย(u) & พลังงาน หน่วย (MeV)</h4>
+        \[
+          E_b(\text{MeV}) \;=\; \Delta m(\text{u}) \times 931.494
+        \]
+        และพลังงานยึดเหนี่ยว “ต่อนิวคลีออน”:
+        \[
+          \frac{E_b}{A} \;=\; \frac{E_b}{A}\quad (\text{MeV ต่อ นิวคลีออน})
+        \]
+      </div>
+
+      <div class="card">
+        <h4>สูตรแบบ SI: m หน่วย(kg) & พลังงาน หน่วย(J)</h4>
+        แปลงหน่วย:
+        \[
+          \Delta m(\text{kg}) \;=\; \Delta m(\text{u}) \times 1.66054\times 10^{-27}
+        \]
+        แล้วพลังงาน:
+        \[
+          E_b(\text{J}) \;=\; \Delta m(\text{kg})\,c^2,\quad c=2.99792458\times10^8\ \text{m/s}
+        \]
+      </div>
+
+      <div class="card">
+        <h4>เกี่ยวกับเสถียรภาพของนิวเคลียส</h4>
+        ใช้ตัวชี้วัด \(\,E_b/A\,\) — ค่ายิ่งมากมักยิ่งเสถียร จุดยอดของโค้งอยู่ในช่วง
+        \[
+          A \approx 56\text{–}62 \quad (\text{เช่น Fe-56, })
+        \]
+      </div>
+
+      <div class="card">
+        <h4>สรุปภาพรวม</h4>
+        \[
+          \boxed{\,m_{\text{before}}=Z m_p+N m_n,\quad
+                 \Delta m=m_{\text{before}}-M_{\text{nucleus}},\quad
+                 E_b=\Delta m c^2\,}
+        \]
+        \[
+          \boxed{\,E_b(\text{MeV})=\Delta m(\text{u})\times 931.494,\quad
+                 E_b/A = \frac{E_b}{A}\,}
+        \]
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- กราฟ Eb/A -->
+<div id="graphModal" class="modal" aria-hidden="true">
+  <div class="modal-card fullscreen-card graph-fullscreen" style="position:relative">
+    <div class="modal-header">
+      <div class="modal-title">กราฟ \(E_b/A\) ต่อ \(A\)</div>
+      <button class="close-btn" id="closeGraph">ปิด</button>
+    </div>
+    <div class="graph-legend" style="margin-bottom:6px;padding:6px 10px;background:#f8fafc;border:1px solid var(--line);border-radius:10px">
+      จุดตัวอย่าง: H-1, H-2, H-3, He-3, He-4, C-12, O-16, Fe-56, , U-235 — ลาก/คลิกเพื่อชี้ค่า
+    </div>
+    <div class="graph-scroll"><div style="position:relative;min-width:max-content">
+      <canvas id="graphCanvas" width="980" height="420"></canvas>
+      <div id="vlineTag" class="vline-tag" style="display:none"></div>
+    </div></div>
+  </div>
+</div>
+
+<!-- แบบฝึกหัด (หลายข้อ + คะแนน + เฉลยละเอียด) -->
+<div id="quizModal" class="modal" aria-hidden="true">
+  <div class="modal-card fullscreen-card">
+    <div class="modal-header">
+      <div class="modal-title" style="color:#2563eb">แบบฝึกหัด — พลังงานยึดเหนี่ยวพื้นฐาน</div>
+      <button class="close-btn" id="closeQuiz">ปิด</button>
+    </div>
+    <div id="quizWrap"></div>
+    <div class="actions" style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+      <button id="gradeBtn">ตรวจคำตอบ</button>
+      <button id="resetQuiz" class="ghost">ล้างคำตอบ</button>
+    </div>
+    <div id="quizResult" style="margin-top:8px"></div>
+  </div>
+</div>
+
+<footer>
+  ศึกษาเพิ่มเติมที่ <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">เพจคลายปมฟิสิกส์</a>
+</footer>
+
+<script>
+/* ===== ค่าคงที่ & ข้อมูลตัวอย่าง ===== */
+const CONST = { m_p_u:1.007276466621, m_n_u:1.00866491595, u_to_MeV:931.49410242 };
+const NUCLEUS_R = 92;
+
+const DEMO = [
+  { name:"H-1",  Z:1,  N:0,  A:1,   Eb_perA:0.000 },
+  { name:"H-2",  Z:1,  N:1,  A:2,   Eb_perA:1.112 },
+  { name:"H-3",  Z:1,  N:2,  A:3,   Eb_perA:2.827 },
+  { name:"He-3", Z:2,  N:1,  A:3,   Eb_perA:2.573 },
+  { name:"He-4", Z:2,  N:2,  A:4,   Eb_perA:7.100 },
+  { name:"C-12", Z:6,  N:6,  A:12,  Eb_perA:7.680 },
+  { name:"O-16", Z:8,  N:8,  A:16,  Eb_perA:7.976 },
+  { name:"Fe-56",Z:26, N:30, A:56,  Eb_perA:8.790 },
+  { name:"",Z:28, N:34, A:62,  Eb_perA:8.794 },
+  { name:"U-235",Z:92, N:143,A:235, Eb_perA:7.600 },
+];
+
+const sel = document.getElementById('nuclideSel');
+DEMO.forEach((n,i)=>{ const o=document.createElement('option'); o.value=i; o.textContent=n.name; sel.appendChild(o); });
+sel.value="4"; // He-4 เริ่มต้น
+
+/* ===== แผงด้านขวา ===== */
+const facts=document.getElementById('facts'), calc=document.getElementById('calc'), bars=document.getElementById('bars');
+function physicsFor(n){ const mp=CONST.m_p_u, mn=CONST.m_n_u, u2=CONST.u_to_MeV;
+  const mass_before_u=n.Z*mp + n.N*mn;
+  const Eb_total_MeV=n.Eb_perA*n.A;
+  const dm_u=Eb_total_MeV/u2;
+  const mass_after_u=mass_before_u - dm_u;
+  return {...n, mp, mn, mass_before_u, mass_after_u, dm_u, Eb_total_MeV};
+}
+function format(x,d=6){ return Number(x).toLocaleString(undefined,{maximumFractionDigits:d}); }
+function updateSide(nu){
+  const P=physicsFor(nu);
+  facts.innerHTML = `
+    <div class="label">สัญลักษณ์</div><div class="val">${nu.name}</div>
+    <div class="label">Z (โปรตอน)</div><div class="val">${P.Z}</div>
+    <div class="label">N (นิวตรอน)</div><div class="val">${P.N}</div>
+    <div class="label">A = Z+N</div><div class="val">${P.A}</div>`;
+  calc.innerHTML = `
+    <div class="label">มวลก่อนรวม (u)</div><div class="val">${format(P.mass_before_u)}</div>
+    <div class="label">มวลนิวเคลียส (u)</div><div class="val">${format(P.mass_after_u)}</div>
+    <div class="label">มวลพร่อง Δm (u)</div><div class="val" style="color:var(--warn)">${format(P.dm_u)}</div>
+    <div class="label">พลังงานยึดเหนี่ยวรวม (MeV)</div><div class="val" style="color:var(--good)">${format(P.Eb_total_MeV,3)}</div>
+    <div class="label">พลังงานยึดเหนี่ยว/นิวคลีออน (MeV/A)</div><div class="val">${format(P.Eb_perA,3)}</div>`;
+  const rel=(P.dm_u/P.mass_before_u)*100;
+  bars.innerHTML = `
+    <div class="kv"><div class="label">สัดส่วนมวลพร่อง</div><div class="val">${format(rel,3)} %</div></div>
+    <div class="bar"><i style="width:${Math.min(100, rel*1.8)}%"></i></div>
+    <div class="kv"><div class="label">Eb/A เทียบ ~9</div><div class="val">${format(P.Eb_perA,3)} / 9</div></div>
+    <div class="bar"><i style="width:${Math.min(100, P.Eb_perA/9*100)}%"></i></div>`;
+}
+
+/* ===== เสียงเอฟเฟกต์ (ยกเว้น H-1) ===== */
+let audioCtx;
+function ensureAudio(){ if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }
+function playBoom(){
+  ensureAudio();
+  const osc = audioCtx.createOscillator(), g = audioCtx.createGain();
+  osc.type='sine'; osc.frequency.setValueAtTime(90, audioCtx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime+0.35);
+  g.gain.setValueAtTime(0.9, audioCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime+0.4);
+  osc.connect(g).connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime+0.42);
+  const sz=audioCtx.sampleRate*0.35, buf=audioCtx.createBuffer(1,sz,audioCtx.sampleRate), d=buf.getChannelData(0);
+  for(let i=0;i<sz;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/sz,2.2);
+  const noise=audioCtx.createBufferSource(); noise.buffer=buf;
+  const lp=audioCtx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=1200;
+  const ng=audioCtx.createGain(); ng.gain.value=0.6;
+  noise.connect(lp).connect(ng).connect(audioCtx.destination); noise.start();
+}
+function isSilent(nu){ return nu && (nu.name==="H-1" || (nu.Z===1 && nu.N===0)); }
+
+/* ===== แอนนิเมชัน (แพ็กแน่น + คละ p/n) ===== */
+const canvas=document.getElementById('lab'), ctx=canvas.getContext('2d');
+let W=canvas.clientWidth, H=canvas.clientHeight;
+let state={particles:[],phase:'idle',t:0,soundPlayed:false};
+
+function resizeCanvasToDisplaySize() {
+  const cssW = Math.floor(canvas.clientWidth);
+  const cssH = Math.floor(canvas.clientHeight);
+  if (canvas.width !== cssW || canvas.height !== cssH) {
+    canvas.width = cssW; canvas.height = cssH; W=cssW; H=cssH; return true;
+  }
+  return false;
+}
+new ResizeObserver(()=>{ resizeCanvasToDisplaySize(); draw(); }).observe(canvas);
+
+function getSceneCenter(){
+  const isMobile = window.matchMedia('(max-width: 780px)').matches;
+  return { x: W*0.5, y: isMobile ? H*0.60 : H*0.58 };
+}
+function getParticleRadius(baseR){
+  const isMobile = window.matchMedia('(max-width: 780px)').matches;
+  return isMobile ? Math.max(7, Math.min(11, baseR*0.92)) : Math.max(6, Math.min(12, baseR));
+}
+function fitText(text,maxWidth,font){
+  ctx.save();
+  ctx.font = font;
+  const words = text.split(' ');
+  const lines = [];
+  let line = '';
+  for(const word of words){
+    const test = line ? line + ' ' + word : word;
+    if(ctx.measureText(test).width > maxWidth && line){
+      lines.push(line);
+      line = word;
+    }else{
+      line = test;
+    }
+  }
+  if(line) lines.push(line);
+  ctx.restore();
+  return lines;
+}
+
+function computePackedTargets(count, maxR){
+  const MIN_D = 6, MAX_D = 24;
+  let d = MAX_D;
+  const center = getSceneCenter();
+
+  function genPoints(dLocal){
+    const r = dLocal/2, vert = dLocal*Math.sqrt(3)/2;
+    const N = Math.ceil(maxR/dLocal)+2;
+    const pts=[];
+    for(let j=-N;j<=N;j++){
+      const y = j*vert;
+      const offset = (j&1)? dLocal/2 : 0;
+      for(let i=-N;i<=N;i++){
+        const x = i*dLocal + offset;
+        if(Math.hypot(x,y) <= maxR - r + 0.1){
+          const gx=center.x+x, gy=center.y+y;
+          const dx=gx-center.x, dy=gy-center.y;
+          const rad=Math.hypot(dx,dy), ang=Math.atan2(dy,dx);
+          pts.push({x:gx, y:gy, rad, ang});
+        }
+      }
+    }
+    pts.sort((a,b)=> a.rad-b.rad || a.ang-b.ang);
+    return {pts, r:dLocal/2, d:dLocal, center};
+  }
+
+  let result=null;
+  for(; d>=MIN_D; d-=2){
+    const pack = genPoints(d);
+    if(pack.pts.length >= count){ result={...pack, points:pack.pts.slice(0,count)}; break; }
+  }
+  if(!result){
+    const pack = genPoints(MIN_D);
+    const out=[...pack.pts];
+    function randInCircle(){
+      const a=Math.random()*Math.PI*2, rr=(maxR-pack.r-1)*Math.sqrt(Math.random());
+      return {x:pack.center.x+rr*Math.cos(a), y:pack.center.y+rr*Math.sin(a), rad:rr, ang:a};
+    }
+    while(out.length < count) out.push(randInCircle());
+    result={...pack, points:out.slice(0,count)};
+  }
+  return result;
+}
+
+function spawn(nu){
+  const {Z,N}=nu; const total=Z+N;
+  const pack = computePackedTargets(total, NUCLEUS_R);
+  const {points, r, d} = pack;
+
+  // จัดเป็นวงแหวน + คละชนิด
+  const ringSize = d*0.9;
+  const rings = new Map();
+  points.forEach(p=>{
+    const idx = Math.floor(p.rad / ringSize);
+    if(!rings.has(idx)) rings.set(idx, []);
+    rings.get(idx).push(p);
+  });
+
+  let needP = Z, needN = N;
+  const assignment = [];
+  const startWith = (Z>=N)? 'p' : 'n';
+  const ringKeys = Array.from(rings.keys()).sort((a,b)=>a-b);
+  ringKeys.forEach((k,ri)=>{
+    const arr = rings.get(k).sort((a,b)=>a.ang-b.ang);
+    let want = (ri%2===0)? startWith : (startWith==='p'?'n':'p');
+    arr.forEach(pt=>{
+      let t = want;
+      if(t==='p' && needP===0) t='n';
+      if(t==='n' && needN===0) t='p';
+      if(t==='p' && needP>0){ needP--; } else if(t==='n' && needN>0){ needN--; } else if(needP>0){ t='p'; needP--; } else { t='n'; needN--; }
+      assignment.push({x:pt.x, y:pt.y, type:t});
+      want = (want==='p')?'n':'p';
+    });
+  });
+
+  const arr=[]; const center = getSceneCenter(); const R0=Math.min(W,H)*0.46;
+  let idxP=0, idxN=0;
+  const tP = assignment.filter(a=>a.type==='p');
+  const tN = assignment.filter(a=>a.type==='n');
+
+  for(let i=0;i<Z;i++){
+    const a=Math.random()*Math.PI*2, rr=R0*(0.72+0.28*Math.random());
+    const t = tP[Math.min(idxP, tP.length-1)]; idxP++;
+    arr.push({id:i, type:'p', r:getParticleRadius(r), startX:center.x+rr*Math.cos(a), startY:center.y+rr*Math.sin(a),
+      x:center.x+rr*Math.cos(a), y:center.y+rr*Math.sin(a), targetX:t.x, targetY:t.y, color:getComputedStyle(document.body).getPropertyValue('--proton').trim()});
+  }
+  for(let j=0;j<N;j++){
+    const a=Math.random()*Math.PI*2, rr=R0*(0.72+0.28*Math.random());
+    const t = tN[Math.min(idxN, tN.length-1)]; idxN++;
+    arr.push({id:Z+j, type:'n', r:getParticleRadius(r), startX:center.x+rr*Math.cos(a), startY:center.y+rr*Math.sin(a),
+      x:center.x+rr*Math.cos(a), y:center.y+rr*Math.sin(a), targetX:t.x, targetY:t.y, color:getComputedStyle(document.body).getPropertyValue('--neutron').trim()});
+  }
+
+  state={particles:arr,phase:'idle',t:0,soundPlayed:false};
+}
+
+function easeOutExpo(x){return x===1?1:1-Math.pow(2,-10*x);}
+function step(dt){
+  state.t+=dt;
+  const nu = DEMO[+sel.value];
+  if(state.phase==='merge'){
+    const T=1.85,u=Math.min(1,state.t/T),e=easeOutExpo(u);
+    if(u>0.55 && !state.soundPlayed && !isSilent(nu)){ playBoom(); state.soundPlayed=true; }
+    state.particles.forEach(s=>{
+      s.x = s.startX + (s.targetX - s.startX) * e;
+      s.y = s.startY + (s.targetY - s.startY) * e;
+    });
+    if(u>=1){
+      state.particles.forEach(s=>{ s.x=s.targetX; s.y=s.targetY; });
+      state.phase='bound'; state.t=0;
+    }
+  }else if(state.phase==='bound'){
+    state.particles.forEach(s=>{ s.x=s.targetX; s.y=s.targetY; });
+  }
+}
+
+function withAlpha(rgb,a=0.5){
+  if(rgb.startsWith('#')){
+    const r=parseInt(rgb.slice(1,3),16),g=parseInt(rgb.slice(3,5),16),b=parseInt(rgb.slice(5,7),16);
+    return `rgba(${r},${g},${b},${a})`;
+  }
+  const m=rgb.match(/rgba?\(([^)]+)\)/);
+  if(m){const [r,g,b]=m[1].split(',').map(v=>+v.trim()); return `rgba(${r},${g},${b},${a})`;}
+  return rgb;
+}
+function roundRect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+
+function draw(){
+  const resized = resizeCanvasToDisplaySize();
+  if(resized){ /* ขนาดเปลี่ยน ให้ตำแหน่งอัปเดตเฟรมถัดไป */ }
+
+  const dash=getComputedStyle(document.body).getPropertyValue('--dash').trim(),
+        energy=getComputedStyle(document.body).getPropertyValue('--energy').trim(),
+        energy2=getComputedStyle(document.body).getPropertyValue('--energy2').trim();
+  ctx.clearRect(0,0,W,H);
+
+  const center = getSceneCenter();
+
+  // วงนิวเคลียส
+  ctx.save(); ctx.setLineDash([6,6]); ctx.strokeStyle=dash; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.arc(center.x,center.y,NUCLEUS_R,0,Math.PI*2); ctx.stroke(); ctx.restore();
+
+  // เอฟเฟกต์รวมตัว (ยกเว้น H-1)
+  const nu=DEMO[+sel.value];
+  if(state.phase==='merge' && !isSilent(nu)){
+    const T=1.85,u=Math.min(1,state.t/T);
+    if(u>0.55){
+      const a=(u-0.55)/0.45, r1=NUCLEUS_R + a*170;
+      const g=ctx.createRadialGradient(center.x,center.y,0,center.x,center.y,r1);
+      g.addColorStop(0, withAlpha(energy,0.55));
+      g.addColorStop(0.4, withAlpha(energy2,0.35));
+      g.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(center.x,center.y,r1,0,Math.PI*2); ctx.fill();
+    }
+  }
+
+  // อนุภาค
+  state.particles.forEach(s=>{
+    ctx.beginPath(); ctx.fillStyle=s.color; ctx.arc(s.x,s.y,s.r,0,Math.PI*2); ctx.fill();
+    const f = Math.max(9, Math.min(14, s.r+2));
+    ctx.fillStyle='#fff'; ctx.font=`bold ${f}px system-ui,Inter,sans-serif`;
+    ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(s.type, s.x, s.y+0.3);
+  });
+
+  // สถานะและข้อมูลสั้นด้านบน (กันข้อความทับรูปทดลอง)
+  const P=physicsFor(nu);
+  const isMobile = window.matchMedia('(max-width: 780px)').matches;
+  const status = state.phase==='idle' ? 'เตรียมรวมตัวของโปรตอนและนิวตรอน'
+                : state.phase==='merge' ? (isSilent(nu) ? 'กำลังรวมตัวของนิวคลีออน' : 'กำลังรวมตัวและปลดปล่อยพลังงาน')
+                : 'นิวคลีออนรวมกันเป็นนิวเคลียสแล้ว';
+  const infoLines = fitText(status, Math.min(W-32, 560), `800 ${isMobile?14:18}px system-ui,Inter,"Noto Sans Thai",sans-serif`);
+  const boxW = Math.min(W-24, isMobile ? W-24 : 620);
+  const boxH = state.phase==='idle' ? (isMobile ? 68 : 74) : (isMobile ? 126 : 136);
+  const boxX = (W-boxW)/2, boxY = 14;
+
+  ctx.textAlign='center'; ctx.textBaseline='top';
+  ctx.fillStyle='rgba(15,23,42,.85)';
+  ctx.font=`800 ${isMobile?14:18}px system-ui,Inter,"Noto Sans Thai",sans-serif`;
+  infoLines.forEach((line,idx)=>ctx.fillText(line, W*0.5, boxY + 12 + idx*(isMobile?20:24)));
+
+  ctx.font=`700 ${isMobile?12:19}px system-ui,Inter,"Noto Sans Thai",sans-serif`;
+  ctx.fillStyle='#334155';
+  const y0 = boxY + 18 + infoLines.length*(isMobile?20:24);
+  ctx.fillText(`${P.Z}(m_p) + ${P.N}(m_n) = ${format(P.mass_before_u,6)} u`, W*0.5, y0);
+
+  if(state.phase!=='idle'){
+    ctx.fillStyle='#b45309';
+    ctx.fillText(`Δm = ${format(P.dm_u,6)} u`, W*0.5, y0 + (isMobile?18:22));
+    ctx.fillStyle='#e11d48';
+    const eb = `E_b = ${format(P.Eb_total_MeV,3)} MeV  •  E_b/A = ${format(P.Eb_perA,3)} MeV/A`;
+    const ebLines = fitText(eb, boxW-30, `800 ${isMobile?12:19}px system-ui,Inter,"Noto Sans Thai",sans-serif`);
+    ctx.font=`800 ${isMobile?12:19}px system-ui,Inter,"Noto Sans Thai",sans-serif`;
+    ebLines.forEach((line,idx)=>ctx.fillText(line, W*0.5, y0 + (isMobile?38:46) + idx*(isMobile?18:20)));
+  }
+}
+
+let lastT=performance.now();
+function loop(now){const dt=Math.min(0.05,(now-lastT)/1000); lastT=now; step(dt); draw(); requestAnimationFrame(loop);}
+requestAnimationFrame(loop);
+
+/* ===== ปุ่มควบคุมหลัก ===== */
+document.getElementById('playBtn').onclick=()=>{
+  const nu=DEMO[+sel.value];
+  spawn(nu); // ให้เริ่มจากตำแหน่งกระจายทุกครั้ง แล้วค่อยวิ่งเข้าสู่วงกลมเส้นปะ
+  state.phase='merge'; state.t=0; state.soundPlayed=false; ensureAudio(); draw();
+};
+document.getElementById('resetBtn').onclick=()=>{ const nu=DEMO[+sel.value]; spawn(nu); updateSide(nu); draw(); if(window.MathJax?.typeset) window.MathJax.typeset(); };
+sel.onchange=()=>{ const nu=DEMO[+sel.value]; spawn(nu); updateSide(nu); draw(); };
+
+(function init(){ const nu=DEMO[+sel.value]; spawn(nu); updateSide(nu); draw(); if(window.MathJax?.typeset) window.MathJax.typeset(); })();
+
+/* ===== สูตรสำคัญ modal ===== */
+const theoryModal=document.getElementById('theoryModal');
+document.getElementById('theoryBtn').onclick=()=>{
+  theoryModal.classList.add('show');
+  rerenderMath([theoryModal]);
+};
+document.getElementById('closeTheory').onclick=()=>{theoryModal.classList.remove('show');};
+
+/* ===== กราฟ Eb/A vs A (แบบเบา) ===== */
+const graphModal=document.getElementById('graphModal');
+const closeGraphBtn=document.getElementById('closeGraph');
+document.getElementById('graphBtn').onclick=()=>{
+  graphModal.classList.add('show');
+  graphModal.setAttribute('aria-hidden','false');
+  drawGraph();
+};
+function closeGraphModal(){
+  graphModal.classList.remove('show');
+  graphModal.setAttribute('aria-hidden','true');
+}
+closeGraphBtn.onclick=closeGraphModal;
+closeGraphBtn.addEventListener('touchstart',(e)=>{ e.preventDefault(); closeGraphModal(); }, {passive:false});
+
+graphModal.addEventListener('click',(e)=>{
+  if(e.target===graphModal){ graphModal.classList.remove('show'); }
+});
+
+function ebCurve(A){
+  const P=[[1,0.00],[2,1.10],[3,2.60],[3.9,5.50],[4.0,7.10],[5.0,5.00],[8.0,7.00],[12,7.60],[16,7.98],[24,8.30],[40,8.55],[56,8.79],[62,8.79],[80,8.60],[100,8.45],[150,8.20],[200,7.95],[230,7.40],[235,7.60],[237,7.45],[240,7.40]];
+  if(A<=1)return 0;if(A>=240)return 7.4;
+  for(let i=0;i<P.length-1;i++){const[x1,y1]=P[i],[x2,y2]=P[i+1];if(A>=x1&&A<=x2){const t=(A-x1)/(x2-x1);const base=y1+(y2-y1)*t;return A<16?base+0.12*Math.cos(Math.PI*A):base;}}
+  return 0;
+}
+function drawGraph(){
+  const c=document.getElementById('graphCanvas'), g=c.getContext('2d');
+  const W=c.width,H=c.height,padL=56,padR=16,padT=18,padB=36;
+  const x2px=x=>padL+(x-1)/(239)*(W-padL-padR), y2px=y=>H-padB-(y-0)/(9.5)*(H-padT-padB);
+  const tag=document.getElementById('vlineTag');
+
+  function grid(){
+    g.clearRect(0,0,W,H);
+    g.strokeStyle='#e5e7eb'; g.lineWidth=1;
+    for(let y=1;y<=9;y++){ g.beginPath(); g.moveTo(padL,y2px(y)); g.lineTo(W-padR,y2px(y)); g.stroke(); }
+    for(let x=20;x<=240;x+=20){ g.beginPath(); g.moveTo(x2px(x),padT); g.lineTo(x2px(x),H-padB); g.stroke(); }
+    g.strokeStyle='#0f172a'; g.lineWidth=1.2;
+    g.beginPath(); g.moveTo(padL,padT); g.lineTo(padL,H-padB); g.lineTo(W-padR,H-padB); g.stroke();
+    g.fillStyle='#0f172a'; g.font='12px system-ui,Inter,sans-serif';
+    g.fillText('E_b/A (MeV per nucleon)', 10,12);
+    g.fillText('A (mass number)', W-170, H-10);
+
+    // เส้นแนวโน้ม
+    g.strokeStyle='#2563eb'; g.lineWidth=2;
+    g.beginPath();
+    for(let A=1; A<=240; A++){
+      const px=x2px(A), py=y2px(ebCurve(A));
+      if(A===1) g.moveTo(px,py); else g.lineTo(px,py);
+    }
+    g.stroke();
+
+    // มาร์กตัวอย่างหลัก
+    function label(px,py,text){
+      g.fillStyle='rgba(37,99,235,.12)';
+      const w=g.measureText(text).width+12,h=20, bx=px+8, by=py-14;
+      roundRect(g,bx,by,w,h,8); g.fill();
+      g.strokeStyle='rgba(37,99,235,.45)'; g.lineWidth=1; roundRect(g,bx,by,w,h,8); g.stroke();
+      g.fillStyle='#2563eb'; g.font='12px system-ui,Inter,sans-serif'; g.textAlign='left';
+      g.fillText(text, bx+6, by+14);
+    }
+    const marks=[{A:4,t:'He-4 • ~7.1 MeV'},{A:56,t:'Fe-56'},{A:62,t:''},{A:235,t:'U-235 • ~7.6 MeV'}];
+    marks.forEach(m=>{const px=x2px(m.A),py=y2px(ebCurve(m.A)); g.fillStyle='#2563eb'; g.beginPath(); g.arc(px,py,4,0,Math.PI*2); g.fill(); label(px,py,m.t);});
+  }
+
+  function placeTag(px,html){
+    const rect=c.getBoundingClientRect();
+    tag.style.display='block'; tag.innerHTML=html;
+    const tagW=tag.offsetWidth||160, tagH=tag.offsetHeight||48;
+    let x=px-160-tagW/2, y=padT+(H-padT-padB)/2-tagH/2, margin=8;
+    if(x<margin)x=margin; if(x+tagW>W-margin)x=W-margin-tagW;
+    if(y<margin)y=margin; if(y+tagH>H-margin)y=H-margin-tagH;
+    tag.style.left=(rect.left+x)+'px';
+    tag.style.top =(rect.top +y)+'px';
+  }
+
+  let Acur=56;
+  function render(){
+    grid();
+    const y=ebCurve(Acur), px=x2px(Acur), py=y2px(y);
+    g.save(); g.setLineDash([5,5]); g.strokeStyle='rgba(15,23,42,.6)';
+    g.beginPath(); g.moveTo(px,padT); g.lineTo(px,H-padB); g.stroke(); g.restore();
+    g.fillStyle='#0f172a'; g.beginPath(); g.arc(px,py,4,0,Math.PI*2); g.fill();
+    placeTag(px, `A = <b>${Math.round(Acur)}</b> • E_b/A ≈ <b>${y.toFixed(3)}</b> MeV`);
+  }
+  render();
+
+  let drag=false;
+  c.onmousedown=e=>{drag=true;upd(e)}; c.ontouchstart=e=>{drag=true;upd(e)};
+  window.onmouseup=()=>drag=false; window.ontouchend=()=>drag=false;
+  window.onmousemove=e=>drag&&upd(e); window.ontouchmove=e=>drag&&upd(e);
+  function upd(e){
+    const r=c.getBoundingClientRect();
+    const x=(e.touches?e.touches[0].clientX:e.clientX)-r.left;
+    Acur=Math.min(240,Math.max(1, 1+(x-56)/(W-56-16)*(239)));
+    render();
+  }
+}
+
+/* ===== แบบฝึกหัดหลายข้อ ===== */
+
+function rerenderMath(nodes){
+  const run = ()=>{
+    if(window.MathJax?.typesetClear) try{ window.MathJax.typesetClear(nodes); }catch(e){}
+    if(window.MathJax?.texReset) try{ window.MathJax.texReset(); }catch(e){}
+    if(window.MathJax?.typesetPromise){
+      MathJax.typesetPromise(nodes).catch(()=>{});
+    }else if(window.MathJax?.typeset){
+      try{ MathJax.typeset(nodes); }catch(e){}
+    }
+  };
+  requestAnimationFrame(()=>requestAnimationFrame(()=>setTimeout(run,120)));
+}
+
+const quizModal=document.getElementById('quizModal'); const quizWrap=document.getElementById('quizWrap');
+document.getElementById('quizBtn').onclick=()=>{
+  buildQuiz();
+  quizModal.classList.add('show');
+  rerenderMath([quizWrap, quizModal]);
+};
+document.getElementById('closeQuiz').onclick=()=>{quizModal.classList.remove('show');document.getElementById('quizResult').innerHTML='';};
+document.getElementById('resetQuiz').onclick=()=>{
+  buildQuiz();
+  rerenderMath([quizWrap, quizModal]);
+};
+
+const QUIZ=[
+  {
+    stem:`ให้ <b>Z=2, N=2</b> (He-4) และ <b>m<sub>p</sub>=1.007276 u</b>, <b>m<sub>n</sub>=1.008665 u</b>. ถ้า <b>E<sub>b</sub>/A ≈ 7.10 MeV</b> จงหา <b>Δm</b> (หน่วย u)`,
+    choices:[`≈ 0.002 u`,`≈ 0.030 u`,`≈ 0.061 u`,`≈ 0.122 u`],
+    answer:1,
+    explain:`<div>คำนวณมวลก่อนรวมตัว</div>
+    <div><b>m<sub>before</sub> = 2m<sub>p</sub> + 2m<sub>n</sub> ≈ 4.031882 u</b></div>
+    <div><b>E<sub>b</sub> = 7.10 × 4 = 28.4 MeV</b></div>
+    <div><b>Δm = E<sub>b</sub>/931.494 ≈ 0.0305 u</b></div>
+    <div>ดังนั้นคำตอบที่ใกล้ที่สุดคือ <b>0.030 u</b></div>`
+  },
+  {
+    stem:`ถ้า <b>Δm = 0.00239 u</b> จงหา <b>E<sub>b</sub></b> (MeV)`,
+    choices:[`≈ 0.22`,`≈ 2.23`,`≈ 9.31`,`≈ 22.3`],
+    answer:1,
+    explain:`<b>E<sub>b</sub> = Δm × 931.494 ≈ 0.00239 × 931.494 ≈ 2.23 MeV</b>`
+  },
+  {
+    stem:`สำหรับ <b>Fe-56</b> ถ้า <b>E<sub>b</sub>/A = 8.79 MeV</b> จงหา <b>E<sub>b</sub></b> รวม`,
+    choices:[`≈ 56 MeV`,`≈ 492 MeV`,`≈ 8.79 MeV`,`≈ 5600 MeV`],
+    answer:1,
+    explain:`<b>E<sub>b</sub> = (E<sub>b</sub>/A) × A = 8.79 × 56 ≈ 492 MeV</b>`
+  },
+  {
+    stem:`จงคำนวณ <b>E<sub>b</sub></b> เป็นจูล ถ้า <b>Δm = 1.20 × 10<sup>-29</sup> kg</b> และ <b>c = 2.998 × 10<sup>8</sup> m/s</b>`,
+    choices:[`≈ 1.08 × 10<sup>-12</sup> J`,`≈ 1.08 × 10<sup>-13</sup> J`,`≈ 1.08 × 10<sup>-11</sup> J`,`≈ 1.08 × 10<sup>-10</sup> J`],
+    answer:0,
+    explain:`<b>E<sub>b</sub> = Δm c² = 1.20 × 10<sup>-29</sup> × (2.998 × 10<sup>8</sup>)² ≈ 1.08 × 10<sup>-12</sup> J</b>`
+  },
+  {
+    stem:`นิวเคลียสใด “เสถียรกว่า” ตามเกณฑ์ <b>E<sub>b</sub>/A</b>?`,
+    choices:[`E<sub>b</sub>/A = 7.5 MeV`,`E<sub>b</sub>/A = 8.0 MeV`,`E<sub>b</sub>/A = 8.5 MeV`,`เท่ากันทั้งหมด`],
+    answer:2,
+    explain:`โดยคร่าว ๆ นิวเคลียสที่มี <b>E<sub>b</sub>/A</b> สูงกว่าจะเสถียรกว่า ดังนั้น <b>8.5 MeV</b> สูงสุด`
+  },
+  {
+    stem:`ให้ <b>Z = 6, N = 6</b> และ <b>M<sub>nucleus</sub> = 11.178 u</b>. ใช้ <b>m<sub>p</sub> = 1.007276 u</b>, <b>m<sub>n</sub> = 1.008665 u</b> หา <b>Δm</b> (u)`,
+    choices:[`≈ 0.012`,`≈ 0.122`,`≈ 1.22`,`≈ 0.0012`],
+    answer:1,
+    explain:`<div><b>m<sub>before</sub> = 6m<sub>p</sub> + 6m<sub>n</sub> ≈ 11.300 u</b></div>
+    <div><b>Δm = m<sub>before</sub> - M<sub>nucleus</sub> ≈ 11.300 - 11.178 ≈ 0.122 u</b></div>`
+  }
+];
+
+function buildQuiz(){
+  quizWrap.innerHTML = QUIZ.map((q,qi)=>`
+    <div class="panel" style="background:#fff">
+      <h4 style="margin:0 0 6px 0">ข้อที่ ${qi+1}</h4>
+      <div class="stem">${q.stem}</div>
+      <div class="choices" style="margin-top:8px;display:grid;gap:8px">
+        ${q.choices.map((c,ci)=>`
+          <label style="display:flex;gap:8px;align-items:flex-start;background:#fff;border:1px solid var(--line);padding:8px;border-radius:10px;min-width:0">
+            <input type="radio" name="q${qi}" value="${ci}"/><span>${c}</span>
+          </label>`).join('')}
+      </div>
+      <div class="explain" id="exp${qi}" style="display:none;margin-top:6px;padding:8px;border-left:3px solid var(--accent);background:rgba(37,99,235,.08);border-radius:8px"></div>
+    </div>
+  `).join('');
+  document.getElementById('quizResult').innerHTML='';
+}
+
+document.getElementById('gradeBtn')?.addEventListener('click',()=>{
+  let score=0;
+  QUIZ.forEach((q,qi)=>{
+    const sel=document.querySelector(`input[name="q${qi}"]:checked`);
+    const exp=document.getElementById(`exp${qi}`);
+    if(sel && +sel.value===q.answer) score++;
+    exp.style.display='block';
+    exp.innerHTML=`<strong>เฉลยละเอียด:</strong> ${q.explain}`;
+  });
+  document.getElementById('quizResult').innerHTML =
+    `<span style="padding:8px 10px;border-radius:10px;background:rgba(22,163,74,.1);color:#16a34a;border:1px solid rgba(22,163,74,.3);font-weight:800">
+      คะแนน: ${score} / ${QUIZ.length}
+     </span>`;
+  rerenderMath([quizWrap, document.getElementById('quizResult')]);
+});
+</script>
+
+<script>
+(function(){
+  const playBtn = document.getElementById('playBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const theoryBtn = document.getElementById('theoryBtn');
+  const graphBtn = document.getElementById('graphBtn');
+  const quizBtn = document.getElementById('quizBtn');
+  const closeGraph = document.getElementById('closeGraph');
+  const closeTheory = document.getElementById('closeTheory');
+  const closeQuiz = document.getElementById('closeQuiz');
+  const graphModal = document.getElementById('graphModal');
+  const theoryModal = document.getElementById('theoryModal');
+  const quizModal = document.getElementById('quizModal');
+
+  function forceClose(modal){
+    if(!modal) return;
+    modal.classList.remove('show');
+    modal.setAttribute('aria-hidden','true');
+    modal.style.display = 'none';
+  }
+  function forceOpen(modal){
+    if(!modal) return;
+    modal.style.display = 'flex';
+    modal.classList.add('show');
+    modal.setAttribute('aria-hidden','false');
+  }
+
+  // Rebind graph open/close so the overlay doesn't get stuck
+  if(graphBtn){
+    graphBtn.addEventListener('click', function(e){
+      e.preventDefault();
+      forceOpen(graphModal);
+      try{ if(typeof drawGraph === 'function') drawGraph(); }catch(err){}
+    }, true);
+    graphBtn.addEventListener('touchstart', function(e){
+      e.preventDefault();
+      forceOpen(graphModal);
+      try{ if(typeof drawGraph === 'function') drawGraph(); }catch(err){}
+    }, {capture:true, passive:false});
+  }
+  if(closeGraph){
+    closeGraph.addEventListener('click', function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      forceClose(graphModal);
+    }, true);
+    closeGraph.addEventListener('touchstart', function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      forceClose(graphModal);
+    }, {capture:true, passive:false});
+  }
+
+  // Rebind theory modal open/close
+  if(theoryBtn){
+    theoryBtn.addEventListener('click', function(e){
+      e.preventDefault();
+      forceOpen(theoryModal);
+      try{ if(typeof rerenderMath === 'function') rerenderMath([theoryModal]); }catch(err){}
+    }, true);
+    theoryBtn.addEventListener('touchstart', function(e){
+      e.preventDefault();
+      forceOpen(theoryModal);
+      try{ if(typeof rerenderMath === 'function') rerenderMath([theoryModal]); }catch(err){}
+    }, {capture:true, passive:false});
+  }
+  if(closeTheory){
+    closeTheory.addEventListener('click', function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      forceClose(theoryModal);
+    }, true);
+  }
+
+  // Rebind quiz modal open/close
+  if(quizBtn){
+    quizBtn.addEventListener('click', function(e){
+      e.preventDefault();
+      try{ if(typeof buildQuiz === 'function') buildQuiz(); }catch(err){}
+      forceOpen(quizModal);
+    }, true);
+    quizBtn.addEventListener('touchstart', function(e){
+      e.preventDefault();
+      try{ if(typeof buildQuiz === 'function') buildQuiz(); }catch(err){}
+      forceOpen(quizModal);
+    }, {capture:true, passive:false});
+  }
+  if(closeQuiz){
+    closeQuiz.addEventListener('click', function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      forceClose(quizModal);
+    }, true);
+  }
+
+  // Rebind reset/play as safety
+  if(resetBtn){
+    resetBtn.addEventListener('touchstart', function(e){
+      // allow original onclick to run
+    }, {passive:true});
+  }
+  if(playBtn){
+    playBtn.addEventListener('touchstart', function(e){
+      // allow original onclick to run
+    }, {passive:true});
+  }
+})();
+</script>
+
+
+<script>
+(function(){
+  const ids = ['graphModal','theoryModal','quizModal'];
+  function openModal(id){
+    const m = document.getElementById(id);
+    if(!m) return;
+    m.style.display='flex';
+    m.classList.add('show');
+    m.setAttribute('aria-hidden','false');
+  }
+  function closeModal(id){
+    const m = document.getElementById(id);
+    if(!m) return;
+    m.classList.remove('show');
+    m.setAttribute('aria-hidden','true');
+    m.style.display='none';
+  }
+
+  const graphBtn = document.getElementById('graphBtn');
+  const theoryBtn = document.getElementById('theoryBtn');
+  const quizBtn = document.getElementById('quizBtn');
+
+  if(graphBtn){
+    graphBtn.onclick = (e)=>{ e.preventDefault(); openModal('graphModal'); try{ if(typeof drawGraph==='function') drawGraph(); }catch(err){}; };
+  }
+  if(theoryBtn){
+    theoryBtn.onclick = (e)=>{ e.preventDefault(); openModal('theoryModal'); try{ if(typeof rerenderMath==='function') rerenderMath([document.getElementById('theoryModal')]); }catch(err){}; };
+  }
+  if(quizBtn){
+    quizBtn.onclick = (e)=>{ e.preventDefault(); try{ if(typeof buildQuiz==='function') buildQuiz(); }catch(err){}; openModal('quizModal'); };
+  }
+
+  const cg = document.getElementById('closeGraph');
+  const ct = document.getElementById('closeTheory');
+  const cq = document.getElementById('closeQuiz');
+
+  if(cg){
+    cg.onclick = (e)=>{ e.preventDefault(); e.stopPropagation(); closeModal('graphModal'); };
+    cg.addEventListener('touchstart',(e)=>{ e.preventDefault(); e.stopPropagation(); closeModal('graphModal'); }, {passive:false});
+  }
+  if(ct){
+    ct.onclick = (e)=>{ e.preventDefault(); e.stopPropagation(); closeModal('theoryModal'); };
+    ct.addEventListener('touchstart',(e)=>{ e.preventDefault(); e.stopPropagation(); closeModal('theoryModal'); }, {passive:false});
+  }
+  if(cq){
+    cq.onclick = (e)=>{ e.preventDefault(); e.stopPropagation(); closeModal('quizModal'); };
+    cq.addEventListener('touchstart',(e)=>{ e.preventDefault(); e.stopPropagation(); closeModal('quizModal'); }, {passive:false});
+  }
+
+  ids.forEach(id=>{
+    const m=document.getElementById(id);
+    if(!m) return;
+    m.addEventListener('click',(e)=>{ if(e.target===m) closeModal(id); });
+  });
+})();
+</script>
+
+
+<script>
+(function(){
+  const playBtn = document.getElementById('playBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const sel = document.getElementById('nuclideSel');
+
+  function runReset(){
+    try{
+      const nu = DEMO[+sel.value];
+      spawn(nu);
+      updateSide(nu);
+      draw();
+      if(window.MathJax?.typesetPromise){ MathJax.typesetPromise().catch(()=>{}); }
+      else if(window.MathJax?.typeset){ MathJax.typeset(); }
+    }catch(err){}
+  }
+
+  function runPlay(){
+    try{
+      const nu = DEMO[+sel.value];
+      spawn(nu);
+      state.phase='merge';
+      state.t=0;
+      state.soundPlayed=false;
+      ensureAudio();
+      draw();
+    }catch(err){}
+  }
+
+  if(resetBtn){
+    resetBtn.onclick = (e)=>{ e.preventDefault(); runReset(); };
+    resetBtn.addEventListener('touchstart', (e)=>{ e.preventDefault(); runReset(); }, {passive:false});
+  }
+  if(playBtn){
+    playBtn.onclick = (e)=>{ e.preventDefault(); runPlay(); };
+    playBtn.addEventListener('touchstart', (e)=>{ e.preventDefault(); runPlay(); }, {passive:false});
+  }
+})();
+</script>
+
+
+<script>
+(function(){
+  const sel = document.getElementById('nuclideSel');
+  const graphCanvas = document.getElementById('graphCanvas');
+
+  function resizeGraphCanvas(){
+    if(!graphCanvas) return;
+    const wrap = graphCanvas.parentElement;
+    const rect = wrap.getBoundingClientRect();
+    const cssW = Math.max(320, Math.floor(rect.width));
+    const cssH = Math.round(cssW * 420 / 980); // keep original ratio
+    graphCanvas.width = cssW;
+    graphCanvas.height = cssH;
+    graphCanvas.style.height = cssH + 'px';
+  }
+
+  // Make selector definitely work
+  if(sel){
+    sel.disabled = false;
+    sel.style.pointerEvents = 'auto';
+    sel.style.touchAction = 'manipulation';
+    sel.addEventListener('change', function(){
+      try{
+        const nu = DEMO[+sel.value];
+        spawn(nu);
+        updateSide(nu);
+        draw();
+      }catch(err){}
+    });
+    sel.addEventListener('touchstart', function(e){
+      e.stopPropagation();
+    }, {passive:true});
+  }
+
+  // Patch graph open to resize before drawing
+  const graphBtn = document.getElementById('graphBtn');
+  if(graphBtn){
+    graphBtn.addEventListener('click', function(){
+      try{
+        resizeGraphCanvas();
+        if(typeof drawGraph === 'function') drawGraph();
+      }catch(err){}
+    }, true);
+    graphBtn.addEventListener('touchstart', function(){
+      try{
+        resizeGraphCanvas();
+        if(typeof drawGraph === 'function') drawGraph();
+      }catch(err){}
+    }, {capture:true, passive:true});
+  }
+
+  window.addEventListener('resize', function(){
+    const graphModal = document.getElementById('graphModal');
+    if(graphModal && graphModal.classList.contains('show')){
+      try{
+        resizeGraphCanvas();
+        if(typeof drawGraph === 'function') drawGraph();
+      }catch(err){}
+    }
+  });
+
+  // initial graph canvas sync
+  try{ resizeGraphCanvas(); }catch(err){}
+})();
+</script>
+
+
+<script>
+(function(){
+  const graphCanvas = document.getElementById('graphCanvas');
+
+  function resizeGraphCanvasLarge(){
+    if(!graphCanvas) return;
+    const scroll = graphCanvas.closest('.graph-scroll');
+    const viewportW = scroll ? scroll.clientWidth : window.innerWidth;
+    const cssW = Math.max(500, Math.floor(viewportW * 0.6));
+    const cssH = Math.round(cssW * 420 / 980);
+    graphCanvas.width = cssW;
+    graphCanvas.height = cssH;
+    graphCanvas.style.width = cssW + 'px';
+    graphCanvas.style.height = cssH + 'px';
+  }
+
+  const graphBtn = document.getElementById('graphBtn');
+  if(graphBtn){
+    graphBtn.addEventListener('click', function(){
+      try{
+        resizeGraphCanvasLarge();
+        if(typeof drawGraph === 'function') drawGraph();
+      }catch(err){}
+    }, true);
+    graphBtn.addEventListener('touchstart', function(){
+      try{
+        resizeGraphCanvasLarge();
+        if(typeof drawGraph === 'function') drawGraph();
+      }catch(err){}
+    }, {capture:true, passive:true});
+  }
+
+  window.addEventListener('resize', function(){
+    const graphModal = document.getElementById('graphModal');
+    if(graphModal && graphModal.classList.contains('show')){
+      try{
+        resizeGraphCanvasLarge();
+        if(typeof drawGraph === 'function') drawGraph();
+      }catch(err){}
+    }
+  });
+})();
+</script>
+
+</body>
+</html>
