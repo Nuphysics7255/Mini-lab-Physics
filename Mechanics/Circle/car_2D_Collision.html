@@ -1,0 +1,559 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Top-Down Cars A & B — Canvas (ชนตั้งฉาก ติดกัน พร้อมควัน+เสียง)</title>
+<style>
+  :root{--bg:#ffffff;--ink:#0f172a;--muted:#475569;--road:#9ca3af;--lane:#e5e7eb;--accent:#0ea5e9}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,system-ui,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+  header{padding:12px 16px;border-bottom:1px solid #e5e7eb}
+  .wrap{max-width:1100px;margin:0 auto;padding:16px;display:grid;grid-template-columns:360px 1fr;gap:16px}
+  .card{border:1px solid #e5e7eb;border-radius:14px;padding:14px;background:#fff}
+  .row{display:flex;gap:8px;align-items:center;margin:6px 0}
+  label{font-size:13px;color:var(--muted);min-width:120px}
+  input[type=number]{width:110px;padding:6px 8px;border:1px solid #cbd5e1;border-radius:10px}
+  button{padding:8px 12px;border:1px solid #cbd5e1;border-radius:12px;background:var(--accent);color:white;font-weight:600;cursor:pointer}
+  button.sec{background:white;color:#0f172a}
+  canvas{width:100%;max-width:100%;background:#f8fafc;border-radius:14px;border:1px solid #e5e7eb}
+  .hint{font-size:12px;color:var(--muted)}
+  .modal{position:fixed;inset:0;background:rgba(15,23,42,.4);display:none;align-items:center;justify-content:center;padding:16px;z-index:20}
+  .modal.active{display:flex}
+  .sheet{max-width:820px;width:100%;background:#fff;border-radius:16px;box-shadow:0 20px 60px rgba(2,6,23,.25);border:1px solid #e5e7eb}
+  .sheet header{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e5e7eb}
+  .sheet header h3{margin:0;font-size:16px}
+  .sheet main{padding:16px}
+  .sheet .math{font-size:15px;line-height:1.7}
+  .tag{display:inline-block;background:#e2e8f0;border:1px solid #cbd5e1;color:#0f172a;border-radius:10px;padding:2px 8px;font-size:12px}
+
+  /* ====== MOBILE ONLY FIX (layout + move actions below canvas) ====== */
+  @media (max-width: 820px){
+    .wrap{grid-template-columns:1fr}
+    #canvasCard{display:block}
+    #actionsCard{display:none}
+    /* ลดขนาดสมการ/ข้อความในหน้า "วิธีการคำนวณ" ลง 5px เพื่อไม่ให้ล้นจอมือถือ */
+    .sheet .math{font-size:10px}
+  }
+</style>
+<script>
+  window.MathJax = { tex: {inlineMath: [["\\(","\\)"],["$","$"]]}, svg:{fontCache:'none'} };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" defer></script>
+</head>
+<body>
+<header>
+  <b>รถสองคันชนกันที่สี่แยก(ชนแล้วติดไปด้วยกัน)</b>
+</header>
+
+<div class="wrap">
+  <section class="card" id="panel">
+    <h3 style="margin:0 0 8px">ตั้งค่า</h3>
+
+    <div class="row"><label>มวล m<sub>A</sub> (kg)</label><input id="mA" type="number" value="1000" step="10"></div>
+    <div class="row"><label>มวล m<sub>B</sub> (kg)</label><input id="mB" type="number" value="1000" step="10"></div>
+    <div class="row"><label>ความเร็ว A (ลง) <b>m/s</b></label><input id="vAy" type="number" value="30" step="0.5"></div>
+    <div class="row"><label>ความเร็ว B (ขวา) <b>m/s</b></label><input id="vBx" type="number" value="40" step="0.5"></div>
+
+    <input id="len" type="hidden" value="90">
+    <input id="wid" type="hidden" value="46">
+
+    <div class="row"><label>โชว์เวกเตอร์ v</label>
+      <input id="showV" type="checkbox" checked>
+    </div>
+
+    <div id="actionsAnchor"></div>
+
+    <div class="row" id="actionsRow" style="gap:10px;margin-top:10px;flex-wrap:wrap">
+      <button id="play">เล่น</button>
+      <button id="reset" class="sec">รีเซ็ต</button>
+      <button id="how" class="sec">วิธีการคำนวณ (ละเอียด)</button>
+      <button id="mom" class="sec">แสดงเวกเตอร์โมเมนตัม</button>
+    </div>
+
+    <p class="hint">สเกล: <span class="tag">3 px/s = 1 m/s</span></p>
+    <p class="hint">สูตรความเร็วร่วม: \(\displaystyle \vec V=\frac{m_A\vec V_A + m_B\vec V_B}{m_A+m_B}\)</p>
+    <p class="hint">สูตรขนาดจากโมเมนตัม: \((m_A+m_B)\,|V|=\sqrt{(m_A V_A)^2 + (m_B V_B)^2}\)</p>
+  </section>
+
+  <section class="card" id="canvasCard">
+    <canvas id="cv" width="720" height="480"></canvas>
+  </section>
+
+  <section class="card" id="actionsCard"></section>
+</div>
+
+<div class="modal" id="modal">
+  <div class="sheet">
+    <header style="padding:10px 14px">
+      <h3>วิธีการคำนวณแบบละเอียด — สามเหลี่ยมเวกเตอร์ + พีทาโกรัส</h3>
+      <button id="close" class="sec" style="border-radius:10px">ปิด</button>
+    </header>
+    <main>
+      <div id="mathArea" class="math"></div>
+    </main>
+  </div>
+</div>
+
+<script>
+(function(){
+  const mq = window.matchMedia('(max-width: 820px)');
+  const panel = document.getElementById('panel');
+  const actionsRow = document.getElementById('actionsRow');
+  const actionsAnchor = document.getElementById('actionsAnchor');
+  const actionsCard = document.getElementById('actionsCard');
+
+  function applyMobileOrder(){
+    if(mq.matches){
+      if(actionsRow.parentElement !== actionsCard){
+        actionsCard.style.display = 'block';
+        actionsCard.appendChild(actionsRow);
+      }
+    }else{
+      actionsCard.style.display = 'none';
+      if(actionsRow.parentElement !== panel){
+        actionsAnchor.insertAdjacentElement('afterend', actionsRow);
+      }
+    }
+  }
+  applyMobileOrder();
+  try{ mq.addEventListener('change', applyMobileOrder); }catch(e){ mq.addListener(applyMobileOrder); }
+  window.addEventListener('resize', applyMobileOrder);
+
+  const dpr = Math.max(1, window.devicePixelRatio || 1);
+  const PX_PER_MS = 3;
+  const cv = document.getElementById('cv');
+  const ctx = cv.getContext('2d');
+  (function scaleCanvas(){
+    const w=cv.width, h=cv.height;
+    cv.style.width='100%';
+    cv.width=Math.floor(w*dpr);
+    cv.height=Math.floor(h*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  })();
+
+  function drawCrossRoad(){
+    const w=cv.width/dpr, h=cv.height/dpr, road=140;
+    ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--road');
+    ctx.fillRect(w/2-road/2,0,road,h);
+    ctx.fillRect(0,h/2-road/2,w,road);
+    ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--lane');
+    const dash=18,gap=16;
+    for(let y=0;y<h;y+=dash+gap) ctx.fillRect(w/2-3,y+4,6,dash);
+    for(let x=0;x<w;x+=dash+gap) ctx.fillRect(x+4,h/2-3,dash,6);
+  }
+
+  function drawCarTop(ctx,opt={}){
+    const {x=0,y=0,angle=0,len=90,wid=46, body='#5ac0e5', roof='#cfe9f5', glass='#e7f5ff', wheel='#111827', label='A'}=opt;
+    ctx.save();
+    ctx.translate(x,y);
+    ctx.rotate(angle);
+    ctx.shadowColor='rgba(0,0,0,.18)';
+    ctx.shadowBlur=8;
+    ctx.shadowOffsetY=2;
+    roundRect(-len/2,-wid/2,len,wid,10, body, '#0e7490');
+    ctx.fillStyle=glass;
+    ctx.strokeStyle='rgba(15,23,42,.25)';
+    const gw=wid*.8, gh=len*.14;
+    ctx.fillRect(-gh*2.1,-gw/2,gh*1.6,gw);
+    ctx.strokeRect(-gh*2.1,-gw/2,gh*1.6,gw);
+    ctx.fillRect(gh*.5,-gw/2,gh*1.6,gw);
+    ctx.strokeRect(gh*.5,-gw/2,gh*1.6,gw);
+    ctx.fillStyle=roof;
+    roundRect(-len*.18,-wid*.38,len*.36,wid*.76,8, roof, 'rgba(15,23,42,.35)');
+    ctx.fillStyle=wheel;
+    const lw=wid*.18,ll=len*.22;
+    ctx.fillRect(-len/2+8,-wid/2-4,ll,lw);
+    ctx.fillRect(len/2-ll-8,-wid/2-4,ll,lw);
+    ctx.fillRect(-len/2+8,wid/2-lw+4,ll,lw);
+    ctx.fillRect(len/2-ll-8,wid/2-lw+4,ll,lw);
+    ctx.shadowColor='transparent';
+    ctx.fillStyle='rgba(15,23,42,.9)';
+    ctx.font='bold 18px Inter, Arial';
+    ctx.textAlign='center';
+    ctx.textBaseline='middle';
+    ctx.fillText(label,0,0);
+    ctx.restore();
+  }
+  function roundRect(x,y,w,h,r,fill,stroke){
+    const rr=Math.min(r,w/2,h/2);
+    ctx.beginPath();
+    ctx.moveTo(x+rr,y);
+    ctx.arcTo(x+w,y,x+w,y+h,rr);
+    ctx.arcTo(x+w,y+h,x,y+h,rr);
+    ctx.arcTo(x,y+h,x,y,rr);
+    ctx.arcTo(x,y,x+w,y,rr);
+    ctx.closePath();
+    ctx.fillStyle=fill; ctx.fill();
+    ctx.strokeStyle=stroke; ctx.lineWidth=1; ctx.stroke();
+  }
+
+  const smoke=[];
+  function spawnSmoke(x,y){
+    for(let i=0;i<34;i++){
+      smoke.push({x,y,r:4+Math.random()*10,a:0.7,vx:(Math.random()-0.5)*80,vy:(Math.random()-0.5)*80,life:0,max:0.8+Math.random()*0.6});
+    }
+  }
+  function updateSmoke(dt){
+    for(let s of smoke){
+      s.life+=dt;
+      s.x+=s.vx*dt; s.y+=s.vy*dt;
+      s.vx*=0.94; s.vy*=0.94;
+      s.a=Math.max(0,0.7*(1-s.life/s.max));
+      s.r+=12*dt;
+    }
+    for(let i=smoke.length-1;i>=0;i--) if(smoke[i].life>smoke[i].max) smoke.splice(i,1);
+  }
+  function drawSmoke(){
+    for(let s of smoke){
+      ctx.fillStyle=`rgba(107,114,128,${s.a})`;
+      ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2); ctx.fill();
+    }
+  }
+
+  let audioCtx;
+  function playCrash(){
+    try{
+      audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)();
+      const t=audioCtx.currentTime;
+
+      const buffer=audioCtx.createBuffer(1,audioCtx.sampleRate*0.2,audioCtx.sampleRate);
+      const data=buffer.getChannelData(0);
+      for(let i=0;i<data.length;i++) data[i]=(Math.random()*2-1)*0.5;
+      const noise=audioCtx.createBufferSource(); noise.buffer=buffer;
+      const nGain=audioCtx.createGain();
+      nGain.gain.setValueAtTime(0.8,t);
+      nGain.gain.exponentialRampToValueAtTime(0.02,t+0.2);
+      noise.connect(nGain).connect(audioCtx.destination);
+      noise.start(t);
+
+      const o=audioCtx.createOscillator();
+      o.type='triangle';
+      o.frequency.setValueAtTime(120,t);
+      o.frequency.exponentialRampToValueAtTime(60,t+0.25);
+      const g=audioCtx.createGain();
+      g.gain.setValueAtTime(0.5,t);
+      g.gain.exponentialRampToValueAtTime(0.001,t+0.25);
+      o.connect(g).connect(audioCtx.destination);
+      o.start(t); o.stop(t+0.26);
+    }catch(e){}
+  }
+
+  const state={
+    len:+document.getElementById('len').value,
+    wid:+document.getElementById('wid').value,
+    mA:+document.getElementById('mA').value,
+    mB:+document.getElementById('mB').value,
+    running:false, t0:0, stuck:false, showMomentum:false,
+    A:{x:cv.width/dpr*0.50,y:cv.height/dpr*0.22,vx:0,vy:0,ang:Math.PI/2,label:'A'},
+    B:{x:cv.width/dpr*0.18,y:cv.height/dpr*0.52,vx:0,vy:0,ang:0,label:'B'}
+  };
+
+  function reset(){
+    state.len=+document.getElementById('len').value;
+    state.wid=+document.getElementById('wid').value;
+    state.mA=+document.getElementById('mA').value;
+    state.mB=+document.getElementById('mB').value;
+    state.running=false; state.stuck=false; state.t0=0;
+    smoke.length=0; state.showMomentum=false;
+    state.A.x=cv.width/dpr*0.50; state.A.y=cv.height/dpr*0.22; state.A.ang=Math.PI/2;
+    state.B.x=cv.width/dpr*0.18; state.B.y=cv.height/dpr*0.52; state.B.ang=0;
+    state.A.vx=0;
+    state.A.vy=(+document.getElementById('vAy').value)*PX_PER_MS;
+    state.B.vx=(+document.getElementById('vBx').value)*PX_PER_MS;
+    state.B.vy=0;
+    draw();
+  }
+
+  function play(){
+    state.running=!state.running;
+    state.t0=performance.now();
+    document.getElementById('play').textContent=state.running?'หยุด':'เล่น';
+    if(state.running) requestAnimationFrame(loop);
+  }
+  function loop(ts){
+    const dt=Math.min(32,ts-state.t0)/1000;
+    state.t0=ts;
+    step(dt);
+    draw();
+    if(state.running) requestAnimationFrame(loop);
+  }
+
+  function step(dt){
+    if(!state.stuck){
+      state.A.x+=state.A.vx*dt; state.A.y+=state.A.vy*dt;
+      state.B.x+=state.B.vx*dt; state.B.y+=state.B.vy*dt;
+      const L=state.len,W=state.wid;
+      const boxA={x:state.A.x-W/2,y:state.A.y-L/2,w:W,h:L};
+      const boxB={x:state.B.x-L/2,y:state.B.y-W/2,w:L,h:W};
+      if(overlap(boxA,boxB)){
+        state.stuck=true;
+        const vx=(state.mA*state.A.vx + state.mB*state.B.vx)/(state.mA+state.mB);
+        const vy=(state.mA*state.A.vy + state.mB*state.B.vy)/(state.mA+state.mB);
+        state.A.vx=state.B.vx=vx;
+        state.A.vy=state.B.vy=vy;
+        const cx=(state.mA*state.A.x + state.mB*state.B.x)/(state.mA+state.mB);
+        const cy=(state.mA*state.A.y + state.mB*state.B.y)/(state.mA+state.mB);
+        state.A.x=state.B.x=cx; state.A.y=state.B.y=cy;
+        spawnSmoke(cx,cy);
+        playCrash();
+      }
+    }else{
+      state.A.x+=state.A.vx*dt; state.A.y+=state.A.vy*dt;
+      state.B.x=state.A.x; state.B.y=state.A.y;
+    }
+    updateSmoke(dt);
+  }
+  function overlap(a,b){ return a.x<b.x+b.w && a.x+a.w>b.x && a.y<b.y+b.h && a.y+a.h>b.y; }
+
+  function drawSpeedLabels(){
+    ctx.font='600 13px Inter, Arial';
+    ctx.textAlign='center';
+    ctx.textBaseline='bottom';
+    const VAy=state.A.vy/PX_PER_MS, VBx=state.B.vx/PX_PER_MS;
+    const Vx=state.A.vx/PX_PER_MS, Vy=state.A.vy/PX_PER_MS;
+
+    if(!state.stuck){
+      ctx.fillStyle='#2563eb';
+      ctx.fillText(`V_A = ${VAy.toFixed(2)} m/s`, state.A.x, state.A.y- state.len/2 - 8);
+
+      ctx.fillStyle='#8b5cf6';
+      ctx.fillText(`V_B = ${VBx.toFixed(2)} m/s`, state.B.x, state.B.y- state.wid/2 - 8);
+    } else {
+      const V=Math.hypot(Vx,Vy);
+      ctx.fillStyle='#ef4444';
+      ctx.fillText(`V หลังชน = ${V.toFixed(2)} m/s`, state.A.x, state.A.y + state.len/2 + 14);
+    }
+  }
+
+  function drawVectors(){
+    const s=0.75;
+
+    if(state.stuck){
+      const vx=state.A.vx*s, vy=state.A.vy*s; const x=state.A.x, y=state.A.y;
+      ctx.strokeStyle='#ef4444'; ctx.lineWidth=2; ctx.fillStyle='#ef4444';
+      ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+vx,y+vy); ctx.stroke();
+      const ang=Math.atan2(vy,vx), ah=8;
+      ctx.beginPath(); ctx.moveTo(x+vx,y+vy);
+      ctx.lineTo(x+vx - ah*Math.cos(ang - Math.PI/8), y+vy - ah*Math.sin(ang - Math.PI/8));
+      ctx.lineTo(x+vx - ah*Math.cos(ang + Math.PI/8), y+vy - ah*Math.sin(ang + Math.PI/8));
+      ctx.closePath(); ctx.fill();
+      return;
+    }
+
+    const pairs=[[state.A,'#2563eb'],[state.B,'#8b5cf6']];
+    for(const [car,color] of pairs){
+      const vx=car.vx*s, vy=car.vy*s; const x=car.x,y=car.y;
+      ctx.strokeStyle=color; ctx.lineWidth=2; ctx.fillStyle=color;
+      ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+vx,y+vy); ctx.stroke();
+      const ang=Math.atan2(vy,vx), ah=8;
+      ctx.beginPath(); ctx.moveTo(x+vx,y+vy);
+      ctx.lineTo(x+vx - ah*Math.cos(ang - Math.PI/8), y+vy - ah*Math.sin(ang - Math.PI/8));
+      ctx.lineTo(x+vx - ah*Math.cos(ang + Math.PI/8), y+vy - ah*Math.sin(ang + Math.PI/8));
+      ctx.closePath(); ctx.fill();
+    }
+  }
+
+  function draw(){
+    const w=cv.width/dpr, h=cv.height/dpr;
+    ctx.clearRect(0,0,w,h);
+    drawCrossRoad();
+    drawCarTop(ctx,{x:state.B.x,y:state.B.y,angle:0,len:state.len,wid:state.wid,body:'#6b7280',roof:'#bfc5cf',label:'B'});
+    drawCarTop(ctx,{x:state.A.x,y:state.A.y,angle:Math.PI/2,len:state.len,wid:state.wid,body:'#38bdf8',roof:'#cdeffd',label:'A'});
+    drawSmoke();
+    if(document.getElementById('showV').checked) drawVectors();
+    drawSpeedLabels();
+    if(state.showMomentum) drawMomentumDiagram();
+  }
+
+  function openHow(){
+    const mA=state.mA, mB=state.mB;
+    const vAy=+document.getElementById('vAy').value;
+    const vBx=+document.getElementById('vBx').value;
+
+    const pA=mA*vAy, pB=mB*vBx;
+    const p=Math.hypot(pA,pB);
+    const V1 = p/(mA+mB);
+
+    const Vx=(mA*0 + mB*vBx)/(mA+mB);
+    const Vy=(mA*vAy + mB*0)/(mA+mB);
+    const V2=Math.hypot(Vx,Vy);
+
+    const f0 = (x)=>Number(x).toFixed(0);
+    const f1 = (x)=>Number(x).toFixed(1);
+
+    const area=document.getElementById('mathArea');
+    area.innerHTML = `
+      <p><span class="tag">วิธีที่ 1: โมเมนตัม (หัวต่อหาง)</span> ต่อเวกเตอร์โมเมนตัม \\(\\vec p_A\\) กับ \\(\\vec p_B\\) แล้วใช้สูตร:</p>
+      <div>\\((m_A+m_B)\\,|V| = \\sqrt{(m_A V_A)^2 + (m_B V_B)^2}\\)</div>
+      <p><b>แทนค่า</b></p>
+      <div>\\(m_A=${f0(mA)}\\,\\text{kg},\\; m_B=${f0(mB)}\\,\\text{kg},\\; V_A=${f1(vAy)}\\,\\text{m/s},\\; V_B=${f1(vBx)}\\,\\text{m/s}\\)</div>
+      <div>\\((m_A+m_B)\\,|V| = \\sqrt{(${f0(mA)}\\cdot${f1(vAy)})^2 + (${f0(mB)}\\cdot${f1(vBx)})^2} = ${f1(p)}\\,\\text{kg·m/s}\\)</div>
+      <div>\\(|V| = \\dfrac{${f1(p)}}{${f0(mA+mB)}} = ${f1(V1)}\\,\\text{m/s}\\)</div>
+      <hr/>
+      <p><span class="tag">วิธีที่ 2: คิดแยกแกน</span> อนุรักษ์โมเมนตัมแยกแกน แล้วใช้พีทาโกรัสกับเวกเตอร์ความเร็ว:</p>
+      <p><span class="tag">วิธีสามเหลี่ยมเวกเตอร์</span> ต่อเวกเตอร์แบบหางต่อหัว: วาด \\(\\vec V_A\\) ลง และ \\(\\vec V_B\\) ต่อให้ชี้ขวา จะได้สามเหลี่ยมมุมฉาก</p>
+      <div>\\(|V| = \\sqrt{V_x^2 + V_y^2}\\) แล้วแทนค่าในสูตรนี้ โดย \\(V_x,V_y\\) มาจากอนุรักษ์โมเมนตัมแยกแกน</div>
+      <div>\\(x:\\; m_A V_{Ax}+m_B V_{Bx}=(m_A+m_B) V_x\\)</div>
+      <div>\\(y:\\; m_A V_{Ay}+m_B V_{By}=(m_A+m_B) V_y\\)</div>
+      <p><b>แทนค่า (m/s)</b></p>
+      <div>\\(m_A=${f0(mA)}\\,\\text{kg},\\; m_B=${f0(mB)}\\,\\text{kg}\\)</div>
+      <div>\\(V_{Ax}=0,\\; V_{Ay}=${f1(vAy)},\\; V_{Bx}=${f1(vBx)},\\; V_{By}=0\\)</div>
+      <div>\\(V_x=${f1(Vx)}\\;\\text{m/s},\\; V_y=${f1(Vy)}\\;\\text{m/s}\\)</div>
+      <div>\\(|V| = \\sqrt{(${f1(Vx)})^2 + (${f1(Vy)})^2 } = ${f1(V2)}\\,\\text{m/s}\\)</div>
+      <p class="hint">สเกลบนฉาก: 3 px/s = 1 m/s</p>`;
+    document.getElementById('modal').classList.add('active');
+    if (window.MathJax && MathJax.typesetPromise) { MathJax.typesetPromise(); }
+  }
+
+  function drawMomentumDiagram(){
+    const pad=14, boxW=280, boxH=230, x0=pad, y0=pad;
+    ctx.save();
+    ctx.fillStyle='rgba(255,255,255,0.92)'; ctx.strokeStyle='#cbd5e1'; ctx.lineWidth=1;
+    if(ctx.roundRect) ctx.roundRect(x0,y0,boxW,boxH,12); else ctx.rect(x0,y0,boxW,boxH);
+    ctx.fill(); ctx.stroke();
+
+    // ตำแหน่งหัวข้อ (ไม่ขยับ)
+    ctx.translate(x0+24+95, y0+28);
+
+    ctx.font='600 13px Inter, Arial'; ctx.fillStyle='#0f172a';
+    ctx.fillText('เวกเตอร์โมเมนตัม (head-to-tail)', 0, -10);
+
+    // === ขยับ "แผนภาพเวกเตอร์" ไปซ้าย 40px (แต่ไม่ขยับหัวข้อ) ===
+    const diagramShiftX = -40;
+
+    const mA=state.mA, mB=state.mB;
+    const vAy=+document.getElementById('vAy').value;
+    const vBx=+document.getElementById('vBx').value;
+    const Vx=(mA*0 + mB*vBx)/(mA+mB);
+    const Vy=(mA*vAy + mB*0)/(mA+mB);
+    const pA=mA*vAy, pB=mB*vBx;
+
+    const scale=120/Math.max(pA,pB,1);
+    const ox=16 + diagramShiftX, oy=36;
+
+    // helper: วาดตัวห้อย A/B แบบ "subscript" จริงบน canvas
+    function drawSubscriptPair(x,y,base,sub){
+      ctx.save();
+      const baseFont='600 13px Inter, Arial';
+      const subFont ='600 10px Inter, Arial';
+      ctx.font=baseFont;
+      ctx.textAlign='left';
+      ctx.textBaseline='alphabetic';
+      ctx.fillText(base, x, y);
+      const w=ctx.measureText(base).width;
+      ctx.font=subFont;
+      ctx.fillText(sub, x+w+1, y+3);
+      ctx.restore();
+      return ctx.measureText(base).width + 1 + ctx.measureText(sub).width;
+    }
+    function draw_mV_label(x,y,subChar){
+      // m_A V_A
+      ctx.save();
+      ctx.textAlign='left';
+      ctx.textBaseline='alphabetic';
+      const w1 = (function(){
+        ctx.font='600 13px Inter, Arial';
+        ctx.fillText('m', x, y);
+        const mw=ctx.measureText('m').width;
+        ctx.font='600 10px Inter, Arial';
+        ctx.fillText(subChar, x+mw+1, y+3);
+        return mw+1+ctx.measureText(subChar).width;
+      })();
+      ctx.font='600 13px Inter, Arial';
+      ctx.fillText(' ', x+w1, y);
+      const sp=ctx.measureText(' ').width;
+
+      // V_A
+      ctx.font='600 13px Inter, Arial';
+      ctx.fillText('V', x+w1+sp, y);
+      const Vw=ctx.measureText('V').width;
+      ctx.font='600 10px Inter, Arial';
+      ctx.fillText(subChar, x+w1+sp+Vw+1, y+3);
+      ctx.restore();
+    }
+    function draw_mAmB_V_label(x,y){
+      // (m_A+m_B) V
+      ctx.save();
+      ctx.textAlign='left';
+      ctx.textBaseline='alphabetic';
+      ctx.font='600 13px Inter, Arial';
+      ctx.fillText('(', x, y);
+      let cx = x + ctx.measureText('(').width;
+
+      // m_A
+      ctx.font='600 13px Inter, Arial';
+      ctx.fillText('m', cx, y);
+      let mw=ctx.measureText('m').width;
+      ctx.font='600 10px Inter, Arial';
+      ctx.fillText('A', cx+mw+1, y+3);
+      cx += mw+1+ctx.measureText('A').width;
+
+      // +
+      ctx.font='600 13px Inter, Arial';
+      ctx.fillText('+', cx, y);
+      cx += ctx.measureText('+').width;
+
+      // m_B
+      ctx.font='600 13px Inter, Arial';
+      ctx.fillText('m', cx, y);
+      mw=ctx.measureText('m').width;
+      ctx.font='600 10px Inter, Arial';
+      ctx.fillText('B', cx+mw+1, y+3);
+      cx += mw+1+ctx.measureText('B').width;
+
+      // ) V
+      ctx.font='600 13px Inter, Arial';
+      ctx.fillText(') V', cx, y);
+      ctx.restore();
+    }
+
+    // p_A (down)
+    const pAy=pA*scale;
+    ctx.strokeStyle='#10b981'; ctx.fillStyle='#10b981'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(ox,oy); ctx.lineTo(ox,oy+pAy); ctx.stroke();
+    arrowHead(ox,oy+pAy,Math.PI/2);
+    draw_mV_label(ox-2, oy+pAy+14, 'A');
+
+    // p_B (right)
+    const pBx=pB*scale;
+    ctx.strokeStyle='#8b5cf6'; ctx.fillStyle='#8b5cf6';
+    ctx.beginPath(); ctx.moveTo(ox,oy+pAy); ctx.lineTo(ox+pBx, oy+pAy); ctx.stroke();
+    arrowHead(ox+pBx, oy+pAy, 0);
+    draw_mV_label(ox+pBx+6, oy+pAy+19, 'B');
+
+    // resultant
+    const prx=(mA+mB)*Vx*scale, pry=(mA+mB)*Vy*scale;
+    ctx.strokeStyle='#ef4444'; ctx.fillStyle='#ef4444';
+    ctx.beginPath(); ctx.moveTo(ox,oy); ctx.lineTo(ox+prx, oy+pry); ctx.stroke();
+    arrowHead(ox+prx, oy+pry, Math.atan2(pry,prx));
+    draw_mAmB_V_label(ox+prx-24, oy+pry-76);
+
+    ctx.restore();
+
+    function arrowHead(x,y,ang){
+      const ah=8; ctx.beginPath(); ctx.moveTo(x,y);
+      ctx.lineTo(x-ah*Math.cos(ang-Math.PI/8), y-ah*Math.sin(ang-Math.PI/8));
+      ctx.lineTo(x-ah*Math.cos(ang+Math.PI/8), y-ah*Math.sin(ang+Math.PI/8));
+      ctx.closePath(); ctx.fill();
+    }
+  }
+
+  document.getElementById('play').addEventListener('click', play);
+  document.getElementById('reset').addEventListener('click', ()=>{ document.getElementById('play').textContent='เล่น'; reset(); });
+  document.getElementById('how').addEventListener('click', openHow);
+  document.getElementById('close').addEventListener('click', ()=> document.getElementById('modal').classList.remove('active'));
+  document.getElementById('mom').addEventListener('click', ()=>{ state.showMomentum = !state.showMomentum; draw(); });
+
+  ['mA','mB','vAy','vBx','showV'].forEach(id=>{
+    document.getElementById(id).addEventListener('input', ()=>{
+      if(id==='showV'){} else reset();
+      draw();
+    });
+  });
+
+  reset();
+})();
+</script>
+</body>
+</html>
