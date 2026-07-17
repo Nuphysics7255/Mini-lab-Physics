@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Mini Lab : อัตราการไหลและสมการความต่อเนื่อง</title>
+<!-- fixed v5: HTML only; number inputs; closable top formula and mission labels; reset shows labels again -->
+<script>
+window.MathJax = { tex: { inlineMath: [['\\(','\\)'], ['$', '$']] }, svg: { fontCache: 'global' } };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<style>
+:root{
+  --blue:#2f6fd6; --deep:#204d7c; --sky:#edf3fb; --line:#d8e3ef;
+  --orange:#fff3df; --orange2:#f4c77f; --green:#eaf8e7; --text:#1e293b;
+  --water:#8fd3f4; --water2:#d9f6ff; --dash:#72c8f3;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;background:#f6f9fd;color:var(--text);overflow-x:hidden;padding-bottom:calc(96px + env(safe-area-inset-bottom))}
+.header{padding:18px 14px 10px;text-align:center;background:linear-gradient(#fff,#f6f9fd)}
+.header h1{margin:0;color:var(--blue);font-size:clamp(24px,4vw,42px);font-weight:900;line-height:1.2}
+.header h2{margin:4px 0 0;color:var(--deep);font-size:clamp(18px,3vw,30px);font-weight:900}
+.wrap{width:min(1120px,100%);margin:auto;padding:10px 14px 28px;display:grid;grid-template-columns:1fr;gap:14px}
+.card{background:#fff;border:1px solid var(--line);border-radius:24px;box-shadow:0 10px 26px rgba(31,64,104,.08);overflow:hidden}
+.lab{padding:12px;position:relative;min-height:520px}.pipeBox{position:relative;height:440px;border-radius:20px;background:linear-gradient(#fff,#f8fbff);border:1px solid #e0ebf5;overflow:hidden;touch-action:none}
+svg{width:100%;height:100%;display:block}.water{fill:url(#waterGrad);stroke:none;opacity:.86}.wall{fill:none;stroke:#66717c;stroke-width:8;stroke-linecap:round;stroke-linejoin:round;filter:url(#softShadow)}.innerWall{fill:none;stroke:rgba(255,255,255,.65);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}.stream{stroke:var(--dash);stroke-width:2.2;stroke-dasharray:9 9;fill:none;opacity:.92;stroke-linecap:round}.mol{fill:#31b8f2;stroke:#0a78bd;stroke-width:1;filter:url(#dotGlow)}.segment{fill:rgba(95,180,225,.18);stroke:#4b9ac4;stroke-width:2;stroke-dasharray:7 5}.section{fill:rgba(180,232,255,.28);stroke:#2f6fd6;stroke-width:2;stroke-dasharray:7 5}.cap{fill:url(#capGrad);stroke:#66717c;stroke-width:5;opacity:.9}.dragZone{fill:transparent;cursor:ns-resize}.handle{cursor:ns-resize}.handle circle{fill:#fff;stroke:#2f6fd6;stroke-width:4}.handle .bar{stroke:#2f6fd6;stroke-width:4;stroke-linecap:round}.handle text{font-size:13px;font-weight:900;fill:#174a86;pointer-events:none}.label{font-size:15px;font-weight:900;fill:#0b4fa6}.small{font-size:12px;font-weight:800;fill:#475569}.arrow{stroke:#1d66c7;stroke-width:6;marker-end:url(#arrowHead);stroke-linecap:round}.speedArrow{opacity:.95}.formulaTop{position:absolute;left:14px;right:14px;top:10px;text-align:center;font-weight:900;color:#174a86;background:rgba(237,243,251,.92);border:1px solid #bfd6ee;border-radius:16px;padding:8px 42px 8px 12px;font-size:15px;z-index:3;min-height:42px;display:flex;align-items:center;justify-content:center}.labelClose{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:30px;height:30px;border:0;border-radius:999px;background:#e7eef6;color:#45688f;font-size:18px;font-weight:900;line-height:1;box-shadow:0 2px 0 rgba(0,0,0,.12);cursor:pointer}.labelClose:active{transform:translateY(-48%) scale(.96)}.hideLabel{display:none!important}
+.panel{padding:14px;display:flex;flex-direction:column;gap:12px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}.metric{background:#fff;border:1px solid #dbe7f2;border-radius:16px;padding:10px;text-align:center}.metric .val{font-size:20px;font-weight:900;color:#0f5e91}.metric .cap{font-size:12px;color:#64748b;font-weight:800}.ctrlStrip{grid-column:1/-1;background:#fff;border:1px solid var(--line);border-radius:22px;padding:12px;overflow-x:auto;-webkit-overflow-scrolling:touch}.ctrlRow{display:grid;grid-template-columns:repeat(3,minmax(245px,1fr));gap:12px;min-width:760px}.ctrl{background:#f8fbff;border:1px solid #dbe7f2;border-radius:18px;padding:10px}.ctrl label{display:flex;justify-content:space-between;gap:8px;font-weight:900;color:#244d78;margin-bottom:8px;white-space:nowrap}.row{display:grid;grid-template-columns:46px minmax(98px,1fr) 46px;gap:10px;align-items:center}.btn{border:0;border-radius:14px;min-height:44px;font-weight:900;box-shadow:0 4px 0 rgba(0,0,0,.15);cursor:pointer}.minus,.plus{background:#edf3fb;color:#0f5e91;font-size:26px}.numInput{width:100%;min-height:48px;border:2px solid #bcd5ee;border-radius:14px;background:#fff;text-align:center;font-size:24px;font-weight:900;color:#0f5e91;outline:none;padding:6px 8px}.numInput:focus{border-color:#2f6fd6;box-shadow:0 0 0 3px rgba(47,111,214,.14)}.numInput::-webkit-outer-spin-button,.numInput::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}.numInput[type=number]{-moz-appearance:textfield} input[type=range]{display:none!important}.checks{display:grid;gap:8px;background:#f8fbff;border:1px solid var(--line);border-radius:18px;padding:12px}.checks label{display:flex;gap:8px;align-items:center;font-weight:800}.miniNote{font-size:13px;color:#64748b;line-height:1.5}.bottomBar{position:fixed;left:50%;bottom:calc(10px + env(safe-area-inset-bottom));transform:translateX(-50%);width:min(760px,calc(100vw - 18px));background:rgba(235,241,247,.78);backdrop-filter:blur(8px);border:1px solid #d8e3ef;border-radius:22px;padding:8px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;z-index:50}.barBtn{border:0;border-radius:16px;padding:12px 8px;font-weight:900;font-size:15px;box-shadow:0 4px 0 rgba(0,0,0,.13)}.play{background:#57a8e8;color:#fff}.reset{background:#e5e7eb;color:#334155}.formulaBtn{background:#ffe4c4;color:#8b4d00}.modal{position:fixed;inset:0;background:#fff7ed;z-index:80;display:none;overflow:auto;padding:calc(70px + env(safe-area-inset-top)) 16px calc(120px + env(safe-area-inset-bottom))}.modal.show{display:block}.close{position:fixed;right:14px;top:calc(14px + env(safe-area-inset-top));width:52px;height:52px;border:0;border-radius:18px;background:#e7eef6;color:#45688f;font-size:28px;font-weight:900;z-index:90}.formulaCard{width:min(900px,100%);margin:auto;background:white;border:2px solid #efc58f;border-radius:24px;padding:18px;box-shadow:0 12px 30px rgba(80,50,10,.1)}.formulaCard h2{margin:0 0 12px;color:#b45309;font-size:28px}.formulaCard h3{color:#204d7c}.formulaCard p,.formulaCard li{font-size:17px;line-height:1.75}.eq{font-size:22px;text-align:center;background:#fffaf0;border:1px solid #f3c27c;border-radius:16px;padding:12px;margin:12px 0;overflow-x:auto}.relation{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0}.relBox{background:#f8fbff;border:1px solid #d8e3ef;border-radius:16px;padding:12px;font-weight:900;text-align:center}.relBox .big{color:#0f5e91;font-size:22px}.relBox .red{color:#e11d48}.mission{position:absolute;left:16px;bottom:16px;right:16px;background:rgba(255,247,235,.94);border:1px solid #f0cfaa;border-radius:20px;padding:10px 42px 10px 12px;color:#9a6500;font-weight:850;font-size:13px;z-index:4;min-height:44px;display:flex;align-items:center}.link{text-align:center;margin:10px}.link a{color:#1d4ed8;font-weight:900}
+@media(max-width:840px){.wrap{grid-template-columns:1fr}.lab{min-height:auto}.pipeBox{height:410px}.panel{padding-bottom:10px}.bottomBar{grid-template-columns:1fr 1fr 1fr}.barBtn{font-size:13px;min-height:46px}.header{padding-top:12px}.formulaTop{font-size:13px}.mission{font-size:12px}.ctrlStrip{order:3}}
+@media(max-width:480px){.pipeBox{height:370px}.grid2{grid-template-columns:1fr 1fr}.metric .val{font-size:16px}.row{grid-template-columns:36px 1fr 36px}.lab{padding:8px}.wrap{padding:6px 8px 20px}.card{border-radius:20px}.ctrlRow{grid-template-columns:repeat(3,235px);min-width:735px}.relation{grid-template-columns:1fr}.formulaTop{left:8px;right:8px}}
+</style>
+</head>
+<body>
+<header class="header">
+  <h1>Mini Lab</h1>
+  <h2>อัตราการไหลและสมการความต่อเนื่อง</h2>
+</header>
+
+<main class="wrap">
+  <section class="card lab">
+    <div class="pipeBox" id="pipeBox">
+      <div class="formulaTop" id="formulaTopLabel"><span>ของไหลอัดตัวไม่ได้ : A₁v₁ = A₂v₂ = A₃v₃ = Q</span><button class="labelClose" type="button" aria-label="ปิดป้ายสูตร" onclick="document.getElementById('formulaTopLabel').classList.add('hideLabel')">×</button></div>
+      <svg id="svg" viewBox="0 0 760 440" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <linearGradient id="waterGrad" x1="0" x2="1"><stop offset="0" stop-color="#d9f6ff"/><stop offset=".5" stop-color="#8fd3f4"/><stop offset="1" stop-color="#d9f6ff"/></linearGradient>
+          <linearGradient id="capGrad" x1="0" x2="1"><stop offset="0" stop-color="#b7bec7"/><stop offset=".5" stop-color="#f7fafc"/><stop offset="1" stop-color="#8b949e"/></linearGradient>
+          <filter id="softShadow"><feDropShadow dx="0" dy="3" stdDeviation="3" flood-opacity=".18"/></filter>
+          <filter id="dotGlow"><feDropShadow dx="0" dy="0" stdDeviation="2" flood-color="#58d6ff" flood-opacity=".75"/></filter>
+          <marker id="arrowHead" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#1d66c7"/></marker>
+          <clipPath id="pipeClip"><path id="clipShape"></path></clipPath>
+        </defs>
+        <!-- ทุกอย่างที่เป็นน้ำ/เส้นกระแส/เม็ดโมเลกุล/ลูกศร ถูก clip ให้อยู่ในท่อเท่านั้น -->
+        <path id="waterPath" class="water" clip-path="url(#pipeClip)"/>
+        <g id="streams" clip-path="url(#pipeClip)"></g>
+        <g id="molecules" clip-path="url(#pipeClip)"></g>
+        <g id="arrows" clip-path="url(#pipeClip)"></g>
+        <g id="segments" clip-path="url(#pipeClip)"></g>
+        <!-- ผนังท่อวาดทับเป็นชั้นบนสุด เพื่อไม่ให้น้ำล้นออกนอกขอบ -->
+        <path id="wallTop" class="wall"/><path id="wallBot" class="wall"/>
+        <path id="wallTopInner" class="innerWall"/><path id="wallBotInner" class="innerWall"/>
+        <g id="endCaps"></g>
+        <g id="texts"></g><g id="dragZones"></g><g id="handles"></g>
+      </svg>
+      <div class="mission" id="missionLabel"><span>🎯 ภารกิจ: ใช้นิ้วลากวงรีสีน้ำเงินเพื่อปรับขนาดท่อ แล้วสังเกตว่า A เปลี่ยน → v เปลี่ยนอย่างไร เมื่อ Q คงที่</span><button class="labelClose" type="button" aria-label="ปิดป้ายภารกิจ" onclick="document.getElementById('missionLabel').classList.add('hideLabel')">×</button></div>
+    </div>
+  </section>
+
+  <section class="ctrlStrip">
+    <div class="ctrlRow">
+      <div class="ctrl"><label><span>A₁ พื้นที่หน้าตัดซ้าย</span><span id="a1Text">6.0 m²</span></label><div class="row"><button class="btn minus" data-step="a1" data-dir="-1">−</button><input id="a1" class="numInput" type="number" inputmode="decimal" min="2" max="10" step="0.1" value="6.0" aria-label="พื้นที่หน้าตัด A1"><button class="btn plus" data-step="a1" data-dir="1">+</button></div></div>
+      <div class="ctrl"><label><span>A₂ พื้นที่หน้าตัดกลาง</span><span id="a2Text">3.9 m²</span></label><div class="row"><button class="btn minus" data-step="a2" data-dir="-1">−</button><input id="a2" class="numInput" type="number" inputmode="decimal" min="1.2" max="8" step="0.1" value="3.9" aria-label="พื้นที่หน้าตัด A2"><button class="btn plus" data-step="a2" data-dir="1">+</button></div></div>
+      <div class="ctrl"><label><span>A₃ พื้นที่หน้าตัดขวา</span><span id="a3Text">6.0 m²</span></label><div class="row"><button class="btn minus" data-step="a3" data-dir="-1">−</button><input id="a3" class="numInput" type="number" inputmode="decimal" min="2" max="10" step="0.1" value="6.0" aria-label="พื้นที่หน้าตัด A3"><button class="btn plus" data-step="a3" data-dir="1">+</button></div></div>
+    </div>
+  </section>
+</main>
+<div class="link"><a href="https://www.facebook.com/resolvephysics" target="_blank">ศึกษาเพิ่มเติมที่เพจคลายปมฟิสิกส์</a></div>
+
+<nav class="bottomBar">
+  <button class="barBtn play" id="playBtn">⏸ หยุด</button>
+  <button class="barBtn reset" id="resetBtn">🔄 รีเซ็ต</button>
+  <button class="barBtn formulaBtn" id="formulaBtn">Σ สูตรสำคัญ</button>
+</nav>
+
+<div class="modal" id="formulaModal">
+  <button class="close" id="closeFormula">×</button>
+  <div class="formulaCard">
+    <h2>สูตรสำคัญ</h2>
+    <h3>1) อัตราการไหลเชิงปริมาตร</h3>
+    <div class="eq">\(Q = Av\)</div>
+    <p><b>Q</b> คือ อัตราการไหลเชิงปริมาตร หน่วย m³/s<br><b>A</b> คือ พื้นที่หน้าตัดของท่อ หน่วย m²<br><b>v</b> คือ <b>ขนาดความเร็วเฉลี่ยของของไหลที่หน้าตัดนั้น</b> หน่วย m/s</p>
+    <h3>2) สมการความต่อเนื่อง</h3>
+    <div class="eq">\(A_1v_1 = A_2v_2 = A_3v_3 = Q\)</div>
+    <p>ใช้เมื่อของไหลไหลต่อเนื่องและถือว่าอัดตัวไม่ได้ เช่น น้ำในท่อ ถ้าพื้นที่หน้าตัดเปลี่ยน ความเร็วต้องเปลี่ยน เพื่อให้ Q คงที่</p>
+    <div class="relation">
+      <div class="relBox"><div class="big">A มาก</div>→ <span class="red">v น้อย</span></div>
+      <div class="relBox"><div class="big">A น้อย</div>→ <span class="red">v มาก</span></div>
+      <div class="relBox"><div class="big">ท่อแนวนอน</div>v มาก → <span class="red">P น้อย</span><br>v น้อย → <span class="red">P มาก</span></div>
+    </div>
+    <h3>จุดที่ต้องระวัง</h3>
+    <ul>
+      <li>ท่อแคบกว่า ไม่ได้แปลว่า Q มากกว่า แต่แปลว่า v มากกว่า เมื่อ Q คงที่</li>
+      <li>บริเวณที่ A มาก จะมี v น้อย และในแนวคิดเบอร์นูลลีสำหรับท่อแนวนอน มักสัมพันธ์กับ P มาก</li>
+      <li><b>v ในสมการนี้เป็นความเร็วเฉลี่ยของของไหลที่หน้าตัดนั้น</b> ไม่ใช่ความเร็วของอนุภาคทุกอนุภาคในหน้าตัด</li>
+      <li>ในของไหลจริง อนุภาคบริเวณกลางท่อมักเคลื่อนที่เร็วกว่าอนุภาคใกล้ผนังท่อ แต่เมื่อคำนวณด้วยสมการความต่อเนื่อง เราใช้ความเร็วเฉลี่ย v ของทั้งหน้าตัด</li>
+      <li>ถ้าใช้หน่วย cm² ต้องแปลงเป็น m² ก่อนแทนค่า</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const state={q:12,a1:6,a2:3.9,a3:6,playing:true,t:0};
+const xs=[70,210,315,445,555,700];
+function rFromA(A){return 24+A*12}
+function readArea(id, fallback){
+  const el=$(id);
+  let v=parseFloat(el.value);
+  if(!Number.isFinite(v)) return fallback;
+  v=Math.max(parseFloat(el.min), Math.min(parseFloat(el.max), v));
+  return Math.round(v*10)/10;
+}
+function vals(){
+  state.a1=readArea('a1',state.a1);
+  state.a2=readArea('a2',state.a2);
+  state.a3=readArea('a3',state.a3);
+}
+function setTexts(){
+  $('a1Text').textContent=state.a1.toFixed(1)+' m²';
+  $('a2Text').textContent=state.a2.toFixed(1)+' m²';
+  $('a3Text').textContent=state.a3.toFixed(1)+' m²';
+}
+function smooth(u){u=Math.max(0,Math.min(1,u)); return u*u*(3-2*u)}
+function radiusAtX(x){
+  const r1=rFromA(state.a1), r2=rFromA(state.a2), r3=rFromA(state.a3);
+  if(x<=xs[2]){ const u=smooth((x-xs[0])/(xs[2]-xs[0])); return r1+(r2-r1)*u; }
+  if(x<=xs[4]){ const u=smooth((x-xs[2])/(xs[4]-xs[2])); return r2+(r3-r2)*u; }
+  return r3;
+}
+function sampleXs(){
+  const a=[]; for(let i=0;i<=90;i++) a.push(xs[0]+(xs[5]-xs[0])*i/90); return a;
+}
+function pipePath(top=true){
+  const y=220, sgn=top?-1:1;
+  const pts=sampleXs().map(x=>[x, y+sgn*radiusAtX(x)]);
+  return 'M '+pts.map(([x,yy])=>`${x.toFixed(1)} ${yy.toFixed(1)}`).join(' L ');
+}
+function closedPipePath(){
+  const y=220;
+  const top=sampleXs().map(x=>[x, y-radiusAtX(x)]);
+  const bot=sampleXs().reverse().map(x=>[x, y+radiusAtX(x)]);
+  return 'M '+top.concat(bot).map(([x,yy])=>`${x.toFixed(1)} ${yy.toFixed(1)}`).join(' L ')+' Z';
+}
+function yAt(x,k,r1,r2,r3){
+  const y=220;
+  const r=radiusAtX(x);
+  return y+k*r*.84;
+}
+function draw(){
+  vals();setTexts();
+  const y=220,r1=rFromA(state.a1),r2=rFromA(state.a2),r3=rFromA(state.a3),v1=state.q/state.a1,v2=state.q/state.a2,v3=state.q/state.a3;
+  const closed=closedPipePath(); $('waterPath').setAttribute('d',closed); $('clipShape').setAttribute('d',closed);
+  $('wallTop').setAttribute('d',pipePath(true));$('wallBot').setAttribute('d',pipePath(false));
+  $('wallTopInner').setAttribute('d',pipePath(true));$('wallBotInner').setAttribute('d',pipePath(false));
+  const streams=$('streams'), mols=$('molecules'), seg=$('segments'), texts=$('texts'), hs=$('handles'), dz=$('dragZones'), arr=$('arrows'), caps=$('endCaps');
+  streams.innerHTML=''; mols.innerHTML=''; seg.innerHTML=''; texts.innerHTML=''; hs.innerHTML=''; dz.innerHTML=''; arr.innerHTML=''; caps.innerHTML='';
+  // ฝาปิดปลายท่อ เพื่อย้ำว่าพื้นที่สีน้ำอยู่ภายในท่อเท่านั้น
+  [[xs[0], r1], [xs[5], r3]].forEach(([cx,r])=>{
+    const cap=document.createElementNS('http://www.w3.org/2000/svg','ellipse');
+    cap.setAttribute('class','cap'); cap.setAttribute('cx',cx); cap.setAttribute('cy',y);
+    cap.setAttribute('rx',12); cap.setAttribute('ry',(r+8).toFixed(1)); caps.appendChild(cap);
+  });
+
+  if(true){
+    // เส้นกระแสกระจายเกือบเต็มหน้าตัดท่อ แต่ยังถูก clip ให้อยู่ในท่อเสมอ
+    const streamKs=[-.78,-.62,-.46,-.30,-.14,0,.14,.30,.46,.62,.78];
+    streamKs.forEach((k,i)=>{
+      const p=document.createElementNS('http://www.w3.org/2000/svg','path'); p.setAttribute('class','stream');
+      p.setAttribute('d',`M ${xs[0]+10} ${yAt(xs[0]+10,k,r1,r2,r3)} C 185 ${yAt(185,k,r1,r2,r3)}, 245 ${yAt(245,k,r1,r2,r3)}, 318 ${yAt(318,k,r1,r2,r3)} C 390 ${yAt(390,k,r1,r2,r3)}, 462 ${yAt(462,k,r1,r2,r3)}, 555 ${yAt(555,k,r1,r2,r3)} C 610 ${yAt(610,k,r1,r2,r3)}, 665 ${yAt(665,k,r1,r2,r3)}, ${xs[5]-10} ${yAt(xs[5]-10,k,r1,r2,r3)}`); streams.appendChild(p);
+      // เพิ่มเม็ดโมเลกุลน้ำให้แน่นขึ้น และให้วิ่งตามเส้นกระแส
+      for(let j=0;j<6;j++){
+        let xx=xs[0]+26+((state.t*(45+v2*11)+j*96+i*39)%(xs[5]-xs[0]-52));
+        let c=document.createElementNS('http://www.w3.org/2000/svg','circle'); c.setAttribute('class','mol'); c.setAttribute('cx',xx); c.setAttribute('cy',yAt(xx,k,r1,r2,r3)); c.setAttribute('r',3.9); mols.appendChild(c);
+      }
+    });
+    // เม็ดเสริมระหว่างเส้น เพื่อให้เห็นว่าอนุภาคกระจายเต็มพื้นที่ท่อมากขึ้น
+    const extraKs=[-.70,-.54,-.38,-.22,-.06,.06,.22,.38,.54,.70];
+    extraKs.forEach((k,i)=>{
+      for(let j=0;j<3;j++){
+        let xx=xs[0]+36+((state.t*(32+v2*8)+j*185+i*57)%(xs[5]-xs[0]-72));
+        let c=document.createElementNS('http://www.w3.org/2000/svg','circle'); c.setAttribute('class','mol'); c.setAttribute('cx',xx); c.setAttribute('cy',yAt(xx,k,r1,r2,r3)); c.setAttribute('r',3.0); c.setAttribute('opacity','.78'); mols.appendChild(c);
+      }
+    });
+  }
+  if(false){[[150,r1,v1*23],[385,r2,v2*23],[630,r3,v3*23]].forEach(([cx,r,w])=>{const rect=document.createElementNS('http://www.w3.org/2000/svg','rect');rect.setAttribute('class','segment');rect.setAttribute('x',cx-w/2);rect.setAttribute('y',y-r*.78);rect.setAttribute('width',w);rect.setAttribute('height',2*r*.78);seg.appendChild(rect);});}
+  function txt(x,yy,c,cls='label'){let t=document.createElementNS('http://www.w3.org/2000/svg','text');t.setAttribute('x',x);t.setAttribute('y',yy);t.setAttribute('text-anchor','middle');t.setAttribute('class',cls);t.textContent=c;texts.appendChild(t)}
+  if(true){txt(145,y-r1-28,`A₁ = ${state.a1.toFixed(1)} m²`);txt(385,y-r2-28,`A₂ = ${state.a2.toFixed(1)} m²`);txt(625,y-r3-28,`A₃ = ${state.a3.toFixed(1)} m²`)}
+  if(true){txt(145,y+r1+28,`v₁ = ${v1.toFixed(2)} m/s`);txt(385,y+r2+28,`v₂ = ${v2.toFixed(2)} m/s`);txt(625,y+r3+28,`v₃ = ${v3.toFixed(2)} m/s`)}
+  txt(380,418,`Q = ${state.q.toFixed(1)} m³/s คงที่ทุกตำแหน่ง`,'small');
+  [[145,v1],[385,v2],[625,v3]].forEach(([x,v])=>{
+    // ความยาวลูกศรแปรตามความเร็ว และจัดให้อยู่กึ่งกลางท่อเสมอ
+    const len=Math.max(28,Math.min(150,22+v*13));
+    let l=document.createElementNS('http://www.w3.org/2000/svg','line');
+    l.setAttribute('class','arrow speedArrow');
+    l.setAttribute('x1',(x-len/2).toFixed(1)); l.setAttribute('y1',y);
+    l.setAttribute('x2',(x+len/2).toFixed(1)); l.setAttribute('y2',y);
+    arr.appendChild(l);
+  });
+  [[145,r1,'A₁','a1'],[385,r2,'A₂','a2'],[625,r3,'A₃','a3']].forEach(([x,r,name,key])=>{
+    let e=document.createElementNS('http://www.w3.org/2000/svg','ellipse'); e.setAttribute('class','section'); e.setAttribute('cx',x); e.setAttribute('cy',y); e.setAttribute('rx',20); e.setAttribute('ry',r*.78); seg.appendChild(e);
+    let zone=document.createElementNS('http://www.w3.org/2000/svg','rect'); zone.setAttribute('class','dragZone'); zone.dataset.key=key; zone.setAttribute('x',x-44); zone.setAttribute('y',y-r*.9); zone.setAttribute('width',88); zone.setAttribute('height',r*1.8); dz.appendChild(zone);
+    let g=document.createElementNS('http://www.w3.org/2000/svg','g');g.setAttribute('class','handle');g.dataset.key=key;g.innerHTML=`<line class="bar" x1="${x}" y1="${y-r*.65}" x2="${x}" y2="${y+r*.65}"></line><circle cx="${x}" cy="${y}" r="16"></circle><text x="${x}" y="${y+5}" text-anchor="middle">${name}</text>`;hs.appendChild(g);
+  });
+}
+['a1','a2','a3'].forEach(id=>$(id).addEventListener('input',draw));
+document.querySelectorAll('[data-step]').forEach(b=>b.onclick=()=>{
+  const el=$(b.dataset.step);
+  const cur=Number.isFinite(parseFloat(el.value)) ? parseFloat(el.value) : state[b.dataset.step];
+  el.value=Math.max(+el.min,Math.min(+el.max,cur+(+b.dataset.dir)*(+el.step||1))).toFixed(1);
+  draw();
+});
+['a1','a2','a3'].forEach(id=>{
+  $(id).addEventListener('change',()=>{
+    const el=$(id);
+    const v=readArea(id,state[id]);
+    el.value=v.toFixed(1);
+    draw();
+  });
+});
+$('playBtn').onclick=()=>{state.playing=!state.playing;$('playBtn').textContent=state.playing?'⏸ หยุด':'▶️ เล่น';draw()};
+$('resetBtn').onclick=()=>{$('a1').value='6.0';$('a2').value='3.9';$('a3').value='6.0';state.playing=true;$('playBtn').textContent='⏸ หยุด';$('formulaTopLabel')?.classList.remove('hideLabel');$('missionLabel')?.classList.remove('hideLabel');draw()};
+$('formulaBtn').onclick=()=>{$('formulaModal').classList.add('show'); if(window.MathJax)MathJax.typesetPromise();};$('closeFormula').onclick=()=>$('formulaModal').classList.remove('show');
+let drag=null;
+function getKey(e){const el=e.target.closest('[data-key]'); return el ? el.dataset.key : null;}
+$('svg').addEventListener('pointerdown',e=>{const key=getKey(e); if(key){drag=key;$('svg').setPointerCapture(e.pointerId); e.preventDefault();}});
+$('svg').addEventListener('pointermove',e=>{if(!drag)return;const rect=$('svg').getBoundingClientRect();const y=220, sy=(e.clientY-rect.top)*440/rect.height;let r=Math.max(38,Math.min(145,Math.abs(sy-y)));let A=(r-24)/12;const el=$(drag);el.value=Math.max(+el.min,Math.min(+el.max,A)).toFixed(1);draw();e.preventDefault();});
+['pointerup','pointercancel','pointerleave'].forEach(ev=>$('svg').addEventListener(ev,()=>drag=null));
+function loop(){if(state.playing) state.t+=0.016; draw(); requestAnimationFrame(loop)}draw();loop();
+</script>
+</body>
+</html>

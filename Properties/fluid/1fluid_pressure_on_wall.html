@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Mini Lab : ความดันของของเหลว</title>
+<script>
+window.MathJax = { tex: { inlineMath: [['\\(','\\)'], ['$', '$']], displayMath: [['\\[','\\]']] }, svg: { fontCache: 'global' } };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<style>
+:root{
+  --blue:#2f6fd6; --deep:#204d7c; --soft:#edf3fb; --line:#d8e3ef;
+  --green:#e9f8e6; --orange:#fff3df; --orangeLine:#efc58f; --red:#d83b3b;
+  --gray:#f4f6f8; --text:#1f2a37;
+}
+*{box-sizing:border-box} body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;background:#f7fbff;color:var(--text);padding-bottom:calc(96px + env(safe-area-inset-bottom));}
+.header{padding:18px 14px 8px;text-align:center}.title1{font-size:clamp(24px,3.5vw,42px);font-weight:900;color:var(--blue);line-height:1.12}.title2{font-size:clamp(19px,2.7vw,31px);font-weight:900;color:var(--deep);line-height:1.15;margin-top:4px}
+.wrap{width:min(1180px,100%);margin:0 auto;padding:8px 12px 22px;display:grid;grid-template-columns:1.1fr .9fr;gap:14px}.card{background:white;border:1px solid var(--line);border-radius:24px;box-shadow:0 8px 22px rgba(28,77,125,.08);padding:14px}.labCard{position:relative;overflow:hidden}.stage{width:100%;aspect-ratio:1.08/1;background:linear-gradient(#ffffff,#f6fbff);border:1px solid #dce7f2;border-radius:22px;position:relative;overflow:hidden;touch-action:none}.note{position:absolute;left:14px;top:14px;right:14px;background:rgba(255,255,255,.92);border:1px solid #dce7f2;border-radius:18px;padding:10px 42px 10px 12px;font-size:14px;line-height:1.45;z-index:5}.note button{position:absolute;right:8px;top:7px;border:0;background:#edf3fb;border-radius:12px;width:30px;height:30px;font-size:18px;color:#45688f}.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}.btn{border:0;border-radius:16px;padding:11px 14px;font-weight:850;cursor:pointer;box-shadow:0 4px 0 rgba(0,0,0,.12);font-size:15px}.btn:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(0,0,0,.12)}.blue{background:#7ab6ed;color:white}.gray{background:#e7ebef;color:#45515f}.orange{background:#ffe4c4;color:#8b4d00}.green{background:#daf2d7;color:#1f6b28}.controls{display:grid;gap:12px}.control{background:#f8fbff;border:1px solid #dbe7f3;border-radius:18px;padding:12px}.row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}.label{font-weight:850;color:#244b76}.value{font-weight:900;color:#2f6fd6;background:white;border:1px solid #dbe7f3;border-radius:999px;padding:5px 10px;white-space:nowrap}input[type=range]{width:100%;accent-color:#2f6fd6}select,input[type=number]{font:inherit;border:1px solid #cfddeb;border-radius:12px;padding:8px 10px;background:white}.readouts{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.read{border-radius:18px;padding:12px;background:#f7fbff;border:1px solid #dce7f2}.read .k{font-weight:850;color:#45688f;font-size:14px}.read .v{font-size:22px;font-weight:950;margin-top:2px}.read.side .v{color:#d83b3b}.read.bottom .v{color:#159447}.concept{background:#fffdf9;border-color:#f1d5ad}.concept h3{margin:0 0 8px;color:#123d70;font-size:20px}.concept p{line-height:1.65;margin:8px 0}.pill{display:inline-block;background:#edf3fb;border-radius:999px;padding:5px 10px;font-weight:800;color:#2e5f93}.footerLink{text-align:center;margin:10px 0 0}.footerLink a{color:#1f6fe5;font-weight:850;text-decoration:underline}.modal{position:fixed;inset:0;background:rgba(20,36,55,.42);display:none;z-index:50;padding:calc(18px + env(safe-area-inset-top)) 12px calc(18px + env(safe-area-inset-bottom));overflow:auto}.modal.show{display:block}.modalBox{max-width:900px;margin:0 auto;background:#fff7ee;border:1px solid var(--orangeLine);border-radius:24px;padding:18px;position:relative}.close{position:fixed;right:16px;top:calc(14px + env(safe-area-inset-top));width:48px;height:48px;border:0;border-radius:16px;background:#e7eef6;color:#45688f;font-size:24px;font-weight:900;z-index:60}.formulaCard{background:white;border:1px solid #efc58f;border-radius:18px;padding:14px;margin:12px 0;line-height:1.65}.formulaCard h3{margin:0 0 8px;color:#123d70}.exerciseBox{background:#f8fff7;border:1px solid #cfe8c8;border-radius:18px;padding:14px;margin:12px 0}.choice{display:block;width:100%;text-align:left;background:white;border:1px solid #dbe7f3;border-radius:16px;padding:11px 12px;margin:8px 0;font-weight:750}.choice.correct{background:#e9f8e6;border-color:#85ca76}.choice.wrong{background:#f1f3f5;border-color:#cfd6dc}.feedback{font-weight:850;margin-top:8px}.svgText{font-family:system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;font-weight:850}.smallSvg{font-size:18px}.medSvg{font-size:21px}.bigSvg{font-size:25px}
+@media (max-width:850px){.wrap{grid-template-columns:1fr}.stage{aspect-ratio:.86/1}.readouts{grid-template-columns:1fr}.title1{font-size:clamp(20px,6vw,30px)}.title2{font-size:clamp(18px,5.3vw,25px)}.note{font-size:12px}.toolbar{position:fixed;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom));z-index:30;background:rgba(235,241,247,.74);backdrop-filter:blur(8px);border:1px solid #d8e3ef;border-radius:20px;padding:8px;display:grid;grid-template-columns:repeat(3,1fr)}.btn{padding:10px 8px;font-size:13px;border-radius:14px}.controls{padding-bottom:20px}}
+</style>
+</head>
+<body>
+<header class="header">
+  <div class="title1">Mini Lab</div>
+  <div class="title2">ความดันที่ด้านข้างและก้นภาชนะ</div>
+</header>
+<main class="wrap">
+  <section class="card labCard">
+    <div id="stage" class="stage">
+      <div id="note" class="note">ภารกิจ: ตอนเริ่มต้นจะไม่แสดงลูกศร กดปุ่มเพื่อดู “แรงดันที่ของเหลวกดผนังภาชนะ” <button onclick="note.style.display='none'">×</button></div>
+      <svg id="svg" viewBox="0 0 720 660" width="100%" height="100%" aria-label="hydrostatic pressure lab"></svg>
+    </div>
+    <div class="toolbar">
+      <button class="btn blue" id="sideBtn">⬅️ แสดงแรงดันด้านข้าง</button>
+      <button class="btn green" id="bottomBtn">⬇️ แสดงแรงดันที่ก้นภาชนะ</button>
+      <button class="btn gray" id="resetBtn">🔄 รีเซ็ต</button>
+      <button class="btn orange" id="formulaBtn">Σ สูตรสำคัญ</button>
+    </div>
+  </section>
+
+  <aside class="card controls">
+    <div class="control">
+      <div class="row"><span class="label">ความสูงน้ำ h</span><span class="value" id="hVal">2.00 m</span></div>
+      <input id="h" type="range" min="0.5" max="4.0" step="0.1" value="2.0">
+    </div>
+    <div class="control">
+      <div class="row"><span class="label">ชนิดของเหลว</span><select id="liquid"><option value="1000">น้ำ ρ = 1000 kg/m³</option><option value="800">น้ำมัน ρ = 800 kg/m³</option><option value="13600">ปรอท ρ = 13600 kg/m³</option><option value="1030">น้ำทะเล ρ = 1030 kg/m³</option></select></div>
+    </div>
+    <div class="control">
+      <div class="row"><span class="label">เลือกการแสดงผล</span></div>
+      <p style="margin:0;line-height:1.6;color:#45688f;font-weight:750">ตอนเริ่มต้นไม่แสดงลูกศร กดปุ่มด้านล่างจอทดลองเพื่อเลือกดูแรงดันที่ผนังด้านข้างหรือที่ก้นภาชนะ</p>
+    </div>
+    <div class="readouts">
+      <div class="read side"><div class="k">ความดันเฉลี่ยที่ด้านข้างภาชนะ</div><div class="v" id="pSide">—</div></div>
+      <div class="read bottom"><div class="k">ความดันที่ก้นภาชนะ</div><div class="v" id="pBottom">—</div></div>
+    </div>
+    <div class="card concept">
+      <h3>หลักที่อยากให้เห็น</h3>
+      <p><span class="pill">ของเหลวหยุดนิ่ง</span> ความดันขึ้นกับ “ความลึกจากผิวน้ำ” ไม่ได้ขึ้นกับทิศของผนังโดยตรง</p>
+      <p>ด้านข้าง: ความดันเพิ่มตามความลึก จึงใช้ความดันเฉลี่ยของผนังด้านข้างเป็น \(P_{avg}=\frac{1}{2}\rho gh\)</p>
+      <p>ก้นภาชนะ: ทุกจุดที่ก้นอยู่ลึกเท่ากัน จึงมีความดันเท่ากันคือ \(P=\rho gh\)</p>
+    </div>
+  </aside>
+</main>
+<div class="footerLink"><a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">ศึกษาเพิ่มเติมที่เพจคลายปมฟิสิกส์</a></div>
+
+<div id="formulaModal" class="modal">
+  <button class="close" onclick="formulaModal.classList.remove('show')">×</button>
+  <div class="modalBox">
+    <h2 style="margin:0;color:#123d70">สูตรสำคัญ</h2>
+    <div class="formulaCard"><h3>ความดันเกจของของเหลว</h3><p>ใช้เมื่อพิจารณาความดันเนื่องจากน้ำหนักของของเหลวเหนือจุดนั้น</p>\[P = \rho g h\]<p>โดย \(P\) คือความดันเกจ, \(\rho\) คือความหนาแน่นของของเหลว, \(g\) คือความเร่งโน้มถ่วง และ \(h\) คือความลึกจากผิวน้ำถึงจุดที่พิจารณา</p></div>
+    <div class="formulaCard"><h3>ด้านข้างภาชนะ</h3><p>ความดันด้านข้างเพิ่มจากศูนย์ที่ผิวน้ำจนถึง \(\rho gh\) ที่ก้นภาชนะ ดังนั้นความดันเฉลี่ยที่ด้านข้างคือ</p>\[P_{avg,side}=\frac{1}{2}\rho gh\]</div>
+    <div class="formulaCard"><h3>ก้นภาชนะ</h3><p>ที่ก้นภาชนะ ถ้าระดับน้ำสูง \(h\)</p>\[P_{bottom}=\rho g h\]</div>
+    <div class="exerciseBox"><b style="color:#1f6b28">จุดที่ต้องระวัง:</b> ความดันที่ก้นภาชนะไม่ขึ้นกับพื้นที่ก้นภาชนะโดยตรง แต่แรงที่ก้นภาชนะขึ้นกับพื้นที่ เพราะ \(F=PA\)</div>
+  </div>
+</div>
+<script>
+const svg = document.getElementById('svg');
+const hSlider = document.getElementById('h');
+const liquid = document.getElementById('liquid');
+const hVal = document.getElementById('hVal');
+const pSide = document.getElementById('pSide');
+const pBottom = document.getElementById('pBottom');
+const sideBtn = document.getElementById('sideBtn');
+const bottomBtn = document.getElementById('bottomBtn');
+const resetBtn = document.getElementById('resetBtn');
+const formulaBtn = document.getElementById('formulaBtn');
+const formulaModal = document.getElementById('formulaModal');
+let mode='none';
+const g = 9.8;
+function kPa(p){ return (p/1000).toFixed(p>=100000?0:1)+' kPa'; }
+function draw(){
+  const h = +hSlider.value;
+  const rho = +liquid.value;
+  const pAvgSide = 0.5*rho*g*h;
+  const pB = rho*g*h;
+  hVal.textContent=h.toFixed(2)+' m';
+  pSide.textContent = (mode==='side') ? kPa(pAvgSide) : '—';
+  pBottom.textContent = (mode==='bottom') ? kPa(pB) : '—';
+  const tankX=135, tankY=70, tankW=360, tankH=500;
+  const scale=tankH/4.0;
+  const waterH=h*scale;
+  const waterTop=tankY+tankH-waterH;
+  const bottomY=tankY+tankH;
+  const rightX=tankX+tankW;
+  let waterColor = rho>5000?'#c8c8d0':rho<900?'#f8d06b':'#9fd3ff';
+  svg.innerHTML = `
+  <defs>
+    <marker id="arrowRed" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#d83b3b"/></marker>
+    <marker id="arrowGreen" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#159447"/></marker>
+    <linearGradient id="water" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${waterColor}" stop-opacity=".55"/><stop offset="1" stop-color="${waterColor}" stop-opacity=".88"/></linearGradient>
+  </defs>
+  <rect x="0" y="0" width="720" height="660" fill="transparent"/>
+  <path d="M${tankX} ${tankY} L${tankX} ${bottomY} L${rightX} ${bottomY} L${rightX} ${tankY}" fill="none" stroke="#252525" stroke-width="7" stroke-linecap="round"/>
+  <rect x="${tankX+4}" y="${waterTop}" width="${tankW-8}" height="${waterH}" fill="url(#water)"/>
+  <path d="M${tankX+8} ${waterTop} C${tankX+55} ${waterTop-5}, ${tankX+75} ${waterTop+5}, ${tankX+118} ${waterTop} S${tankX+230} ${waterTop-5}, ${rightX-10} ${waterTop}" fill="none" stroke="#4387bd" stroke-width="4" opacity=".75"/>
+  <line x1="${rightX+25}" y1="${waterTop}" x2="${rightX+25}" y2="${bottomY}" stroke="#222" stroke-width="4"/>
+  <line x1="${rightX+18}" y1="${waterTop}" x2="${rightX+32}" y2="${waterTop}" stroke="#222" stroke-width="4"/>
+  <line x1="${rightX+18}" y1="${bottomY}" x2="${rightX+32}" y2="${bottomY}" stroke="#222" stroke-width="4"/>
+  <text x="${rightX+45}" y="${(waterTop+bottomY)/2}" class="svgText bigSvg" fill="#222">h = ${h.toFixed(2)} m</text>
+  `;
+  if(mode==='side'){
+    let arrows='';
+    for(let i=0;i<9;i++){
+      const yy=waterTop + (i+.55)*waterH/9;
+      const depth=(yy-waterTop)/scale;
+      const ratio=Math.max(0, Math.min(1, depth/h));
+      const len=18 + ratio*150;
+      const strokeW=3.5 + ratio*3;
+      const red=Math.round(210 + ratio*35);
+      const green=Math.round(115 - ratio*55);
+      const blue=Math.round(115 - ratio*65);
+      const color=`rgb(${red},${green},${blue})`;
+      // ลูกศรแรงดันด้านข้าง: ยิ่งลึก ลูกศรยิ่งยาวและสีเข้มขึ้น แสดง P ∝ h
+      arrows += `<line x1="${tankX+24+len}" y1="${yy}" x2="${tankX+13}" y2="${yy}" stroke="${color}" stroke-width="${strokeW}" marker-end="url(#arrowRed)" opacity=".96"/>`;
+    }
+    svg.insertAdjacentHTML('beforeend', arrows + `
+      <text x="55" y="620" class="svgText medSvg" fill="#d83b3b">ความดันเฉลี่ยที่ด้านข้างภาชนะ = 1/2 ρgh = ${kPa(pAvgSide)}</text>
+    `);
+  }
+  if(mode==='bottom'){
+    let arrows='';
+    for(let i=0;i<7;i++){
+      const xx=tankX+40+i*(tankW-80)/6;
+      // ลูกศรแรงดันที่ก้นภาชนะ: พุ่งลงเข้าหาก้นภาชนะ
+      arrows += `<line x1="${xx}" y1="${bottomY-95}" x2="${xx}" y2="${bottomY-14}" stroke="#159447" stroke-width="5" marker-end="url(#arrowGreen)" opacity=".92"/>`;
+    }
+    svg.insertAdjacentHTML('beforeend', arrows + `
+      <text x="95" y="620" class="svgText medSvg" fill="#159447">ความดันที่ก้นภาชนะ = ρgh = ${kPa(pB)}</text>
+    `);
+  }
+  if(mode==='none'){
+    svg.insertAdjacentHTML('beforeend', `<text x="86" y="620" class="svgText medSvg" fill="#45688f">กดปุ่มเพื่อแสดงทิศแรงดันที่ของเหลวกดผนังภาชนะ</text>`);
+  }
+}
+[hSlider,liquid].forEach(el=>el.addEventListener('input',draw));
+sideBtn.onclick=()=>{mode='side'; draw();};
+bottomBtn.onclick=()=>{mode='bottom'; draw();};
+resetBtn.onclick=()=>{mode='none'; hSlider.value=2.0; liquid.value=1000; note.style.display='block'; draw();};
+formulaBtn.onclick=()=>{formulaModal.classList.add('show'); setTimeout(()=>MathJax.typesetPromise(),50)};
+draw();
+</script>
+</body>
+</html>

@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mini Lab : ของเหลวพุ่งออกจากรูรั่วเล็กๆข้างภาชนะ</title>
+<style>
+  :root{
+    --bg:#ffffff;
+    --ink:#0f172a;
+    --muted:#475569;
+    --outline:#e5e7eb;
+    --accent:#2563eb;
+    --ground:#9ca3af;
+    --table:#6b3f1f;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Noto Sans Thai",sans-serif}
+  .pageTitle{max-width:1200px;margin:16px auto 0;padding:0 16px;font-size:22px;font-weight:800;line-height:1.35;color:#2563eb}
+  .wrap{display:grid;grid-template-columns:380px 1fr;gap:16px;align-items:start;padding:12px 16px 16px;max-width:1200px;margin:0 auto}
+  @media (max-width: 900px){
+    .wrap{grid-template-columns:1fr;}
+    .panel{order:2;}
+    .pageTitle{font-size:18px;margin-top:12px;padding:0 16px 4px;}
+  }
+  .panel{background:#fff;border:1px solid var(--outline);border-radius:16px;padding:14px;box-shadow:0 2px 10px rgba(15,23,42,.06)}
+  .panel h1{display:none}
+  .row{display:grid;grid-template-columns: 1fr auto;gap:8px;align-items:center;margin:10px 0}
+  input[type="range"]{display:block;width:100%;margin:4px 0 2px;}
+  .row label{font-size:13px;color:var(--muted)}
+  .row output{font-variant-numeric:tabular-nums}
+  .ctrl{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+  .ctrl button{cursor:pointer;border:1px solid var(--outline);background:#fff;border-radius:12px;padding:8px 12px;font-size:14px}
+  .ctrl button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .ctrl button.reset{background:#e5e7eb;color:#334155;border-color:#cbd5e1}
+  .holes{margin-top:12px;border-top:1px dashed var(--outline);padding-top:10px}
+  .hole{display:flex;align-items:center;justify-content:space-between;border:1px solid var(--outline);border-radius:12px;padding:8px 10px;margin:8px 0;background:#f9fafb}
+  .hole .meta{font-size:13px}
+  .hole .meta b{color:var(--ink)}
+  .hole .del{border-color:#fca5a5;color:#b91c1c}
+
+  .board{position:relative;min-height:540px;height:540px;background:#fff;border:1px solid var(--outline);border-radius:16px;overflow:hidden}
+  @media (max-width: 900px){
+    .board{height:270px;min-height:270px;max-height:270px;}
+    .panel{padding:14px 18px 16px;}
+    input[type="range"]{width:calc(100% - 36px);margin-left:18px;margin-right:18px;}
+  }
+  canvas{width:100%;height:100%;display:block}
+
+  .legend{position:absolute;top:10px;right:10px;left:auto;bottom:auto;background:#fff;border:1px solid var(--outline);border-radius:12px;padding:8px 10px;font-size:12px;color:var(--muted);box-shadow:0 2px 8px rgba(0,0,0,.05);max-width:min(58vw,320px)}
+
+  @media (max-width: 900px){
+    .legend{top:12px;right:12px;max-width:62vw;font-size:11px;padding:7px 9px;}
+  }
+  .footer{max-width:1200px;margin:10px auto 24px;padding:0 16px;font-size:14px;color:var(--muted)}
+  .footer a{color:var(--accent);text-decoration:underline}
+  .formula{margin-top:12px;font-size:13px;color:#0f172a;background:#f9fafb;padding:8px;border-radius:8px}
+  code{background:#eef2ff;padding:2px 4px;border-radius:4px}
+</style>
+</head>
+<body>
+  <div class="pageTitle">Mini Lab : ของเหลวพุ่งออกจากรูรั่วเล็กๆข้างภาชนะ</div>
+  <div class="wrap">
+    <section class="panel">
+      <h1>Mini Lab : ของเหลวพุ่งออกจากรูรั่วเล็กๆข้างภาชนะ</h1>
+      <div class="row">
+        <label for="H">ความสูงถัง H (m)</label>
+        <output id="Hval">2.00</output>
+      </div>
+      <input id="H" type="range" min="0.4" max="3.5" step="0.01" value="2.00"/>
+      <div class="row">
+        <label for="h0">ความสูงโต๊ะ/ฐาน h₀ (m)</label>
+        <output id="h0val">0.00</output>
+      </div>
+      <input id="h0" type="range" min="0" max="2.0" step="0.01" value="0.00"/>
+      <div class="row">
+        <label for="hNew">รูใหม่: ความลึกจากผิวน้ำ h (m)</label>
+        <output id="hNewVal">0.50</output>
+      </div>
+      <input id="hNew" type="range" min="0.0" max="1.5" step="0.5" value="0.50"/>
+      <div class="ctrl">
+        <button id="addHole" class="primary">+ เพิ่มรูรั่ว</button>
+        <button id="clearHoles">ล้างรูทั้งหมด</button>
+        <button id="resetAll" class="reset">🔄 รีเซ็ต</button>
+      </div>
+      <div class="ctrl" style="margin-top:12px">
+        <button id="play" class="primary">▶️ เล่น</button>
+        <button id="pause">⏸️ หยุด</button>
+        <label class="toggle"><input id="slow" type="checkbox"/> สโลว์โมชั่น</label>
+      </div>
+      <div class="holes" id="holesList"></div>
+      <div class="formula">
+        สูตรที่เกี่ยวข้อง:<br>
+        <b>ความเร็วที่รูรั่ว:</b> <code>v = √(2gh)</code><br>
+        <b>เวลาในการตก:</b> <code>t = √(2y₀/g)</code><br>
+        <b>ระยะทางแนวนอน:</b> <code>Δx = v·t</code>
+      </div>
+    </section>
+    <section class="board">
+      <canvas id="cv"></canvas>
+      <div class="legend">กดเพิ่มรู เลื่อน H และ h₀ แล้วกด <b>เล่น</b></div>
+    </section>
+  </div>
+  <div class="footer">ศึกษาเพิ่มเติมได้ที่เพจ <a href="https://www.facebook.com/resolvephysics" target="_blank">คลายปมฟิสิกส์</a></div>
+<script>
+(() => {
+  const cv=document.getElementById('cv');
+  const ctx=cv.getContext('2d');
+  const H=document.getElementById('H');
+  const h0=document.getElementById('h0');
+  const hNew=document.getElementById('hNew');
+  const Hval=document.getElementById('Hval');
+  const h0val=document.getElementById('h0val');
+  const hNewVal=document.getElementById('hNewVal');
+  const addHoleBtn=document.getElementById('addHole');
+  const clearHolesBtn=document.getElementById('clearHoles');
+  const playBtn=document.getElementById('play');
+  const pauseBtn=document.getElementById('pause');
+  const resetAllBtn=document.getElementById('resetAll');
+  const slow=document.getElementById('slow');
+  const holesList=document.getElementById('holesList');
+  const g=9.81;
+  const tank={x:1.0,w:1.0,H:parseFloat(H.value)};
+  let worldW=10;
+  let worldH=5;
+  let pxpm=100;
+  const state={holes:[],particles:[],running:false,lastT:0};
+  const MOBILE_Y_SHIFT = -122;
+  function clamp(v,lo,hi){return Math.max(lo,Math.min(hi,v));}
+  function fmt(x){return x.toFixed(2);}
+  function resizeCanvas(){
+    const rect=cv.parentElement.getBoundingClientRect();
+    cv.width=rect.width*2;cv.height=rect.height*2;ctx.setTransform(2,0,0,2,0,0);
+    // Keep the ground line visually fixed. Changing h0 should lift the setup upward,
+    // not push the ground downward.
+    worldH=Math.max(6.0, parseFloat(H.value)+2.2);
+    const isMobile=window.innerWidth<=900;
+    pxpm=isMobile ? Math.min(cv.width/2/worldW,cv.height/2/worldH)*1.7 : Math.min(cv.width/2/worldW,cv.height/2/worldH);
+  }
+  function worldToCanvas(x,y){return [x*pxpm+10,(worldH-y)*pxpm-10];}
+  function addHole(hDepth){
+    const Hm=parseFloat(H.value);
+    const h=clamp(hDepth,0.02,Hm-0.02);
+    const hole={id:Math.random(),h,color:'#2563eb'};
+    state.holes.push(hole);recalcHoles();renderHoleList();}
+  function recalcHoles(){
+    const Hm=parseFloat(H.value),h0m=parseFloat(h0.value);
+    const xHole=tank.x+tank.w;
+    for(const [i,hole] of state.holes.entries()){
+      const v=Math.sqrt(2*g*hole.h);
+      const y0=h0m+(Hm-hole.h);
+      const t=Math.sqrt(2*y0/g);
+      hole.v=v;hole.y0=y0;hole.xHole=xHole;hole.yHole=y0;hole.range=v*t;hole.index=i+1;
+    }
+  }
+  function renderHoleList(){holesList.innerHTML='';state.holes.forEach((h,i)=>{const d=document.createElement('div');d.textContent=`รู${i+1} h=${fmt(h.h)}m v=${fmt(h.v)}m/s Δx≈${fmt(h.range)}m`;holesList.appendChild(d);});}
+  function spawnParticles(){for(const h of state.holes){state.particles.push({x:h.xHole,y:h.yHole,vx:h.v,vy:0,color:'#2563eb',type:'jet'});}}
+  function step(dt){
+    const spd=slow.checked?0.35:1.0;
+    const sdt=dt*spd;
+    for(const p of state.particles){
+      p.x+=p.vx*sdt;
+      p.vy-=g*sdt;
+      p.y+=p.vy*sdt;
+      if(p.type==='jet' && p.y<=0){
+        p.kill=true;
+        for(let k=0;k<4;k++){
+          const a=Math.random()*Math.PI;
+          const sp=0.5+Math.random()*0.8;
+          state.particles.push({x:p.x,y:0.02,vx:sp*Math.cos(a),vy:sp*Math.sin(a),color:'rgba(37,99,235,0.4)',type:'splash',life:0.5});
+        }
+      }
+      if(p.type==='splash'){
+        p.life-=sdt;if(p.life<=0)p.kill=true;
+      }
+    }
+    state.particles=state.particles.filter(p=>!p.kill&&p.y>-0.1&&p.x<worldW*2);
+  }
+  function draw(){ctx.clearRect(0,0,cv.width,cv.height);
+    const isMobile=window.innerWidth<=900;
+    // ground always gray
+    ctx.strokeStyle='#6b7280';ctx.lineWidth=4;ctx.setLineDash([]);
+    const [gx1,_gy]=worldToCanvas(0,0);const [gx2]=worldToCanvas(worldW,0);
+    const gy=isMobile ? _gy+MOBILE_Y_SHIFT : _gy;
+    ctx.beginPath();ctx.moveTo(gx1,gy);ctx.lineTo(gx2,gy);ctx.stroke();
+    // thin baseline at y=0
+    ctx.strokeStyle='#666';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(gx1,gy);ctx.lineTo(gx2,gy);ctx.stroke();
+    // table always light brown
+    const baseH=parseFloat(h0.value);
+    let [tblx1,tbly]=worldToCanvas(tank.x-0.5,baseH);
+    let [tblx2]=worldToCanvas(tank.x+tank.w+0.5,baseH);
+    if(isMobile){tbly+=MOBILE_Y_SHIFT;}
+    ctx.fillStyle='#5a3418';
+    ctx.fillRect(tblx1,tbly-8,tblx2-tblx1,12);
+    const groundY=gy;
+    ctx.fillRect(tblx1+20,tbly+4,10,Math.max(0,groundY-(tbly+4)));
+    ctx.fillRect(tblx2-30,tbly+4,10,Math.max(0,groundY-(tbly+4)));
+    // tank
+    const tx=tank.x;const ty=baseH;const tw=tank.w;const th=parseFloat(H.value);
+    let [tlx,tly]=worldToCanvas(tx,ty+th);let [brx,bry]=worldToCanvas(tx+tw,ty);
+    if(isMobile){tly+=MOBILE_Y_SHIFT;bry+=MOBILE_Y_SHIFT;}
+    ctx.fillStyle='rgba(37,99,235,0.55)';
+    ctx.fillRect(tlx+2,tly+2,Math.max(0,brx-tlx-4),Math.max(0,bry-tly-4));
+    ctx.strokeStyle='#666';ctx.lineWidth=2;ctx.strokeRect(tlx,tly,brx-tlx,bry-tly);
+    ctx.clearRect(tlx-1,tly-3,brx-tlx+2,6);
+    // holes & trajectories
+    for(const h of state.holes){
+      let [hx,hy]=worldToCanvas(h.xHole,h.yHole);
+      if(isMobile){hy+=MOBILE_Y_SHIFT;}
+      ctx.fillStyle=h.color;ctx.beginPath();ctx.arc(hx,hy,4,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#000';ctx.font='12px sans-serif';ctx.fillText(`รู${h.index}`,hx+6,hy-6);
+      ctx.strokeStyle='#2563eb';ctx.setLineDash([3,3]);ctx.beginPath();
+      const steps=30;
+      for(let i=0;i<=steps;i++){
+        const t=h.range/h.v*(i/steps);
+        const x=h.xHole+h.v*t;
+        const y=h.y0-0.5*g*t*t;
+        let [cx,cy]=worldToCanvas(x,y);
+        if(isMobile){cy+=MOBILE_Y_SHIFT;}
+        if(i===0)ctx.moveTo(cx,cy);else ctx.lineTo(cx,cy);
+      }
+      ctx.stroke();ctx.setLineDash([]);
+      // label Δx under the ground line with vertical offset to avoid overlap
+      let [lx,ly]=worldToCanvas(h.xHole+h.range,0);
+      if(isMobile){ly+=MOBILE_Y_SHIFT;}
+      ctx.fillStyle='#111';ctx.font='12px sans-serif';ctx.fillText(`Δx${h.index}=${fmt(h.range)}m`,lx,ly+14+((h.index-1)*25));
+    }
+    // particles
+    for(const p of state.particles){
+      let [px,py]=worldToCanvas(p.x,p.y);
+      if(isMobile){py+=MOBILE_Y_SHIFT;}
+      ctx.fillStyle=p.color;
+      ctx.beginPath();
+      const r=p.type==='splash'?1.2:2;
+      ctx.arc(px,py,r,0,Math.PI*2);
+      ctx.fill();
+    }
+  }
+  function loop(ts){if(!state.lastT)state.lastT=ts;const dt=(ts-state.lastT)/1000;state.lastT=ts;if(state.running){spawnParticles();step(dt);}draw();requestAnimationFrame(loop);}
+  function syncHNewMax(){
+    const Hm=parseFloat(H.value);
+    const maxDepth=Math.min(1.5, Hm);
+    hNew.max=maxDepth.toFixed(2);
+    let hVal=parseFloat(hNew.value);
+    if(hVal>maxDepth){ hVal=maxDepth; hNew.value=hVal.toFixed(2); }
+    hNewVal.textContent=parseFloat(hNew.value).toFixed(2);
+  }
+  H.oninput=()=>{
+    Hval.textContent=parseFloat(H.value).toFixed(2);
+    syncHNewMax();
+    recalcHoles();
+    resizeCanvas();
+  };
+  h0.oninput=()=>{h0val.textContent=parseFloat(h0.value).toFixed(2);recalcHoles();resizeCanvas();};
+  hNew.oninput=()=>{
+    const Hm=parseFloat(H.value);
+    const maxDepth=Math.min(1.5, Hm);
+    if(parseFloat(hNew.value)>maxDepth){ hNew.value=maxDepth.toFixed(2); }
+    hNewVal.textContent=parseFloat(hNew.value).toFixed(2);
+  };
+  addHoleBtn.onclick=()=>addHole(parseFloat(hNew.value));
+  clearHolesBtn.onclick=()=>{state.holes=[];state.particles=[];holesList.innerHTML='';};
+  playBtn.onclick=()=>{state.running=true;};pauseBtn.onclick=()=>{state.running=false;};
+  resetAllBtn.onclick=()=>{
+    H.value='2.00'; h0.value='0.00'; hNew.value='0.50'; slow.checked=false;
+    Hval.textContent='2.00'; h0val.textContent='0.00'; hNewVal.textContent='0.50';
+    state.holes=[]; state.particles=[]; state.running=false; state.lastT=0;
+    syncHNewMax(); recalcHoles(); resizeCanvas(); renderHoleList(); draw();
+  };
+  window.addEventListener('resize', resizeCanvas);
+  syncHNewMax(); resizeCanvas();requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

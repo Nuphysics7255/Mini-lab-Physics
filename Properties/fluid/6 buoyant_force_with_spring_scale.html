@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ชั่งวัตถุในของเหลว</title>
+  <style>
+    :root{
+      --ink:#0f172a;
+      --water:#dbeafe;
+      --box:#b98100;
+      --panel:#ffffff;
+      --accent:#0ea5e9;
+    }
+    body{
+      margin:0;
+      background:#fff;
+      font-family:system-ui,"Noto Sans Thai",sans-serif;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:6px;
+      padding:10px 4px 20px;
+    }
+    canvas{
+      border:1px solid #e2e8f0;
+      border-radius:10px;
+      touch-action:none;
+      max-width:100%;
+      background:#ffffff;
+    }
+    button{
+      border:1px solid #d1d5db;
+      background:#f8fafc;
+      border-radius:8px;
+      padding:5px 14px;
+      font-size:13px;
+      cursor:pointer;
+      margin:0 3px 4px 3px;
+    }
+    #calcModal{
+      position:fixed;
+      inset:0;
+      background:rgba(15,23,42,0.15);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index:50;
+    }
+    #calcBox{
+      position:relative;
+      background:#fff;
+      border:2px solid #0ea5e9;
+      border-radius:18px;
+      padding:18px 20px 20px;
+      width:min(920px, calc(100vw - 28px));
+      min-height:min(78vh, 760px);
+      max-height:88vh;
+      overflow-y:auto;
+      box-shadow:0 12px 36px rgba(15,23,42,0.25);
+    }
+    #calcBox h4{
+      margin:2px 52px 12px 0;
+      font-size:24px;
+    }
+    #closeCalc{
+      position:absolute;
+      top:12px;
+      right:12px;
+      background:#ef4444;
+      color:#fff;
+      border:none;
+      margin-top:0;
+      padding:8px 14px;
+      border-radius:999px;
+      cursor:pointer;
+      font-size:15px;
+      font-weight:700;
+      z-index:2;
+    }
+    @media (max-width: 700px){
+      #calcBox{
+        width:calc(100vw - 18px);
+        min-height:84vh;
+        max-height:90vh;
+        padding:16px 16px 20px;
+      }
+      #calcBox h4{
+        font-size:21px;
+        margin-right:58px;
+      }
+      #calcContent{
+        font-size:15px !important;
+      }
+    }
+    a.link-page{
+      color:#1d4ed8;
+      text-decoration:underline;
+      font-weight:500;
+    }
+  </style>
+  <!-- MathJax -->
+  <script>
+    window.MathJax = { tex:{inlineMath:[['$','$'],['\\(','\\)']]} };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+</head>
+<body>
+  <h3 style="margin:2px 0 0;text-align:center;color:#2563eb;font-weight:800;">Mini Lab : ชั่งวัตถุในของเหลว</h3>
+  <div>
+    <button id="btnVectors">แสดงเวกเตอร์ของแรง</button>
+    <button id="btnCalc">แสดงวิธีคำนวณ</button>
+  </div>
+  <canvas id="cv" width="460" height="640"></canvas>
+  <p style="font-size:12px;color:#475569;margin:0;">ลากชุดด้านบน (ตาชั่งสปริง+กล่อง) ขึ้น/ลง เพื่อให้กล่องจุ่มน้ำ</p>
+  <p style="font-size:12.5px;margin-top:4px;">
+    ศึกษาเพิ่มเติมได้ที่
+    <a class="link-page" href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener noreferrer">เพจ คลายปมฟิสิกส์</a>
+  </p>
+
+  <!-- Modal สูตร -->
+  <div id="calcModal">
+    <div id="calcBox">
+      <h4>วิธีคำนวณ</h4>
+      <div id="calcContent" style="font-size:16px;line-height:1.7;"></div>
+      <button id="closeCalc">ปิด</button>
+    </div>
+  </div>
+
+<script>
+const canvas = document.getElementById("cv");
+const ctx = canvas.getContext("2d");
+const btnVectors = document.getElementById("btnVectors");
+const btnCalc = document.getElementById("btnCalc");
+const calcModal = document.getElementById("calcModal");
+const calcContent = document.getElementById("calcContent");
+const closeCalc = document.getElementById("closeCalc");
+
+let showVectors = false;
+
+// ค่าคงที่ทางฟิสิกส์
+const g = 10;
+const boxWeight = 15;
+const rho = 1000;
+const baseBottomScale = 120;
+
+// ขนาดจริง
+const boxSizeM = 0.10;
+const boxArea = boxSizeM**2;
+const boxVolume = boxSizeM**3;
+
+// สเกล
+const boxSizePx = 60;
+const pxPerM = boxSizePx / boxSizeM;
+
+// ถัง 20x20 cm
+const tankArea = 0.04;
+
+// ตำแหน่งถัง
+const contWidthPx  = boxSizePx * 2;
+const contHeightPx = 0.5 * pxPerM;
+const waterHeightPx0 = 0.3 * pxPerM;
+const contX = canvas.width/2 - contWidthPx/2;
+const contTop = 200;
+const contBottom = contTop + contHeightPx;
+const waterBaseSurfaceY = contBottom - waterHeightPx0;
+
+// ชุดแขวน
+const baseAnchorY = 40;
+const baseBoxTopY = 220;
+let assemblyOffsetY = 0;
+const minAssemblyOffset = -40;
+const maxAssemblyOffset = 160;
+
+// ลาก
+let dragging = false;
+let dragOffsetY = 0;
+
+function hitAssembly(mx,my){
+  const top = baseAnchorY + assemblyOffsetY - 12;
+  const bottom = baseBoxTopY + boxSizePx + assemblyOffsetY + 12;
+  const left = canvas.width/2 - 90;
+  const right = canvas.width/2 + 90;
+  return mx>=left && mx<=right && my>=top && my<=bottom;
+}
+canvas.addEventListener("pointerdown",e=>{
+  const r = canvas.getBoundingClientRect();
+  const x = e.clientX - r.left, y = e.clientY - r.top;
+  if(hitAssembly(x,y)){ dragging = true; dragOffsetY = y - assemblyOffsetY; }
+});
+canvas.addEventListener("pointermove",e=>{
+  if(!dragging) return;
+  const y = e.clientY - canvas.getBoundingClientRect().top;
+  assemblyOffsetY = y - dragOffsetY;
+  assemblyOffsetY = Math.max(minAssemblyOffset,Math.min(maxAssemblyOffset,assemblyOffsetY));
+});
+canvas.addEventListener("pointerup",()=>dragging=false);
+canvas.addEventListener("pointerleave",()=>dragging=false);
+
+// วาดสปริง
+function drawSpring(x,topY,len,turns=6){
+  const step=len/turns;
+  ctx.beginPath(); ctx.moveTo(x,topY);
+  for(let i=1;i<=turns;i++){
+    const y=topY+i*step, dir=(i%2===0)?-6:6;
+    ctx.lineTo(x+dir,y);
+  }
+  ctx.lineTo(x,topY+len);
+  ctx.strokeStyle="#1d4ed8"; ctx.lineWidth=2; ctx.stroke();
+}
+
+// วาดลูกศร
+function drawArrow(x1,y1,x2,y2,color,label,dx=5,dy=-4){
+  const dxv=x2-x1, dyv=y2-y1, ang=Math.atan2(dyv,dxv), h=8;
+  ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=2.3;
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x2,y2);
+  ctx.lineTo(x2-h*Math.cos(ang-Math.PI/6),y2-h*Math.sin(ang-Math.PI/6));
+  ctx.lineTo(x2-h*Math.cos(ang+Math.PI/6),y2-h*Math.sin(ang+Math.PI/6));
+  ctx.closePath(); ctx.fill();
+  if(label){ ctx.font="bold 13px system-ui,sans-serif"; ctx.fillText(label,x2+dx,y2+dy); }
+}
+
+function render(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  const cx=canvas.width/2;
+  const boxTop=baseBoxTopY+assemblyOffsetY;
+  const boxBottom=boxTop+boxSizePx;
+
+  // การจุ่ม
+  let subDepthPx=0, waterY=waterBaseSurfaceY;
+  if(boxBottom>waterBaseSurfaceY){
+    subDepthPx=(boxBottom-waterBaseSurfaceY)/0.75;
+    subDepthPx=Math.max(0,Math.min(boxSizePx,subDepthPx));
+    waterY=waterBaseSurfaceY-0.25*subDepthPx;
+  }
+  const Vsub=boxArea*(subDepthPx/pxPerM);
+  let Fb=rho*g*Vsub; if(Fb>boxWeight)Fb=boxWeight;
+  const T=boxWeight-Fb;
+  const bottomScale=baseBottomScale+Fb;
+
+  // ถังน้ำ
+  ctx.lineWidth=3; ctx.strokeStyle="#000";
+  ctx.beginPath();
+  ctx.moveTo(contX,contTop); ctx.lineTo(contX,contBottom);
+  ctx.moveTo(contX+contWidthPx,contTop); ctx.lineTo(contX+contWidthPx,contBottom);
+  ctx.stroke();
+  ctx.fillStyle="rgba(147,197,253,0.9)";
+  ctx.fillRect(contX+1,waterY,contWidthPx-2,contBottom-waterY);
+  ctx.setLineDash([4,3]); ctx.strokeStyle="#94a3b8"; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(contX,waterBaseSurfaceY); ctx.lineTo(contX+contWidthPx,waterBaseSurfaceY); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.strokeStyle="#1e3a8a"; ctx.beginPath(); ctx.moveTo(contX,waterY); ctx.lineTo(contX+contWidthPx,waterY); ctx.stroke();
+  ctx.lineWidth=3; ctx.strokeStyle="#000";
+  ctx.beginPath(); ctx.moveTo(contX,contTop); ctx.lineTo(contX+contWidthPx,contTop); ctx.stroke();
+
+  // ตาชั่งล่าง
+  ctx.fillStyle="#94a3b8"; ctx.fillRect(contX-35,contBottom,contWidthPx+70,40);
+  ctx.fillStyle="#fff"; ctx.fillRect(contX+contWidthPx/2-75,contBottom+7,150,24);
+  ctx.strokeStyle="#000"; ctx.strokeRect(contX+contWidthPx/2-75,contBottom+7,150,24);
+  ctx.fillStyle="#000"; ctx.font="bold 14px system-ui"; ctx.textAlign="center";
+  ctx.fillText(bottomScale.toFixed(1)+" N",contX+contWidthPx/2,contBottom+25);
+
+  // ชุดแขวน
+  const anchor=baseAnchorY+assemblyOffsetY;
+  ctx.beginPath(); ctx.arc(cx,anchor,7,0,Math.PI*2); ctx.strokeStyle="#1f2937"; ctx.lineWidth=2; ctx.stroke();
+  const scaleTop=anchor+6, scaleW=50;
+  ctx.strokeStyle="#1d4ed8"; ctx.lineWidth=2;
+  ctx.strokeRect(cx-scaleW/2,scaleTop,scaleW,100);
+  const springLen=45+(T-5)*2; drawSpring(cx,scaleTop,springLen);
+  const ropeY=springLen+scaleTop;
+  ctx.beginPath(); ctx.moveTo(cx,ropeY); ctx.lineTo(cx,boxTop-10); ctx.strokeStyle="#1d4ed8"; ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx,boxTop-10,5,0,Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx,boxTop-5); ctx.lineTo(cx,boxTop); ctx.stroke();
+  ctx.fillStyle="#b98100"; ctx.fillRect(cx-boxSizePx/2,boxTop,boxSizePx,boxSizePx);
+  ctx.strokeStyle="#000"; ctx.strokeRect(cx-boxSizePx/2,boxTop,boxSizePx,boxSizePx);
+  if(!showVectors){ ctx.fillStyle="#000"; ctx.font="bold 13px system-ui"; ctx.fillText("15 N",cx,boxTop+boxSizePx/2+4); }
+  ctx.textAlign="left"; ctx.font="12px system-ui"; ctx.fillStyle="#000";
+  ctx.fillText("ρ น้ำ = 1000 kg/m³",24,contTop-10);
+  ctx.fillText("V กล่อง = 0.001 m³",24,contTop+6);
+  ctx.fillText("g = 10 N/kg",24,contTop+22);
+  ctx.fillText("V จม ปัจจุบัน = "+Vsub.toFixed(5)+" m³",24,contTop+38);
+  if(!showVectors){ ctx.font="bold 14px system-ui"; ctx.fillText("T = "+T.toFixed(1)+" N",cx+65,scaleTop+28); }
+
+  if(showVectors){
+    const k=5;
+    drawArrow(cx,boxTop,cx,boxTop-T*k,"#ef4444","T="+T.toFixed(1)+" N");
+    const boxCy=boxTop+boxSizePx/2;
+    drawArrow(cx,boxCy,cx,boxCy+boxWeight*k,"#0f172a","mg=15 N",-50,25);
+    if(subDepthPx>0&&Fb>0){
+      const len=Fb*k, fbX=cx+25, fbY=boxTop+boxSizePx+5;
+      drawArrow(fbX,fbY+len,fbX,fbY,"#0ea5e9","F(B)="+Fb.toFixed(1)+" N",15,21);
+    }
+  }
+  requestAnimationFrame(render);
+}
+render();
+
+// ปุ่ม
+btnVectors.onclick=()=>{ showVectors=!showVectors; btnVectors.textContent=showVectors?"ซ่อนเวกเตอร์ของแรง":"แสดงเวกเตอร์ของแรง"; };
+btnCalc.onclick=()=>{
+  const boxTop=baseBoxTopY+assemblyOffsetY, boxBottom=boxTop+boxSizePx;
+  let subDepthPx=0;
+  if(boxBottom>waterBaseSurfaceY){ subDepthPx=(boxBottom-waterBaseSurfaceY)/0.75; subDepthPx=Math.max(0,Math.min(boxSizePx,subDepthPx)); }
+  const Vsub=boxArea*(subDepthPx/pxPerM);
+  let Fb=rho*g*Vsub; if(Fb>boxWeight)Fb=boxWeight;
+  const T=boxWeight-Fb, bottomScale=baseBottomScale+Fb, riseM=Vsub/tankArea;
+  calcContent.innerHTML=`
+  <p><b>หลักการคิด</b></p>
+  <p>1) แรงลอยตัว:</p>
+  <p>$$F_B = \\rho g V_{จม} = \\rho g (A_{กล่อง}) h_{จุ่ม}$$</p>
+  <p>2) สมดุลแนวดิ่ง:</p>
+  <p>$$T + F_B = W \\Rightarrow T = W - F_B$$</p>
+  <p>3) ตาชั่งล่าง:</p>
+  <p>$$W_{ล่าง} = 120 + F_B$$</p>
+  <p>4) ระดับน้ำสูงขึ้น:</p>
+  <p>$$\\Delta h = \\frac{V_{จม}}{A_{ถัง}}$$</p>
+  <hr/>
+  <p><b>ค่าปัจจุบัน</b></p>
+  <p>$V_{จม} = ${Vsub.toFixed(5)}\\ \\text{m}^3$</p>
+  <p>$F_B = ${Fb.toFixed(2)}\\ \\text{N}$</p>
+  <p>$T = ${T.toFixed(2)}\\ \\text{N}$</p>
+  <p>$W_{ล่าง} = ${bottomScale.toFixed(2)}\\ \\text{N}$</p>
+  <p>$\\Delta h = ${riseM.toFixed(4)}\\ \\text{m}$</p>`;
+  calcModal.style.display="flex";
+  if(window.MathJax) MathJax.typesetPromise();
+};
+closeCalc.onclick=()=>calcModal.style.display="none";
+calcModal.onclick=e=>{ if(e.target===calcModal) calcModal.style.display="none"; };
+</script>
+</body>
+</html>

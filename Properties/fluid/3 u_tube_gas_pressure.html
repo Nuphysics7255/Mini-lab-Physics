@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+
+<html lang="th">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1, viewport-fit=cover" name="viewport"/>
+<title>U-Tube (แขนเท่ากัน) — ปรอท • สเกล −50..+50 • V4.4 + สูตรอ่านชัด &amp; แบบฝึกหัด</title>
+<meta content="Equal-arm U-tube with left closed gas headspace. Mercury only. Scale -50..+50 with zero centered. Δh/P labels draggable. Improved MathJax legibility. Gas particles speed scales with pressure." name="description"/>
+<!-- MathJax for equations -->
+<script>
+  // 🧮 ทำให้สมการอ่านชัดขึ้น (ขยายขนาด MathJax และเปิด linebreak)
+  window.MathJax = {
+    tex:{
+      inlineMath:[['\\(','\\)']],
+      displayMath:[['$$','$$']],
+      tags:'none'
+    },
+    svg:{
+      fontCache:'global',
+      scale:1.3,           // ขยายทั้งหมด ~30%
+      minScaleAdjust:100   // ป้องกันการย่อจนเล็กอ่านยาก
+    },
+    options:{
+      renderActions: {
+        addMenu: []
+      }
+    }
+  };
+</script>
+<script async="" id="MathJax-script" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<style>
+  :root{
+    --ink:#0f172a; --muted:#475569; --line:#e5e7eb; --bg:#ffffff; --card:#ffffff;
+    --mercury:#cbd5e1; --gas:#f59e0b; --delta:#7c3aed;
+    --grad1:#2563eb; --grad2:#7c3aed; --grad3:#ec4899;
+    --ok:#10b981; --bad:#ef4444;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Thai",Arial,sans-serif}
+  .wrap{max-width:1100px;margin:0 auto;padding:clamp(8px,2vw,16px);display:grid;gap:clamp(8px,2vw,14px)}
+  header{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+  h1{font-size:clamp(14px,2.2vw,18px);margin:0;line-height:1.3}
+  .grid{display:grid;gap:clamp(8px,2vw,14px)}
+  @media(min-width:900px){ .grid{grid-template-columns:min(420px,45vw) 1fr} }
+  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:clamp(10px,2vw,14px);box-shadow:0 2px 6px #0000000a}
+  label{font-size:14px;color:var(--ink)}
+  input,select{border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:14px}
+  input[type=range]{width:100%}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .hint{font-size:12px;color:var(--muted);text-align:center}
+  .badge{display:inline-block;padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:#fff;font-size:12px}
+  .footer{text-align:center;color:var(--muted);font-size:13px;margin-top:8px}
+  .btn{border:none;border-radius:12px;padding:10px 14px;cursor:pointer;color:#fff;background:linear-gradient(90deg,var(--grad1),var(--grad2));box-shadow:0 2px 6px #00000022}
+  .btn.secondary{background:#fff;color:var(--ink);border:1px solid var(--line)}
+  .ticktext{font-size:9px;fill:#475569}
+  .labeltext{font-size:12px;fill:#0f172a} /* เพิ่มขนาดอีกนิดบนป้าย */
+  .labelbg{fill:#ffffff;stroke:#cbd5e1;stroke-width:1}
+  .svgwrap{display:flex;justify-content:center}
+  #scene{width:100%;height:auto;max-height:88vh}
+  @media(max-width:480px){ .row{grid-template-columns:1fr} }
+
+  /* Overlays (Formula & Quiz) */
+  .overlay{position:fixed;inset:0;background:linear-gradient(180deg,#fdf2f8,#e0e7ff,#dcfce7);display:none;overflow:auto;padding:16px;z-index:50}
+  .inner{max-width:1000px;margin:0 auto;display:grid;gap:12px}
+  .title{font-weight:800;font-size:24px;background:linear-gradient(90deg,var(--grad1),var(--grad2),var(--grad3));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .qcard{background:#fff;border:1px solid var(--line);border-radius:18px;padding:14px;box-shadow:0 1px 4px #00000014}
+  .qcard h3{font-size:17px;margin:0 0 6px 0;color:#0f172a}
+  .qcard ul{margin:6px 0 0 18px;font-size:15px;color:#334155;line-height:1.8}
+  .choice{display:flex;gap:8px;align-items:flex-start;border:1px solid var(--line);border-radius:12px;padding:8px;margin:6px 0}
+  .choice.sel{background:#eff6ff;border-color:#93c5fd}
+  .sol.ok{background:#ecfdf5;border:1px solid #bbf7d0}
+  .sol.bad{background:#fff1f2;border:1px solid #fecdd3}
+  .badge2{display:inline-block;padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:#fff}
+
+  /* ทำให้ MathJax อ่านง่ายขึ้นอีก (CSS) */
+  .mjx-container{ font-size:115% !important; line-height:1.3; }
+  .mjx-container[jax="SVG"] svg{ overflow:visible; }
+
+/* === Improved MathJax readability === */
+mjx-container[display="true"] { text-align: center; margin: 12px auto; }
+.mjx-container { font-size: 125% !important; line-height: 1.6; }
+.MathJax_Display, mjx-math { font-weight: 500; color: #0f172a; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+<h1>U-Tube — ซ้ายปิด + แก๊ส • ปรอท (ρ≈13.56 g/cm³) • สเกล −50 ถึง +50 (0 อยู่กึ่งกลาง)</h1>
+<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+<button class="btn" id="btn-formula">สูตรสำคัญ</button>
+<button class="btn" id="btn-quiz" style="background:linear-gradient(90deg,#f59e0b,#ec4899)">แบบฝึกหัด</button>
+<div class="badge" id="info">Δh = 0.00 cm</div>
+</div>
+</header>
+<div class="grid">
+<!-- Controls -->
+<div class="card">
+<div class="row">
+<label>ความดันแก๊สฝั่งซ้าย (atm)
+          <input id="pGas" max="2" min="0" step="0.01" type="range" value="1.00"/>
+<input id="pGasNum" max="2" min="0" step="0.01" style="width:90px;margin-left:8px" type="number" value="1.00"/></label>
+<label>ความดันบรรยากาศขวา (atm)
+          <input id="pAtm" min="0" step="0.01" type="number" value="1.00"/>
+</label>
+</div>
+<div class="hint" id="stats">ρ=13.56 g/cm³ | P_gas=1.00 atm | P_atm=1.00 atm | Δh=0.00 cm</div>
+<div style="display:flex;gap:8px;flex-wrap:wrap">
+<button class="btn secondary" id="reset">รีเซ็ต (ค่าแรงดัน &amp; ตำแหน่งป้าย)</button>
+<span class="badge" id="vacLabel" style="display:none">สุญญากาศ</span>
+</div>
+</div>
+<!-- Scene -->
+<div class="card svgwrap">
+<svg id="scene" preserveaspectratio="xMidYMid meet" viewbox="0 0 520 820"></svg>
+</div>
+</div>
+<div class="footer">
+    ศึกษาเพิ่มเติมได้ที่เพจ <a href="https://www.facebook.com/resolvephysics" target="_blank">คลายปมฟิสิกส์</a>
+</div>
+</div>
+<!-- Formula Overlay -->
+<div class="overlay" id="overlay-formula">
+<div class="inner">
+<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+<div class="title">สูตรสำคัญ – หลักคิดหลอดตัวยู</div>
+<button class="btn secondary" id="close-formula">ปิด</button>
+</div>
+<div class="qcard">
+<h3>แนวคิดหลัก: “ของเหลวชนิดเดียวกัน ที่ระดับเดียวกัน ความดันต้องเท่ากัน”</h3>
+<ul>
+<li>พิจารณาที่ <b>ก้นหลอด</b> จุดเดียวกันในของเหลวเดียวกัน (ปรอท) ความดันเท่ากันเสมอ</li>
+<li>ฝั่งซ้ายมีแก๊สความดัน \(P_{\text{gas}}\), ฝั่งขวาเปิดสู่บรรยากาศ \(P_{\text{atm}}\)</li>
+<li>ดังนั้นที่ก้นหลอด: $$P_{\text{gas}} + \rho g h_L \;=\; P_{\text{atm}} + \rho g h_R$$</li>
+<li>ย้ายข้าง จะได้ส่วนต่างระดับของผิวปรอท: $$\Delta h \equiv h_R - h_L \;=\; \frac{P_{\text{gas}}-P_{\text{atm}}}{\rho g}$$</li>
+<li>ในโปรแกรมนี้วัดระดับจากขีด \(0\) กลางสเกล: \(h_L=-\tfrac{\Delta h}{2},\; h_R=+\tfrac{\Delta h}{2}\)</li>
+</ul>
+</div>
+<div class="qcard">
+<h3>หน่วย &amp; ค่าคงที่</h3>
+<ul>
+<li>\(\rho_{\text{Hg}}\approx 13.56\,\mathrm{g/cm^3} = 13560\,\mathrm{kg/m^3}\)</li>
+<li>\(g \approx 9.81\,\mathrm{m/s^2}\), \(1\,\mathrm{atm}=101325\,\mathrm{Pa}\)</li>
+<li>สมการ SI: $$\displaystyle \Delta h\,[\mathrm{m}] = \dfrac{\Delta P\,[\mathrm{Pa}]}{\rho\,[\mathrm{kg/m^3}]\,g\,[\mathrm{m/s^2}]}$$</li>
+</ul>
+</div>
+<div style="display:flex;justify-content:flex-end">
+<button class="btn secondary" id="close-formula-2">ปิด</button>
+</div>
+</div>
+</div>
+<!-- Quiz Overlay -->
+<div class="overlay" id="overlay-quiz">
+<div class="inner">
+<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+<div class="title">แบบฝึกหัด – หลอดตัวยู (4 ตัวเลือก)</div>
+<button class="btn secondary" id="close-quiz">ปิด</button>
+</div>
+<div class="grid" id="quiz-list" style="grid-template-columns:1fr;gap:12px"></div>
+<div style="display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap">
+<button class="btn" id="check-ans" style="background:linear-gradient(90deg,#2563eb,#10b981)">ตรวจคำตอบ</button>
+<div class="badge" id="score">คะแนน: 0/0</div>
+<button class="btn" id="reset-quiz" style="background:linear-gradient(90deg,#a855f7,#ec4899)">ทำใหม่</button>
+<button class="btn secondary" id="close-quiz-2">ปิด</button>
+</div>
+</div>
+</div>
+<script>
+(()=>{
+  // --------- Base Sim (V4.4) ---------
+  const g = 9.81, ATM_TO_kPa = 101.325, m_to_cm = 100, rho = 13.56;
+  const $ = (s)=>document.querySelector(s);
+  const scene = $('#scene');
+  const inputs = { pGas: $('#pGas'), pAtm: $('#pAtm'), stats: $('#stats'), info: $('#info'), vac: $('#vacLabel'), reset: $('#reset') };
+
+  const PX_PER_CM = 6, TOP_VAL = 50, BOT_VAL = -50;
+  const bottomY = 730;
+  const topY = bottomY - (TOP_VAL - BOT_VAL)*PX_PER_CM - 20;
+  const zeroY = (topY + bottomY)/2;
+  let midX = 260, armGap = 180, bridgeY = bottomY - 18;
+  const glassStrokeOuter = 4, glassStrokeInner = 2;
+
+  // draggable labels
+  const labels = { delta: {x: 0, y: 0, text: ''}, pgas: {x: 0, y: topY+28, text: ''}, patm: {x: 0, y: topY+28, text: ''} };
+  let dragState = null;
+
+  // Gas dots
+  let gas = [];
+  function gasTargetCount(pGas_atm){
+    if(pGas_atm <= 0.0001) return 0;
+    // เพิ่มจำนวนจุดเล็กน้อยเมื่อแรงดันมากขึ้น (ดูฟุ้งขึ้น)
+    return Math.min(360, Math.round(220 + 120*(pGas_atm))); // 1 atm ≈ 340 จุด, 2 atm ≈ 360 จุด
+  }
+  function gasSpeedScale(pGas_atm){
+    // สเกลความเร็วตามแรงดัน (0 atm=0, 1 atm=1x, 2 atm≈1.6x)
+    if(pGas_atm <= 0.0001) return 0;
+    return 0.2 + 0.8*pGas_atm; // linear, อ่านง่ายและเห็นผลชัด
+  }
+
+  function mercuryColor(){ const root = getComputedStyle(document.documentElement); return root.getPropertyValue('--mercury') || '#cbd5e1'; }
+
+  function getState(){
+    const pGas_atm = +inputs.pGas.value || 0;
+    const pAtm_atm = +inputs.pAtm.value || 1.0;
+    const rhoSI = rho*1000;
+    const dP_Pa = (pGas_atm - pAtm_atm) * ATM_TO_kPa*1000;
+    const dH_cm = (dP_Pa / (rhoSI * g)) * m_to_cm;
+    return {pGas_atm, pAtm_atm, dH_cm, lL: -dH_cm/2, lR: dH_cm/2};
+  }
+
+  function clearSVG(){ while(scene.firstChild) scene.removeChild(scene.firstChild); }
+  function rect(x,y,w,h,f){ const r = document.createElementNS('http://www.w3.org/2000/svg','rect'); r.setAttribute('x',x); r.setAttribute('y',y); r.setAttribute('width',w); r.setAttribute('height',h); r.setAttribute('fill',f); scene.appendChild(r); }
+  function path(d,stroke,w){ const p = document.createElementNS('http://www.w3.org/2000/svg','path'); p.setAttribute('d',d); p.setAttribute('fill','none'); p.setAttribute('stroke',stroke); p.setAttribute('stroke-width',w); scene.appendChild(p); }
+  function line(x1,y1,x2,y2,col,w){ const L=document.createElementNS('http://www.w3.org/2000/svg','line'); L.setAttribute('x1',x1); L.setAttribute('y1',y1); L.setAttribute('x2',x2); L.setAttribute('y2',y2); L.setAttribute('stroke',col); L.setAttribute('stroke-width',w); scene.appendChild(L); }
+  function text(x,y,s,cls='ticktext'){ const t=document.createElementNS('http://www.w3.org/2000/svg','text'); t.setAttribute('x',x); t.setAttribute('y',y); t.setAttribute('class',cls); t.textContent=s; scene.appendChild(t); }
+
+  function roundedLabel(key, x, y, str){
+    if(labels[key].x === 0){ labels[key].x = x; labels[key].y = y; }
+    labels[key].text = str;
+    // measure
+    const temp = document.createElementNS('http://www.w3.org/2000/svg','text');
+    temp.setAttribute('x', labels[key].x); temp.setAttribute('y', labels[key].y); temp.setAttribute('class','labeltext'); temp.textContent = labels[key].text;
+    scene.appendChild(temp);
+    const bb = temp.getBBox(); scene.removeChild(temp);
+    const padX = 8, padY = 6;
+    const bg = document.createElementNS('http://www.w3.org/2000/svg','rect');
+    bg.setAttribute('x', labels[key].x - padX); bg.setAttribute('y', labels[key].y - padY - bb.height*0.8);
+    bg.setAttribute('width', bb.width + 2*padX); bg.setAttribute('height', bb.height + 2*padY);
+    bg.setAttribute('rx', 9); bg.setAttribute('ry', 9); bg.setAttribute('class','labelbg');
+    const t = document.createElementNS('http://www.w3.org/2000/svg','text'); t.setAttribute('x', labels[key].x); t.setAttribute('y', labels[key].y); t.setAttribute('class','labeltext'); t.textContent = labels[key].text;
+    const g = document.createElementNS('http://www.w3.org/2000/svg','g'); g.appendChild(bg); g.appendChild(t); g.style.cursor = 'grab';
+    g.addEventListener('pointerdown', (e)=>{
+      g.setPointerCapture(e.pointerId); g.style.cursor='grabbing';
+      const pt = scene.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
+      const sp = pt.matrixTransform(scene.getScreenCTM().inverse());
+      dragState = {key, dx: labels[key].x - sp.x, dy: labels[key].y - sp.y};
+      e.preventDefault();
+    });
+    g.addEventListener('pointermove', (e)=>{
+      if(!dragState || dragState.key!==key) return;
+      const pt = scene.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
+      const sp = pt.matrixTransform(scene.getScreenCTM().inverse());
+      labels[key].x = sp.x + dragState.dx;
+      labels[key].y = sp.y + dragState.dy;
+      draw();
+    });
+    g.addEventListener('pointerup', (e)=>{ g.releasePointerCapture(e.pointerId); g.style.cursor='grab'; dragState=null; });
+    scene.appendChild(g);
+  }
+
+  function draw(){
+    const s = getState();
+    $('#info').textContent = `Δh = ${s.dH_cm.toFixed(2)} cm`;
+    inputs.stats && (inputs.stats.textContent = `ρ=13.56 g/cm³ | P_gas=${s.pGas_atm.toFixed(2)} atm | P_atm=${s.pAtm_atm.toFixed(2)} atm | Δh=${s.dH_cm.toFixed(2)} cm`);
+    inputs.vac && (inputs.vac.style.display = (s.pGas_atm <= 0.0001) ? 'inline-block' : 'none');
+
+    clearSVG();
+    const LQ = mercuryColor();
+    const leftX = midX - armGap/2, rightX = midX + armGap/2;
+
+    // walls
+    path(`M ${leftX - 64/2} ${topY} V ${bottomY} H ${rightX + 64/2} V ${topY}`, '#111', glassStrokeOuter);
+    path(`M ${leftX - 32/2} ${topY} V ${bridgeY} H ${rightX + 32/2} V ${topY}`, '#111', glassStrokeInner);
+    path(`M ${leftX + 32/2} ${topY} V ${bridgeY} H ${rightX - 32/2} V ${topY}`, '#111', glassStrokeInner);
+
+    // surfaces (relative to zeroY)
+    const yL = zeroY - s.lL*PX_PER_CM;
+    const yR = zeroY - s.lR*PX_PER_CM;
+
+    // liquids & bridge
+    rect(leftX - 32/2, yL, 32, bottomY - yL, LQ);
+    rect(rightX - 32/2, yR, 32, bottomY - yR, LQ);
+    rect(leftX - 32/2, bridgeY, (rightX - leftX) + 32, bottomY-bridgeY, LQ);
+
+    // left cap (closed)
+    line(leftX - 32/2 - 3, topY + 8, leftX + 32/2 + 3, topY + 8, '#111', 3);
+
+    // ticks -50..+50
+    for(let v=BOT_VAL; v<=TOP_VAL; v+=1){
+      const y = zeroY - v*PX_PER_CM;
+      if(y < topY-4 || y > bottomY+4) continue;
+      const major = (v%10===0), len = major?12:7;
+      line(leftX - 64/2 - len - 8, y, leftX - 64/2 - 4 - 8, y, '#64748b', 1);
+      if(major) text(leftX - 64/2 - 34 - 8, y+3, String(v));
+      line(rightX + 64/2 + 4 + 8, y, rightX + 64/2 + len + 8, y, '#64748b', 1);
+      if(major) text(rightX + 64/2 + 14 + 8, y+3, String(v));
+    }
+    text(rightX + 64/2 + 36, zeroY-6, "cm");
+
+    // Δh marker & labels
+    const xMark = rightX + 64/2 + 60;
+    const DELTA = getComputedStyle(document.documentElement).getPropertyValue('--delta') || '#7c3aed';
+    line(xMark, yL, xMark, yR, DELTA, 2);
+    line(xMark-4, yL, xMark+4, yL, DELTA, 2);
+    line(xMark-4, yR, xMark+4, yR, DELTA, 2);
+    const yMid = (yL + yR)/2;
+    roundedLabel('delta', xMark + 18, yMid + 4, `Δh = ${s.dH_cm.toFixed(2)} cm`);
+    roundedLabel('pgas',  leftX + 64/2 + 16, topY + 28, `P_gas = ${s.pGas_atm.toFixed(2)} atm`);
+    roundedLabel('patm',  rightX + 64/2 + 46, topY + 28, `P_atm = ${s.pAtm_atm.toFixed(2)} atm`);
+
+    // Gas dots: ปรับจำนวน + ความเร็วตามแรงดัน
+    const gasTop = topY + 10, gasLeft = leftX - 32/2 + 2, gasRight = leftX + 32/2 - 2, gasBottom = yL - 2;
+    const tgt = gasTargetCount(s.pGas_atm);
+    // เพิ่ม/ลดจำนวนให้เท่ากับเป้า
+    while(gas.length < tgt){
+      const x = gasLeft + Math.random()*(Math.max(2, gasRight-gasLeft));
+      const y = gasTop + Math.random()*(Math.max(2, gasBottom-gasTop));
+      const sp = gasSpeedScale(s.pGas_atm);
+      // สุ่มความเร็วเริ่มต้นตามแรงดัน
+      const v0 = 0.6 * sp;
+      gas.push({x,y,vx:(Math.random()-0.5)*v0,vy:(Math.random()-0.5)*v0});
+    }
+    while(gas.length > tgt) gas.pop();
+    const gasColor = getComputedStyle(document.documentElement).getPropertyValue('--gas') || '#f59e0b';
+    for(const p of gas){
+      const dot = document.createElementNS('http://www.w3.org/2000/svg','rect');
+      dot.setAttribute('x', p.x); dot.setAttribute('y', p.y);
+      dot.setAttribute('width', 1.1); dot.setAttribute('height', 1.1);
+      dot.setAttribute('fill', gasColor);
+      scene.appendChild(dot);
+    }
+    if(tgt===0){
+      // vacuum label
+      const vacText = 'สุญญากาศ';
+      const x = leftX + 64/2 + 20, y = gasTop + 50;
+      const temp = document.createElementNS('http://www.w3.org/2000/svg','text'); temp.setAttribute('x', x); temp.setAttribute('y', y); temp.setAttribute('class','labeltext'); temp.textContent = vacText; scene.appendChild(temp);
+      const bb = temp.getBBox(); scene.removeChild(temp);
+      const padX=8, padY=5;
+      const bg = document.createElementNS('http://www.w3.org/2000/svg','rect'); bg.setAttribute('x', x - padX); bg.setAttribute('y', y - padY - bb.height*0.8);
+      bg.setAttribute('width', bb.width + 2*padX); bg.setAttribute('height', bb.height + 2*padY); bg.setAttribute('rx', 8); bg.setAttribute('ry', 8); bg.setAttribute('class','labelbg');
+      const t = document.createElementNS('http://www.w3.org/2000/svg','text'); t.setAttribute('x', x); t.setAttribute('y', y); t.setAttribute('class','labeltext'); t.textContent = vacText;
+      scene.appendChild(bg); scene.appendChild(t);
+    }
+  }
+
+  function step(){
+    // simple idle animation for dots (ความเร็วแปรตามแรงดันแบบไดนามิก)
+    const s = getState();
+    const leftX = midX - armGap/2;
+    const yL = zeroY - s.lL*PX_PER_CM;
+    const gasTop = topY + 10, gasLeft = leftX - 32/2 + 2, gasRight = leftX + 32/2 - 2, gasBottom = yL - 2;
+
+    const sp = gasSpeedScale(s.pGas_atm);
+    for(const p of gas){
+      // เพิ่มแรงสุ่มเล็กน้อยตามแรงดัน เพื่อฟุ้งทั่วพื้นที่ว่าง
+      p.vx += (Math.random()-0.5)*0.06*sp;
+      p.vy += (Math.random()-0.5)*0.06*sp;
+
+      // จำกัดความเร็วสูงสุดตามแรงดัน
+      const vmax = 1.2*sp; // 1 atm ≈ 1.2, 2 atm ≈ 1.92
+      const v = Math.hypot(p.vx,p.vy);
+      if(v > vmax){ p.vx *= vmax/v; p.vy *= vmax/v; }
+
+      p.x += p.vx; p.y += p.vy;
+
+      // ชนขอบ
+      if(p.x < gasLeft){ p.x = gasLeft; p.vx = Math.abs(p.vx); }
+      if(p.x > gasRight){ p.x = gasRight; p.vx = -Math.abs(p.vx); }
+      if(p.y < gasTop){ p.y = gasTop; p.vy = Math.abs(p.vy); }
+      if(p.y > gasBottom){ p.y = gasBottom; p.vy = -Math.abs(p.vy); }
+
+      // ลดความเร็วเล็กน้อยให้เสถียร
+      p.vx *= 0.995; p.vy *= 0.995;
+    }
+    draw();
+    requestAnimationFrame(step);
+  }
+
+  // Events
+  inputs.pGas.oninput = draw;
+  inputs.pAtm.oninput = draw;
+  inputs.reset.onclick = ()=>{
+    inputs.pGas.value = '1.00'; inputs.pAtm.value = '1.00';
+    // reset label positions
+    labels.delta.x = 0; labels.delta.y = 0;
+    labels.pgas.x = 0;  labels.pgas.y = topY + 28;
+    labels.patm.x = 0;  labels.patm.y = topY + 28;
+    draw();
+  };
+
+  draw(); requestAnimationFrame(step);
+
+  // --------- Formula & Quiz logic ---------
+  const overlayF = $('#overlay-formula');
+  const overlayQ = $('#overlay-quiz');
+  function typesetNow(){ if(window.MathJax && window.MathJax.typeset){ window.MathJax.typeset(); } }
+  $('#btn-formula').onclick = ()=>{ overlayF.style.display='block'; typesetNow(); };
+  $('#btn-quiz').onclick    = ()=>{ overlayQ.style.display='block'; renderQuiz(); typesetNow(); };
+  $('#close-formula').onclick = ()=> overlayF.style.display='none';
+  $('#close-formula-2').onclick = ()=> overlayF.style.display='none';
+  $('#close-quiz').onclick = ()=> overlayQ.style.display='none';
+  $('#close-quiz-2').onclick = ()=> overlayQ.style.display='none';
+
+  // QUIZ (เหมือนเดิม)
+  const QUIZ = [
+    {
+      stem: "ข้อ 1) พิสูจน์ความสัมพันธ์ \\(\\Delta h = \\dfrac{P_{\\text{gas}}-P_{\\text{atm}}}{\\rho g}\\) จากหลักว่า “ของเหลวชนิดเดียวกัน ที่ระดับเดียวกัน ความดันเท่ากัน” ข้อใดกล่าวถูก?",
+      choices: [
+        "เทียบความดันที่ปากหลอดทั้งสองด้าน",
+        "เทียบความดันที่ก้นหลอดในของเหลวชนิดเดียวกัน",
+        "เทียบความดันในแก๊สกับในของเหลวโดยตรง",
+        "เทียบความดันที่ระดับสุ่มใดๆ ก็ได้"
+      ],
+      ans: 1,
+      sol: [
+        "เลือกจุดที่ 'ก้นหลอด' ซึ่งอยู่ในของเหลวชนิดเดียวกัน ⇒ ความดันเท่ากัน",
+        "ได้ \\(P_{\\text{gas}}+\\rho g h_L = P_{\\text{atm}}+\\rho g h_R\\) ⇒ \\(h_R-h_L = \\dfrac{P_{\\text{gas}}-P_{\\text{atm}}}{\\rho g}\\)"
+      ]
+    },
+    {
+      stem: "ข้อ 2) ให้ \\(P_{\\text{gas}}=1.20\\,\\text{atm},\\; P_{\\text{atm}}=1.00\\,\\text{atm},\\; \\rho=13.56\\,\\text{g/cm}^3\\). คำนวณ \\(\\Delta h\\) หน่วย cm (ใช้ \\(g=9.81\\,\\text{m/s}^2\\)).",
+      choices: ["15.2","2.0","1.1","0.15"],
+      ans: 0,
+      sol: [
+        "แปลงหน่วย: \\(\\Delta P = 0.20\\,\\text{atm} = 0.20\\times 101325 = 20265\\,\\text{Pa}\\)",
+        "\\(\\rho = 13.56\\,\\text{g/cm}^3 = 13560\\,\\text{kg/m}^3\\)",
+        "\\(\\Delta h = \\dfrac{20265}{13560\\times 9.81} = 0.152\\,\\text{m} = 15.2\\,\\text{cm}\\)"
+      ]
+    },
+    {
+      stem: "ข้อ 3) ให้ \\(\\Delta h = 12\\,\\text{cm}\\), \\(\\rho=13.56\\,\\text{g/cm}^3\\), \\(g=9.81\\,\\text{m/s}^2\\), และ \\(P_{\\text{atm}}=1.00\\,\\text{atm}\\). จงหา \\(P_{\\text{gas}}\\) (หน่วย atm).",
+      choices: ["1.16","0.84","1.02","1.00"],
+      ans: 0,
+      sol: [
+        "จาก \\(\\Delta P = \\rho g \\Delta h\\). ใส่หน่วย SI: \\(\\rho=13560\\,\\mathrm{kg/m^3}\\), \\(\\Delta h=0.12\\,\\mathrm{m}\\)",
+        "\\(\\Delta P = 13560\\times 9.81\\times 0.12 \\approx 1.5963\\times 10^4\\,\\mathrm{Pa}\\)",
+        "แปลงเป็น atm: \\(\\Delta P/101325 \\approx 0.158\\,\\text{atm}\\)",
+        "ดังนั้น \\(P_{\\text{gas}} = P_{\\text{atm}} + \\Delta P \\approx 1.00 + 0.158 \\approx 1.16\\,\\text{atm}\\)"
+      ]
+    },
+    {
+      stem: "ข้อ 4) ถ้า \\(h_L=-\\frac{\\Delta h}{2}\\) และ \\(h_R=+\\frac{\\Delta h}{2}\\). ข้อใดถูกต้อง?",
+      choices: ["\\(h_L+h_R=0\\) เสมอ","\\(h_R-h_L=\\Delta h\\)","ทั้งสองข้อถูก","ทั้งสองข้อผิด"],
+      ans: 2,
+      sol: ["จากนิยาม ⇒ \\(h_L+h_R=0\\) และ \\(h_R-h_L=\\Delta h\\) ⇒ ถูกทั้งคู่"]
+    }
+  ];
+
+  const quizList = $('#quiz-list');
+  const scoreBox = $('#score');
+
+  function renderQuiz(){
+    quizList.innerHTML = "";
+    QUIZ.forEach((q, qi)=>{
+      const card = document.createElement('div');
+      card.className = 'qcard';
+      const stem = document.createElement('div');
+      stem.style.fontSize='16px'; stem.style.color='#0f172a'; stem.innerHTML = q.stem;
+      card.appendChild(stem);
+      q.choices.forEach((ch, ci)=>{
+        const lab = document.createElement('label');
+        lab.className = 'choice';
+        const input = document.createElement('input');
+        input.type = 'radio'; input.name = 'q'+qi;
+        input.onchange = ()=>{
+          const chs = Array.from(card.querySelectorAll('.choice'));
+          chs.forEach((el, j)=> el.classList.toggle('sel', j===ci));
+        };
+        const span = document.createElement('span'); span.innerHTML = ch;
+        lab.appendChild(input); lab.appendChild(span);
+        card.appendChild(lab);
+      });
+      const sol = document.createElement('div'); sol.className='sol'; sol.style.display='none'; sol.style.marginTop='8px'; sol.style.borderRadius='12px'; sol.style.padding='8px';
+      card.appendChild(sol);
+      quizList.appendChild(card);
+    });
+    scoreBox.textContent = `คะแนน: 0/${QUIZ.length}`;
+    if(window.MathJax&&MathJax.typeset) MathJax.typeset();
+  }
+  renderQuiz();
+
+  $('#check-ans').onclick = ()=>{
+    let score = 0;
+    Array.from(quizList.children).forEach((card, qi)=>{
+      const inputs = Array.from(card.querySelectorAll('input[type=radio]'));
+      const idx = inputs.findIndex(el=>el.checked);
+      const solBox = card.querySelector('.sol');
+      if(idx===QUIZ[qi].ans){ score++; solBox.className='sol ok'; }
+      else { solBox.className='sol bad'; }
+      solBox.innerHTML = `<div class="badge2" style="margin-bottom:6px">${idx===QUIZ[qi].ans?'ถูกต้อง ✅':'ยังไม่ถูก ❌'}</div>`
+        + '<ul style="margin:0 0 0 18px;font-size:15px;color:#334155;line-height:1.7">'
+        + QUIZ[qi].sol.map(s=>`<li>${s}</li>`).join('')
+        + '</ul>';
+      solBox.style.display='block';
+    });
+    scoreBox.textContent = `คะแนน: ${score}/${QUIZ.length}`;
+    if(window.MathJax&&MathJax.typeset) MathJax.typeset();
+  };
+  $('#reset-quiz').onclick = ()=>{ renderQuiz(); };
+})();
+</script>
+<script>
+// ===== sync slider <-> number for P_gas =====
+(function(){
+  const slider = document.getElementById('pGas');
+  const num = document.getElementById('pGasNum');
+  if(!slider || !num) return;
+  const clamp = v => Math.max(+slider.min, Math.min(+slider.max, +v || 0));
+  const to2 = v => (+v).toFixed(2);
+  const syncSliderToNum = ()=>{ num.value = to2(slider.value); };
+  const syncNumToSlider = ()=>{ slider.value = to2(clamp(num.value)); };
+  slider.addEventListener('input', ()=>{ syncSliderToNum(); });
+  num.addEventListener('input', ()=>{ syncNumToSlider(); });
+  // hook reset button if present
+  const reset = document.getElementById('reset');
+  if(reset){ reset.addEventListener('click', ()=>{ num.value = '1.00'; }); }
+  // init
+  syncSliderToNum();
+})();
+</script></body>
+</html>

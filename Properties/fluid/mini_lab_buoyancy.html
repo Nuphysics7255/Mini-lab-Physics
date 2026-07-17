@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>แรงลอยตัว — สอนคำนวณ + แบบฝึกหัด (คงที่) + สูตรสำคัญ (ปรับ)</title>
+<style>
+  :root { --ink:#0f172a; --muted:#475569; --line:#e2e8f0; --bg:#ffffff;
+          --water:#bfdbfe; --water-deep:#93c5fd; --block:#b45309; --accent:#2563eb;
+          --formula-bg:#eef6ff; --formula-border:#93c5fd; }
+  *{box-sizing:border-box} html,body{height:100%}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans Thai",sans-serif;color:var(--ink);background:var(--bg)}
+  header{padding:12px 16px;border-bottom:1px solid var(--line)}
+  header h1{font-size:18px;margin:0;color:#2563eb;font-weight:800}
+  .app{display:grid;grid-template-columns:1fr;gap:12px;max-width:1000px;margin:0 auto;padding:12px}
+  .panel{border:1px solid var(--line);border-radius:12px;padding:12px}
+  .controls{display:grid;gap:12px}
+  .row{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center}
+  .row label{font-size:14px;color:var(--muted)}
+  .row input[type="range"]{width:100%}
+  .row input[type="number"]{width:100px;padding:4px}
+  .metrics{display:grid;gap:4px;font-size:14px}
+  .metrics .good{color:#16a34a} .metrics .warn{color:#f59e0b} .metrics .bad{color:#dc2626}
+  .scene-wrap{display:grid;place-items:center}
+  .scene{width:100%;max-width:640px;aspect-ratio:4/3;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff}
+  .buttons{display:flex;gap:8px;flex-wrap:wrap}
+  button{appearance:none;border:1px solid var(--line);background:#fff;border-radius:10px;padding:10px 14px;font-weight:600;cursor:pointer}
+  button.primary{border-color:transparent;background:var(--accent);color:#fff}
+  #keyBtn{background:#fed7aa;border-color:#fdba74;color:#9a3412}
+  #quizBtn{background:#dcfce7;border-color:#86efac;color:#166534}
+  #resetBtn{background:#f1f5f9;border-color:#cbd5e1;color:#475569}
+  button:active{transform:translateY(1px)}
+  footer.fixed{position:fixed;left:0;right:0;bottom:0;background:#ffffffcc;backdrop-filter:saturate(1.5) blur(6px);
+    border-top:1px solid var(--line);padding:8px 12px;text-align:center;font-size:14px}
+  footer.fixed a{color:var(--accent);text-decoration:none;font-weight:700}
+  /* Overlay generic */
+  .overlay{position:fixed;inset:0;background:#0b122033;display:none;align-items:center;justify-content:center;padding:16px;z-index:50}
+  .sheet{max-width:860px;width:100%;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 20px 50px #00000022}
+  .sheet header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line)}
+  .sheet header h2{font-size:18px;margin:0}
+  .sheet .content{padding:12px 16px}
+  .formula{background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:10px;margin:10px 0}
+  .note{color:#64748b;font-size:13px}
+  .q{border:1px dashed var(--line);border-radius:10px;padding:10px;margin:10px 0}
+  .q h3{margin:0 0 6px 0;font-size:16px}
+  .q .ans{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .q input[type="number"]{width:120px;padding:6px}
+  .tag{font-size:12px;color:#475569;background:#e2e8f0;border-radius:999px;padding:2px 8px;margin-left:6px}
+  .ok{color:#16a34a;font-weight:700} .ng{color:#dc2626;font-weight:700}
+  .solution{display:none;background:#f1f5f9;border-radius:8px;padding:8px;margin-top:8px;font-size:14px}
+  ul.clean{margin:6px 0 0 18px;padding:0}
+  /* Big formula box */
+  .big-box{background:var(--formula-bg);border:2px solid var(--formula-border);border-radius:14px;padding:16px;margin:12px 0;box-shadow:0 6px 16px #00000014}
+  .big-formula{font-weight:800;font-size:28px;letter-spacing:0.5px;text-align:center}
+  .big-formula sub{font-weight:600}
+  .safe-overlay .sheet{max-height:calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - 24px);display:flex;flex-direction:column}
+  .safe-overlay .sheet .content{overflow:auto;padding-bottom:max(24px, calc(env(safe-area-inset-bottom, 0px) + 24px))}
+  @media (max-width: 768px){
+    .app{padding:10px 10px 96px;gap:10px}
+    .panel{padding:10px}
+    .row{grid-template-columns:1fr auto;gap:8px}
+    .row label{grid-column:1 / -1}
+    .row input[type="number"]{width:92px}
+    .buttons{gap:6px}
+    button{padding:9px 12px}
+    .scene-wrap{padding-bottom:max(16px, calc(env(safe-area-inset-bottom, 0px) + 16px))}
+    .scene{max-width:none;height:calc(min(28dvh, 240px) + 50px);aspect-ratio:auto}
+    footer.fixed{position:static;background:transparent;backdrop-filter:none;border-top:none;padding:12px 12px max(18px, calc(env(safe-area-inset-bottom, 0px) + 18px))}
+    .safe-overlay{align-items:flex-start;padding-top:max(16px, calc(env(safe-area-inset-top, 0px) + 12px));padding-bottom:max(16px, calc(env(safe-area-inset-bottom, 0px) + 12px));}
+    .safe-overlay .sheet{margin-top:0;margin-bottom:0;max-height:calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - 32px)}
+    .safe-overlay .sheet header{position:sticky;top:0;background:#fff;z-index:2}
+  }
+</style>
+</head>
+<body>
+  <header><h1>Mini Lab : แรงลอยตัว</h1></header>
+
+  <main class="app">
+    <section class="panel">
+      <div class="controls">
+        <div class="row">
+          <label>มวลของวัตถุ (kg)</label>
+          <input id="mass" type="range" min="0.5" max="50" step="0.1"/>
+          <input id="massNum" type="number" min="0.5" max="50" step="0.1"/>
+        </div>
+        <div class="row">
+          <label>ปริมาตรของวัตถุ (m³)</label>
+          <input id="vol" type="range" min="0.001" max="0.1" step="0.0005"/>
+          <input id="volNum" type="number" min="0.001" max="0.1" step="0.0005"/>
+        </div>
+     
+        <div class="metrics">
+          <div>ความหนาแน่นของวัตถุ ρ<sub>วัตถุ</sub> = <b><span id="rhoObj">0</span></b> kg/m³</div>
+       
+   <div class="row">
+          <label>ความหนาแน่นของของเหลว ρ<sub>ของเหลว</sub> (kg/m³)</label>
+          <input id="rhoL" type="range" min="100" max="2000" step="10"/>
+          <input id="rhoLNum" type="number" min="100" max="2000" step="10"/>
+        </div>
+   <div id="stateText" class="good">สถานะ: -</div>
+        </div>
+        <div class="buttons">
+          <button class="primary" id="showCalc">แสดงผลการคำนวณ</button>
+          <button id="keyBtn">สูตรสำคัญ</button>
+          <button id="quizBtn">แบบฝึกหัด</button>
+          <button id="resetBtn">รีเซ็ตค่า</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="scene-wrap">
+      <div class="scene">
+        <svg id="svg" viewBox="0 0 800 600" width="70%" height="auto" style="max-height:100%;">
+          <rect x="150" y="60" width="500" height="480" fill="#fff" stroke="#cbd5e1" stroke-width="3" rx="14"/>
+          <defs>
+            <linearGradient id="waterGrad" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stop-color="var(--water)"/>
+              <stop offset="100%" stop-color="var(--water-deep)"/>
+            </linearGradient>
+          <marker id="arrowDown" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
+            <path d="M 0 0 L 8 4 L 0 8 z" fill="#dc2626"/>
+          </marker>
+          <marker id="arrowUp" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
+            <path d="M 0 8 L 8 4 L 0 0 z" fill="#2563eb"/>
+          </marker>
+          </defs>
+          <rect id="water" x="160" y="140" width="480" height="380" fill="url(#waterGrad)" rx="10"/>
+          <line id="waterLine" x1="160" x2="640" y1="140" y2="140" stroke="#1d4ed8" stroke-width="3"/>
+          <rect id="block" x="310" y="180" width="180" height="180" fill="var(--block)" rx="6" stroke="#92400e" stroke-width="3"/>
+          <line id="mgArrow" x1="280" y1="210" x2="280" y2="340" stroke="#dc2626" stroke-width="4" marker-end="url(#arrowDown)" stroke-linecap="round"/>
+          <text id="mgLabel" x="230" y="205" font-size="26" font-weight="800" fill="#dc2626">mg = 0 N</text>
+          <line id="fbArrow" x1="520" y1="340" x2="520" y2="210" stroke="#2563eb" stroke-width="4" marker-end="url(#arrowUp)" stroke-linecap="round"/>
+          <text id="fbLabel" x="540" y="205" font-size="26" font-weight="800" fill="#2563eb">F<tspan baseline-shift="sub" font-size="18">b</tspan> = 0 N</text>
+        </svg>
+      </div>
+    </section>
+  </main>
+
+  <!-- Overlay: Calculation teaching -->
+  <div class="overlay" id="overlayCalc">
+    <div class="sheet">
+      <header>
+        <h2>🧮 สอนการคำนวณแรงลอยตัว</h2>
+        <div class="buttons"><button id="closeCalc">กลับสู่หน้าหลัก</button></div>
+      </header>
+      <div class="content" id="calcContent"></div>
+    </div>
+  </div>
+
+  <!-- Overlay: Key formulas/theory (CLEANED) -->
+  <div class="overlay safe-overlay" id="overlayKey">
+    <div class="sheet">
+      <header>
+        <h2>📘 สูตรสำคัญ & หลักการ</h2>
+        <div class="buttons"><button id="closeKey">ปิด</button></div>
+      </header>
+      <div class="content">
+        <div class="formula">
+          <b>ทฤษฎีอาร์คิมิดีส (Archimedes' Principle)</b>
+          <ul class="clean">
+            <li>วัตถุในของไหลได้รับ <b>แรงลอยตัว</b> เท่ากับ <b>น้ำหนักของของไหลที่ถูกแทนที่</b></li>
+          </ul>
+        </div>
+        <div class="big-box">
+          <div class="big-formula">F<sub>b</sub> = ρ<sub>ของเหลว</sub> · g · V<sub>จม</sub></div>
+        </div>
+        <div class="formula">
+          <b>คำอธิบายตัวแปร</b>
+          <ul class="clean">
+            <li>ρ<sub>ของเหลว</sub> (kg/m³): ความหนาแน่นของของไหล</li>
+            <li>V<sub>จม</sub> (m³): ปริมาตรส่วนที่จมของวัตถุ</li>
+            <li>m (kg): มวลของวัตถุ</li>
+            <li>g (N/kg): ความเร่งโน้มถ่วง ~ 9.81</li>
+            <li>F<sub>b</sub> (N): แรงลอยตัว</li>
+          </ul>
+        <div class="note">หมายเหตุ: สำหรับแรงลอยตัวของวัตถุที่อยู่ในอากาศ ให้แทนความหนาแน่นของของเหลวด้วยความหนาแน่นของอากาศ</div>
+        </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Overlay: Fixed exercises (not random) -->
+  <div class="overlay safe-overlay" id="overlayQuiz">
+    <div class="sheet">
+      <header>
+        <h2>🎯 แบบฝึกหัดพื้นฐาน <span class="tag">ค่าคงที่</span></h2>
+        <div class="buttons"><button id="closeQuiz">ปิด</button></div>
+      </header>
+      <div class="content" id="quizContent"></div>
+    </div>
+  </div>
+
+  <footer class="fixed">ศึกษาเพิ่มเติมได้ที่ <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">เพจ คลายปมฟิสิกส์</a></footer>
+
+<script>
+(function(){
+  const g = 9.81;
+  const massEl = document.getElementById('mass'), massNum = document.getElementById('massNum');
+  const volEl = document.getElementById('vol'), volNum = document.getElementById('volNum');
+  const rhoLEl = document.getElementById('rhoL'), rhoLNum = document.getElementById('rhoLNum');
+  const rhoObjEl = document.getElementById('rhoObj');
+  const stateText = document.getElementById('stateText');
+  const block = document.getElementById('block');
+  const mgArrow = document.getElementById('mgArrow');
+  const fbArrow = document.getElementById('fbArrow');
+  const mgLabel = document.getElementById('mgLabel');
+  const fbLabel = document.getElementById('fbLabel');
+
+  const overlayCalc = document.getElementById('overlayCalc');
+  const calcContent = document.getElementById('calcContent');
+  const showCalcBtn = document.getElementById('showCalc');
+  const closeCalcBtn = document.getElementById('closeCalc');
+
+  const overlayKey = document.getElementById('overlayKey');
+  const keyBtn = document.getElementById('keyBtn');
+  const closeKeyBtn = document.getElementById('closeKey');
+
+  const overlayQuiz = document.getElementById('overlayQuiz');
+  const quizContent = document.getElementById('quizContent');
+  const quizBtn = document.getElementById('quizBtn');
+  const closeQuizBtn = document.getElementById('closeQuiz');
+
+  const tank = {y:140,h:380,bottom:520}; const blockGeom = {h:180};
+  let anim = {y:180};
+
+  function sync(sl, num){ sl.addEventListener('input',()=>{ num.value = sl.value; }); num.addEventListener('input',()=>{ sl.value = num.value; }); }
+  sync(massEl, massNum); sync(volEl, volNum); sync(rhoLEl, rhoLNum);
+
+  function compute(){
+    const m = parseFloat(massEl.value);
+    const V = parseFloat(volEl.value);
+    const rhoL = parseFloat(rhoLEl.value);
+    const rhoObj = m / V;
+    let state = '', subFrac = 0;
+    if (rhoObj < rhoL){ state = 'float'; subFrac = rhoObj / rhoL; }
+    else if (Math.abs(rhoObj - rhoL) < 1e-6){ state = 'neutral'; subFrac = 1; }
+    else { state = 'sink'; subFrac = 1; }
+    return {m,V,rhoL,rhoObj,state,subFrac};
+  }
+
+  function render(){
+    const {m,V,rhoL,rhoObj,state,subFrac} = compute();
+    rhoObjEl.textContent = rhoObj.toFixed(2);
+    let targetY;
+    if (state==='float'){ targetY = tank.y - (blockGeom.h - subFrac*blockGeom.h); stateText.textContent='สถานะ: ลอยบางส่วน (ρวัตถุ < ρของเหลว)'; stateText.className='good'; }
+    else if (state==='neutral'){ targetY = tank.y; stateText.textContent='สถานะ: ลอยระดับผิว (ρวัตถุ = ρของเหลว)'; stateText.className='warn'; }
+    else { targetY = tank.bottom - blockGeom.h; stateText.textContent='สถานะ: จมลงก้นภาชนะ (ρวัตถุ > ρของเหลว)'; stateText.className='bad'; }
+    anim.y += (targetY - anim.y)*0.15; if (Math.abs(targetY - anim.y) < 0.5) anim.y = targetY;
+    block.setAttribute('y', anim.y);
+
+    const W = m * g;
+    const Vsub = (state==='sink') ? V : (subFrac * V);
+    const Fb = rhoL * g * Vsub;
+    const xLeft = 280, xRight = 520;
+    const topY = anim.y;
+    const bottomY = anim.y + blockGeom.h;
+    const centerY = anim.y + blockGeom.h/2;
+    const minLen = 90;
+    const maxLen = 150;
+    const scale = 0.55;
+    const mgLen = Math.max(minLen, Math.min(maxLen, W * scale));
+    const fbLen = Math.max(minLen, Math.min(maxLen, Fb * scale));
+
+    mgArrow.setAttribute('x1', xLeft);
+    mgArrow.setAttribute('y1', centerY - mgLen/2);
+    mgArrow.setAttribute('x2', xLeft);
+    mgArrow.setAttribute('y2', centerY + mgLen/2);
+
+    fbArrow.setAttribute('x1', xRight);
+    fbArrow.setAttribute('y1', centerY + fbLen/2);
+    fbArrow.setAttribute('x2', xRight);
+    fbArrow.setAttribute('y2', centerY - fbLen/2);
+
+    mgLabel.setAttribute('x', xLeft - 110);
+    mgLabel.setAttribute('y', Math.max(40, topY - 22));
+    mgLabel.textContent = `mg = ${W.toFixed(2)} N`;
+
+    fbLabel.setAttribute('x', xRight + 18);
+    fbLabel.setAttribute('y', Math.max(40, topY - 22));
+    while (fbLabel.firstChild) fbLabel.removeChild(fbLabel.firstChild);
+    fbLabel.appendChild(document.createTextNode('F'));
+    const t = document.createElementNS('http://www.w3.org/2000/svg','tspan');
+    t.setAttribute('baseline-shift','sub');
+    t.setAttribute('font-size','18');
+    t.textContent = 'b';
+    fbLabel.appendChild(t);
+    fbLabel.appendChild(document.createTextNode(` = ${Fb.toFixed(2)} N`));
+
+    requestAnimationFrame(render);
+  }
+
+  function showCalc(){
+    const {m,V,rhoL,rhoObj,state,subFrac} = compute();
+    const Vsub = (state==='sink') ? V : (subFrac*V);
+    const Fb = rhoL * g * Vsub;
+    const W  = m * g;
+    const N  = (state==='sink') ? Math.max(0, W - Fb) : 0;
+    const isFloat = (state==='float' || state==='neutral');
+
+    calcContent.innerHTML = `
+      <div class="formula">
+        <div><b>ค่าที่กำหนด</b></div>
+        <div>m = ${m.toFixed(2)} kg, V = ${V.toFixed(4)} m³, ρ<sub>ของเหลว</sub> = ${rhoL.toFixed(0)} kg/m³, g = ${g.toFixed(2)} m/s²</div>
+        <div>ρ<sub>วัตถุ</sub> = m / V = ${rhoObj.toFixed(2)} kg/m³</div>
+      </div>
+      <div class="formula">
+        <div><b>1) ปริมาตรส่วนที่จม (V<sub>จม</sub>)</b></div>
+        ${isFloat
+          ? `<div>ที่สมดุล: F<sub>b</sub> = W ⇒ ρ<sub>ของเหลว</sub> g V<sub>จม</sub> = m g ⇒ V<sub>จม</sub> = m / ρ<sub>ของเหลว</sub></div>
+             <div>หรือ: V<sub>จม</sub> = (ρ<sub>วัตถุ</sub>/ρ<sub>ของเหลว</sub>) · V</div>
+             <div><b>แทนค่า</b>: V<sub>จม</sub> = (${rhoObj.toFixed(2)} / ${rhoL.toFixed(0)}) × ${V.toFixed(4)} = <b>${Vsub.toFixed(4)} m³</b></div>`
+          : `<div>วัตถุจมแตะก้น ⇒ จมเต็ม: V<sub>จม</sub> = V = <b>${V.toFixed(4)} m³</b></div>`}
+      </div>
+      <div class="formula">
+        <div><b>2) แรงลอยตัว (F<sub>b</sub>)</b></div>
+        <div>F<sub>b</sub> = ρ<sub>ของเหลว</sub> · g · V<sub>จม</sub></div>
+        <div><b>แทนค่า</b>: F<sub>b</sub> = ${rhoL.toFixed(0)} × ${g.toFixed(2)} × ${Vsub.toFixed(4)} = <b>${Fb.toFixed(2)} N</b></div>
+      </div>
+      <div class="formula">
+        <div><b>3) ตรวจสมดุลแนวดิ่ง & หา N (เมื่อจมแตะก้น)</b></div>
+        ${isFloat
+          ? `<div>ลอย: F<sub>b</sub> = W = m g = ${W.toFixed(2)} N ✅</div>`
+          : `<div>จมแตะก้น: F<sub>b</sub> + N = W ⇒ N = W − F<sub>b</sub> = ${W.toFixed(2)} − ${Fb.toFixed(2)} = <b>${N.toFixed(2)} N</b></div>`}
+      </div>
+    `;
+    overlayCalc.style.display = 'flex';
+  }
+  function closeCalc(){ overlayCalc.style.display = 'none'; }
+
+  function openKey(){ overlayKey.style.display = 'flex'; }
+  function closeKey(){ overlayKey.style.display = 'none'; }
+
+  function buildQuiz(){
+    const q1 = {
+      id:'q1',
+      text:'ให้ ρวัตถุ = 800 kg/m³ และ ρของเหลว = 1000 kg/m³ วัตถุจะมีสถานะใด?',
+      type:'choice',
+      options:['ลอยบางส่วน','ลอยระดับผิว','จมแตะก้น'],
+      answer:0,
+      explain:'เพราะ ρวัตถุ < ρของเหลว ⇒ ลอยบางส่วน (Vจม/V = 0.8)'
+    };
+    const q2 = {
+      id:'q2',
+      text:'ของเหลว ρ = 1000 kg/m³, g = 9.81 m/s², Vจม = 0.004 m³ จงหา Fb (N)',
+      type:'number',
+      answer: 1000*9.81*0.004,
+      tol: 0.2,
+      explain:'Fb = ρ g Vจม = 1000 × 9.81 × 0.004 = 39.24 N'
+    };
+    const q3 = {
+      id:'q3',
+      text:'มวล m = 6 kg, V = 0.006 m³, ρของเหลว = 800 kg/m³ วัตถุจมแตะก้น หา N (N)',
+      type:'number',
+      answer: (6*9.81) - (800*9.81*0.006),
+      tol: 0.2,
+      explain:'W = 58.86 N, Fb = 47.09 N ⇒ N = 11.77 N'
+    };
+
+    function choiceHTML(q){
+      return `
+        <div class="q" id="${q.id}">
+          <h3>ข้อที่ 1: ${q.text}</h3>
+          <div class="ans">
+            ${q.options.map((op,i)=>`<label><input type="radio" name="${q.id}" value="${i}"> ${op}</label>`).join(' ')}
+            <button data-action="check" data-q="${q.id}">ตรวจคำตอบ</button>
+            <span class="result"></span>
+          </div>
+          <button data-action="show" data-q="${q.id}">เฉลย</button>
+          <div class="solution"><b>เฉลย:</b> ${q.options[q.answer]} — ${q.explain}</div>
+        </div>`;
+    }
+    function numberHTML(q, idx){
+      return `
+        <div class="q" id="${q.id}">
+          <h3>ข้อที่ ${idx}: ${q.text}</h3>
+          <div class="ans">
+            <input type="number" step="0.01" placeholder="ใส่คำตอบเป็นตัวเลข" />
+            <span>หน่วย: N</span>
+            <button data-action="check" data-q="${q.id}">ตรวจคำตอบ</button>
+            <span class="result"></span>
+          </div>
+          <button data-action="show" data-q="${q.id}">เฉลย</button>
+          <div class="solution"><b>เฉลย:</b> ${q.explain}</div>
+        </div>`;
+    }
+
+    quizContent.innerHTML = choiceHTML(q1) + numberHTML(q2,2) + numberHTML(q3,3);
+
+    quizContent.addEventListener('click', (e)=>{
+      const btn = e.target.closest('button'); if(!btn) return;
+      const action = btn.dataset.action; const qid = btn.dataset.q; if(!action||!qid) return;
+      const wrap = document.getElementById(qid); const res = wrap.querySelector('.result'); const sol = wrap.querySelector('.solution');
+
+      if(qid==='q1'){
+        if(action==='check'){
+          const val = wrap.querySelector('input[type="radio"]:checked');
+          if(!val){ res.textContent='โปรดเลือกคำตอบ'; res.className='ng'; return; }
+          const ok = (Number(val.value)===q1.answer);
+          res.textContent = ok ? 'ถูกต้อง! ✅' : 'ยังไม่ถูก ✖️';
+          res.className = ok ? 'ok' : 'ng';
+        } else if(action==='show'){ sol.style.display='block'; }
+      } else if(qid==='q2'){
+        if(action==='check'){
+          const v = parseFloat(wrap.querySelector('input[type="number"]').value);
+          if(isNaN(v)){ res.textContent='ใส่ตัวเลขก่อนนะ'; res.className='ng'; return; }
+          const ok = Math.abs(v - q2.answer) <= q2.tol;
+          res.textContent = ok ? 'ถูกต้อง! ✅' : `ยังไม่ถูก (ใกล้ๆ ${q2.answer.toFixed(2)})`;
+          res.className = ok ? 'ok' : 'ng';
+        } else if(action==='show'){ sol.style.display='block'; }
+      } else if(qid==='q3'){
+        if(action==='check'){
+          const v = parseFloat(wrap.querySelector('input[type="number"]').value);
+          if(isNaN(v)){ res.textContent='ใส่ตัวเลขก่อนนะ'; res.className='ng'; return; }
+          const ok = Math.abs(v - q3.answer) <= q3.tol;
+          res.textContent = ok ? 'ถูกต้อง! ✅' : `ยังไม่ถูก (ใกล้ๆ ${q3.answer.toFixed(2)})`;
+          res.className = ok ? 'ok' : 'ng';
+        } else if(action==='show'){ sol.style.display='block'; }
+      }
+    }, {once:false});
+  }
+
+  function openQuiz(){ buildQuiz(); overlayQuiz.style.display='flex'; }
+  function closeQuiz(){ overlayQuiz.style.display='none'; }
+
+  function reset(){
+    const rhoL0 = 1000, V0 = 0.01, m0 = 0.5 * rhoL0 * V0;
+    rhoLEl.value = rhoL0; rhoLNum.value = rhoL0;
+    volEl.value = V0; volNum.value = V0;
+    massEl.value = m0; massNum.value = m0;
+  }
+
+  document.getElementById('resetBtn').addEventListener('click', reset);
+  showCalcBtn.addEventListener('click', showCalc);
+  closeCalcBtn.addEventListener('click', closeCalc);
+
+  keyBtn.addEventListener('click', openKey);
+  closeKeyBtn.addEventListener('click', closeKey);
+
+  quizBtn.addEventListener('click', openQuiz);
+  closeQuizBtn.addEventListener('click', closeQuiz);
+
+  reset(); requestAnimationFrame(render);
+})();
+</script>
+</body>
+</html>

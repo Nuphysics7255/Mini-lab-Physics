@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Mini Lab : การลอยตัวของกล่องและแท่งโลหะ</title>
+  <style>
+    :root{
+      --ink:#0f172a;
+      --panel:#ffffff;
+      --accent:#0ea5e9;
+    }
+    body{
+      margin:0;
+      font-family:"Noto Sans Thai",system-ui,sans-serif;
+      background:#f8fafc;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:10px;
+      padding:10px 6px 20px;
+      color:var(--ink);
+    }
+    h2{margin:4px 0 0;text-align:center;color:#2f6fd6;}
+    #layout{
+      display:flex;
+      gap:14px;
+      flex-wrap:wrap;
+      justify-content:center;
+      width:100%;
+      max-width:1080px;
+    }
+    #cv{
+      border:1px solid #ddd;
+      border-radius:12px;
+      background:#fff;
+      width:420px;
+      height:420px;
+      max-width:100%;
+      aspect-ratio:1/1;
+    }
+    #ctrl{
+      background:#fff;
+      border:2px solid #bae6fd;
+      border-radius:12px;
+      padding:12px 12px 14px;
+      max-width:460px;
+      width:100%;
+      box-shadow:0 8px 20px rgba(15,23,42,.1);
+    }
+    select,button{
+      font-size:14px;
+      padding:5px 10px;
+      border-radius:8px;
+    }
+    button{
+      background:linear-gradient(90deg,#0ea5e9,#38bdf8);
+      border:none;
+      color:#fff;
+      font-weight:600;
+      cursor:pointer;
+      margin-top:6px;
+    }
+    .tagline{
+      margin-top:8px;
+      font-size:13px;
+      background:#fff0dc;
+      border:1px solid #fed7aa;
+      border-radius:10px;
+      padding:6px 10px;
+    }
+    #calcModal{
+      position:fixed;
+      inset:0;
+      background:rgba(15,23,42,.45);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:12px;
+      z-index:50;
+    }
+    #calcBox{
+      background:#fff;
+      border:2px solid #0ea5e9;
+      border-radius:14px;
+      max-width:520px;
+      width:100%;
+      max-height:90vh;
+      overflow-y:auto;
+      padding:14px 16px 18px;
+      box-shadow:0 14px 40px rgba(15,23,42,.2);
+      line-height:1.6;
+    }
+    #closeCalc{
+      float:right;
+      background:#ef4444;
+      border:none;
+      color:#fff;
+      border-radius:999px;
+      width:28px;
+      height:28px;
+      font-weight:700;
+      cursor:pointer;
+    }
+    @media(max-width:720px){
+      #layout{flex-direction:column;align-items:center;}
+      #ctrl{max-width:520px;}
+    }
+  </style>
+  <!-- MathJax -->
+  <script>
+    window.MathJax = {
+      tex: {inlineMath: [['\\(', '\\)'], ['$', '$']], displayMath: [['\\[','\\]']]},
+      svg: {fontCache: 'global'}
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+</head>
+<body>
+  <h2>Mini Lab : การลอยตัวของกล่องและแท่งโลหะ</h2>
+  <div id="layout">
+    <canvas id="cv" width="420" height="420"></canvas>
+    <div id="ctrl">
+      <label for="mode">เลือกโหมดการทดลอง:</label>
+      <select id="mode">
+        <option value="floatBox">0) กล่องลอยในน้ำ</option>
+        <option value="onBox">1) วางแท่งโลหะบนกล่อง</option>
+        <option value="underBox">2) ติดแท่งโลหะที่ก้นกล่อง</option>
+        <option value="inWater">3) วางแท่งโลหะในน้ำ</option>
+      </select>
+      <p style="font-size:13px;margin-top:6px">
+        กล่อง: ด้าน 0.1 m, \(\rho_b = 500 \text{ kg/m}^3\) <br>
+        น้ำ: \(\rho_w = 1000 \text{ kg/m}^3\) <br>
+        แท่งโลหะ: \(m = 0.3 \text{ kg}, \rho_m = 2000 \text{ kg/m}^3\) <br>
+        ภาชนะ: 0.2 m × 0.2 m, สูง 0.5 m <br>
+        ระดับน้ำฐาน: 0.40 m
+      </p>
+      <button id="showCalc">แสดงวิธีการคำนวณ</button>
+      <div id="result" style="font-size:13px;line-height:1.5;margin-top:10px"></div>
+      <div class="tagline">
+        ศึกษาเพิ่มเติมที่
+        <a href="https://www.facebook.com/resolvephysics" target="_blank">เพจคลายปมฟิสิกส์</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div id="calcModal">
+    <div id="calcBox">
+      <button id="closeCalc">×</button>
+      <h3 style="margin-top:0;">วิธีการคำนวณ (แทนค่าปัจจุบัน)</h3>
+      <div id="calcContent">...</div>
+    </div>
+  </div>
+
+<script>
+(function(){
+  // ===== ค่าคงที่จากโจทย์ =====
+  const rhoW = 1000;      // น้ำ
+  const rhoB = 500;       // กล่อง
+  const rhoM = 2000;      // โลหะ
+  const boxSize = 0.10;   // m
+  const boxVol  = 0.001;  // 0.1^3
+  const boxArea = 0.01;   // 0.1^2
+  const mB = rhoB * boxVol;      // 0.5 kg
+  const mM = 0.3;                // kg
+  const VM = mM / rhoM;          // 0.00015 m^3
+  const A  = 0.04;               // 0.2 * 0.2
+  const h0 = 0.40;               // m
+  const VsubBase = mB / rhoW;    // 0.0005 m^3
+  const Vreal = A * h0 - VsubBase; // 0.0155 m^3
+
+  // ===== canvas setup =====
+  const cv = document.getElementById('cv');
+  const ctx = cv.getContext('2d');
+  const modeSel = document.getElementById('mode');
+  const resultDiv = document.getElementById('result');
+
+  const pxpm = 600; // 1m = 600px
+  const bottomY = 390;
+  const leftX   = 80;
+  const contH   = 0.50;
+  const contPxH = contH * pxpm;
+
+  function calc(mode){
+    let VbSub = VsubBase;
+    let VmSub = 0;
+    let touch = false;
+
+    if (mode === 'floatBox') {
+      VbSub = VsubBase;
+      VmSub = 0;
+      touch = false;
+    }
+    else if (mode === 'onBox') {
+      // โลหะอยู่นอกน้ำ -> น้ำต้องพยุงน้ำหนักรวม
+      const Vneed = (mB + mM) / rhoW; // 0.8/1000 = 0.0008
+      VbSub = Math.min(Vneed, boxVol);
+      if (Vneed > boxVol) touch = true;
+      VmSub = 0;
+    }
+    else if (mode === 'underBox') {
+      // โลหะอยู่ล่าง จมหมดก่อน แล้วส่วนที่เหลือให้กล่อง
+      VbSub = (mB + mM - rhoW * VM) / rhoW; // = (0.5+0.3 - 1000*0.00015)/1000 = 0.00065
+      if (VbSub > boxVol){
+        VbSub = boxVol;
+        touch = true;
+      }
+      VmSub = VM;
+    }
+    else if (mode === 'inWater') {
+      // กล่องลอยเท่าเดิม โลหะจมก้น
+      VbSub = VsubBase;
+      VmSub = VM;
+      touch = false;
+    }
+
+    const hNew = (Vreal + VbSub + VmSub) / A;  // m
+    const subDepth = VbSub / boxArea;          // m
+
+    return { VbSub, VmSub, hNew, subDepth, touch };
+  }
+
+  function draw(){
+    const mode = modeSel.value;
+    const r = calc(mode);
+    const contWpx = 0.2 * pxpm;
+    const waterY  = bottomY - r.hNew * pxpm;
+
+    ctx.clearRect(0,0,cv.width,cv.height);
+
+    // ภาชนะ
+    const contTopY = bottomY - contH * pxpm;
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = "#000";
+    ctx.beginPath();
+    ctx.moveTo(leftX, contTopY);
+    ctx.lineTo(leftX, bottomY);
+    ctx.moveTo(leftX + contWpx, contTopY);
+    ctx.lineTo(leftX + contWpx, bottomY);
+    ctx.stroke();
+
+    // เส้นฐานภาชนะ
+    ctx.strokeStyle = "#000";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(leftX, bottomY);
+    ctx.lineTo(leftX + contWpx, bottomY);
+    ctx.stroke();
+
+    // น้ำปัจจุบัน
+    ctx.fillStyle = "#bfdbfe";
+    ctx.fillRect(leftX+1, waterY, contWpx-2, bottomY - waterY);
+
+    // เส้นปะสีเทาระดับน้ำฐาน 40 cm สำหรับโหมดที่มีโลหะ
+    if (mode !== 'floatBox') {
+      const baseY = bottomY - h0 * pxpm;
+      ctx.save();
+      ctx.setLineDash([6,4]);
+      ctx.strokeStyle = "#94a3b8";
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(leftX, baseY);
+      ctx.lineTo(leftX + contWpx, baseY);
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.fillStyle = "#94a3b8";
+      ctx.font = "11px system-ui,'Noto Sans Thai'";
+      ctx.fillText("ระดับน้ำเดิม 40.0 cm", leftX + contWpx + 8, baseY + 19);
+    }
+
+    // กล่อง
+    const boxPx = boxSize * pxpm;
+    const subPx = r.subDepth * pxpm;
+    const boxX  = leftX + (contWpx - boxPx)/2;
+    let boxBottom, boxTop;
+    if (r.touch && mode !== 'floatBox') {
+      boxBottom = bottomY;
+      boxTop    = bottomY - boxPx;
+    } else {
+      boxBottom = waterY + subPx;
+      boxTop    = boxBottom - boxPx;
+    }
+    ctx.fillStyle = "#b98100";
+    ctx.strokeStyle = "#0f172a";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.rect(boxX, boxTop, boxPx, boxPx);
+    ctx.fill();
+    ctx.stroke();
+
+    // เส้นปะสีแดงกลางกล่อง
+    const midY = (boxTop + boxBottom)/2;
+    ctx.save();
+    ctx.setLineDash([5,4]);
+    ctx.strokeStyle = "#ef4444";
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(boxX, midY);
+    ctx.lineTo(boxX + boxPx, midY);
+    ctx.stroke();
+    ctx.restore();
+
+    // แท่งโลหะ
+    const metalSize = Math.cbrt(VM) * pxpm;
+    ctx.fillStyle = "#000";
+    if (mode === 'onBox') {
+      ctx.fillRect(boxX + boxPx/2 - metalSize/2, boxTop - metalSize, metalSize, metalSize);
+    } else if (mode === 'underBox') {
+      ctx.fillRect(boxX + boxPx/2 - metalSize/2, boxBottom, metalSize, metalSize);
+    } else if (mode === 'inWater') {
+      // อยู่กลางก้นภาชนะ
+      const metalX = leftX + (contWpx - metalSize)/2;
+      const metalY = bottomY - metalSize;
+      ctx.fillRect(metalX, metalY, metalSize, metalSize);
+    }
+
+    // เส้นระดับน้ำปัจจุบัน
+    ctx.strokeStyle = "#1d4ed8";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(leftX, waterY);
+    ctx.lineTo(leftX + contWpx, waterY);
+    ctx.stroke();
+
+    // ข้อความ
+    ctx.fillStyle = "#0f172a";
+    ctx.font = "12px Noto Sans Thai,system-ui";
+    ctx.fillText("h น้ำ = " + (r.hNew*100).toFixed(2) + " cm", leftX + contWpx + 10, waterY + 3);
+
+    // แสดงผลด้านขวา
+    resultDiv.innerHTML =
+      "<b>ผลการคำนวณ</b><br>" +
+      "โหมด: " + modeLabel(mode) + "<br>" +
+      "ปริมาตรกล่องที่จม: " + (r.VbSub*1e6).toFixed(1) + " cm³<br>" +
+      "ปริมาตรโลหะที่จม: " + (r.VmSub*1e6).toFixed(1) + " cm³<br>" +
+      "ระดับน้ำใหม่: " + (r.hNew*100).toFixed(2) + " cm<br>" +
+      "ระยะที่กล่องจม: " + (r.subDepth*100).toFixed(2) + " cm<br>" +
+      "กล่องแตะก้นภาชนะหรือไม่: <b>" + (r.touch ? "แตะก้น" : "ลอย") + "</b>";
+  }
+
+  function modeLabel(m){
+    if(m==='floatBox') return "0) กล่องลอยในน้ำ";
+    if(m==='onBox')    return "1) วางแท่งโลหะบนกล่อง";
+    if(m==='underBox') return "2) ติดแท่งโลหะที่ก้นกล่อง";
+    if(m==='inWater')  return "3) วางแท่งโลหะในน้ำ";
+    return m;
+  }
+
+  // ===== modal สำหรับแสดงวิธีคำนวณ =====
+  const showCalcBtn = document.getElementById('showCalc');
+  const calcModal   = document.getElementById('calcModal');
+  const closeCalc   = document.getElementById('closeCalc');
+  const calcContent = document.getElementById('calcContent');
+
+  function showCalc(){
+    const mode = modeSel.value;
+    const r = calc(mode);
+
+    // เตรียมข้อความโหมด
+    let extraExplain = "";
+    if (mode === 'onBox') {
+      extraExplain = "กรณีนี้แท่งโลหะอยู่นอกน้ำ น้ำต้องยกทั้งกล่องและแท่ง จึงให้กล่องจมมากที่สุดในทุกโหมด";
+    } else if (mode === 'underBox') {
+      extraExplain = "กรณีนี้แท่งโลหะจมในน้ำก่อน ทำให้แรงลอยตัวของแท่งช่วยพยุงบางส่วน ทำให้กล่องต้องจมน้่อยกว่าแบบวางบนกล่อง";
+    } else if (mode === 'inWater') {
+      extraExplain = "กรณีนี้กล่องลอยเหมือนเดิม แต่เพิ่มวัตถุอีกก้อนที่ก้นภาชนะ เมื่อวัตถุจมหมดก็แค่ดันน้ำเพิ่ม";
+    } else {
+      extraExplain = "กรณีนี้ใช้สภาวะฐานจากโจทย์เลย กล่องเบากว่าน้ำจึงจมแค่ครึ่งเดียว (5 cm จาก 10 cm)";
+    }
+
+    calcContent.innerHTML = `
+      <p><b>โหมดปัจจุบัน:</b> ${modeLabel(mode)}</p>
+      <p>${extraExplain}</p>
+
+      <p><b>1) ข้อมูลเริ่มต้น</b></p>
+      <p>
+        \\(m_b = ${mB.toFixed(2)}\\,\\text{kg}\\), 
+        \\(m_m = ${mM.toFixed(2)}\\,\\text{kg}\\), 
+        \\(\\rho_w = ${rhoW}\\,\\text{kg/m}^3\\) <br>
+        \\(V_m = m_m/\\rho_m = ${mM.toFixed(2)}/${rhoM} = ${VM.toFixed(5)}\\,\\text{m}^3\\) <br>
+        พื้นที่หน้าตัดภาชนะ \\(A = 0.04\\,\\text{m}^2\\) <br>
+        ปริมาตรน้ำจริงตอนฐาน \\(V_{w,\\text{real}} = A h_0 - V_{b,\\text{sub,base}} = 0.04 \\times 0.40 - 0.0005 = 0.0155\\,\\text{m}^3\\)
+      </p>
+
+      <p><b>2) หาปริมาตรที่จมของกล่อง</b></p>
+      ${ mode === 'underBox'
+        ? `
+        <p>กรณีแท่งโลหะติดก้นกล่อง เรารู้ว่าแท่งจมหมดแล้ว จึงมีแรงลอยตัวจากแท่ง = \\(\\rho_w V_m\\). ส่วนที่เหลือให้กล่องพยุง:</p>
+        <p>
+        \\[
+          V_{b,\\text{sub}} = \\frac{m_b + m_m - \\rho_w V_m}{\\rho_w}
+          = \\frac{${mB.toFixed(2)} + ${mM.toFixed(2)} - ${rhoW}\\times ${VM.toFixed(5)}}{${rhoW}}
+          = ${(r.VbSub).toFixed(6)}\\,\\text{m}^3
+        \\]
+        </p>
+        `
+        : mode === 'onBox'
+        ? `
+        <p>กรณีวางบนกล่อง น้ำต้องยกทั้งกล่องและแท่ง เพราะแท่งอยู่นอกน้ำ:</p>
+        <p>
+        \\[
+          V_{b,\\text{sub}} = \\frac{m_b + m_m}{\\rho_w}
+          = \\frac{${mB.toFixed(2)} + ${mM.toFixed(2)}}{${rhoW}}
+          = ${((mB+mM)/rhoW).toFixed(6)}\\,\\text{m}^3
+        \\]
+        (แต่จมได้ไม่เกินปริมาตรกล่อง = 0.001 m³)
+        </p>
+        `
+        : `
+        <p>กรณีนี้กล่องลอยเหมือนฐาน ดังนั้น</p>
+        <p>
+        \\[
+          V_{b,\\text{sub}} = V_{b,\\text{sub,base}} = 0.0005\\,\\text{m}^3
+        \\]
+        </p>
+        `
+      }
+
+      <p><b>3) ระดับน้ำใหม่</b></p>
+      <p>
+      ใช้สูตรรวม: 
+      \\[
+        h_{\\text{new}} = \\frac{V_{w,\\text{real}} + V_{b,\\text{sub}} + V_{m,\\text{sub}}}{A}
+      \\]
+      โดยในโหมดนี้มี \\(V_{b,\\text{sub}} = ${(r.VbSub).toFixed(6)}\\,\\text{m}^3\\) และ \\(V_{m,\\text{sub}} = ${(r.VmSub).toFixed(6)}\\,\\text{m}^3\\)
+      </p>
+      <p>
+      แทนค่า:
+      \\[
+        h_{\\text{new}} = \\frac{0.0155 + ${(r.VbSub).toFixed(6)} + ${(r.VmSub).toFixed(6)}}{0.04}
+        = ${(r.hNew).toFixed(4)}\\,\\text{m}
+        = ${(r.hNew*100).toFixed(2)}\\,\\text{cm}
+      \\]
+      </p>
+
+      <p><b>4) ระยะที่กล่องจม</b></p>
+      <p>
+      กล่องมีพื้นที่ฐาน \\(0.01\\,\\text{m}^2\\) ดังนั้น
+      \\[
+        d_{\\text{sub}} = \\frac{V_{b,\\text{sub}}}{0.01}
+        = \\frac{${(r.VbSub).toFixed(6)}}{0.01}
+        = ${(r.subDepth).toFixed(4)}\\,\\text{m}
+        = ${(r.subDepth*100).toFixed(2)}\\,\\text{cm}
+      \\]
+      </p>
+    `;
+
+    calcModal.style.display = "flex";
+    if (window.MathJax && window.MathJax.typesetPromise) {
+      MathJax.typesetPromise();
+    }
+  }
+
+  document.getElementById('showCalc').addEventListener('click', showCalc);
+  document.getElementById('closeCalc').addEventListener('click', ()=> calcModal.style.display = "none");
+  document.getElementById('calcModal').addEventListener('click', (e)=>{
+    if(e.target.id === 'calcModal') calcModal.style.display = "none";
+  });
+
+  modeSel.addEventListener('change', draw);
+  draw();
+})();
+</script>
+</body>
+</html>

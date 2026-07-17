@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+
+<html lang="th">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>Mini Lab : เครื่องอัดไฮโดรลิก (ลูกสูบเบาและลื่น)</title>
+<style>
+  :root{--rim:#0e2b4d;--ink:#0f172a;--steel:#0a0f14;--fluid:#b3742b;--bg:#fff;--blue:#2f6fd6;--orange-soft:#ffe8c7;--orange-border:#efc58f;--gray-soft:#eef2f7;--gray-border:#cbd5e1}
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans Thai",sans-serif;-webkit-user-select:none;user-select:none;touch-action:manipulation}
+  #ui{max-width:960px;width:96vw;margin:10px auto;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+  .lab-title{color:var(--blue);font-weight:800;font-size:clamp(22px,3vw,32px)}
+  #reset{background:var(--gray-soft);border-color:var(--gray-border)}
+  #showFormulas{background:var(--orange-soft);border-color:var(--orange-border)}
+  .hint{max-width:960px;width:96vw;margin:10px auto 20px;color:#334155;font-size:14px;text-align:center}
+  .hint a{color:var(--blue);text-decoration:underline;text-underline-offset:2px}
+  input[type="number"]{width:90px;padding:4px 6px;border:1px solid #cbd5e1;border-radius:8px}
+  button{padding:6px 10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;cursor:pointer}
+  svg{max-width:960px;width:96vw;display:block;margin:0 auto;touch-action:none}
+  /* -------- Modal: สูตรสำคัญ -------- */
+  .overlay{position:fixed;inset:0;background:rgba(15,23,42,.55);display:none;align-items:center;justify-content:center;z-index:50}
+  .overlay.show{display:flex}
+  .card{max-width:860px;width:92vw;background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 20px 40px rgba(2,6,23,.25);padding:20px}
+  .card h2{margin:0 0 6px 0;font-size:20px;color:#0f172a}
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;background:#e2e8f0;color:#0f172a;font-size:12px;margin-right:8px}
+  .equation{border-left:4px solid #0e2b4d;background:#f8fafc;padding:10px 12px;border-radius:10px;margin:10px 0}
+  .card footer{display:flex;gap:10px;justify-content:flex-start;margin-top:12px}
+  .btn{padding:8px 12px;border-radius:10px;border:1px solid #cbd5e1;background:#fff;cursor:pointer}
+  .btn.primary{background:#0e2b4d;color:#fff;border-color:#0e2b4d}
+
+  @media (max-width: 768px){
+    #ui{gap:10px}
+    .lab-title{font-size:clamp(18px,5.3vw,24px);width:100%}
+    .card{width:94vw;max-height:calc(100vh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - 24px);overflow:auto}
+  }
+
+
+/* Mobile adjustments */
+@media (max-width: 768px){
+  .mass, .ball, .weight{
+    transform: scale(1.3) !important;
+  }
+  .formula-page, .formula-container{
+    padding-top: env(safe-area-inset-top, 20px);
+    padding-bottom: calc(env(safe-area-inset-bottom, 20px) + 120px);
+  }
+}
+
+/* Increase mass size further for mobile */
+@media (max-width: 768px){
+  .mass, .ball, .weight{
+    transform: scale(1.8) !important;
+  }
+}
+</style>
+</head>
+<body>
+<div id="ui">
+<div class="lab-title">Mini Lab : เครื่องอัดไฮโดรลิก (ลูกสูบเบาและลื่น)</div>
+<div>A<sub>ซ้าย</sub> = <b>1</b> | A<sub>ขวา</sub> = <input id="areaRatioInput" max="6" min="0.25" step="0.1" type="number" value="2"/></div>
+<div>
+<button id="addWeight10">+ สร้างตุ้ม 10 N</button>
+<button id="addWeight20">+ สร้างตุ้ม 20 N</button>
+<button id="reset">รีเซ็ต</button>
+<button class="btn" id="showFormulas">สูตรสำคัญ</button>
+</div>
+</div>
+<!-- Modal: สูตรสำคัญ -->
+<div aria-labelledby="modalTitle" aria-modal="true" class="overlay" id="formulasModal" role="dialog">
+<div class="card">
+<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+<h2 id="modalTitle">สูตรสำคัญของเครื่องอัดไฮโดรลิก</h2>
+<button class="btn" id="closeFormulas">ปิด</button>
+</div>
+<div style="margin-bottom:6px;color:#334155">
+      หลักการ: ของไหลที่ไม่อัดตัวในภาชนะปิดจะถ่ายทอดความดันเท่ากันทุกทิศทาง (กฎของปาสคาล) 
+      และปริมาตรของของไหลในสองแขนต้องคงที่
+    </div>
+<div class="equation">ความดันเท่ากัน: \( P_1=P_2 \Rightarrow \dfrac{F_1}{A_1}=\dfrac{F_2}{A_2} \)</div>
+<div class="equation">อัตราทดแรง (Mechanical Advantage): \( F_2=\dfrac{A_2}{A_1}F_1 \)</div>
+<div class="equation">อนุรักษ์ปริมาตร: \( A_1\,\Delta h_1 = A_2\,\Delta h_2 \) (ถ้าด้านหนึ่งลง อีกด้านต้องขึ้น)</div>
+<div class="equation">เงื่อนไขระดับ (คอลัมน์ของไหล): \( \Delta p=\rho g\,\Delta h \), 
+      และ \( \dfrac{F_1}{A_1}-\dfrac{F_2}{A_2}=\rho g\,(h_1-h_2) \)</div>
+<footer>
+<span class="pill">ลูกสูบเบาและลื่น</span>
+</footer>
+</div>
+</div>
+<svg id="scene" viewbox="0 0 960 700">
+<!-- ป้ายคำแนะนำ -->
+<g id="rack">
+<rect fill="#fff" height="92" rx="12" stroke="#94a3b8" stroke-width="2" width="340" x="330" y="10"></rect>
+<text fill="#334155" font-size="16" font-weight="600" text-anchor="middle" x="500" y="44">ลากตุ้ม 10 N หรือ 20 N มาวางบนฐาน</text>
+<text fill="#64748b" font-size="14" text-anchor="middle" x="500" y="68">(ลูกสูบเบาและลื่น ไม่เสียดทาน)</text>
+</g>
+<!-- ระบบถังและท่อ -->
+<g id="hydraulicSystem">
+<g fill="none" id="tankGroup" stroke="var(--rim)" stroke-linejoin="round" stroke-width="6" style="shape-rendering:crispEdges">
+<path d="M60 80 V600 H900 V80" id="outerWall"></path>
+<line id="innerLeft" x1="260" x2="260" y1="80" y2="600"></line>
+<line id="innerRight" x1="700" x2="700" y1="80" y2="600"></line>
+</g>
+<!-- ของไหลสีน้ำตาล -->
+<path d="" fill="var(--fluid)" id="fluid"></path>
+<!-- เส้นซีลท่อล่างสีดำ -->
+<line id="bottomSeal" stroke="var(--rim)" stroke-linecap="square" stroke-width="4" x1="265" x2="695" y1="500" y2="500"></line>
+<!-- ลูกสูบซ้าย (คงที่) -->
+<g fill="var(--steel)" id="leftPiston">
+<rect height="16" id="leftPlate" rx="2" width="200" x="60" y="224"></rect>
+<rect height="84" id="leftRod" width="24" x="148" y="140"></rect>
+<rect height="22" id="leftBase" rx="3" width="150" x="85" y="140"></rect>
+</g>
+<!-- ลูกสูบขวา (เปลี่ยนกว้างตาม Aขวา) -->
+<g fill="var(--steel)" id="rightPiston">
+<rect height="16" id="rightPlate" rx="2" width="200" x="700" y="224"></rect>
+<rect height="78" id="rightRod" width="18" x="791" y="146"></rect>
+<rect height="20" id="rightBase" rx="3" width="120" x="740" y="146"></rect>
+</g>
+</g>
+<!-- ชั้นเก็บตุ้ม -->
+<g id="weights"></g>
+</svg>
+<p class="hint">ศึกษาเพิ่มเติมที่ <a href="https://www.facebook.com/resolvephysics" rel="noopener" target="_blank">เพจคลายปมฟิสิกส์</a></p>
+<!-- MathJax for equations -->
+<script>
+window.MathJax = {
+  tex: { inlineMath:[["$","$"], ["\\(","\\)"]], displayMath:[["$$","$$"], ["\\[","\\]"]] },
+  svg:{fontCache:'global'}
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<script>
+// ===== Elements =====
+const input = document.getElementById('areaRatioInput');
+const add10 = document.getElementById('addWeight10');
+const add20 = document.getElementById('addWeight20');
+const resetBtn = document.getElementById('reset');
+const svg = document.getElementById('scene');
+
+// Modal controls
+const modal = document.getElementById('formulasModal');
+document.getElementById('showFormulas').addEventListener('click', ()=>{
+  modal.classList.add('show');
+  if(window.MathJax && window.MathJax.typeset) window.MathJax.typeset();
+});
+function closeModal(){ modal.classList.remove('show'); }
+document.getElementById('closeFormulas').addEventListener('click', closeModal);
+modal.addEventListener('click', (e)=>{ if(e.target===modal) closeModal(); });
+
+// hydraulic parts
+const innerRightLine = document.getElementById('innerRight');
+const fluidPath = document.getElementById('fluid');
+const bottomSeal = document.getElementById('bottomSeal');
+const leftPlate = document.getElementById('leftPlate');
+const rightPlate = document.getElementById('rightPlate');
+const leftRod = document.getElementById('leftRod');
+const rightRod = document.getElementById('rightRod');
+const leftBase = document.getElementById('leftBase');
+const rightBase = document.getElementById('rightBase');
+const weightsLayer = document.getElementById('weights');
+
+// ===== Geometry =====
+const LEFT_OUTER_X=60, LEFT_INNER_X=260, RIGHT_OUTER_X=900;
+const Y_BOTTOM=600, BOTTOM_CHANNEL_Y=500;
+const STROKE=6, HALF=STROKE/2; // for wall thickness compensation
+const PLATE_H=16;
+
+// dynamic right tube
+let k = 2; // A_right / A_left
+let rightInnerX = 700; // starting inner wall x
+
+// plate levels
+let yL = 224, yR = 224; // top of plates
+let ySurfL = yL + PLATE_H, ySurfR = yR + PLATE_H; // fluid surfaces per tube
+
+// weights
+let nextId=1;
+const weightInfo = new Map(); // id -> {side:'L'|'R'|null, col:number|null, h:number, force:number}
+let leftCols = new Array(6).fill(0); // number in each column
+let rightCols = new Array(6).fill(0);
+const leftSet = new Set();
+const rightSet = new Set();
+
+// ===== Helpers =====
+function clientToSvg(x,y){ const p=svg.createSVGPoint(); p.x=x; p.y=y; return p.matrixTransform(svg.getScreenCTM().inverse()); }
+
+function redrawFluid(){
+  const Ledge = LEFT_INNER_X - HALF;
+  const Redge = rightInnerX + HALF;
+  const d = `M${LEFT_OUTER_X},${Y_BOTTOM} L${LEFT_OUTER_X},${ySurfL} ${Ledge},${ySurfL} ${Ledge},${Y_BOTTOM} Z `+
+            `M${Ledge},${Y_BOTTOM} L${Ledge},${BOTTOM_CHANNEL_Y} ${Redge},${BOTTOM_CHANNEL_Y} ${Redge},${Y_BOTTOM} Z `+
+            `M${Redge},${Y_BOTTOM} L${Redge},${ySurfR} ${RIGHT_OUTER_X},${ySurfR} ${RIGHT_OUTER_X},${Y_BOTTOM} Z`;
+  fluidPath.setAttribute('d', d);
+  bottomSeal.setAttribute('x1', Ledge); bottomSeal.setAttribute('x2', Redge);
+}
+
+function setPlateY(side, newY){
+  const plate = side==='L'?leftPlate:rightPlate;
+  const rod   = side==='L'?leftRod:rightRod;
+  const base  = side==='L'?leftBase:rightBase;
+  const dy = newY - +plate.getAttribute('y');
+  plate.setAttribute('y', newY);
+  rod.setAttribute('y', +rod.getAttribute('y') + dy);
+  base.setAttribute('y', +base.getAttribute('y') + dy);
+  if(side==='L'){ yL=newY; ySurfL=yL+PLATE_H; shiftWeights('L', dy); }
+  else { yR=newY; ySurfR=yR+PLATE_H; shiftWeights('R', dy); }
+  redrawFluid();
+}
+
+function shiftWeights(side, dy){ const set = (side==='L'?leftSet:rightSet); set.forEach(id=>{ const g=document.getElementById(id); if(!g) return; const r=g.querySelector('rect'); const t=g.querySelector('text'); const ny=+r.getAttribute('y')+dy; r.setAttribute('y',ny); t.setAttribute('y', +t.getAttribute('y')+dy); }); }
+
+function repositionWeights(side){
+  const base = (side==='L'?leftBase:rightBase);
+  const colsArr = (side==='L'?leftCols:rightCols);
+  const set = (side==='L'?leftSet:rightSet);
+  const baseX=+base.getAttribute('x'), baseW=+base.getAttribute('width');
+  const cols = colsArr.length;
+  set.forEach(id=>{
+    const w=weightInfo.get(id); if(!w) return;
+    const gx = baseX + (w.col+0.5) * (baseW/cols);
+    const g=document.getElementById(id); const r=g.querySelector('rect'); const t=g.querySelector('text');
+    r.setAttribute('x', gx - +r.getAttribute('width')/2); t.setAttribute('x', gx);
+  });
+}
+
+function layoutFromRatio(){
+  k = Math.max(0.25, Math.min(6, parseFloat(input.value)||2));
+  // ตั้งความกว้างท่อขวาให้สัดส่วน ~k เท่าของท่อซ้าย (ท่อซ้ายกว้าง 200)
+  const rightWidth = 200 * k;
+  // ขอบเขตป้องกันชนกลาง
+  const minGap = 40; // เว้นที่เซฟ
+  const maxRightWidth = (RIGHT_OUTER_X - minGap) - LEFT_INNER_X; // ให้เหลือช่องกลางอย่างน้อย minGap
+  const clamped = Math.max(80, Math.min(maxRightWidth, rightWidth));
+  rightInnerX = RIGHT_OUTER_X - clamped;
+
+  // อัปเดตผนังในขวา + แผ่นลูกสูบ/ก้าน/ฐาน ตามความกว้างใหม่
+  innerRightLine.setAttribute('x1', rightInnerX); innerRightLine.setAttribute('x2', rightInnerX);
+  rightPlate.setAttribute('x', rightInnerX); rightPlate.setAttribute('width', clamped);
+  const rodW = Math.max(14, Math.min(28, clamped*0.09));
+  rightRod.setAttribute('x', rightInnerX + clamped/2 - rodW/2); rightRod.setAttribute('width', rodW);
+  const baseW = clamped * 0.6;
+  rightBase.setAttribute('x', rightInnerX + clamped/2 - baseW/2); rightBase.setAttribute('width', baseW);
+
+  repositionWeights('R');
+  redrawFluid();
+}
+
+// ===== Physics: Pascal + conserve volume =====
+function solveAndApply(){
+  let F1=0, F2=0; // total force per side
+  weightInfo.forEach(w=>{ if(w.side==='L') F1+=w.force; if(w.side==='R') F2+=w.force; });
+  const A1=1, A2=k;           // ใช้สัดส่วนพื้นที่โดยตรง (ซ้าย=1, ขวา=k)
+  const RHO_G=0.2;           // สเกลให้การเคลื่อนเห็นชัด
+  const hL0=Y_BOTTOM-(ySurfL), hR0=Y_BOTTOM-(ySurfR);
+  const C=A1*hL0 + A2*hR0;   // ปริมาตรคงที่ในสองแขนรวมกัน
+  const d=(F2/A2 - F1/A1)/RHO_G; // จากสมดุลความดัน → ความต่างระดับ hL-hR
+  const hR=(C - A1*d)/(A1 + A2), hL=hR + d;
+  const yL_new=(Y_BOTTOM - hL) - PLATE_H;
+  const yR_new=(Y_BOTTOM - hR) - PLATE_H;
+  animateTo(yL_new, yR_new, 500);
+}
+
+function animateTo(yL_new, yR_new, ms){
+  const yL0=+leftPlate.getAttribute('y'); const yR0=+rightPlate.getAttribute('y');
+  const t0=performance.now(); const ease=t=>t<0.5?2*t*t:-1+(4-2*t)*t;
+  function step(now){ const t=Math.min(1,(now-t0)/ms), s=ease(t); setPlateY('L', yL0+(yL_new-yL0)*s); setPlateY('R', yR0+(yR_new-yR0)*s); if(t<1) requestAnimationFrame(step); }
+  requestAnimationFrame(step);
+}
+
+// ===== Drag & Drop (snap เฉพาะผิวบนฐาน, ซ้อนเป็นคอลัมน์, ติดตามการเคลื่อนของฐาน) =====
+function hookDrag(g){
+  const r=g.querySelector('rect'); const t=g.querySelector('text');
+  let dragging=false, offX=0, offY=0;
+  function start(e){ const c=e.touches?e.touches[0]:e; const P=clientToSvg(c.clientX,c.clientY); offX=P.x-+r.getAttribute('x'); offY=P.y-+r.getAttribute('y'); dragging=true; e.preventDefault(); }
+  function move(e){ if(!dragging) return; const c=e.touches?e.touches[0]:e; const P=clientToSvg(c.clientX,c.clientY); const nx=P.x-offX, ny=P.y-offY; r.setAttribute('x',nx); r.setAttribute('y',ny); t.setAttribute('x', nx + +r.getAttribute('width')/2); t.setAttribute('y', ny + +r.getAttribute('height')/2 + 5); e.preventDefault(); }
+  function end(){ if(!dragging) return; dragging=false; handleDrop(g); }
+  g.addEventListener('pointerdown', start, {passive:false}); svg.addEventListener('pointermove', move, {passive:false}); window.addEventListener('pointerup', end, {passive:false});
+  g.addEventListener('touchstart', start, {passive:false}); svg.addEventListener('touchmove', move, {passive:false}); window.addEventListener('touchend', end, {passive:false});
+}
+
+function handleDrop(g){
+  const r=g.querySelector('rect'); const t=g.querySelector('text'); const id=g.id; const h=+r.getAttribute('height');
+  // remove previous placement
+  const prev=weightInfo.get(id); if(prev){ if(prev.side==='L' && prev.col!=null){leftCols[prev.col]=Math.max(0,leftCols[prev.col]-1); leftSet.delete(id);} if(prev.side==='R' && prev.col!=null){rightCols[prev.col]=Math.max(0,rightCols[prev.col]-1); rightSet.delete(id);} }
+
+  // snap to base, stack upward in columns
+  const cx=+r.getAttribute('x') + +r.getAttribute('width')/2; const cy=+r.getAttribute('y') + h/2;
+  const L={x:+leftBase.getAttribute('x'), y:+leftBase.getAttribute('y'), w:+leftBase.getAttribute('width')};
+  const R={x:+rightBase.getAttribute('x'),y:+rightBase.getAttribute('y'),w:+rightBase.getAttribute('width')};
+
+  function placeOn(base, set, colsArr, cols){
+    const rel=(cx-base.x)/base.w; let col=Math.round(rel*(cols-1)); col=Math.max(0,Math.min(cols-1,col));
+    const row=colsArr[col]; const gx=base.x + (col+0.5)*(base.w/cols);
+    const spacing=h+6; const rectY=base.y - h - row*spacing; // stack upward
+    r.setAttribute('x', gx - +r.getAttribute('width')/2); r.setAttribute('y', rectY); 
+    t.setAttribute('x', gx); t.setAttribute('y', rectY + h/2 + 5);
+    colsArr[col]=row+1; set.add(id); return col;
+  }
+
+  let placed=false; let info={side:null,col:null,force:(t.textContent.includes('20')?20:10),h};
+  if(cx>L.x && cx<L.x+L.w && cy< L.y + 120){ info.col=placeOn(L,leftSet,leftCols,leftCols.length); info.side='L'; placed=true; }
+  else if(cx>R.x && cx<R.x+R.w && cy< R.y + 120){ info.col=placeOn(R,rightSet,rightCols,rightCols.length); info.side='R'; placed=true; }
+  else { // back to rack
+    r.setAttribute('x', 420+Math.random()*100); r.setAttribute('y', 40); t.setAttribute('x', +r.getAttribute('x') + +r.getAttribute('width')/2); t.setAttribute('y', +r.getAttribute('y') + h/2 + 5);
+  }
+  weightInfo.set(id, info);
+  solveAndApply();
+}
+
+// ===== Create weight (responsive scale) =====
+function getWeightScale(){
+  return window.matchMedia('(max-width: 768px)').matches ? 1.56 : 1.2; // มือถือใหญ่ขึ้น 30% จากเดิม
+}
+function addWeight(force){
+  const g=document.createElementNS('http://www.w3.org/2000/svg','g'); const id='w'+(nextId++); g.id=id;
+  const scale=getWeightScale(); const w=30*scale; const h=(force===20)?60*scale:30*scale;
+  const r=document.createElementNS('http://www.w3.org/2000/svg','rect'); r.setAttribute('x', 420+Math.random()*100); r.setAttribute('y', 40); r.setAttribute('width', w); r.setAttribute('height', h); r.setAttribute('rx', 6);
+  if(force===20){ r.setAttribute('fill','#93c5fd'); r.setAttribute('stroke','#60a5fa'); } else { r.setAttribute('fill','#9ca3af'); r.setAttribute('stroke','#6b7280'); }
+  const t=document.createElementNS('http://www.w3.org/2000/svg','text'); t.setAttribute('x', +r.getAttribute('x')+w/2); t.setAttribute('y', +r.getAttribute('y') + h/2 + 5); t.setAttribute('text-anchor','middle'); t.setAttribute('font-size','14'); t.textContent=force+' N';
+  g.appendChild(r); g.appendChild(t); weightsLayer.appendChild(g); hookDrag(g); weightInfo.set(id,{side:null,col:null,force,h});
+}
+
+// ===== Bind UI =====
+add10.addEventListener('click', ()=>addWeight(10));
+add20.addEventListener('click', ()=>addWeight(20));
+input.addEventListener('input', ()=>{ layoutFromRatio(); solveAndApply(); });
+resetBtn.addEventListener('click', ()=>{
+  // clear weights
+  leftSet.clear(); rightSet.clear(); weightInfo.clear(); leftCols = new Array(6).fill(0); rightCols = new Array(6).fill(0);
+  while(weightsLayer.firstChild) weightsLayer.removeChild(weightsLayer.firstChild);
+  // defaults
+  input.value=2; k=2; yL=224; yR=224; ySurfL=yL+PLATE_H; ySurfR=yR+PLATE_H;
+  setPlateY('L', yL); setPlateY('R', yR); layoutFromRatio(); redrawFluid();
+});
+
+// ===== Init =====
+layoutFromRatio(); redrawFluid();
+</script>
+</body>
+</html>

@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Mini Lab : ความหนืดของของเหลว</title>
+<script>
+window.MathJax = { tex: { inlineMath: [['\\(','\\)'], ['$', '$']] }, svg: { fontCache: 'global' } };
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<style>
+:root{
+  --blue:#2f6fd6; --deep:#204d7c; --soft:#edf3fb; --line:#d8e3ef;
+  --orange:#fff2df; --green:#eef9ea; --gray:#f6f7f9; --red:#d73333;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:linear-gradient(#f7fbff,#ffffff);color:#17324d;padding-bottom:calc(70px + env(safe-area-inset-bottom));overflow:auto;}
+header{padding:12px 16px 8px;text-align:center}
+h1{margin:0;color:var(--blue);font-size:clamp(24px,4vw,42px);font-weight:900;line-height:1.15}
+.subtitle{margin-top:4px;color:#456; font-weight:700;font-size:15px}
+.wrap{width:min(1240px,100%);min-height:calc(100vh - 92px);margin:0 auto;padding:10px;display:grid;grid-template-columns:380px 420px minmax(360px,1fr);gap:12px;align-items:start;overflow:visible}
+.card{background:#fff;border:1px solid var(--line);border-radius:24px;box-shadow:0 10px 28px rgba(35,75,120,.08);padding:14px}
+.controls{position:sticky;top:10px;max-height:calc(100vh - 24px);overflow-y:auto;overscroll-behavior:contain;padding-bottom:24px}
+.row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;margin:10px 0;padding:10px;border:1px solid #e4edf7;border-radius:18px;background:#fbfdff}
+label{font-weight:850;color:#254d78}
+.value{font-weight:900;color:#0e5eaa;background:var(--soft);padding:5px 9px;border-radius:999px;white-space:nowrap}
+input[type=range]{grid-column:1/-1;width:100%;accent-color:var(--blue)}
+input[type=range]:disabled{accent-color:#9aa9b6;opacity:.55;cursor:not-allowed}
+select,input[type=number]{width:100%;border:1px solid #cbd9e8;border-radius:14px;padding:9px 10px;font-weight:750;background:white;color:#17324d;font-size:15px}
+.topControls{display:flex;align-items:center;gap:10px;justify-content:flex-start;margin:0 0 12px;flex-wrap:wrap;position:sticky;top:0;z-index:20;background:rgba(255,255,255,.94);backdrop-filter:blur(6px);padding-bottom:8px;border-bottom:1px solid #e7eef6}
+.btns{display:grid;grid-template-columns:repeat(3,auto);gap:8px;margin:0}
+.forceInline{display:flex;align-items:center;gap:8px;border:1px solid #e4edf7;border-radius:18px;background:#fbfdff;padding:9px 12px;font-weight:900;color:#254d78;white-space:nowrap}
+.forceInline .value{font-size:13px;padding:4px 8px}
+.forceInline input{width:22px;height:22px;accent-color:var(--blue)}
+button{border:0;border-radius:17px;padding:11px 12px;font-size:15px;font-weight:900;cursor:pointer;box-shadow:inset 0 -2px 0 rgba(0,0,0,.08),0 5px 12px rgba(0,0,0,.08)}
+.play{background:#65a7e8;color:white}.reset{background:#e9edf2;color:#576575}.formula{background:#ffe2b8;color:#7a4b08}
+.stageGrid{display:contents}
+.tubeBox{height:706px;min-height:454px;background:linear-gradient(90deg,#f4fbff,#e8f7ff 35%,#dff3ff 50%,#e8f7ff 65%,#f4fbff);border-radius:28px;border:1px solid #cce2f0;position:relative;overflow:hidden}
+.tube{position:absolute;left:50%;top:20px;transform:translateX(-50%);width:210px;height:668px;border:8px solid rgba(80,145,190,.35);border-top:0;border-radius:0 0 52px 52px;background:linear-gradient(90deg,rgba(255,255,255,.35),rgba(111,199,240,.24),rgba(255,255,255,.28));box-shadow:inset 0 0 30px rgba(50,140,200,.2)}
+.scale{position:absolute;left:22px;top:20px;height:668px;width:78px;border-right:3px solid #48657b;color:#48657b;font-size:12px;font-weight:800}
+.tick{position:absolute;right:0;width:16px;border-top:2px solid #48657b;text-align:left;padding-left:20px;transform:translateY(-1px)}
+
+.surfaceLine{position:absolute;left:0;right:0;top:0;height:3px;background:rgba(46,135,205,.65);box-shadow:0 0 10px rgba(46,135,205,.35);z-index:2}
+.surfaceLine::after{content:"ผิวของเหลว";position:absolute;right:-88px;top:-9px;font-size:12px;font-weight:900;color:#2e6fa6;background:rgba(255,255,255,.82);border-radius:999px;padding:2px 7px;white-space:nowrap}
+
+.sphere{position:absolute;left:50%;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffffff,#6aa7d9 36%,#22619d 75%);box-shadow:0 8px 18px rgba(0,0,0,.2);z-index:4}
+.dot{position:absolute;left:50%;transform:translate(-50%,-50%);width:9px;height:9px;border-radius:50%;background:#e13a3a;z-index:3;box-shadow:0 0 0 3px rgba(225,58,58,.14)}
+.dotLabel{position:absolute;left:calc(50% + 22px);transform:translateY(-50%);font-size:12px;font-weight:900;color:#b82929;background:rgba(255,255,255,.75);border-radius:999px;padding:2px 7px;z-index:3}
+.forceLayer{position:absolute;inset:0;pointer-events:none;z-index:8}
+.forceArrow{position:absolute;left:50%;width:4px;border-radius:999px;transform:translateX(-50%);transform-origin:50% 0}
+.forceArrow::after{content:"";position:absolute;left:50%;transform:translateX(-50%);border-left:8px solid transparent;border-right:8px solid transparent}
+.forceArrow.down{background:#d73333}.forceArrow.down::after{bottom:-12px;border-top:13px solid #d73333}
+.forceArrow.up.fb{background:#2f6fd6}.forceArrow.up.fb::after{top:-12px;border-bottom:13px solid #2f6fd6}
+.forceArrow.up.drag{background:#159447}.forceArrow.up.drag::after{top:-12px;border-bottom:13px solid #159447}
+.forceLabel{position:absolute;left:calc(50% + 18px);transform:translateY(-50%);font-size:12px;font-weight:900;background:rgba(255,255,255,.86);border-radius:999px;padding:2px 7px;white-space:nowrap}
+.forceLabel.mg{color:#d73333}.forceLabel.fb{color:#2f6fd6}.forceLabel.drag{color:#159447}
+.info{position:absolute;left:12px;right:12px;bottom:12px;background:rgba(255,255,255,.88);border:1px solid #d7e8f7;border-radius:20px;padding:10px 38px 10px 10px;font-weight:800;color:#28577f;line-height:1.55;font-size:14px;z-index:10}.info.hidden{display:none}.infoClose{position:absolute;right:10px;top:8px;width:28px;height:28px;border-radius:999px;padding:0;background:#eef3f8;color:#45688f;box-shadow:none;font-size:16px;line-height:28px;z-index:11}.showInfoBtn{position:absolute;right:12px;bottom:12px;display:none;background:rgba(255,255,255,.9);border:1px solid #d7e8f7;color:#28577f;border-radius:999px;padding:8px 12px;font-size:13px;z-index:10}.showInfoBtn.show{display:block}
+.graphs{position:sticky;top:10px;display:grid;grid-template-rows:repeat(3,340px);gap:10px;min-height:0;height:calc(100vh - 24px);overflow-y:auto;overscroll-behavior:contain;padding-right:4px;padding-bottom:calc(130vh - 80px);scroll-padding-top:10px}
+.graphCard{position:relative;background:white;border:1px solid #dce7f2;border-radius:22px;padding:10px;min-height:220px}
+.graphTitle{position:absolute;left:18px;top:9px;font-weight:900;color:#1f5f9f;background:rgba(255,255,255,.82);padding:2px 8px;border-radius:999px;z-index:2}
+canvas{width:100%;height:100%;display:block}
+.note{font-size:13px;line-height:1.55;color:#516273;background:#f8fbff;border:1px solid #e0ebf6;border-radius:16px;padding:10px;margin-top:10px}
+.modal{position:fixed;inset:0;background:#fff4e7;z-index:50;display:none;overflow:auto;padding:calc(18px + env(safe-area-inset-top)) 14px calc(130px + env(safe-area-inset-bottom))}
+.modal.show{display:block}.modalInner{width:min(880px,100%);margin:0 auto;background:#fff;border:2px solid #f0bd7e;border-radius:28px;padding:20px;box-shadow:0 15px 40px rgba(80,45,10,.12)}
+.close{position:fixed;right:14px;top:calc(14px + env(safe-area-inset-top));width:48px;height:48px;border-radius:18px;background:#e7eef6;color:#45688f;font-size:22px;z-index:60}
+.modal h2{color:#b26300;margin:0 54px 14px 0;font-size:28px}.formulaBox{background:#fff8ef;border:1.5px solid #efc58f;border-radius:22px;padding:14px;margin:12px 0;line-height:1.75}.formulaBox h3{color:#123d70;margin:0 0 8px;font-size:20px}
+.footerLink{text-align:center;margin:18px auto;color:#2f6fd6;font-weight:900}.footerLink a{color:#2f6fd6;text-decoration:underline}
+@media(max-width:900px){
+ body{overflow:auto;padding-bottom:calc(120px + env(safe-area-inset-bottom));}
+ .wrap{height:auto;grid-template-columns:1fr;overflow:visible}.controls{position:relative;top:auto;max-height:none;overflow:visible}.stageGrid{display:grid;grid-template-columns:1fr}.tubeBox{height:58vh;min-height:420px}.tube{height:calc(58vh - 52px);min-height:360px;width:178px}.scale{height:calc(58vh - 52px);min-height:360px}.graphs{min-height:660px;height:auto;overflow:visible;grid-template-rows:1fr 1fr 1fr;padding-right:0}.btns{position:fixed;left:8px;right:8px;bottom:calc(8px + env(safe-area-inset-bottom));z-index:30;background:rgba(245,249,255,.76);backdrop-filter:blur(8px);padding:8px;border:1px solid #d8e3ef;border-radius:22px;grid-template-columns:1fr 1fr 1fr}
+ .topControls{margin-bottom:10px;position:static;background:transparent;border-bottom:0;padding-bottom:0}.forceInline{flex:1;justify-content:space-between}.row{padding:9px}header{padding-top:14px} }
+</style>
+</head>
+<body>
+<header>
+  <h1>Mini Lab : ความหนืดของของเหลว</h1>
+  <div class="subtitle">ปล่อยวัตถุทรงกลมในของเหลว แล้วสังเกตตำแหน่ง ความเร็ว และความเร่งตามเวลา</div>
+</header>
+<main class="wrap">
+  <section class="card controls">
+    <div class="topControls">
+      <div class="btns">
+        <button class="play" id="playBtn">▶️ ปล่อย</button>
+        <button class="reset" id="resetBtn">🔄 รีเซ็ต</button>
+        <button class="formula" id="formulaBtn">Σ สูตรสำคัญ</button>
+      </div>
+      <label class="forceInline">แสดงเวกเตอร์แรง <span class="value">mg, FB, f</span><input id="showForces" type="checkbox"></label>
+    </div>
+    <div class="row"><label>ชนิดของเหลว</label><select id="fluid"></select></div>
+    <div class="row"><label>ชนิดวัตถุทรงกลม</label><select id="material"></select></div>
+    <div class="row"><label>รัศมีวัตถุ</label><span class="value" id="rVal"></span><input id="radius" type="range" min="2" max="16" step="1" value="16"></div>
+    <div class="row"><label>ความหนืด</label><span class="value" id="etaVal"></span><input id="eta" type="range" min="0.001" max="5.00" step="0.001" value="0.95"></div>
+    <div class="row"><label>ความหนาแน่นของของเหลว</label><span class="value" id="rhoFVal"></span><input id="rhoF" type="range" min="700" max="1400" step="10" value="1260"></div>
+    <div class="row"><label>ความยาวท่อทดลอง</label><span class="value" id="heightVal"></span><input id="height" type="range" min="5" max="50" step="1" value="5"></div>
+    <div class="row"><label>แสดงจุดทุก ๆ</label><select id="markInterval"><option value="0.2">0.2 วินาที</option><option value="0.5">0.5 วินาที</option><option value="1">1.0 วินาที</option><option value="2">2.0 วินาที</option></select></div>
+    <div class="row"><label>เร่งเวลา</label><select id="timeScale"><option value="0.2">×0.2</option><option value="0.5">×0.5</option><option value="1" selected>×1</option><option value="2">×2</option><option value="5">×5</option><option value="10">×10</option></select></div>
+
+    <div class="note">แนวคิดหลัก: เมื่อเลือกชนิดของเหลวแล้ว ค่า η และ ρ ของของเหลวจะถูกกำหนดอัตโนมัติและไม่ให้ปรับด้วยสไลเดอร์ เพื่อให้ตรงกับสมบัติของของเหลวชนิดนั้น</div>
+  </section>
+  <section class="card stageGrid">
+    <div class="tubeBox">
+      <div class="tube" id="tube"><div class="surfaceLine"></div></div>
+      <div class="scale" id="scale"></div>
+      <div class="sphere" id="sphere"></div>
+      <div id="dots"></div>
+      <div id="forceLayer" class="forceLayer"></div>
+      <div class="info" id="info"><button class="infoClose" id="infoClose" aria-label="ปิดป้ายข้อมูล">×</button><div id="infoText"></div></div><button class="showInfoBtn" id="showInfoBtn">แสดงป้ายข้อมูล</button>
+    </div>
+    <div class="graphs">
+      <div class="graphCard"><div class="graphTitle">กราฟตำแหน่ง y กับเวลา t</div><canvas id="gy"></canvas></div>
+      <div class="graphCard"><div class="graphTitle">กราฟความเร็ว v กับเวลา t</div><canvas id="gv"></canvas></div>
+      <div class="graphCard"><div class="graphTitle">กราฟความเร่ง a กับเวลา t</div><canvas id="ga"></canvas></div>
+    </div>
+  </section>
+</main>
+<div class="footerLink">ศึกษาเพิ่มเติมที่ <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">เพจคลายปมฟิสิกส์</a></div>
+<section class="modal" id="formulaModal">
+  <button class="close" id="closeFormula">❌</button>
+  <div class="modalInner">
+    <h2>สูตรสำคัญ : การตกในของเหลวหนืด</h2>
+    <div class="formulaBox"><h3>1) แรงที่เกี่ยวข้อง</h3>
+      <p>น้ำหนักของวัตถุชี้ลง ส่วนแรงพยุงและแรงต้านจากความหนืดชี้ขึ้น</p>
+      <p>\( W = mg \)</p><p>\( F_b = \rho_f Vg \)</p><p>\( F_d = 6\pi\eta r v \)</p>
+    </div>
+    <div class="formulaBox"><h3>2) สมการการเคลื่อนที่</h3>
+      <p>กำหนดทิศลงเป็นบวก จะได้</p>
+      <p>\( ma = mg - \rho_f Vg - 6\pi\eta r v \)</p>
+      <p>เมื่อวัตถุเริ่มตก ความเร็วมากขึ้น ทำให้แรงต้านมากขึ้น ความเร่งจึงค่อย ๆ ลดลง</p>
+    </div>
+    <div class="formulaBox"><h3>3) ความเร็วปลาย</h3>
+      <p>เมื่อแรงลัพธ์เป็นศูนย์ ความเร่งเป็นศูนย์ และวัตถุเคลื่อนที่ด้วยความเร็วคงที่</p>
+      <p>\( v_t = \dfrac{2r^2g(\rho_s-\rho_f)}{9\eta} \)</p>
+      <p><b>จุดที่ต้องระวัง:</b> ถ้าความหนืด \(\eta\) มากขึ้น ความเร็วปลายจะลดลง แต่ถ้ารัศมี \(r\) มากขึ้น ความเร็วปลายจะเพิ่มขึ้นแบบกำลังสอง</p>
+    </div>
+  </div>
+</section>
+<script>
+const fluids={
+  water:{name:'น้ำ',eta:0.001,rho:1000}, oil:{name:'น้ำมันพืช',eta:0.08,rho:920}, glycerin:{name:'กลีเซอรีน',eta:0.95,rho:1260}, honey:{name:'น้ำผึ้ง',eta:5.00,rho:1360}
+};
+const materials={plastic:{name:'พลาสติก',rho:1150}, glass:{name:'แก้ว',rho:2500}, steel:{name:'เหล็ก',rho:7800}, wood:{name:'ไม้เบา',rho:650}};
+const g=9.8; let state={t:0,y:0,v:0,a:0,run:false,last:0,data:[],marks:[],nextMark:0};
+const el=id=>document.getElementById(id);
+const fluidSel=el('fluid'), matSel=el('material');
+for(const [k,f] of Object.entries(fluids)){const o=document.createElement('option');o.value=k;o.textContent=f.name;fluidSel.appendChild(o)}
+for(const [k,m] of Object.entries(materials)){const o=document.createElement('option');o.value=k;o.textContent=m.name;matSel.appendChild(o)}
+fluidSel.value='glycerin'; matSel.value='steel';
+el('radius').value=16;
+el('height').value=20;
+el('eta').disabled=true;
+el('rhoF').disabled=true;
+function syncFromFluid(){const f=fluids[fluidSel.value]; el('eta').value=f.eta; el('rhoF').value=f.rho; reset(false)}
+syncFromFluid();
+fluidSel.addEventListener('change',syncFromFluid); matSel.addEventListener('change',()=>reset(false));
+['radius','eta','rhoF','height','markInterval','timeScale','showForces'].forEach(id=>el(id).addEventListener('input',()=>{updateLabels(); reset(false)}));
+el('playBtn').onclick=()=>{state.run=!state.run; el('playBtn').textContent=state.run?'⏸ หยุด':'▶️ ปล่อย'; if(state.run) state.last=performance.now()};
+el('resetBtn').onclick=()=>reset(true); el('formulaBtn').onclick=()=>{el('formulaModal').classList.add('show'); MathJax.typesetPromise?.()}; el('closeFormula').onclick=()=>el('formulaModal').classList.remove('show');
+el('infoClose').onclick=()=>{el('info').classList.add('hidden'); el('showInfoBtn').classList.add('show')};
+el('showInfoBtn').onclick=()=>{el('info').classList.remove('hidden'); el('showInfoBtn').classList.remove('show')};
+function params(){let r=+el('radius').value/1000, eta=+el('eta').value, rhoF=+el('rhoF').value, rhoS=materials[matSel.value].rho, H=+el('height').value; let V=4/3*Math.PI*r**3, m=rhoS*V, k=6*Math.PI*eta*r; return {r,eta,rhoF,rhoS,H,V,m,k}}
+function updateLabels(){const p=params(); el('rVal').textContent=(p.r*1000).toFixed(0)+' mm'; el('etaVal').textContent=(p.eta<0.01?p.eta.toFixed(3):p.eta.toFixed(2))+' Pa·s'; el('rhoFVal').textContent=p.rhoF.toFixed(0)+' kg/m³'; el('heightVal').textContent=p.H.toFixed(0)+' m'}
+function reset(full){const p0=params(); const y0=Math.min(p0.r,p0.H); state={t:0,y:y0,v:0,a:0,run:false,last:0,data:[{t:0,y:y0,v:0,a:0}],marks:[{t:0,y:y0}],nextMark:+el('markInterval').value}; el('playBtn').textContent='▶️ ปล่อย'; updateLabels(); makeScale(); drawAll();}
+function makeScale(){const sc=el('scale');sc.innerHTML=''; const H=params().H; for(let i=0;i<=7;i++){const d=H*i/7; const tick=document.createElement('div'); tick.className='tick'; tick.style.top=(i/7*100)+'%'; tick.textContent=d.toFixed(1)+' m'; sc.appendChild(tick)}}
+function step(dt){const p=params(); const maxDt=.02; let n=Math.ceil(dt/maxDt); dt=dt/n; for(let i=0;i<n;i++){state.a=g*(1-p.rhoF/p.rhoS)-(p.k/p.m)*state.v; state.v=Math.max(0,state.v+state.a*dt); state.y+=state.v*dt; state.t+=dt; while(state.t>=state.nextMark){state.marks.push({t:state.nextMark,y:state.y}); state.nextMark += +el('markInterval').value;} if(state.y>=p.H){state.y=p.H; state.run=false; el('playBtn').textContent='▶️ ปล่อย'; break;} state.data.push({t:state.t,y:state.y,v:state.v,a:state.a}); if(state.data.length>3000) state.data.shift();}}
+function yToTubePx(y, p, displayRadius){
+  const tube=el('tube');
+  const rect=tube.getBoundingClientRect();
+  const top=20, height=rect.height||660;
+  const rPix = displayRadius || 24;
+  // y คือความลึกของจุดศูนย์กลางวัตถุจากผิวของเหลว
+  // เมื่อเริ่มต้น y = r ให้ด้านบนของทรงกลมอยู่ใต้/แตะผิวของเหลวพอดี ไม่โผล่พ้นผิว
+  const yStart = Math.max(p.r, 0.0001);
+  const denom = Math.max(p.H - yStart, 0.0001);
+  const usable = Math.max(height - 2*rPix, 10);
+  return top + rPix + ((y - yStart) / denom) * usable;
+}
+function drawForces(){
+  const layer=el('forceLayer'); layer.innerHTML='';
+  if(!el('showForces')?.checked) return;
+  const p=params();
+  const displayD=Math.max(18, Math.min(54, p.r*1000*3));
+  const ypx=yToTubePx(state.y,p,displayD/2);
+  const W=p.m*g;
+  const Fb=p.rhoF*p.V*g;
+  const Fd=p.k*state.v;
+  const maxF=Math.max(W,Fb,Fd,1e-9);
+  const scaleLen=80;
+  const lenMg=Math.max(18, Math.min(110, W/maxF*scaleLen));
+  const lenFb=Math.max(18, Math.min(110, Fb/maxF*scaleLen));
+  const lenFd=Math.max(0, Math.min(110, Fd/maxF*scaleLen));
+  const add=(cls,label,xoff,ybase,len,dir)=>{
+    if(len<6) return;
+    const a=document.createElement('div'); a.className='forceArrow '+cls;
+    a.style.left=`calc(50% + ${xoff}px)`; a.style.height=len+'px';
+    if(dir==='down') a.style.top=ybase+'px'; else a.style.top=(ybase-len)+'px';
+    layer.appendChild(a);
+    const l=document.createElement('div'); l.className='forceLabel '+(cls.includes('drag')?'drag':cls.includes('fb')?'fb':'mg');
+    l.style.left=`calc(50% + ${xoff+14}px)`; l.style.top=(dir==='down'? ybase+len+6 : ybase-len-6)+'px';
+    l.textContent=label;
+    layer.appendChild(l);
+  };
+  add('down','mg',0,ypx,lenMg,'down');
+  add('up fb','FB',-42,ypx,lenFb,'up');
+  add('up drag','f',42,ypx,lenFd,'up');
+}
+function drawTube(){const p=params(); const sph=el('sphere'); const d=Math.max(18, Math.min(54, p.r*1000*3)); const ypx=yToTubePx(state.y,p,d/2); sph.style.width=d+'px'; sph.style.height=d+'px'; sph.style.top=ypx+'px'; const dots=el('dots'); dots.innerHTML=''; state.marks.forEach((m)=>{if(m.y<=p.H){let yy=yToTubePx(m.y,p,d/2); const dot=document.createElement('div'); dot.className='dot'; dot.style.top=yy+'px'; dots.appendChild(dot); const lab=document.createElement('div'); lab.className='dotLabel'; lab.style.top=yy+'px'; lab.textContent=m.t.toFixed(1).replace('.0','')+' s'; dots.appendChild(lab)}});
+ drawForces();
+ const vt=(2*p.r*p.r*g*(p.rhoS-p.rhoF))/(9*p.eta); el('infoText').innerHTML=`เวลา t = ${state.t.toFixed(2)} s &nbsp; | &nbsp; จุดทุก ${(+el('markInterval').value).toFixed(1)} s &nbsp; | &nbsp; เร่งเวลา ×${(+el('timeScale').value||1)}<br>ตำแหน่ง y = ${state.y.toFixed(3)} m &nbsp; | &nbsp; v = ${state.v.toFixed(3)} m/s<br>a = ${state.a.toFixed(3)} m/s²<br>v สุดท้าย / v<sub>t</sub> ≈ ${Math.max(0,vt).toFixed(3)} m/s`;}
+function drawGraph(canvasId, key, unit){
+ const c=el(canvasId), box=c.parentElement.getBoundingClientRect();
+ const ratio=devicePixelRatio||1; c.width=box.width*ratio; c.height=box.height*ratio;
+ const ctx=c.getContext('2d'); ctx.setTransform(ratio,0,0,ratio,0,0);
+ const W=box.width,H=box.height; ctx.clearRect(0,0,W,H);
+ const pad={l:48,r:14,t:38,b:34}; const data=state.data.length?state.data:[{t:0,y:0,v:0,a:0}];
+ const p=params(); const vt=Math.max(0,(2*p.r*p.r*g*(p.rhoS-p.rhoF))/(9*p.eta));
+ const a0=g*(1-p.rhoF/p.rhoS);
+ const maxT=Math.max(5, Math.ceil((data[data.length-1]?.t||0)*10)/10, ...data.map(d=>d.t));
+ let vals=data.map(d=>d[key]); let minV=0, maxV=Math.max(.1,...vals);
+ if(key==='y'){minV=0; maxV=p.H;}
+ if(key==='v'){minV=0; maxV=Math.max(vt*1.12, ...vals, .1);}
+ if(key==='a'){minV=0; maxV=Math.max(a0*1.08, ...vals, .5);}
+ const xOf=t=>pad.l+(t/maxT)*(W-pad.l-pad.r);
+ const yOf=v=>H-pad.b-((v-minV)/(maxV-minV))*(H-pad.t-pad.b);
+ ctx.strokeStyle='#d7e3ef'; ctx.lineWidth=1; ctx.beginPath();
+ for(let i=0;i<5;i++){let y=pad.t+(H-pad.t-pad.b)*i/4; ctx.moveTo(pad.l,y); ctx.lineTo(W-pad.r,y)}
+ for(let i=0;i<6;i++){let x=pad.l+(W-pad.l-pad.r)*i/5; ctx.moveTo(x,pad.t); ctx.lineTo(x,H-pad.b)} ctx.stroke();
+ if(key==='v' && vt>0){
+   const yvt=yOf(vt); ctx.save(); ctx.setLineDash([7,5]); ctx.strokeStyle='#159447'; ctx.lineWidth=2;
+   ctx.beginPath(); ctx.moveTo(pad.l,yvt); ctx.lineTo(W-pad.r,yvt); ctx.stroke(); ctx.restore();
+   ctx.fillStyle='#159447'; ctx.font='bold 12px system-ui'; ctx.fillText('v สุดท้าย ≈ '+vt.toFixed(2)+' m/s', Math.max(pad.l+6,W-145), Math.max(pad.t+14,yvt-6));
+ }
+ const color = key==='v' ? '#159447' : key==='a' ? '#f27c00' : '#2f6fd6';
+ ctx.strokeStyle=color; ctx.lineWidth=3; ctx.beginPath();
+ data.forEach((d,i)=>{let x=xOf(d.t); let y=yOf(d[key]); if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y)}); ctx.stroke();
+ ctx.fillStyle=color;
+ data.filter((_,i)=>i%Math.max(1,Math.floor(data.length/16))===0 || i===data.length-1).forEach(d=>{ctx.beginPath();ctx.arc(xOf(d.t),yOf(d[key]),3,0,Math.PI*2);ctx.fill();});
+ ctx.fillStyle='#40566d'; ctx.font='12px system-ui';
+ ctx.fillText('0',pad.l-16,H-pad.b+15); ctx.fillText(maxT.toFixed(1)+' s',W-58,H-pad.b+15);
+ ctx.fillText(maxV.toFixed(key==='y'?1:2)+' '+unit,8,pad.t+4); ctx.fillText(minV.toFixed(0),12,H-pad.b);
+}
+function drawAll(){drawTube(); drawGraph('gy','y','m'); drawGraph('gv','v','m/s'); drawGraph('ga','a','m/s²')}
+function loop(now){if(state.run){let dt=Math.min(.05,(now-state.last)/1000); state.last=now; step(dt*(+el('timeScale').value||1));} drawAll(); requestAnimationFrame(loop)}
+reset(true); requestAnimationFrame(loop);
+</script>
+</body>
+</html>

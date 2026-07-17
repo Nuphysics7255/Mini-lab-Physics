@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>แรงลอยตัว+อาร์คิมิดีส</title>
+  <style>
+    :root{
+      --ink:#0f172a;
+      --water:#dbeafe;
+      --box:#b98100;
+      --panel:#ffffff;
+      --accent:#0ea5e9;
+    }
+    body{
+      margin:0;
+      background:#fff;
+      font-family:system-ui,"Noto Sans Thai",sans-serif;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:6px;
+      padding:10px 4px 20px;
+    }
+    .main-title{
+      margin:2px 0 0;
+      text-align:center;
+      color:#2563eb;
+      font-size:24px;
+      font-weight:800;
+      line-height:1.25;
+    }
+    canvas{
+      border:1px solid #e2e8f0;
+      border-radius:10px;
+      touch-action:none;
+      max-width:100%;
+      background:#ffffff;
+    }
+    button{
+      border:1px solid #d1d5db;
+      background:#f8fafc;
+      border-radius:8px;
+      padding:5px 14px;
+      font-size:13px;
+      cursor:pointer;
+      margin:0 3px 4px 3px;
+    }
+    #principleModal,
+    #proofModal{
+      position:fixed;
+      inset:0;
+      background:rgba(15,23,42,0.25);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index:50;
+      padding:16px;
+      box-sizing:border-box;
+    }
+    #principleBox,
+    #proofBox{
+      position:relative;
+      background:#fff;
+      border:2px solid #0ea5e9;
+      border-radius:16px;
+      padding:56px 26px 24px;
+      width:min(92vw, 860px);
+      max-height:88vh;
+      overflow-y:auto;
+      box-shadow:0 14px 40px rgba(15,23,42,0.25);
+      font-size:18px;
+      line-height:1.7;
+    }
+    .formula-box{
+      border:2px solid #0ea5e9;
+      background:#e0f2fe;
+      border-radius:12px;
+      padding:12px 14px;
+      margin:12px 0 16px;
+      text-align:center;
+      font-weight:600;
+      font-size:18px;
+    }
+    #closePrinciple,
+    #closeProof{
+      position:absolute;
+      top:12px;
+      right:12px;
+      background:#ef4444;
+      color:#fff;
+      border:none;
+      margin:0;
+      padding:8px 14px;
+      border-radius:10px;
+      cursor:pointer;
+      font-weight:700;
+      z-index:2;
+    }
+    #proofBox{
+      border-color:#f97316;
+      background:linear-gradient(180deg,#fff7ed 0%,#ffffff 40%);
+    }
+    #proofBox h3{
+      color:#c2410c;
+      margin-top:0;
+      margin-bottom:6px;
+    }
+    .more-link{
+      margin-top:8px;
+      font-size:13px;
+      color:#0f172a;
+    }
+    .more-link a{
+      color:#0ea5e9;
+      text-decoration:none;
+      font-weight:600;
+    }
+    .more-link a:hover{
+      text-decoration:underline;
+    }
+    @media (max-width: 768px){
+      .main-title{
+        font-size:20px;
+        padding:0 10px;
+      }
+      #principleModal,
+      #proofModal{
+        align-items:flex-start;
+        padding:
+          calc(12px + env(safe-area-inset-top))
+          10px
+          calc(24px + env(safe-area-inset-bottom))
+          10px;
+        overflow-y:auto;
+      }
+      #principleBox,
+      #proofBox{
+        width:min(96vw, 860px);
+        max-height:none;
+        margin:0 auto;
+        padding:58px 16px calc(120px + env(safe-area-inset-bottom)) 16px;
+        font-size:16px;
+      }
+      .formula-box{
+        font-size:16px;
+      }
+      #closePrinciple,
+      #closeProof{
+        top:calc(10px + env(safe-area-inset-top));
+        right:10px;
+      }
+    }
+
+  </style>
+  <script>
+    window.MathJax = { tex:{inlineMath:[['$','$'],['\\(','\\)']]} };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+</head>
+<body>
+  <h3 class="main-title">Mini Lab : แรงลอยตัว+อาร์คิมิดีส</h3>
+  <div>
+    <button id="btnVectors">แสดงเวกเตอร์ของแรง</button>
+    <button id="btnPrinciple">อธิบายหลักการ</button>
+    <button id="btnToggleFB">พิสูจน์สูตรแรงลอยตัว</button>
+    <button id="btnReset">รีเซ็ต</button>
+  </div>
+  <canvas id="cv" width="520" height="640"></canvas>
+
+  <p class="more-link">
+    ศึกษาเพิ่มเติมที่ <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noreferrer">เพจคลายปมฟิสิกส์</a>
+  </p>
+
+  <!-- Modal อธิบายหลักการ -->
+  <div id="principleModal">
+    <div id="principleBox">
+      <h3 style="margin-top:0;margin-bottom:12px;font-size:28px;line-height:1.3;">หลักการของอาร์คีมีดิส</h3>
+      <p>วัตถุที่จุ่มอยู่ในของเหลวจะได้รับ <b>แรงลอยตัว</b> กระทำในทิศขึ้น</p>
+      <div class="formula-box">
+        แรงลอยตัว (F<sub>B</sub>) = น้ำหนักของของเหลวที่ถูกแทนที่<br/>
+        $$F_B = \rho g V_{จม}$$
+      </div>
+      <p>ถ้าจุ่มลึกขึ้น → ปริมาตรที่จมมากขึ้น → แรงลอยตัวมากขึ้น</p>
+      <button id="closePrinciple">ปิด</button>
+    </div>
+  </div>
+
+  <!-- Modal พิสูจน์ -->
+  <div id="proofModal">
+    <div id="proofBox">
+      <h3 style="margin-top:0;margin-bottom:12px;font-size:28px;line-height:1.3;">พิสูจน์สูตรด้วยแรงดันของของเหลว</h3>
+      <p>ของเหลวลึกมากขึ้น → แรงดันมากขึ้น \((P = \rho g h)\)</p>
+      <div style="background:#fff; border-left:4px solid #0ea5e9; padding:6px 10px; border-radius:8px; margin:6px 0 10px 0;">
+        <p style="margin:3px 0;">แรงจากของเหลวบนพื้นที่ A: \(F = PA = \rho g h A\)</p>
+      </div>
+      <p style="margin:4px 0;">ด้านล่างลึกกว่า → ถูกดันขึ้นมากกว่า</p>
+      <p style="margin:4px 0;">ถ้าด้านบนลึก \(h_1\), ด้านล่างลึก \(h_2\)</p>
+      <p style="margin:2px 0;">\(F_{ล่าง} = \rho g h_2 A\)</p>
+      <p style="margin:2px 0;">\(F_{บน} = \rho g h_1 A\)</p>
+      <p style="margin:4px 0;"><b>แรงลอยตัว = แรงล่าง − แรงบน</b></p>
+      <div class="formula-box" style="background:#dbeafe;">
+        \(F_B = \rho g h_2 A - \rho g h_1 A = \rho g (h_2 - h_1) A\)
+      </div>
+      <p style="margin:4px 0;">และ \((h_2 - h_1)A = V_{จม}\)</p>
+      <div class="formula-box" style="background:#fef9c3; border-color:#eab308;">
+        ดังนั้น &nbsp; <b>\(F_B = \rho g V_{จม}\)</b>
+      </div>
+      <!-- ตัดประโยคที่ผู้ใช้ไม่ต้องการออกแล้ว -->
+      <button id="closeProof">ปิด</button>
+    </div>
+  </div>
+
+<script>
+const cv = document.getElementById("cv");
+const ctx = cv.getContext("2d");
+const btnVectors = document.getElementById("btnVectors");
+const btnPrinciple = document.getElementById("btnPrinciple");
+const btnToggleFB = document.getElementById("btnToggleFB");
+const btnReset = document.getElementById("btnReset");
+const principleModal = document.getElementById("principleModal");
+const closePrinciple = document.getElementById("closePrinciple");
+const proofModal = document.getElementById("proofModal");
+const closeProof = document.getElementById("closeProof");
+
+let showVectors = false;
+let modeFB = true;
+
+// ฟิสิกส์
+const g = 10;
+const boxWeight = 15;
+const rho = 1000;
+const boxSizeM = 0.10;
+const boxArea = boxSizeM**2;
+
+// แปลงเป็น px
+const boxSizePx = 60;
+const pxPerM = boxSizePx / boxSizeM;
+
+// layout
+const cx = 260;
+const contWidthPx = boxSizePx * 2;
+const contX = cx - contWidthPx/2;
+const contTop = 200;
+const baseY = 520;
+const contBottom = baseY;
+
+// ถังซ้าย
+const tankArea = 0.04;
+const overflowHeightM = 0.30;
+let waterVolumeLeft = tankArea * overflowHeightM;
+let rightVolume = 0;
+
+// ถังขวา (ลดลง 20px ตามเวอร์ชันก่อน)
+const rightTankWidth = 60;
+const rightTankHeight = 130;
+const pipeMidX = contX + contWidthPx + 40;
+const rightScaleH = 35;
+const rightTankX = (pipeMidX + 40 - 100) + 50;
+const rightTankBottom = baseY - rightScaleH;
+const rightTankTop = rightTankBottom - rightTankHeight;
+const rightTankArea = 0.01;
+
+// แขวน
+const baseAnchorY = 40;
+const baseBoxTopY = 220;
+let assemblyOffsetY = 0;
+const minAssemblyOffset = -40;
+const maxAssemblyOffset = 160;
+
+// drag
+let dragging = false;
+let dragOffsetY = 0;
+
+// flags
+let isOverflowing = false;
+
+// ค่าสูงสุดที่แสดงบนตาชั่งในโหมดพิสูจน์
+let fbDisplayMax = 0;
+
+const initState = {
+  waterVolumeLeft: tankArea * overflowHeightM,
+  rightVolume: 0,
+  assemblyOffsetY: 0,
+  modeFB: true,
+  fbDisplayMax: 0
+};
+
+function resetAll(){
+  waterVolumeLeft = initState.waterVolumeLeft;
+  rightVolume = initState.rightVolume;
+  assemblyOffsetY = initState.assemblyOffsetY;
+  modeFB = initState.modeFB;
+  fbDisplayMax = initState.fbDisplayMax;
+  btnToggleFB.textContent = "พิสูจน์สูตรแรงลอยตัว";
+  showVectors = false;
+  btnVectors.textContent = "แสดงเวกเตอร์ของแรง";
+  proofModal.style.display = "none";
+}
+
+function drawFSubB(ctx, x, y, textAfter=""){
+  ctx.save();
+  ctx.fillStyle = "#0ea5e9";
+  ctx.font = "bold 13px system-ui,sans-serif";
+  ctx.fillText("F", x, y);
+  ctx.font = "11px system-ui,sans-serif";
+  const subYOffset = 3;
+  const subXOffset = ctx.measureText("F").width - 1;
+  ctx.fillText("B", x + subXOffset, y + subYOffset);
+  if(textAfter){
+    ctx.font = "13px system-ui,sans-serif";
+    const baseWidth = ctx.measureText("F").width + ctx.measureText("B").width - 1;
+    ctx.fillText(textAfter, x + baseWidth + 6, y);
+  }
+  ctx.restore();
+}
+
+function hitAssembly(mx,my){
+  const top = baseAnchorY + assemblyOffsetY - 12;
+  const bottom = baseBoxTopY + boxSizePx + assemblyOffsetY + 12;
+  const left = cx - 90;
+  const right = cx + 90;
+  return mx>=left && mx<=right && my>=top && my<=bottom;
+}
+cv.addEventListener("pointerdown",e=>{
+  const r = cv.getBoundingClientRect();
+  const x = e.clientX - r.left, y = e.clientY - r.top;
+  if(hitAssembly(x,y)){ dragging = true; dragOffsetY = y - assemblyOffsetY; }
+});
+cv.addEventListener("pointermove",e=>{
+  if(!dragging) return;
+  const y = e.clientY - cv.getBoundingClientRect().top;
+  assemblyOffsetY = y - dragOffsetY;
+  assemblyOffsetY = Math.max(minAssemblyOffset,Math.min(maxAssemblyOffset,assemblyOffsetY));
+});
+cv.addEventListener("pointerup",()=>dragging=false);
+cv.addEventListener("pointerleave",()=>dragging=false);
+
+function drawSpring(x,topY,len,turns=6){
+  const step=len/turns;
+  ctx.beginPath(); ctx.moveTo(x,topY);
+  for(let i=1;i<=turns;i++){
+    const y=topY+i*step;
+    const dir=(i%2===0)?-6:6;
+    ctx.lineTo(x+dir,y);
+  }
+  ctx.lineTo(x,topY+len);
+  ctx.strokeStyle="#1d4ed8"; ctx.lineWidth=2; ctx.stroke();
+}
+function drawArrow(x1,y1,x2,y2,color,label,dx=5,dy=-4){
+  const dxv=x2-x1, dyv=y2-y1, ang=Math.atan2(dyv,dxv), h=8;
+  ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=2.3;
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x2,y2);
+  ctx.lineTo(x2-h*Math.cos(ang-Math.PI/6),y2-h*Math.sin(ang-Math.PI/6));
+  ctx.lineTo(x2-h*Math.cos(ang+Math.PI/6),y2-h*Math.sin(ang+Math.PI/6));
+  ctx.closePath(); ctx.fill();
+  if(label){
+    ctx.font="bold 13px system-ui,sans-serif";
+    ctx.fillText(label,x2+dx,y2+dy);
+  }
+}
+
+function submergedDepthPx(boxTop, boxBottom, surfaceY){
+  if (boxBottom <= surfaceY) return 0;
+  if (boxTop >= surfaceY)   return boxSizePx;
+  return boxBottom - surfaceY;
+}
+
+function render(){
+  ctx.clearRect(0,0,cv.width,cv.height);
+  isOverflowing = false;
+
+  const boxTop = baseBoxTopY + assemblyOffsetY;
+  const boxBottom = boxTop + boxSizePx;
+
+  const maxVolumeAtOverflow = tankArea * overflowHeightM;
+
+  const waterHeight0_m = waterVolumeLeft / tankArea;
+  const waterSurface0_y = contBottom - waterHeight0_m * pxPerM;
+
+  let subDepthPx0 = submergedDepthPx(boxTop, boxBottom, waterSurface0_y);
+  subDepthPx0 = Math.max(0, Math.min(boxSizePx, subDepthPx0));
+  let Vsub0 = boxArea * (subDepthPx0/pxPerM);
+
+  let totalVol = waterVolumeLeft + Vsub0;
+  let currentWaterSurfaceY;
+  let Vsub;
+
+  if (totalVol > maxVolumeAtOverflow){
+    const overflowVol = totalVol - maxVolumeAtOverflow;
+    waterVolumeLeft -= overflowVol;
+    if (waterVolumeLeft < 0) waterVolumeLeft = 0;
+    rightVolume += overflowVol;
+    isOverflowing = true;
+
+    currentWaterSurfaceY = contBottom - overflowHeightM * pxPerM;
+
+    let subDepthPxFinal = submergedDepthPx(boxTop, boxBottom, currentWaterSurfaceY);
+    subDepthPxFinal = Math.max(0, Math.min(boxSizePx, subDepthPxFinal));
+    Vsub = boxArea * (subDepthPxFinal/pxPerM);
+  } else {
+    const newHeight_m = totalVol / tankArea;
+    currentWaterSurfaceY = contBottom - newHeight_m * pxPerM;
+
+    let subDepthPxFinal = submergedDepthPx(boxTop, boxBottom, currentWaterSurfaceY);
+    subDepthPxFinal = Math.max(0, Math.min(boxSizePx, subDepthPxFinal));
+    Vsub = boxArea * (subDepthPxFinal/pxPerM);
+  }
+
+  // แรงลอยตัว
+  let Fb = rho * g * Vsub;
+  if (Fb > boxWeight) Fb = boxWeight;
+  const T = boxWeight - Fb;
+
+  // น้ำหนักจริงจากน้ำที่ไหลไปแล้ว
+  const weightRight_real = rho * g * rightVolume;
+
+  // น้ำหนักที่โชว์บนตาชั่ง
+  let weightRight_display;
+  if (modeFB) {
+    if (Fb > fbDisplayMax) {
+      fbDisplayMax = Fb;
+    }
+    weightRight_display = fbDisplayMax;
+  } else {
+    weightRight_display = weightRight_real;
+  }
+
+  // น้ำในถังขวา
+  let rightHeightM = rightVolume / rightTankArea;
+  let rightWaterHeightPx = rightHeightM * pxPerM;
+  if (rightWaterHeightPx > rightTankHeight - 4) rightWaterHeightPx = rightTankHeight - 4;
+  const rightWaterTop = rightTankBottom - rightWaterHeightPx;
+
+  // ===== วาด =====
+  // พื้น
+  ctx.fillStyle="#000";
+  ctx.fillRect(40, baseY, cv.width-80, 18);
+
+  // ถังซ้าย
+  ctx.lineWidth=3; ctx.strokeStyle="#000";
+  ctx.beginPath(); ctx.moveTo(contX, contTop); ctx.lineTo(contX, contBottom); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(contX+contWidthPx, contTop); ctx.lineTo(contX+contWidthPx, contBottom); ctx.stroke();
+  ctx.fillStyle="#000"; ctx.fillRect(contX, contBottom, contWidthPx, 18);
+
+  // น้ำซ้าย
+  ctx.fillStyle="rgba(147,197,253,0.9)";
+  ctx.fillRect(contX+1, currentWaterSurfaceY, contWidthPx-2, contBottom - currentWaterSurfaceY);
+
+  // ท่อหลัก
+  const pipeY = contBottom - overflowHeightM*pxPerM;
+  ctx.lineWidth=6; ctx.strokeStyle="#0f172a";
+  ctx.beginPath();
+  ctx.moveTo(contX+contWidthPx, pipeY);
+  ctx.lineTo(pipeMidX, pipeY);
+  ctx.lineTo(pipeMidX, rightTankTop);
+  ctx.stroke();
+
+  // เส้นขาวบนท่อแนวนอน (จบที่ปลายท่อดำ)
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = isOverflowing ? "#38bdf8" : "#ffffff";
+  ctx.beginPath();
+  ctx.moveTo(contX + contWidthPx - 2, pipeY);
+  ctx.lineTo(pipeMidX, pipeY);
+  ctx.stroke();
+
+  // ปลายท่อดำสั้นแนวดิ่ง + เส้นขาว/ฟ้าสั้นๆ กลางท่อ
+  const tipLen = 18;
+  const innerLen = 12;
+  const tipStartY = pipeY;
+  const tipEndY = pipeY + tipLen;
+
+  // ท่อดำสั้น
+  ctx.lineWidth = 6;
+  ctx.strokeStyle = "#0f172a";
+  ctx.beginPath();
+  ctx.moveTo(pipeMidX, tipStartY);
+  ctx.lineTo(pipeMidX, tipEndY);
+  ctx.stroke();
+
+  // เส้นขาวกลางท่อ (เป็นฟ้าเมื่อมีน้ำไหล)
+  const innerStartY = tipStartY + (tipLen - innerLen)/2;
+  const innerEndY = innerStartY + innerLen;
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = isOverflowing ? "#38bdf8" : "#ffffff";
+  ctx.beginPath();
+  ctx.moveTo(pipeMidX, innerStartY);
+  ctx.lineTo(pipeMidX, innerEndY);
+  ctx.stroke();
+
+  // สายน้ำโค้ง
+  if (isOverflowing){
+    ctx.strokeStyle="rgba(147,197,253,0.8)";
+    ctx.lineWidth=5;
+    ctx.beginPath();
+    const startX = pipeMidX;
+    const startY = tipEndY;
+    const endX = rightTankX + rightTankWidth/2;
+    const endY = rightTankBottom;
+    const ctrlX = (startX + endX)/2;
+    const ctrlY = startY + 50;
+    ctx.moveTo(startX, startY);
+    ctx.quadraticCurveTo(ctrlX, ctrlY, endX, endY);
+    ctx.stroke();
+  }
+
+  // ตาชั่งขวา
+  ctx.fillStyle="#6b7280";
+  ctx.fillRect(rightTankX-10, baseY - rightScaleH, rightTankWidth+20, rightScaleH);
+  ctx.fillStyle="#fff";
+  ctx.fillRect(rightTankX-4, baseY - rightScaleH + 6, rightTankWidth+8, rightScaleH - 12);
+  ctx.strokeStyle="#000";
+  ctx.strokeRect(rightTankX-4, baseY - rightScaleH + 6, rightTankWidth+8, rightScaleH - 12);
+  ctx.fillStyle="#000"; ctx.font="bold 13px system-ui"; ctx.textAlign="center";
+  ctx.fillText(weightRight_display.toFixed(1)+" N", rightTankX + rightTankWidth/2, baseY - rightScaleH + 25);
+  ctx.textAlign="left";
+
+  // ถังขวา
+  ctx.lineWidth=3; ctx.strokeStyle="#000";
+  ctx.beginPath(); ctx.moveTo(rightTankX, rightTankTop); ctx.lineTo(rightTankX, rightTankBottom); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(rightTankX+rightTankWidth, rightTankTop); ctx.lineTo(rightTankX+rightTankWidth, rightTankBottom); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(rightTankX, rightTankBottom); ctx.lineTo(rightTankX+rightTankWidth, rightTankBottom); ctx.stroke();
+
+  // น้ำในถังขวา
+  if (rightVolume > 0){
+    ctx.fillStyle="rgba(147,197,253,0.9)";
+    ctx.fillRect(rightTankX+1, rightWaterTop, rightTankWidth-2, rightTankBottom - rightWaterTop);
+    ctx.strokeStyle="rgba(15,23,42,0.35)";
+    ctx.beginPath();
+    ctx.moveTo(rightTankX, rightWaterTop);
+    ctx.lineTo(rightTankX+rightTankWidth, rightWaterTop);
+    ctx.stroke();
+  }
+
+  // ชุดแขวน
+  const anchor = baseAnchorY + assemblyOffsetY;
+  ctx.beginPath(); ctx.arc(cx,anchor,7,0,Math.PI*2);
+  ctx.strokeStyle="#1f2937"; ctx.lineWidth=2; ctx.stroke();
+
+  const scaleTop = anchor + 6;
+  const scaleW = 50;
+  ctx.strokeStyle="#1d4ed8"; ctx.lineWidth=2;
+  ctx.strokeRect(cx-scaleW/2, scaleTop, scaleW, 100);
+
+  const springLen = 45 + (T-5)*2;
+  drawSpring(cx, scaleTop, springLen);
+
+  ctx.beginPath(); ctx.moveTo(cx, scaleTop + springLen); ctx.lineTo(cx, boxTop-10); ctx.strokeStyle="#1d4ed8"; ctx.stroke();
+
+  // จุดเกี่ยว
+  ctx.beginPath(); ctx.arc(cx, boxTop-10, 5, 0, Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx, boxTop-5); ctx.lineTo(cx, boxTop); ctx.stroke();
+
+  // กล่อง
+  ctx.fillStyle="rgba(185,129,0,1)";
+  ctx.fillRect(cx-boxSizePx/2, boxTop, boxSizePx, boxSizePx);
+  ctx.strokeStyle="#000"; ctx.strokeRect(cx-boxSizePx/2, boxTop, boxSizePx, boxSizePx);
+  if(!showVectors){
+    ctx.fillStyle="#000"; ctx.font="bold 13px system-ui"; ctx.textAlign="center";
+    ctx.fillText("15 N", cx, boxTop+boxSizePx/2+4);
+  }
+
+  // เลือกตัวเลขที่จะแสดงให้เท่ากันตอนนิ่งๆ
+  let displayedRightVol = rightVolume;
+  if (!dragging && rightVolume > 0) {
+    // ยังไม่ยก ไม่ลาก ให้โชว์เท่ากับ Vsub เพื่อไม่ให้งง
+    displayedRightVol = Vsub;
+  }
+
+  // ป้ายข้อมูลบนซ้าย
+  ctx.textAlign="left"; ctx.font="12px system-ui"; ctx.fillStyle="#000";
+  ctx.fillText("ρ น้ำ = 1000 kg/m³", 24, 20);
+  ctx.fillText("V กล่อง = 0.001 m³", 24, 36);
+  ctx.fillText("V จม ปัจจุบัน = "+Vsub.toFixed(5)+" m³", 24, 52);
+  ctx.fillText("ปริมาตรน้ำที่เหลือในถังซ้าย = "+waterVolumeLeft.toFixed(5)+" m³", 24, 68);
+  ctx.fillText("ปริมาตรที่ไหลไปถังขวา = "+displayedRightVol.toFixed(5)+" m³", 24, 84);
+
+  // ป้าย FB ข้างกล่อง
+  drawFSubB(ctx, cx + boxSizePx/2 + 8, boxTop + boxSizePx/2, "= " + Fb.toFixed(1) + " N");
+
+  // ป้าย T
+  ctx.fillStyle="#000";
+  ctx.font="bold 14px system-ui";
+  ctx.fillText("T = "+T.toFixed(1)+" N", cx+65, scaleTop+28);
+
+  if(showVectors){
+    const k=5;
+    drawArrow(cx, boxTop, cx, boxTop - T*k, "#ef4444", "T="+T.toFixed(1)+" N");
+    const boxCy = boxTop + boxSizePx/2;
+    drawArrow(cx, boxCy, cx, boxCy + boxWeight*k, "#0f172a", "mg=15 N", -50, 25);
+    if(Fb>0){
+      // เอาป้าย F_B ออกจากปลายลูกศรตามที่ขอ
+      drawArrow(cx+30, boxTop + boxSizePx, cx+30, boxTop + boxSizePx - Fb*k, "#0ea5e9", "", 8, -4);
+    }
+  }
+
+  requestAnimationFrame(render);
+}
+render();
+
+// ปุ่ม
+btnVectors.onclick = ()=>{
+  showVectors = !showVectors;
+  btnVectors.textContent = showVectors ? "ซ่อนเวกเตอร์ของแรง" : "แสดงเวกเตอร์ของแรง";
+};
+btnReset.onclick = ()=>resetAll();
+btnPrinciple.onclick = ()=>{
+  principleModal.style.display = "flex";
+  if(window.MathJax) MathJax.typesetPromise();
+};
+closePrinciple.onclick = ()=>principleModal.style.display="none";
+principleModal.onclick = e=>{ if(e.target===principleModal) principleModal.style.display="none"; };
+
+btnToggleFB.onclick = ()=>{
+  proofModal.style.display = "flex";
+  if(window.MathJax) MathJax.typesetPromise();
+};
+
+closeProof.onclick = ()=>proofModal.style.display = "none";
+proofModal.onclick = e=>{ if(e.target===proofModal) proofModal.style.display="none"; };
+</script>
+</body>
+</html>

@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mini Lab : ความดันเกจ</title>
+  <script>
+    window.MathJax = { tex: { inlineMath: [['\\(','\\)'], ['$', '$']] }, svg: { fontCache: 'global' } };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+  <style>
+    :root{
+      --bg:#f4f7fb; --card:#ffffff; --ink:#14213d; --muted:#5b677a;
+      --blue:#2b7fff; --water:#63b3ff; --gas:#ffe6a7; --red:#e63946; --green:#2a9d8f; --orange:#f4a261; --purple:#7b2cbf;
+      --line:#d6dfec; --shadow:0 10px 28px rgba(20,33,61,.10);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Tahoma,sans-serif;background:linear-gradient(180deg,#eef6ff,var(--bg));color:var(--ink)}
+    header{padding:14px 18px;text-align:center;background:#fff;box-shadow:0 2px 14px rgba(0,0,0,.08);position:sticky;top:0;z-index:5}
+    header h1{margin:0;font-size:clamp(22px,4vw,36px);font-weight:900;color:#0b3d91}
+    .wrap{max-width:1200px;margin:14px auto 24px;padding:0 12px;display:grid;grid-template-columns:1.25fr .75fr;gap:14px}
+    .card{background:rgba(255,255,255,.96);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);overflow:hidden}
+    .card h2{font-size:18px;margin:0;padding:12px 14px;background:#f7fbff;border-bottom:1px solid var(--line)}
+    .stage{padding:10px;position:relative;min-height:560px}
+    .panel{padding:12px;display:grid;gap:12px}
+    .control{border:1px solid #e1e8f2;background:#fbfdff;border-radius:14px;padding:10px}
+    .control label{display:flex;justify-content:space-between;gap:10px;font-weight:800;font-size:14px;margin-bottom:7px}
+    .row{display:grid;grid-template-columns:34px 1fr 88px 34px;gap:8px;align-items:center}
+    button,.btn{border:0;border-radius:12px;padding:9px 12px;background:#0b64d8;color:#fff;font-weight:800;cursor:pointer;box-shadow:0 4px 10px rgba(11,100,216,.18)}
+    button.secondary{background:#e9f1fb;color:#14345f;box-shadow:none;border:1px solid #cddbed}
+    button.warn{background:#e63946}
+    #formulaBtn{background:#f59e0b !important;color:white}
+    #formulaBtn:hover{background:#ea8c00 !important}
+    input[type="range"]{width:100%}
+    input[type="number"]{width:100%;border:1px solid #cbd7e6;border-radius:10px;padding:8px;font-weight:800;text-align:center;background:white;color:var(--ink)}
+    .mode{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .mode button.active{background:#0b64d8;color:white}
+    .mode button:not(.active){background:#eef4fb;color:#243b5a;border:1px solid #d4e0ef;box-shadow:none}
+    .note{font-size:13px;line-height:1.45;color:#4b5c72;background:#fff8e8;border:1px solid #ffe0a3;padding:10px;border-radius:12px}
+    #scene{width:100%;height:520px;display:block;background:linear-gradient(180deg,#ffffff,#f7fbff);border-radius:14px;border:1px solid #dfe8f4}
+    .small{font-size:12px;fill:#475569}.label{font-size:16px;font-weight:800;fill:#102a43}.formula{font-size:15px;font-weight:800;fill:#102a43}.dragHint{font-size:12px;fill:#64748b}
+    .callout{font-size:14px;font-weight:900}.calloutBox{fill:#fff;stroke-width:2}.thinRed{stroke:#e63946;stroke-width:1.5}.thinBlue{stroke:#7db7f5;stroke-width:2}.draggable{cursor:move;touch-action:none;user-select:none}
+    .footer{text-align:center;color:#0b3d91;font-weight:900;padding:12px 8px 18px}
+    .formulaBox{display:none;position:fixed;inset:18px;z-index:20;background:#fff;border-radius:20px;box-shadow:0 20px 80px rgba(0,0,0,.25);padding:18px;overflow:auto;border:1px solid #d7e2f0}
+    .formulaBox.open{display:block}.formulaBox h2{margin-top:0;color:#0b3d91;font-size:19px}.formulaBox{font-size:14px}.formulaBox .eq{font-size:13px;line-height:1.45;background:#f8fbff;border:1px solid #dce8f6;border-radius:14px;padding:9px 10px;margin:7px 0;overflow-x:auto}.formulaBox .formulaLine{display:block;font-size:13px;font-weight:800;color:#102a43;white-space:normal}.formulaBox mjx-container{font-size:78% !important;line-height:1.1 !important}.formulaBox mjx-container[jax="SVG"][display="true"]{font-size:72% !important;margin:.2em 0 !important;text-align:left !important}.formulaBox mjx-container[jax="SVG"]{font-size:78% !important}.formulaBox mjx-container svg{max-width:100% !important}.topBtns{display:flex;gap:8px;flex-wrap:wrap}.legend{display:flex;gap:8px;flex-wrap:wrap;font-size:12px;color:#475569}.chip{display:inline-flex;align-items:center;gap:5px}.dot{width:12px;height:12px;border-radius:50%}
+
+    /* แก้ MathJax โตผิดปกติ: จำกัดสไตล์ SVG เฉพาะ #scene ไม่ให้ไปโดน SVG ของ MathJax */
+    #formulaBtn{background:#f59e0b !important;color:white !important;box-shadow:0 4px 10px rgba(245,158,11,.22) !important}
+    #formulaBtn:hover{background:#ea8c00 !important}
+    .formulaBox .eq{font-size:14px !important;line-height:1.45 !important}
+    .formulaBox .formulaLine{font-size:14px !important;line-height:1.35 !important}
+    .formulaBox mjx-container{font-size:70% !important;line-height:1.1 !important}
+    .formulaBox mjx-container[jax="SVG"]{font-size:70% !important;line-height:1.1 !important}
+    .formulaBox mjx-container[jax="SVG"][display="true"]{font-size:66% !important;margin:.15em 0 !important;text-align:left !important}
+    .formulaBox mjx-container svg{width:auto !important;height:auto !important;max-width:100% !important;display:inline !important;background:none !important;border:0 !important;border-radius:0 !important}
+    @media(max-width:850px){.wrap{grid-template-columns:1fr}.stage{min-height:auto}#scene{height:500px}.row{grid-template-columns:32px 1fr 78px 32px}}
+  </style>
+</head>
+<body>
+  <header><h1>Mini Lab : ความดันเกจ</h1></header>
+  <main class="wrap">
+    <section class="card">
+      <h2>จอทดลอง</h2>
+      <div class="stage">
+        <svg id="scene" viewBox="0 0 760 560" aria-label="Gauge pressure mini lab">
+          <defs>
+            <linearGradient id="waterGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8fd3ff"/><stop offset="1" stop-color="#2389da"/></linearGradient>
+            <linearGradient id="gasGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff3c4"/><stop offset="1" stop-color="#ffd166"/></linearGradient>
+            <marker id="arrowRed" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"><path d="M0,1.2 L6,3 L0,4.8 Z" fill="#e63946"/></marker>
+            <marker id="arrowBlue" markerWidth="7" markerHeight="7" refX="3.5" refY="3.5" orient="auto"><path d="M0,1.5 L7,3.5 L0,5.5 Z" fill="#a9cef7"/></marker>
+          </defs>
+
+
+          <!-- tank: fixed bottom gauge point; liquid level changes with h -->
+          <text id="openAtmosText" x="220" y="78" text-anchor="middle" class="formula draggable" fill="#0b64d8">เปิดสู่บรรยากาศ</text>
+          <g id="atmArrows" opacity="1">
+            <line x1="150" y1="84" x2="150" y2="118" stroke="#a9cef7" stroke-width="1.4" marker-end="url(#arrowBlue)"/>
+            <line x1="220" y1="84" x2="220" y2="118" stroke="#a9cef7" stroke-width="1.4" marker-end="url(#arrowBlue)"/>
+            <line x1="290" y1="84" x2="290" y2="118" stroke="#a9cef7" stroke-width="1.4" marker-end="url(#arrowBlue)"/>
+          </g>
+
+          <!-- tank outline (open top when open mode; lid appears only in closed mode) -->
+          <path id="tankOutline" d="M96 96 L96 432 Q96 448 112 448 L328 448 Q344 448 344 432 L344 96" fill="none" stroke="#23395d" stroke-width="4" stroke-linecap="round"/>
+          <line id="tankLid" x1="96" y1="96" x2="344" y2="96" stroke="#23395d" stroke-width="4" stroke-linecap="round" opacity="0"/>
+          <rect id="gasRect" x="100" y="100" width="240" height="0" rx="10" fill="url(#gasGrad)" opacity="0"/>
+          <rect id="waterRect" x="100" y="170" width="240" height="274" rx="0" fill="url(#waterGrad)" opacity=".9"/>
+          <path id="surfaceWave" d="M102 170 C132 162,162 178,192 170 S252 162,338 170" fill="none" stroke="#0b64d8" stroke-width="4"/>
+          <text id="gasText" x="220" y="122" text-anchor="middle" class="formula draggable">Psurface = Patm</text>
+          <text id="gasModeText" x="220" y="146" text-anchor="middle" class="small draggable">ถังเปิด</text>
+
+          <!-- fixed bottom measuring point -->
+          <circle id="probe" cx="220" cy="438" r="11" fill="#e63946" stroke="#fff" stroke-width="4"/>
+
+          <!-- liquid height indicator -->
+          <line id="surfaceGuide" x1="60" y1="170" x2="92" y2="170" stroke="#64748b" stroke-dasharray="6 6" stroke-width="2"/>
+          <line x1="60" y1="448" x2="92" y2="448" stroke="#64748b" stroke-dasharray="6 6" stroke-width="2"/>
+          <line id="depthLine" x1="70" y1="170" x2="70" y2="448" class="thinRed" marker-end="url(#arrowRed)"/>
+          <text id="hText" x="26" y="314" class="formula draggable" fill="#0b3d91">h = 5.0 m</text>
+          <!-- gauge connector -->
+          <path d="M220 448 L220 486 Q220 498 232 498 L472 498 Q486 498 486 484 L486 380" fill="none" stroke="#334155" stroke-width="10" stroke-linecap="round"/>
+          <path d="M220 448 L220 486 Q220 498 232 498 L472 498 Q486 498 486 484 L486 380" fill="none" stroke="#8fd3ff" stroke-width="5" stroke-linecap="round"/>
+
+          <!-- gauge -->
+          <g id="gauge" transform="translate(570,300)">
+            <circle r="116" fill="#ffffff" stroke="#23395d" stroke-width="5"/>
+            <circle r="95" fill="#f8fbff" stroke="#dbeafe" stroke-width="2"/>
+            <path d="M-72 52 A90 90 0 0 1 72 52" fill="none" stroke="#e2e8f0" stroke-width="15" stroke-linecap="round"/>
+            <path d="M-72 52 A90 90 0 0 1 -20 -82" fill="none" stroke="#2a9d8f" stroke-width="15" stroke-linecap="round"/>
+            <path d="M-20 -82 A90 90 0 0 1 72 52" fill="none" stroke="#f4a261" stroke-width="15" stroke-linecap="round"/>
+            <g id="ticks"></g>
+            <line id="needle" x1="0" y1="0" x2="0" y2="-78" stroke="#e63946" stroke-width="6" stroke-linecap="round"/>
+            <circle r="10" fill="#23395d"/>
+            <text x="0" y="-35" text-anchor="middle" class="small">หน้าปัดเกจ</text>
+            <text id="gaugeRead" x="0" y="38" text-anchor="middle" font-size="26" font-weight="900" fill="#0b3d91">0 kPa</text>
+            <text x="0" y="65" text-anchor="middle" class="small">อ่านค่า Pgauge</text>
+          </g>
+
+          <g id="pressureBox" class="draggable" data-tx="0" data-ty="30" transform="translate(0,30)">
+            <rect x="566" y="414" width="174" height="104" rx="14" fill="#ffffff" stroke="#0b64d8" stroke-width="1.5"/>
+            <text x="653" y="436" text-anchor="middle" class="small" fill="#0b3d91">ค่าความดัน</text>
+            <text id="patmLabel" x="584" y="458" class="small" fill="#8a4b00">Patm = 101 kPa</text>
+            <text id="rhoGhLabel" x="584" y="478" class="small" fill="#e63946">ρgh = 50 kPa</text>
+            <text id="pabsTag" x="584" y="498" class="small" fill="#b91c1c">Pabs = 151 kPa</text>
+            <text id="pgTag" x="584" y="514" class="small" fill="#1d4ed8">Pgauge = 50 kPa</text>
+          </g>
+
+          <!-- equations -->
+          <rect x="420" y="30" width="300" height="130" rx="16" fill="#ffffff" stroke="#d7e2f0"/>
+          <text x="438" y="60" class="formula">Pabs = Psurface + ρgh</text>
+          <text x="438" y="92" class="formula">Pgauge = Pabs − Patm</text>
+          <text id="caseText" x="438" y="126" class="formula" fill="#0b64d8">ถังเปิด: Pgauge = ρgh</text>
+
+          <text x="38" y="530" class="small">ศึกษาเพิ่มเติมที่เพจ คลายปมฟิสิกส์</text>
+        </svg>
+      </div>
+    </section>
+
+    <aside class="card">
+      <h2>แผงควบคุม</h2>
+      <div class="panel">
+        <div class="topBtns">
+          <button id="resetBtn" class="secondary">รีเซ็ต</button>
+          <button id="formulaBtn">สรุปสูตร</button>
+        </div>
+
+        <div class="control">
+          <label>ประเภทถัง <span id="modeLabel">ถังเปิด</span></label>
+          <div class="mode"><button id="openBtn" class="active">ถังเปิด</button><button id="closedBtn">ถังปิดอัดแก๊ส</button></div>
+        </div>
+
+        <div class="control">
+          <label>ความดันแก๊สเหนือผิวของเหลว <span id="psUnit">kPa(abs)</span></label>
+          <div class="row"><button class="secondary" data-step="ps" data-dir="-1">−</button><input id="ps" type="range" min="50" max="300" step="1" value="101"><input id="psNum" type="number" min="50" max="300" step="1" value="101"><button class="secondary" data-step="ps" data-dir="1">+</button></div>
+        </div>
+
+        <div class="control">
+          <label>ระดับของเหลว h <span>m</span></label>
+          <div class="row"><button class="secondary" data-step="h" data-dir="-1">−</button><input id="h" type="range" min="0" max="10" step="0.1" value="5"><input id="hNum" type="number" min="0" max="10" step="0.1" value="5"><button class="secondary" data-step="h" data-dir="1">+</button></div>
+        </div>
+
+        <div class="control">
+          <label>ความหนาแน่น ρ <span>kg/m³</span></label>
+          <div class="row"><button class="secondary" data-step="rho" data-dir="-1">−</button><input id="rho" type="range" min="100" max="1500" step="10" value="1000"><input id="rhoNum" type="number" min="100" max="1500" step="10" value="1000"><button class="secondary" data-step="rho" data-dir="1">+</button></div>
+        </div>
+
+        <div class="control">
+          <label>ค่า g <span>N/kg</span></label>
+          <div class="row"><button class="secondary" data-step="g" data-dir="-1">−</button><input id="gval" type="range" min="1" max="20" step="0.1" value="10"><input id="gNum" type="number" min="1" max="20" step="0.1" value="10"><button class="secondary" data-step="g" data-dir="1">+</button></div>
+        </div>
+
+        <div class="note" id="explainBox">ถังเปิด: Psurface = Patm ดังนั้น Pgauge = ρgh เป็นกรณีพิเศษ</div>
+        
+      </div>
+    </aside>
+  </main>
+
+  <div id="formulaBox" class="formulaBox">
+    <button id="closeFormula" class="warn" style="float:right">ปิด</button>
+    <h2>สรุปสูตร : ความดันเกจ</h2>
+    <div class="eq"><span class="formulaLine">\(P_{abs}=P_{surface}+\rho gh\)</span></div>
+    <div class="eq"><span class="formulaLine">\(P_{gauge}=P_{abs}-P_{atm}\)</span></div>
+    <div class="eq">กรณีถังเปิด <span class="formulaLine">\(P_{surface}=P_{atm}\Rightarrow P_{gauge}=\rho gh\)</span></div>
+    <div class="eq">กรณีถังปิดอัดแก๊ส <span class="formulaLine">\(P_{gauge}=(P_{gas}+\rho gh)-P_{atm}\)</span></div>
+    <p><b>ใจความสำคัญ:</b> \(\rho gh\) คือส่วนเพิ่มของความดันจากความลึก แต่ความดันเกจคือค่าที่เทียบกับความดันบรรยากาศ</p>
+  </div>
+
+  <div class="footer">ศึกษาเพิ่มเติมที่เพจ คลายปมฟิสิกส์</div>
+
+  <script>
+    const ATM = 101.0; // kPa
+    const $ = id => document.getElementById(id);
+    const st = { mode:'open', ps:101, h:5, rho:1000, g:10 };
+    const pairs = [['ps','psNum'],['h','hNum'],['rho','rhoNum'],['gval','gNum']];
+    function syncFrom(id,val){
+      if(id==='gval'||id==='gNum') st.g = +val;
+      if(id==='ps'||id==='psNum') st.ps = +val;
+      if(id==='h'||id==='hNum') st.h = +val;
+      if(id==='rho'||id==='rhoNum') st.rho = +val;
+      if(st.mode==='open') st.ps = ATM;
+      render();
+    }
+    pairs.forEach(([a,b])=>{ [$(a),$(b)].forEach(el=>el.addEventListener('input',e=>syncFrom(e.target.id,e.target.value))); });
+    document.querySelectorAll('[data-step]').forEach(btn=>btn.addEventListener('click',()=>{
+      const key=btn.dataset.step, dir=+btn.dataset.dir;
+      const step = key==='h'?0.1:key==='g'?0.1:key==='rho'?10:5;
+      if(key==='g') st.g=Math.min(20,Math.max(1,+(st.g+dir*step).toFixed(1)));
+      if(key==='h') st.h=Math.min(10,Math.max(0,+(st.h+dir*step).toFixed(1)));
+      if(key==='rho') st.rho=Math.min(1500,Math.max(100,st.rho+dir*step));
+      if(key==='ps' && st.mode==='closed') st.ps=Math.min(300,Math.max(50,st.ps+dir*step));
+      render();
+    }));
+    $('openBtn').onclick=()=>{st.mode='open';st.ps=ATM;render();};
+    $('closedBtn').onclick=()=>{st.mode='closed'; if(st.ps<=ATM) st.ps=151; render();};
+    $('resetBtn').onclick=()=>{Object.assign(st,{mode:'open',ps:ATM,h:5,rho:1000,g:10});render();};
+    $('formulaBtn').onclick=()=>{
+      $('formulaBox').classList.add('open');
+      if(window.MathJax) MathJax.typesetPromise([$('formulaBox')]).then(()=>{
+        document.querySelectorAll('#formulaBox mjx-container').forEach(el=>{ el.style.fontSize='70%'; el.style.lineHeight='1.1'; });
+      });
+    };
+    $('closeFormula').onclick=()=>{$('formulaBox').classList.remove('open');};
+
+    // ticks
+    const ticks=$('ticks');
+    for(let i=0;i<=10;i++){
+      const ang=(-135+i*27)*Math.PI/180, r1=82, r2=94;
+      const x1=r1*Math.cos(ang), y1=r1*Math.sin(ang), x2=r2*Math.cos(ang), y2=r2*Math.sin(ang);
+      const line=document.createElementNS('http://www.w3.org/2000/svg','line');
+      line.setAttribute('x1',x1);line.setAttribute('y1',y1);line.setAttribute('x2',x2);line.setAttribute('y2',y2);line.setAttribute('stroke','#334155');line.setAttribute('stroke-width',i%5===0?3:2);ticks.appendChild(line);
+    }
+
+
+    function fmt(x){return Math.abs(x)>=100?x.toFixed(0):x.toFixed(1)}
+    function render(){
+      if(st.mode==='open') st.ps=ATM;
+      $('openBtn').classList.toggle('active',st.mode==='open'); $('closedBtn').classList.toggle('active',st.mode==='closed');
+      $('modeLabel').textContent=st.mode==='open'?'ถังเปิด':'ถังปิดอัดแก๊ส';
+      $('ps').disabled=st.mode==='open'; $('psNum').disabled=st.mode==='open';
+      $('ps').value=st.ps; $('psNum').value=st.ps.toFixed(0); $('h').value=st.h; $('hNum').value=st.h; $('rho').value=st.rho; $('rhoNum').value=st.rho; $('gval').value=st.g; $('gNum').value=st.g;
+      const rhoGh = st.rho*st.g*st.h/1000; // kPa
+      const pabs = st.ps + rhoGh;
+      const pg = pabs - ATM;
+      $('gaugeRead').textContent=fmt(pg)+' kPa';
+      $('patmLabel').textContent='Patm = '+fmt(ATM)+' kPa';
+      $('rhoGhLabel').textContent='ρgh = '+fmt(rhoGh)+' kPa';
+      $('pabsTag').textContent='Pabs = '+fmt(pabs)+' kPa';
+      $('pgTag').textContent='Pgauge = '+fmt(pg)+' kPa';
+      // h is the liquid height. Increasing h fills the tank upward; pressure is measured at the bottom.
+      const bottomY = 448;
+      const topY = 110;
+      const liquidH = st.h/10*(bottomY-topY);
+      const surfaceY = bottomY - liquidH;
+      $('waterRect').setAttribute('y',surfaceY);
+      $('waterRect').setAttribute('height',liquidH);
+      $('surfaceWave').setAttribute('d',`M102 ${surfaceY} C132 ${surfaceY-8},162 ${surfaceY+8},192 ${surfaceY} S252 ${surfaceY-8},338 ${surfaceY}`);
+      $('surfaceGuide').setAttribute('y1',surfaceY); $('surfaceGuide').setAttribute('y2',surfaceY);
+      $('depthLine').setAttribute('y1',surfaceY); $('depthLine').setAttribute('y2',bottomY);
+      $('hText').setAttribute('y',(surfaceY+bottomY)/2); $('hText').textContent='h = '+st.h.toFixed(1)+' m';
+      $('gasRect').setAttribute('y',100);
+      $('gasRect').setAttribute('height',Math.max(0,surfaceY-100));
+      $('gasText').setAttribute('y', Math.max(118, surfaceY-46));
+      $('gasModeText').setAttribute('y', Math.max(142, surfaceY-24));
+      const isOpen = st.mode==='open';
+      $('gasRect').setAttribute('opacity', isOpen ? '0' : '.95');
+      $('tankLid').setAttribute('opacity', isOpen ? '0' : '1');
+      $('atmArrows').setAttribute('opacity', isOpen ? '1' : '0');
+      $('openAtmosText').setAttribute('opacity', isOpen ? '1' : '0');
+      $('gasText').textContent=isOpen?'Psurface = Patm':'Psurface = Pgas';
+      $('gasModeText').textContent=isOpen?'ถังเปิด':'Pgas = '+fmt(st.ps)+' kPa(abs)';
+      $('caseText').textContent=st.mode==='open'?'ถังเปิด: Pgauge = ρgh':'ถังปิด: Pgauge = (Pgas + ρgh) − Patm';
+      $('explainBox').innerHTML= st.mode==='open'
+        ? 'ถังเปิด: <b>Psurface = Patm</b> ดังนั้น <b>Pgauge = ρgh</b> เป็นกรณีพิเศษ'
+        : 'ถังปิดอัดแก๊ส: <b>Pgauge = (Pgas + ρgh) − Patm</b> จึงไม่ใช่แค่ ρgh';
+      const angle=-135 + Math.max(0,Math.min(1,pg/200))*270;
+      $('needle').setAttribute('transform','rotate('+angle+')');
+    }
+
+
+    function enableSvgDrag(ids){
+      const svg = $('scene');
+      let active = null;
+      const getPoint = (evt) => {
+        const pt = svg.createSVGPoint();
+        pt.x = evt.clientX; pt.y = evt.clientY;
+        return pt.matrixTransform(svg.getScreenCTM().inverse());
+      };
+      ids.forEach(id => {
+        const el = $(id);
+        if(!el) return;
+        el.classList.add('draggable');
+        if(!el.dataset.tx) el.dataset.tx = '0';
+        if(!el.dataset.ty) el.dataset.ty = '0';
+        el.addEventListener('pointerdown', evt => {
+          evt.preventDefault();
+          const p = getPoint(evt);
+          active = { el, startX:p.x, startY:p.y, tx:+el.dataset.tx||0, ty:+el.dataset.ty||0 };
+          el.setPointerCapture(evt.pointerId);
+        });
+      });
+      svg.addEventListener('pointermove', evt => {
+        if(!active) return;
+        const p = getPoint(evt);
+        const nx = active.tx + (p.x - active.startX);
+        const ny = active.ty + (p.y - active.startY);
+        active.el.dataset.tx = nx.toFixed(1);
+        active.el.dataset.ty = ny.toFixed(1);
+        active.el.setAttribute('transform', `translate(${nx},${ny})`);
+      });
+      svg.addEventListener('pointerup', () => active = null);
+      svg.addEventListener('pointercancel', () => active = null);
+    }
+
+    enableSvgDrag(['hText','pressureBox','openAtmosText','gasText','gasModeText']);
+    render();
+  </script>
+</body>
+</html>

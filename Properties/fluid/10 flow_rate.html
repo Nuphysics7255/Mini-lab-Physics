@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mini Lab : อัตราการไหล</title>
+  <style>
+    :root{--border:#e2e8f0;--text:#0f172a;--muted:#475569;--blue:#2563eb;--teal:#14b8a6;}
+    *{box-sizing:border-box;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Thai",Arial}
+    body{margin:0;color:var(--text);background:#fff}
+    header{position:sticky;top:0;z-index:10;background:#ffffffd9;backdrop-filter:blur(6px);
+      border-bottom:1px solid var(--border);padding:12px 16px}
+    h1{margin:0 0 6px;font-size:clamp(18px,2.2vw,22px);font-weight:600}
+    .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    .spacer{flex:1 1 auto}
+    button{border:0;border-radius:999px;padding:8px 14px;font-size:14px;cursor:pointer}
+    .primary{background:#2563eb;color:#fff}.secondary{background:#334155;color:#fff}.info{background:#fed7aa;color:#9a3412}
+    .grid{display:grid;gap:12px;margin-top:12px}
+    .g-4{grid-template-columns:repeat(1,minmax(0,1fr))}
+    @media(min-width:768px){.g-4{grid-template-columns:repeat(4,minmax(0,1fr))}}
+    .card{border:1px solid var(--border);border-radius:12px;padding:8px 10px;background:#f8fafc;font-size:14px}
+    .card.blue{background:#eff6ff;border-color:#bfdbfe}.card.cyan{background:#ecfeff;border-color:#a5f3fc}.card.em{background:#ecfdf5;border-color:#a7f3d0}
+    .mono{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+    .ctrl{border:1px solid var(--border);border-radius:12px;padding:8px;background:#fff}
+    .ctrl label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+    .ctrl .inline{display:flex;gap:8px;align-items:stretch}
+    input[type="number"]{flex:1 1 auto;padding:6px 8px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px}
+    input[type="range"]{width:100%}
+    .ud{display:grid;grid-template-rows:1fr 1fr}.ud button{border:1px solid #cbd5e1;background:#fff}
+    .viewport{width:100%;height:70dvh}
+    a{color:#2563eb;text-decoration:underline}
+    .backdrop{position:fixed;inset:0;background:#0f172acc;display:none;align-items:center;justify-content:center;z-index:9999}
+    .modal{width:min(920px,92vw);background:#fff;border-radius:16px;overflow:hidden;border:1px solid #cbd5e1;
+      box-shadow:0 25px 40px rgba(2,6,23,.35)}
+    .modal>header{padding:14px 16px;color:#fff;background:linear-gradient(90deg,#06b6d4 0%,#3b82f6 100%)}
+    .modal .content{padding:16px;background:linear-gradient(180deg,#f8fafc 0%,#ffffff 30%)}
+    .panel{border:2px solid #bfdbfe;background:#eff6ff;border-radius:12px;padding:12px 14px;margin-bottom:12px}
+    .panel h3{margin:0 0 6px;color:#1d4ed8;font-size:16px}
+    .unit{font-family:ui-monospace,monospace;font-size:13px;color:#334155}
+    .close{background:#111827;color:#fff}
+  </style>
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['\\(','\\)'], ['$', '$']], displayMath: [['\\[','\\]'], ['$$','$$']], processEscapes: true, processEnvironments: true },
+      options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] }
+    };
+  </script>
+  <script id="MathJax-script" defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+  <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
+  <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+  <header>
+    <div class="row">
+      <h1 style="color:#2563eb;">Mini Lab : อัตราการไหล</h1>
+      <div class="spacer"></div>
+      <button id="formulaBtn" class="info">สูตรสำคัญ</button>
+      <button id="playBtn" class="primary">▶️</button>
+      <button id="resetBtn" class="secondary">Reset</button>
+    </div>
+    <div class="grid g-4">
+      <div class="card cyan"><div><b>ปริมาตรน้ำในอ่าง</b>: <span id="liters" class="mono">0.0000</span> / 0.1000 m³</div><div id="fillTimeBox">กด Play เพื่อเริ่มนับเวลา</div></div>
+      <div class="card blue"><div><b>ความเร็วที่ปากท่อ</b> (v): <span id="vExit" class="mono">0.00</span> m/s</div><div><b>อัตราการไหล</b> (Q): <span id="Qdisp" class="mono">0.0000</span> m³/s</div><div>รัศมีปากท่อ: <span id="radius2" class="mono">0.000</span> m</div></div>
+      <div class="card em"><div><b>เวลาตกถึงพื้น</b>: <span id="tHit" class="mono">—</span> s</div><div><b>ระยะตกไกล (range)</b>: <span id="rangeX" class="mono">—</span> m</div></div>
+      <div class="card"><div>\( Q =V/t=A\,v \)</div><div>อ่างเต็ม 100 L จะหยุดไหลและบันทึกเวลา (ใช้ \( t=V/Q \) ตอนเริ่ม)</div></div>
+    </div>
+    <div class="grid g-4" style="margin-top:12px">
+      <div class="ctrl"><label>Q — อัตราการไหล (m³/s)</label><input id="Q_range" type="range" min="0.1" max="50" step="0.1" /><div class="inline"><input id="Q_num" type="number" step="0.1" min="0.1" max="50"/><div class="ud"><button id="Q_up">▲</button><button id="Q_dn">▼</button></div></div></div>
+      <div class="ctrl"><label>A₂ — พื้นที่ปากท่อ (cm²)</label><input id="A_range" type="range" min="0.5" max="50" step="0.1" /><div class="inline"><input id="A_num" type="number" step="0.1" min="0.5" max="50"/><div class="ud"><button id="A_up">▲</button><button id="A_dn">▼</button></div></div></div>
+      <div class="ctrl"><label>θ — มุมท่อ (°)</label><input id="ang_range" type="range" min="0" max="85" step="1" /><div class="inline"><input id="ang_num" type="number" step="1" min="0" max="85"/><div class="ud"><button id="ang_up">▲</button><button id="ang_dn">▼</button></div></div></div>
+      <div class="ctrl"><label>h — ความสูงปากท่อ (m)</label><input id="h_range" type="range" min="0.3" max="1.8" step="0.01" /><div class="inline"><input id="h_num" type="number" step="0.01" min="0.3" max="1.8"/><div class="ud"><button id="h_up">▲</button><button id="h_dn">▼</button></div></div></div>
+    </div>
+  </header>
+
+  <div id="formulaBackdrop" class="backdrop" role="dialog" aria-modal="true">
+    <div class="modal">
+      <header class="row"><div style="font-weight:700;font-size:18px">สูตรสำคัญ: อัตราการไหล</div><div class="spacer"></div><button id="closeFormula" class="close">ปิด</button></header>
+      <div class="content">
+        <div class="panel"><h3>1) อัตราการไหลเชิงปริมาตร (Volumetric Flow Rate)</h3><p>นิยาม: \( Q = \dfrac{dV}{dt} \)</p><p>ผ่านหน้าตัด \(A\) ด้วยความเร็วเฉลี่ย \(v\): \( Q = A\,v \)</p><p class="unit">หน่วย SI: m\(^3\)/s</p></div>
+        <div class="panel"><h3>2) อัตราการไหลเชิงมวล (Mass Flow Rate)</h3><p>นิยาม: \( \dot{m} = \dfrac{dm}{dt} = \rho\,Q = \rho\,A\,v \)</p><p class="unit">หน่วย SI: kg/s</p></div>
+        <div class="panel"><h3>3) การแปลงหน่วย</h3><p>\( 1\,\text{L} = 10^{-3}\,\text{m}^3 \), \( 1\,\text{cm}^2 = 10^{-4}\,\text{m}^2 \)</p></div>
+        <div class="panel" style="border-color:#86efac;background:#ecfdf5"><h3>ตัวอย่าง</h3><p>ถ้า \(Q = 10\,\text{L/s} = 0.01\,\text{m}^3/\text{s}\) และ \(A = 20\,\text{cm}^2 = 2\times10^{-3}\,\text{m}^2\)</p><p>แล้ว \( v = Q/A = 5\,\text{m/s} \)</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="viewport" class="viewport"></div>
+
+  <script>
+    const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+    const deg2rad=d=>d*Math.PI/180;
+    const cm2_to_m2=A=>A/10000;
+    const Lps_to_m3s=Q=>Q/1000;
+
+    const ui={
+      vp:document.getElementById('viewport'),
+      play:document.getElementById('playBtn'),
+      reset:document.getElementById('resetBtn'),
+      liters:document.getElementById('liters'),
+      fillBox:document.getElementById('fillTimeBox'),
+      vExit:document.getElementById('vExit'),
+      Qdisp:document.getElementById('Qdisp'),
+      radius2:document.getElementById('radius2'),
+      tHit:document.getElementById('tHit'),
+      rangeX:document.getElementById('rangeX'),
+      Qr:document.getElementById('Q_range'), Qn:document.getElementById('Q_num'), Qup:document.getElementById('Q_up'), Qdn:document.getElementById('Q_dn'),
+      Ar:document.getElementById('A_range'), An:document.getElementById('A_num'), Aup:document.getElementById('A_up'), Adn:document.getElementById('A_dn'),
+      Tr:document.getElementById('ang_range'), Tn:document.getElementById('ang_num'), Tup:document.getElementById('ang_up'), Tdn:document.getElementById('ang_dn'),
+      Hr:document.getElementById('h_range'), Hn:document.getElementById('h_num'), Hup:document.getElementById('h_up'), Hdn:document.getElementById('h_dn'),
+      formulaBtn:document.getElementById('formulaBtn'),
+      backdrop:document.getElementById('formulaBackdrop'),
+      closeFormula:document.getElementById('closeFormula'),
+    };
+
+    let Q_Lps=10.0, A2_cm2=20, angleDeg=0, height=1.0;
+    let running=false, QStart=Lps_to_m3s(Q_Lps);
+    let elapsed=0, fillTime=null;
+    const g=9.81;
+    const FULL_M3=0.1;
+    const wallT=0.03;
+    const groundColor=0x5aa15a;
+    const waterBlue=0x0077cc;
+    const tracerBlue=0x003366;
+
+    const scene=new THREE.Scene(); scene.background=new THREE.Color(0xffffff);
+    const camera=new THREE.PerspectiveCamera(60,1,0.1,200); camera.position.set(3.2,2.0,3.2);
+    const renderer=new THREE.WebGLRenderer({antialias:true}); renderer.setPixelRatio(Math.min(2,window.devicePixelRatio||1));
+    renderer.setSize(ui.vp.clientWidth,ui.vp.clientHeight); ui.vp.appendChild(renderer.domElement);
+    const controls=new THREE.OrbitControls(camera,renderer.domElement);
+    controls.target.set(0.8,1.0,0); controls.enableDamping=true; controls.dampingFactor=0.08;
+    controls.minPolarAngle=0.05; controls.maxPolarAngle=Math.PI/2-0.02; controls.minDistance=0.8; controls.maxDistance=8;
+
+    scene.add(new THREE.HemisphereLight(0xffffff,0xbcc7d6,0.95));
+    const dL=new THREE.DirectionalLight(0xffffff,0.9); dL.position.set(5,6,3); scene.add(dL);
+    const ground=new THREE.Mesh(new THREE.PlaneGeometry(24,24), new THREE.MeshStandardMaterial({color:groundColor}));
+    ground.rotation.x=-Math.PI/2; scene.add(ground);
+
+    const steelMat=new THREE.MeshStandardMaterial({color:0x667788,metalness:0.55,roughness:0.45,side:THREE.DoubleSide});
+    const brownMat=new THREE.MeshStandardMaterial({color:0x8B4513,metalness:0.45,roughness:0.55,side:THREE.DoubleSide});
+    const jetMat=new THREE.MeshPhysicalMaterial({color:waterBlue,transmission:0.6,thickness:0.6,roughness:0.22,metalness:0,transparent:true,opacity:0.98});
+
+    const pipeGroup=new THREE.Group(); scene.add(pipeGroup);
+    const pipe1Radius=0.08, pipe1Length=0.85;
+    const pipe1=new THREE.Mesh(new THREE.CylinderGeometry(pipe1Radius,pipe1Radius,pipe1Length,64,1,false), steelMat);
+    pipe1.rotation.z=Math.PI/2;
+    pipe1.position.set(pipe1Length/2 - 0.52, 1.0, 0);
+    pipeGroup.add(pipe1);
+
+    const vPipeLen=1.2, jointOverlap=0.06;
+    const vPipe=new THREE.Mesh(new THREE.CylinderGeometry(pipe1Radius,pipe1Radius,vPipeLen+jointOverlap*2,64,1,false), steelMat);
+    const leftEndX=pipe1.position.x - pipe1Length/2;
+    vPipe.position.set(leftEndX, vPipeLen/2 - jointOverlap, 0);
+    scene.add(vPipe);
+
+    let nozzleLen=0.24, nozzleR=0.05;
+    let nozzle=new THREE.Mesh(new THREE.CylinderGeometry(nozzleR,nozzleR,nozzleLen,48,1,true), brownMat);
+    nozzle.rotation.z=Math.PI/2; nozzle.position.set(pipe1.position.x + pipe1Length/2 + nozzleLen/2 - 0.1, 1.0, 0);
+    pipeGroup.add(nozzle);
+
+    const outlet=new THREE.Object3D(); outlet.position.copy(nozzle.position); scene.add(outlet);
+
+    let jetCurve=new THREE.CatmullRomCurve3([new THREE.Vector3(0,0,0), new THREE.Vector3(0.05,0,0)]);
+    let jetGeo=new THREE.TubeGeometry(jetCurve, 12, 0.014, 20, false);
+    const jetMesh=new THREE.Mesh(jetGeo, jetMat); jetMesh.visible=false; scene.add(jetMesh);
+    const JT_N=420, JT_SIZE=0.009;
+    const jtGeo=new THREE.SphereGeometry(JT_SIZE,10,10);
+    const jtMat=new THREE.MeshStandardMaterial({color:tracerBlue,emissive:0x001a33,emissiveIntensity:1.0,roughness:0.3});
+    const jtMesh=new THREE.InstancedMesh(jtGeo,jtMat,JT_N); jtMesh.frustumCulled=false; jtMesh.visible=false; scene.add(jtMesh);
+    const jtState=Array.from({length:JT_N},()=>({u:Math.random(), r:Math.random(), a:Math.random()*Math.PI*2}));
+    let jetLen=1;
+
+    const basinGroup=new THREE.Group();
+    const basinInnerW=1.0, basinInnerL=0.8, basinH=0.30;
+    const baseMesh=new THREE.Mesh(new THREE.BoxGeometry(basinInnerW+2*wallT, wallT, basinInnerL+2*wallT),
+      new THREE.MeshStandardMaterial({color:0x9aa3b2,metalness:0.2,roughness:0.7}));
+    baseMesh.position.set(0, wallT/2, 0); basinGroup.add(baseMesh);
+    const wallFront=new THREE.Mesh(new THREE.BoxGeometry(basinInnerW+2*wallT, basinH, wallT), baseMesh.material.clone());
+    wallFront.position.set(0, basinH/2+wallT, (basinInnerL+wallT)/2);
+    const wallBack=wallFront.clone(); wallBack.position.z=-(basinInnerL+wallT)/2;
+    const wallLeft=new THREE.Mesh(new THREE.BoxGeometry(wallT, basinH, basinInnerL+2*wallT), baseMesh.material.clone());
+    wallLeft.position.set(-(basinInnerW+wallT)/2, basinH/2+wallT, 0);
+    const wallRight=wallLeft.clone(); wallRight.position.x=(basinInnerW+wallT)/2;
+    basinGroup.add(wallFront, wallBack, wallLeft, wallRight);
+
+    const basinWater=new THREE.Mesh(new THREE.BoxGeometry(basinInnerW,0.001,basinInnerL),
+      new THREE.MeshStandardMaterial({color:waterBlue,metalness:0.05,roughness:0.25,transparent:true,opacity:0.9}));
+    basinWater.position.set(0, wallT+0.0005, 0); basinGroup.add(basinWater);
+
+    const surfaceGeo=new THREE.PlaneGeometry(basinInnerW,basinInnerL,40,28); surfaceGeo.rotateX(-Math.PI/2);
+    const surfaceMesh=new THREE.Mesh(surfaceGeo,new THREE.MeshPhysicalMaterial({color:waterBlue,metalness:0,roughness:0.3,transmission:0.65,transparent:true,opacity:0.85,depthWrite:false}));
+    surfaceMesh.position.set(0, wallT+0.0005, 0); basinGroup.add(surfaceMesh);
+    basinGroup.position.set(0.8,0,0); basinGroup.visible=false; scene.add(basinGroup);
+
+    const RIPPLES=60, rippleMeshes=[], rippleAlive=new Array(RIPPLES).fill(false), rippleAge=new Float32Array(RIPPLES);
+    const rippleMaxAge=1.9, ripGeo=new THREE.RingGeometry(0.02,0.028,72);
+    for(let i=0;i<RIPPLES;i++){ const m=new THREE.Mesh(ripGeo,new THREE.MeshBasicMaterial({color:0x5aa7ff,transparent:true,opacity:0,depthWrite:false}));
+      m.rotation.x=-Math.PI/2; m.visible=false; basinGroup.add(m); rippleMeshes.push(m); }
+
+    const impactMark=new THREE.Mesh(new THREE.CylinderGeometry(0.02,0.02,0.002,20), new THREE.MeshStandardMaterial({color:0x2563eb}));
+    impactMark.rotation.x=Math.PI/2; impactMark.visible=true; scene.add(impactMark);
+    const guideLine=new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({color:0x1f2937})); guideLine.visible=false; scene.add(guideLine);
+
+    const maxParticles=1000;
+    const pGeo=new THREE.IcosahedronGeometry(0.0035,0);
+    const pMat=new THREE.MeshStandardMaterial({color:waterBlue,metalness:0.05,roughness:0.25,emissive:0x005fa3,emissiveIntensity:0.35});
+    const pMesh=new THREE.InstancedMesh(pGeo,pMat,maxParticles); pMesh.frustumCulled=false; scene.add(pMesh);
+    const pPos=Array.from({length:maxParticles},()=>new THREE.Vector3());
+    const pVel=Array.from({length:maxParticles},()=>new THREE.Vector3());
+    const pAge=new Float32Array(maxParticles);
+    const pAlive=Array.from({length:maxParticles},()=>false);
+    let pCursor=0; {const off=new THREE.Matrix4().makeTranslation(1e6,1e6,1e6); for(let i=0;i<maxParticles;i++) pMesh.setMatrixAt(i,off); pMesh.instanceMatrix.needsUpdate=true;}
+    const basin={vol:0,acc:0}; let waveAmp=0,wavePhase=0,lastImpact=new THREE.Vector2(0,0);
+    let spawnAccum=0;
+
+    function derive(){ const A2=Math.max(cm2_to_m2(A2_cm2),1e-6); const Q=Lps_to_m3s(Q_Lps);
+      const vExit=Q/A2; const radius2=Math.sqrt(A2/Math.PI); const theta=deg2rad(angleDeg); return {A2,Q,vExit,radius2,theta}; }
+
+    function recalcHUD(){
+      const {A2,Q,vExit:V,radius2:R,theta}=derive();
+      document.getElementById('vExit').textContent=V.toFixed(2);
+      document.getElementById('Qdisp').textContent=Q.toFixed(4);
+      document.getElementById('radius2').textContent=R.toFixed(3);
+      const vy=Math.sin(theta)*V, y0=height, a=-0.5*g, b=vy, c=y0, disc=b*b-4*a*c;
+      if(disc<=0){document.getElementById('tHit').textContent='—'; document.getElementById('rangeX').textContent='—';}
+      else{ const t1=(-b+Math.sqrt(disc))/(2*a), t2=(-b-Math.sqrt(disc))/(2*a); const t=Math.max(t1,t2);
+        const range=Math.max(0,t*Math.cos(theta)*V); document.getElementById('tHit').textContent=t.toFixed(2); document.getElementById('rangeX').textContent=range.toFixed(2);}
+    }
+
+    function updateNozzleAndGuide(){
+      const {vExit:V,radius2:R,theta}=derive();
+      nozzleR=Math.max(R,0.02);
+      nozzle.geometry.dispose(); nozzle.geometry=new THREE.CylinderGeometry(nozzleR,nozzleR,nozzleLen,48,1,true);
+      pipe1.position.y=height;
+      const baseX=pipe1.position.x + pipe1Length/2 + nozzleLen/2 - 0.1;
+      const base=new THREE.Vector3(baseX,height,0);
+      nozzle.rotation.set(0,0,Math.PI/2+theta); nozzle.position.copy(base);
+      const tip=new THREE.Vector3(Math.cos(theta),Math.sin(theta),0).multiplyScalar(nozzleLen/2);
+      outlet.position.copy(base.clone().add(tip));
+
+      const points=[],steps=64;
+      const vx=Math.cos(theta)*V, vy=Math.sin(theta)*V;
+      const x0=outlet.position.x, y0=outlet.position.y, z0=outlet.position.z;
+      const level=THREE.MathUtils.clamp((basin.vol/FULL_M3)*basinH,0,basinH);
+      const yPlane=wallT+level;
+      const a=-0.5*g, b=vy, c=y0-yPlane, disc=b*b-4*a*c;
+      const tPlane=(disc>0)?Math.max((-b+Math.sqrt(disc))/(2*a),(-b-Math.sqrt(disc))/(2*a)):0.25;
+      const tmax=Math.max(0.1,tPlane);
+      for(let i=0;i<=steps;i++){ const t=i/steps*tmax; points.push(new THREE.Vector3(x0+vx*t, y0+vy*t-0.5*g*t*t, z0)); }
+      guideLine.geometry.dispose(); guideLine.geometry=new THREE.BufferGeometry().setFromPoints(points);
+      const xi=x0+vx*tPlane; impactMark.position.set(xi,yPlane+0.001,0); impactMark.visible=tPlane>0.0001 && isFinite(tPlane);
+      if(impactMark.visible) basinGroup.position.set(xi,0,0);
+      rebuildJet();
+    }
+
+    function rebuildJet(){
+      const {vExit:V,theta}=derive();
+      const x0=outlet.position.x, y0=outlet.position.y, z0=outlet.position.z;
+      const vx=Math.cos(theta)*V, vy=Math.sin(theta)*V, tmax=0.6;
+      const pts=[]; for(let i=0;i<=72;i++){ const t=i/72*tmax; pts.push(new THREE.Vector3(x0+vx*t,y0+vy*t-0.5*g*t*t,z0));}
+      jetCurve=new THREE.CatmullRomCurve3(pts);
+      const r=Math.max(nozzleR*0.9,0.01);
+      jetMesh.geometry.dispose(); jetMesh.geometry=new THREE.TubeGeometry(jetCurve,64,r,24,false);
+      jetMesh.visible=running;
+      const lens=jetCurve.getLengths(128); jetLen=lens[lens.length-1]||1;
+    }
+    function frameAt(u){const t=jetCurve.getTangentAt(u%1).normalize(); const up=new THREE.Vector3(0,0,1); if(Math.abs(t.dot(up))>0.98) up.set(0,1,0);
+      const n=new THREE.Vector3().crossVectors(up,t).normalize(); const b=new THREE.Vector3().crossVectors(t,n).normalize(); return {n,b,t};}
+    function pointAt(u){return jetCurve.getPointAt(u%1)}
+
+    function updateJetTracers(dt){
+      if(!running) return; const {vExit:V}=derive();
+      const speedU=clamp((V*0.85)/(jetLen+1e-6),0.06,2.4);
+      const m=new THREE.Matrix4();
+      for(let i=0;i<JT_N;i++){ const s=jtState[i]; s.u=(s.u+speedU*dt)%1; const rr=Math.sqrt(s.r)*0.012; const aa=s.a;
+        const f=frameAt(s.u), c=pointAt(s.u), o=f.n.clone().multiplyScalar(rr*Math.cos(aa)).add(f.b.clone().multiplyScalar(rr*Math.sin(aa)));
+        const p=c.add(o); m.makeTranslation(p.x,p.y,p.z); jtMesh.setMatrixAt(i,m);}
+      jtMesh.instanceMatrix.needsUpdate=true;
+    }
+
+    function reseed(i){
+      const {vExit:V,radius2:R,theta}=derive();
+      pAlive[i]=true; pAge[i]=0; pPos[i].copy(outlet.position);
+      const spread=Math.max(0.0012,0.028*(0.02/Math.max(R,0.005)));
+      const j=new THREE.Vector3((Math.random()-0.5)*spread,(Math.random()-0.5)*spread,(Math.random()-0.5)*spread*0.6);
+      pVel[i].set(Math.cos(theta)*V,Math.sin(theta)*V,0).add(j);
+    }
+    function setWaterLevel(){
+      const lv=THREE.MathUtils.clamp((basin.vol/FULL_M3)*basinH,0,basinH);
+      basinWater.scale.set(1,Math.max(lv/0.001,0.001),1);
+      basinWater.position.y=wallT+(lv/2);
+      surfaceMesh.position.y=wallT+lv+0.0005;
+    }
+    function clearFlow(){
+      const off=new THREE.Matrix4().makeTranslation(1e6,1e6,1e6);
+      for(let i=0;i<pPos.length;i++){pAlive[i]=false;pMesh.setMatrixAt(i,off)} pMesh.instanceMatrix.needsUpdate=true;
+      jtMesh.visible=false; jetMesh.visible=false; guideLine.visible=false; impactMark.visible=false;
+      rippleAlive.fill(false); rippleAge.fill(0); rippleMeshes.forEach(m=>{m.visible=false;m.material.opacity=0});
+      const pos=surfaceMesh.geometry.attributes.position; for(let i=0;i<pos.count;i++) pos.setY(i,0); pos.needsUpdate=true;
+      waveAmp=0; wavePhase=0;
+    }
+
+    const clock=new THREE.Clock();
+    function animate(){const dt=running?Math.min(0.05,clock.getDelta()):0; if(running) elapsed+=dt;
+      updatePhysics(dt); updateJetTracers(dt); controls.update(); renderer.render(scene,camera); requestAnimationFrame(animate);}
+    animate();
+
+    function updatePhysics(dt){
+      const {Q,vExit:V,radius2:R,theta}=derive();
+      if(basin.vol>=FULL_M3){
+        if(fillTime===null){basin.vol=FULL_M3; setWaterLevel(); document.getElementById("liters").textContent="0.1000";
+          fillTime=FULL_M3/(QStart||1e-9); document.getElementById('fillTimeBox').innerHTML=`<b>เวลาเมื่ออ่างเต็ม</b>: <span class="mono">${fillTime.toFixed(2)}</span> s`;}
+        if(running){running=false; document.getElementById("playBtn").textContent="▶️"} clearFlow(); return;
+      }
+      if(!dt) return;
+      const spawnPerSec=clamp(900*(V/2.0),250,1400);
+      spawnAccum+=dt*spawnPerSec; while(spawnAccum>=1){const i=pCursor%pPos.length; reseed(i); pCursor=(pCursor+1)%pPos.length; spawnAccum-=1;}
+
+      const mat=new THREE.Matrix4(), quat=new THREE.Quaternion();
+      const s=Math.max(0.0012,Math.min(0.004,R*0.12)), sv=new THREE.Vector3(s,s,s);
+      for(let i=0;i<pPos.length;i++){
+        if(!pAlive[i]){mat.makeTranslation(1e6,1e6,1e6); pMesh.setMatrixAt(i,mat); continue;}
+        pAge[i]+=dt; pVel[i].multiplyScalar(1-0.12*dt); pVel[i].y+=-g*dt; pPos[i].addScaledVector(pVel[i],dt);
+
+        const basinX=basinGroup.position.x;
+        const level=THREE.MathUtils.clamp((basin.vol/FULL_M3)*basinH,0,basinH);
+        const waterTop=wallT+level;
+        const insideX=Math.abs(pPos[i].x-basinX)<=basinInnerW/2;
+        const insideZ=Math.abs(pPos[i].z-basinGroup.position.z)<=basinInnerL/2;
+        if(insideX && insideZ && pPos[i].y<=waterTop){
+          const lx=THREE.MathUtils.clamp(pPos[i].x-basinX,-basinInnerW/2+0.02,basinInnerW/2-0.02);
+          const lz=THREE.MathUtils.clamp(pPos[i].z-basinGroup.position.z,-basinInnerL/2+0.02,basinInnerL/2-0.02);
+          for(let r=0;r<RIPPLES;r++){ if(!rippleAlive[r]){rippleAlive[r]=true; rippleAge[r]=0; const m=rippleMeshes[r];
+            m.position.set(lx,waterTop+0.001,lz); m.scale.set(1,1,1); m.material.opacity=0.8; m.visible=true; break; } }
+          waveAmp=Math.min(0.03,waveAmp+0.009); lastImpact.set(lx,lz);
+          pAlive[i]=false; mat.makeTranslation(1e6,1e6,1e6); pMesh.setMatrixAt(i,mat); continue;
+        }
+        if(pPos[i].y<=0){pAlive[i]=false; mat.makeTranslation(1e6,1e6,1e6); pMesh.setMatrixAt(i,mat); continue;}
+        mat.compose(pPos[i],quat,sv); pMesh.setMatrixAt(i,mat);
+      }
+      pMesh.instanceMatrix.needsUpdate=true;
+
+      for(let r=0;r<RIPPLES;r++){
+        if(!rippleAlive[r]) continue;
+        rippleAge[r]+=dt; const t=rippleAge[r]/rippleMaxAge;
+        if(t>=1){rippleAlive[r]=false; rippleMeshes[r].visible=false; continue;}
+        const m=rippleMeshes[r], halfW=basinInnerW/2-0.02, halfL=basinInnerL/2-0.02;
+        const r0=0.028, limit=Math.max(0.05,Math.min(halfW-Math.abs(m.position.x),halfL-Math.abs(m.position.z)));
+        const sMax=Math.max(0.5,limit/r0), scale=Math.min(1+t*6.6,sMax);
+        m.scale.set(scale,scale,scale); m.material.opacity=(1-t)*0.8;
+      }
+
+      const pos=surfaceMesh.geometry.attributes.position, halfW=basinInnerW/2, halfL=basinInnerL/2;
+      waveAmp=Math.max(0,waveAmp-dt*0.003); wavePhase+=dt*3.6;
+      const amp=waveAmp, cx=lastImpact.x, cz=lastImpact.y;
+      for(let i=0;i<pos.count;i++){
+        const x=pos.getX(i), z=pos.getZ(i);
+        const edge=clamp(Math.min((halfW-Math.abs(x))/0.1,(halfL-Math.abs(z))/0.1),0,1);
+        const dx=x-cx, dz=z-cz, r=Math.sqrt(dx*dx+dz*dz)+1e-6;
+        const local=Math.sin(10*r-wavePhase)*Math.exp(-r*1.25);
+        pos.setY(i, local*amp*edge);
+      }
+      pos.needsUpdate=true;
+
+      if(impactMark.visible){
+        basinGroup.visible=true;
+        basin.vol=Math.min(FULL_M3, basin.vol + Q*dt);
+        basin.acc+=dt; if(basin.acc>=0.1){document.getElementById("liters").textContent=basin.vol.toFixed(4); basin.acc=0;}
+        setWaterLevel();
+      }
+    }
+
+    function updateButtons(){document.getElementById("playBtn").textContent=running?"⏸":"▶️"; jetMesh.visible=running; jtMesh.visible=running}
+    function setDefaults(){
+      Q_Lps=10.0; A2_cm2=20; angleDeg=0; height=1.0;
+      ui.Qr.value=Q_Lps; ui.Qn.value=Q_Lps; ui.Ar.value=A2_cm2; ui.An.value=A2_cm2; ui.Tr.value=angleDeg; ui.Tn.value=angleDeg; ui.Hr.value=height; ui.Hn.value=height;
+      basin.vol=0; basin.acc=0; elapsed=0; fillTime=null; document.getElementById('fillTimeBox').textContent="กด Play เพื่อเริ่มนับเวลา"; document.getElementById("liters").textContent="0.0000";
+      basinGroup.visible=false; clearFlow(); recalcHUD(); updateNozzleAndGuide(); rebuildJet();
+    }
+    function bindPair(range,num,step,min,max,get,set){
+      function sync(v){v=clamp(parseFloat(v||0),min,max); set(v); range.value=v; num.value=v; recalcHUD(); updateNozzleAndGuide(); rebuildJet();}
+      range.addEventListener('input',e=>sync(e.target.value)); num.addEventListener('change',e=>sync(e.target.value));
+      return {inc(){sync(get()+step)}, dec(){sync(get()-step)}};
+    }
+    function makePairs(){
+      const QP=bindPair(ui.Qr,ui.Qn,0.1,0.1,50,()=>Q_Lps,v=>Q_Lps=v);
+      const AP=bindPair(ui.Ar,ui.An,0.1,0.5,50,()=>A2_cm2,v=>A2_cm2=v);
+      const TP=bindPair(ui.Tr,ui.Tn,1,0,85,()=>angleDeg,v=>angleDeg=v);
+      const HP=bindPair(ui.Hr,ui.Hn,0.01,0.3,1.8,()=>height,v=>height=v);
+      ui.Qup.addEventListener('click',()=>QP.inc()); ui.Qdn.addEventListener('click',()=>QP.dec());
+      ui.Aup.addEventListener('click',()=>AP.inc()); ui.Adn.addEventListener('click',()=>AP.dec());
+      ui.Tup.addEventListener('click',()=>TP.inc()); ui.Tdn.addEventListener('click',()=>TP.dec());
+      ui.Hup.addEventListener('click',()=>HP.inc()); ui.Hdn.addEventListener('click',()=>HP.dec());
+    }
+
+    ui.play.addEventListener('click',()=>{
+      running=!running;
+      if(running){ elapsed=0; basin.acc=0; basin.vol=0; fillTime=null; document.getElementById('fillTimeBox').textContent="กำลังคำนวณ..."; QStart=Lps_to_m3s(Q_Lps); rebuildJet(); updatePhysics(0.0001); }
+      updateButtons();
+    });
+    ui.reset.addEventListener('click',()=>{running=false; updateButtons(); setDefaults();});
+
+    window.addEventListener('resize',()=>{const w=ui.vp.clientWidth,h=ui.vp.clientHeight; renderer.setSize(w,h); camera.aspect=w/h; camera.updateProjectionMatrix();});
+
+    ui.formulaBtn.addEventListener('click',async ()=>{ ui.backdrop.style.display='flex'; if(window.MathJax && MathJax.typesetPromise){try{await MathJax.typesetPromise();}catch(e){}} });
+    ui.closeFormula.addEventListener('click',()=> ui.backdrop.style.display='none');
+    ui.backdrop.addEventListener('click',(e)=>{ if(e.target===ui.backdrop) ui.backdrop.style.display='none'; });
+    window.addEventListener('load',()=>{ if(window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise(); });
+
+    function init(){ renderer.setSize(ui.vp.clientWidth,ui.vp.clientHeight); camera.aspect=ui.vp.clientWidth/ui.vp.clientHeight; camera.updateProjectionMatrix();
+      setDefaults(); makePairs(); recalcHUD(); updateNozzleAndGuide(); rebuildJet(); }
+    init();
+  </script>
+
+<div style="text-align:center;padding:16px;font-size:18px;">
+ศึกษาเพิ่มเติมที่ <a href="https://www.facebook.com/resolvephysics" target="_blank">เพจคลายปมฟิสิกส์</a>
+</div>
+</body>
+</html>
+

@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>Realistic Interactive Physics: Water Jet</title>
+    <style>
+        body { background: #0b111e; color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+        h2 { color: #f1f5f9; margin-bottom: 20px; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+        canvas { background: #121826; border: 1px solid #334155; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); }
+        .controls { background: #1e293b; padding: 25px; border-radius: 16px; margin-top: 20px; width: 650px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; border: 1px solid #334155; }
+        .slider-group { display: flex; flex-direction: column; }
+        label { margin-bottom: 8px; font-size: 15px; color: #cbd5e1; font-weight: 500; }
+        input[type=range] { cursor: pointer; height: 8px; -webkit-appearance: none; background: #475569; border-radius: 5px; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 18px; width: 18px; border-radius: 50%; background: #38bdf8; cursor: pointer; margin-top: -5px; box-shadow: 0 0 10px rgba(56, 189, 248, 0.5); }
+        .stats { grid-column: span 2; background: #0f172a; padding: 15px; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 14px; color: #7dd3fc; border: 1px solid #334155; line-height: 1.5; }
+        .stats b { color: #38bdf8; }
+    </style>
+</head>
+<body>
+
+    <h2>การจำลองการไหลของน้ำแบบสมจริง</h2>
+    <canvas id="simCanvas" width="800" height="450"></canvas>
+
+    <div class="controls">
+        <div class="slider-group">
+            <label id="levelLabel">ระดับน้ำ (H): 300 มม.</label>
+            <input type="range" id="waterLevel" min="100" max="400" value="300">
+        </div>
+        <div class="slider-group">
+            <label id="holeLabel">ตำแหน่งรู (y จากพื้น): 150 มม.</label>
+            <input type="range" id="holeHeight" min="30" max="380" value="150">
+        </div>
+        <div class="stats" id="dataDisplay">
+            ข้อมูลการทดลอง: กำลังโหลด...
+        </div>
+    </div>
+
+<script>
+const canvas = document.getElementById('simCanvas');
+const ctx = canvas.getContext('2d');
+const levelSlider = document.getElementById('waterLevel');
+const holeSlider = document.getElementById('holeHeight');
+const levelLabel = document.getElementById('levelLabel');
+const holeLabel = document.getElementById('holeLabel');
+const dataDisplay = document.getElementById('dataDisplay');
+
+// --- ค่าคงที่ทางฟิสิกส์และกราฟิก ---
+const g = 9.81; // แรงโน้มถ่วง (m/s^2)
+const screenScale = 1; // 1 pixel = 1 mm
+const tankX = 120;
+const tankGroundY = 420;
+const tankWidth = 120;
+const tankMaxHeight = 400;
+
+// --- ระบบ Particle (หยดน้ำ) ---
+class WaterParticle {
+    constructor(x, y, vx, vy) {
+        this.x = x;
+        this.y = y;
+        this.vx = vx;
+        this.vy = vy;
+        this.life = 1; // "ชีวิต" ของหยดน้ำ
+        this.size = Math.random() * 2 + 1.5; // ขนาดสุ่มเล็กน้อย
+    }
+
+    update() {
+        // เคลื่อนที่ตามความเร็ว
+        this.x += this.vx;
+        this.y += this.vy;
+        
+        // กราวิตี้กระทำต่อหยดน้ำ (แปลง g เป็น pixel/frame)
+        // 0.0167 คือค่า dt โดยประมาณ (1/60 วินาที)
+        this.vy += g * 0.0167 * 10; 
+
+        // ลดอายุขัย (ทำให้ดูจางลงเมื่อไกลออกไป หรือกระทบพื้น)
+        if (this.y >= tankGroundY) {
+            this.vy *= -0.2; // กระดอนพื้นเล็กน้อย
+            this.y = tankGroundY - 1;
+            this.life -= 0.1; // ตายเร็วขึ้นเมื่อถึงพื้น
+        }
+        
+        if (this.x > canvas.width || this.y < 0) this.life = 0;
+    }
+
+    draw(ctx) {
+        ctx.beginPath();
+        // ใช้ความเข้มสีตามอายุ (life)
+        ctx.fillStyle = `rgba(125, 211, 252, ${this.life * 0.8})`; 
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
+let particles = [];
+let lastTime = 0;
+
+function draw(timestamp) {
+    let dt = (timestamp - lastTime) / 1000; // หา delta time (วินาที)
+    if (dt > 0.05) dt = 0.0167; // ป้องกันอาการกระตุกถ้าเฟรมเรตตก
+    lastTime = timestamp;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // ดึงค่าจาก Slider
+    const waterH = parseInt(levelSlider.value);
+    const holeY_fromBottom = parseInt(holeSlider.value);
+    
+    // อัปเดตข้อความ Slider
+    levelLabel.innerText = `ระดับน้ำ (H): ${waterH} มม.`;
+    holeLabel.innerText = `ตำแหน่งรู (y จากพื้น): ${holeY_fromBottom} มม.`;
+
+    // 1. วาดถังน้ำ (โครงสร้าง)
+    ctx.strokeStyle = "#475569";
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(tankX, tankGroundY - tankMaxHeight);
+    ctx.lineTo(tankX, tankGroundY);
+    ctx.lineTo(tankX + tankWidth, tankGroundY);
+    ctx.lineTo(tankX + tankWidth, tankGroundY - tankMaxHeight);
+    ctx.stroke();
+
+    // 2. วาดน้ำในถัง
+    const waterTopY = tankGroundY - waterH;
+    let waterGradient = ctx.createLinearGradient(tankX, waterTopY, tankX, tankGroundY);
+    waterGradient.addColorStop(0, "rgba(56, 189, 248, 0.5)");
+    waterGradient.addColorStop(1, "rgba(14, 165, 233, 0.7)");
+    ctx.fillStyle = waterGradient;
+    ctx.fillRect(tankX + 2, waterTopY, tankWidth - 4, waterH);
+
+    // วาดเส้นผิวน้ำ
+    ctx.strokeStyle = "#a7f3d0";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(tankX + 2, waterTopY);
+    ctx.lineTo(tankX + tankWidth - 4, waterTopY);
+    ctx.stroke();
+
+    // 3. คำนวณทางฟิสิกส์ (Torricelli's Law)
+    const h_depth = Math.max(0, waterH - holeY_fromBottom);
+    
+    // ความเร็วพุ่งออก (v = sqrt(2gh))
+    let v_metersPerSec = 0;
+    if (h_depth > 0) {
+        v_metersPerSec = Math.sqrt(2 * g * (h_depth / 1000)); // แปลง mm เป็น m
+    }
+    
+    // ระยะทางราบ R = 2 * sqrt(h * y)
+    const R_mm = 2 * Math.sqrt(h_depth * holeY_fromBottom);
+
+    // 4. สร้างหยดน้ำใหม่ (ถ้ามีน้ำเหนือรู)
+    const holeX = tankX + tankWidth;
+    const holeY_canvas = tankGroundY - holeY_fromBottom;
+    const isWaterAboveHole = waterH > holeY_fromBottom;
+
+    if (isWaterAboveHole && v_metersPerSec > 0) {
+        // วาดรูที่ตัวถัง
+        ctx.fillStyle = "#1e293b";
+        ctx.beginPath();
+        ctx.arc(holeX, holeY_canvas, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#38bdf8";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // สร้างอนุภาคใหม่ (ทำหน้าเหมือนน้ำพุ่ง)
+        // สร้างหลายอนุภาคต่อเฟรมเพื่อให้ดูต่อเนื่อง
+        for(let i=0; i<3; i++) {
+            // ความเร็วแนวนอน (m/s) แปลงเป็น pixel/frame
+            // คูณด้วย 100 เพื่อสเกลภาพให้เห็นชัดเจนขึ้น
+            let vx = v_metersPerSec * 100 * 0.0167 + (Math.random() - 0.5) * 0.1; // สุ่มแกน X เล็กน้อย
+            let vy = (Math.random() - 0.5) * 0.2; // สุ่มแกน Y เล็กน้อย
+            
+            // เพิ่มความเร็วเริ่มต้น (Boost) เพื่อให้พุ่งออกไปไกลขึ้น ดูสมจริง
+            vx *= 2.5; 
+
+            particles.push(new WaterParticle(holeX + 5, holeY_canvas, vx, vy));
+        }
+    } else if (!isWaterAboveHole && holeY_fromBottom > 0) {
+         // ถ้ารูอยู่เหนือน้ำ วาดรูเปล่าๆ
+         ctx.fillStyle = "#0b111e";
+         ctx.beginPath();
+         ctx.arc(holeX, holeY_canvas, 4, 0, Math.PI * 2);
+         ctx.fill();
+         ctx.strokeStyle = "#475569";
+         ctx.lineWidth = 2;
+         ctx.stroke();
+    }
+
+    // 5. อัปเดตและวาดหยดน้ำทั้งหมด
+    particles.forEach(p => {
+        p.update();
+        p.draw(ctx);
+    });
+
+    // กำจัดหยดน้ำที่ "ตาย" แล้วเพื่อประหยัดทรัพยากร
+    particles = particles.filter(p => p.life > 0);
+
+    // 6. วาดพื้น
+    ctx.beginPath();
+    ctx.moveTo(tankX - 50, tankGroundY);
+    ctx.lineTo(canvas.width - 50, tankGroundY);
+    ctx.strokeStyle = "#334155";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // 7. แสดงผลตัวเลข (สรุป)
+    dataDisplay.innerHTML = `
+        <span><b>ความลึกจากผิวน้ำ (h):</b> ${h_depth} มม.</span> | 
+        <span><b>ความเร็วปลายท่อ (v):</b> ${v_metersPerSec.toFixed(2)} ม./วินาที</span> | 
+        <span><b>ระยะทางราบ (R):</b> ${isWaterAboveHole ? R_mm.toFixed(1) : 0} มม.</span>
+    `;
+
+    requestAnimationFrame(draw);
+}
+
+// เริ่มต้นการจำลอง
+requestAnimationFrame(draw);
+</script>
+</body>
+</html>
