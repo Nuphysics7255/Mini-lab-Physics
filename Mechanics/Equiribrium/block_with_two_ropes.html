@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>การทดลอง: สองเชือกดึงกล่อง — Responsive ทุกอุปกรณ์</title>
+<style>
+  :root{
+    --ink:#0f172a; --muted:#64748b; --line:#e5e7eb; --dash:#cbd5e1;
+    --blue:#2563eb; --red:#ef4444; --blueSoft:#93c5fd; --redSoft:#fecaca; --mg:#111827;
+    --box:#fdba74; --edge:#0f172a; --bg:#ffffff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,"Noto Sans Thai",Segoe UI,Roboto,Arial,sans-serif;display:flex;flex-direction:column;align-items:center}
+  header{padding:10px 14px;text-align:center}
+  .panel{margin:10px;padding:12px;border:1px solid var(--line);border-radius:12px;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.05);max-width:900px;width:100%;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  label{font-size:14px;color:#334155}
+  input[type=number]{width:110px;padding:6px;border:1px solid var(--line);border-radius:10px}
+  button{padding:8px 12px;border-radius:10px;border:1px solid #0ea5e980;background:#0ea5e9;color:#fff;font-weight:600;cursor:pointer}
+  button.ghost{background:#fff;color:#0ea5e9}
+  .stage{width:100%;max-width:900px}
+  canvas{width:100%;height:auto;border:1px solid var(--line);border-radius:14px;background:#f8fafc;touch-action:none;display:block}
+  .linkbar{font-size:13px;margin:6px 0 16px}
+  .linkbar a{color:#2563eb;text-decoration:underline}
+</style>
+</head>
+<body>
+<header>
+  <h2 style="margin:0">ทดลอง เชือกสองเส้นดึงกล่อง</h2>
+  <div style="font-size:12.5px;color:var(--muted)">
+    ลากวงแหวนปลายเชือกเพื่อปรับมุม • หน่วยน้ำหนักเป็น N • รองรับมือถือ/แท็บเล็ต/คอม
+    <br>
+    หมายเหตุ: θ คือมุมที่เส้นเชือกทำกับแนวราบ
+  </div>
+</header>
+
+<div class="panel">
+  <label>น้ำหนัก (mg) [N]</label>
+  <input id="wInput" type="number" value="100" min="1" step="1">
+  <button id="toggleVectors">แสดงเวกเตอร์แรง</button>
+  <label style="display:flex;gap:6px;align-items:center;font-size:13px;color:#334155"><input id="showComps" type="checkbox"> แสดงองค์ประกอบของแรง</label>
+  <button id="resetBtn" class="ghost">รีเซ็ต</button>
+  <div id="status" style="margin-left:auto;font-size:12.5px;color:#334155"></div>
+</div>
+
+<div class="stage"><canvas id="cnv" aria-label="rope-canvas"></canvas></div>
+<div class="linkbar">ศึกษาเพิ่มเติมที่ <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">เพจคลายปมฟิสิกส์</a></div>
+
+<script>
+(function(){
+  // --- ค่าฐานสำหรับสเกล ---
+  const BASE_W=900, BASE_H=540, BASE_R=170, BASE_kPN=0.9;
+
+  const cv=document.getElementById('cnv');
+  const ctx=cv.getContext('2d');
+  const wInput=document.getElementById('wInput');
+  const toggleBtn=document.getElementById('toggleVectors');
+  const compChk=document.getElementById('showComps');
+  const resetBtn=document.getElementById('resetBtn');
+  const statusEl=document.getElementById('status');
+
+  const INFO_BASE = { x:16, y:16, w:310, h:122 }; // ฐาน (เดิม)
+
+  const state={
+    W:100, th1:Math.PI/4, th2:Math.PI/4,
+    R:BASE_R, kPN:BASE_kPN,
+    showVectors:false, showComps:false,
+    dragging:null,
+    info:{x:INFO_BASE.x,y:INFO_BASE.y,w:INFO_BASE.w,h:INFO_BASE.h},
+    infoBase:{...INFO_BASE},
+    infoDrag:null,
+    scale:1,
+    isMobile:false,
+    dpr:1
+  };
+
+  const rad2deg=r=>r*180/Math.PI;
+  const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
+  const getCenter=()=>({cx:cv.width/state.dpr/2, cy:cv.height/state.dpr/2 + 40*state.scale});
+
+  function detectMobile(){
+    return window.matchMedia('(max-width: 640px)').matches || window.matchMedia('(pointer: coarse)').matches;
+  }
+
+  // --- จัดขนาด canvas ให้คมชัดทุกหน้าจอ ---
+  function resizeCanvas(){
+    const stage = cv.parentElement; // .stage
+    const dispW = stage.clientWidth;
+    const aspect = BASE_H/BASE_W;
+    const dispH = Math.round(dispW*aspect);
+
+    const dpr = window.devicePixelRatio || 1;
+    cv.width = Math.floor(dispW * dpr);
+    cv.height = Math.floor(dispH * dpr);
+    cv.style.width = dispW + 'px';
+    cv.style.height = dispH + 'px';
+
+    // 1 หน่วย = 1 พิกเซล CSS
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+
+    state.dpr = dpr;
+    state.scale = dispW / BASE_W;
+    state.R = BASE_R * state.scale;
+    state.kPN = BASE_kPN * state.scale;
+
+    // มือถือ: ลดขนาดป้ายกรอบขาวลากได้เหลือ 40%
+    state.isMobile = detectMobile();
+    const panelScale = state.isMobile ? 0.40 : 1.00;
+    state.info.w = state.infoBase.w * panelScale;
+    state.info.h = state.infoBase.h * panelScale;
+
+    // กันป้ายหลุดจอ
+    if(state.info.x + state.info.w > dispW) state.info.x = dispW - state.info.w - 4;
+    if(state.info.y + state.info.h > dispH) state.info.y = dispH - state.info.h - 4;
+
+    draw();
+  }
+
+  function solveTensions(W,th1,th2){
+    const s=Math.sin(th1+th2);
+    if(s<1e-4) return {T1:0,T2:0,valid:false};
+    return {T1:W*Math.cos(th2)/s, T2:W*Math.cos(th1)/s, valid:true};
+  }
+
+  function draw(){
+    const {cx,cy}=getCenter();
+    const dispW = cv.width/state.dpr, dispH=cv.height/state.dpr;
+    ctx.clearRect(0,0,dispW,dispH);
+
+    // เส้นปะแกน
+    ctx.save();ctx.setLineDash([6*state.scale,4*state.scale]);ctx.strokeStyle='#cbd5e1';
+    ctx.beginPath();ctx.moveTo(0,cy);ctx.lineTo(dispW,cy);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(cx,0);ctx.lineTo(cx,dispH);ctx.stroke();ctx.restore();
+
+    // ปลายวงแหวนเชือก
+    const exL=cx-state.R*Math.cos(state.th1), eyL=cy-state.R*Math.sin(state.th1);
+    const exR=cx+state.R*Math.cos(state.th2), eyR=cy-state.R*Math.sin(state.th2);
+
+    // เส้นเชือก
+    ctx.lineWidth=2*state.scale;
+    ctx.strokeStyle=getCSS('--blue','#2563eb'); ctx.beginPath(); ctx.moveTo(exL,eyL); ctx.lineTo(cx,cy); ctx.stroke();
+    ctx.strokeStyle=getCSS('--red','#ef4444');  ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(exR,eyR); ctx.stroke();
+
+    // กล่อง + วงแหวน
+    drawBox(cx,cy+18*state.scale);
+    drawRing(exL,eyL,getCSS('--blue','#2563eb'));
+    drawRing(exR,eyR,getCSS('--red','#ef4444'));
+
+    // เวกเตอร์
+    const {T1,T2,valid}=solveTensions(state.W,state.th1,state.th2);
+    statusEl.textContent=`θ₁=${Math.round(rad2deg(state.th1))}°, θ₂=${Math.round(rad2deg(state.th2))}°  |  T₁≈${T1.toFixed(1)} N, T₂≈${T2.toFixed(1)} N`;
+
+    if(state.showVectors && valid){
+      drawForces(cx,cy,T1,T2,state.W);
+      if(state.showComps) drawComponents(cx,cy,T1,T2);
+    }
+
+    drawInfoPanel(T1,T2,state.W);
+  }
+
+  function drawBox(x,y){
+    const w=56*state.scale, h=46*state.scale, r=10*state.scale;
+    ctx.save();
+    ctx.fillStyle=getCSS('--box','#fdba74');
+    ctx.strokeStyle=getCSS('--edge','#0f172a');
+    ctx.lineWidth=2*state.scale;
+    roundRect(x-w/2,y-h/2,w,h,r);
+    ctx.fill(); ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawRing(x,y,color){
+    const rr=10*state.scale;
+    ctx.save();
+    ctx.strokeStyle=color;
+    ctx.lineWidth=2*state.scale;
+    ctx.beginPath(); ctx.arc(x,y,rr,0,Math.PI*2); ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawArrow(x1,y1,x2,y2,color,lw=3){
+    ctx.save();
+    ctx.strokeStyle=color; ctx.fillStyle=color;
+    ctx.lineWidth=lw*state.scale;
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+    const ang=Math.atan2(y2-y1,x2-x1);
+    const ah=9*state.scale, aw=6*state.scale;
+    ctx.beginPath();
+    ctx.moveTo(x2,y2);
+    ctx.lineTo(x2 - ah*Math.cos(ang) + aw*Math.sin(ang), y2 - ah*Math.sin(ang) - aw*Math.cos(ang));
+    ctx.lineTo(x2 - ah*Math.cos(ang) - aw*Math.sin(ang), y2 - ah*Math.sin(ang) + aw*Math.cos(ang));
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+
+  function drawForces(cx,cy,T1,T2,W){
+    const k=state.kPN, mgScale=1.3;
+    const t1End={x:cx-Math.cos(state.th1)*T1*k, y:cy-Math.sin(state.th1)*T1*k};
+    const t2End={x:cx+Math.cos(state.th2)*T2*k, y:cy-Math.sin(state.th2)*T2*k};
+    const mgEnd={x:cx, y:cy+W*k*mgScale};
+    drawArrow(cx,cy,t1End.x,t1End.y,getCSS('--blue','#2563eb'));
+    drawArrow(cx,cy,t2End.x,t2End.y,getCSS('--red','#ef4444'));
+    drawArrow(cx,cy,mgEnd.x,mgEnd.y,getCSS('--mg','#111827'));
+
+    labelAt(t1End.x-50*state.scale,t1End.y-20*state.scale,`T₁=${T1.toFixed(1)} N`,getCSS('--blue','#2563eb'),'center','top','bold');
+    labelAt(t2End.x+50*state.scale,t2End.y-20*state.scale,`T₂=${T2.toFixed(1)} N`,getCSS('--red','#ef4444'),'center','top','bold');
+    ctx.save();
+    ctx.font=`bold ${15*state.scale}px system-ui`;
+    ctx.fillStyle=getCSS('--mg','#111827');
+    ctx.textAlign='center'; ctx.textBaseline='top';
+    ctx.fillText(`mg=${W.toFixed(1)} N`, mgEnd.x, mgEnd.y+14*state.scale);
+    ctx.restore();
+  }
+
+  function drawComponents(cx,cy,T1,T2){
+    const k=state.kPN;
+    const T1x=T1*Math.cos(state.th1), T1y=T1*Math.sin(state.th1);
+    const T2x=T2*Math.cos(state.th2), T2y=T2*Math.sin(state.th2);
+    const arrowBlue=getCSS('--blueSoft','#93c5fd');
+    const arrowRed =getCSS('--redSoft','#fecaca');
+    const labelBlue='#2563eb';
+    const labelRed ='#ef4444';
+
+    const t1xTip = cx - Math.abs(T1x)*k + 2*state.scale;
+    drawArrow(cx+2*state.scale, cy, t1xTip, cy, arrowBlue, 2);
+    labelAt(t1xTip, cy+5*state.scale, 'T₁x', labelBlue, 'center', 'top', 'bold');
+
+    const t2xTip = cx + Math.abs(T2x)*k - 2*state.scale;
+    drawArrow(cx-2*state.scale, cy, t2xTip, cy, arrowRed, 2);
+    labelAt(t2xTip, cy+5*state.scale, 'T₂x', labelRed, 'center', 'top', 'bold');
+
+    const t1yBaseLabel = cx - 12*state.scale;
+    const t1yBaseArrow = t1yBaseLabel + 7.5*state.scale;
+    const t1yTipY = cy - Math.abs(T1y)*k;
+    drawArrow(t1yBaseArrow, cy, t1yBaseArrow, t1yTipY, arrowBlue, 2);
+    labelAt(t1yBaseLabel, t1yTipY, 'T₁y', labelBlue, 'center', 'bottom', 'bold');
+
+    const t2yBaseLabel = cx + 12*state.scale;
+    const t2yBaseArrow = t2yBaseLabel - 7.5*state.scale;
+    const t2yTipY = cy - Math.abs(T2y)*k;
+    drawArrow(t2yBaseArrow, cy, t2yBaseArrow, t2yTipY, arrowRed, 2);
+    labelAt(t2yBaseLabel, t2yTipY, 'T₂y', labelRed, 'center', 'bottom', 'bold');
+  }
+
+  function drawInfoPanel(T1,T2,W){
+    const x=state.info.x, y=state.info.y, w=state.info.w, h=state.info.h;
+
+    // มือถือ: ตัวอักษรในป้ายโตขึ้น +5px
+    const fontBoost = state.isMobile ? 5 : 0;
+    const baseFont = 12.5*state.scale;
+    const fontPx = Math.max(10, baseFont + fontBoost);
+    const lineH = Math.max(12, (16*state.scale) + (state.isMobile ? 3 : 0));
+    const pad = Math.max(4, (10*state.scale) * (state.isMobile ? 0.55 : 1));
+
+    ctx.save();
+
+    // ✅ ป้ายโปร่งใส และ "ไม่มีขอบ"
+    ctx.fillStyle='rgba(255,255,255,0.55)';
+    roundRect(x,y,w,h,10*state.scale);
+    ctx.fill();
+    // ไม่ stroke ตามที่สั่ง (ไม่มีขอบ)
+
+    ctx.font=`${fontPx}px system-ui, sans-serif`;
+    ctx.textAlign='left';
+    ctx.textBaseline='top';
+
+    const blue=getCSS('--blue','#2563eb'), red=getCSS('--red','#ef4444');
+    let yy=y+pad;
+
+    const th1=rad2deg(state.th1).toFixed(0), th2=rad2deg(state.th2).toFixed(0);
+    ctx.fillStyle='#0f172a'; ctx.fillText(`θ₁ = ${th1}°    θ₂ = ${th2}°`, x+pad, yy); yy+=lineH;
+
+    ctx.fillStyle=blue; ctx.fillText(`T₁ = ${T1.toFixed(1)} N`, x+pad, yy); yy+=lineH;
+    ctx.fillStyle=red;  ctx.fillText(`T₂ = ${T2.toFixed(1)} N`, x+pad, yy); yy+=lineH;
+
+    const T1x=(T1*Math.cos(state.th1)).toFixed(1), T1y=(T1*Math.sin(state.th1)).toFixed(1);
+    const T2x=(T2*Math.cos(state.th2)).toFixed(1), T2y=(T2*Math.sin(state.th2)).toFixed(1);
+
+    ctx.fillStyle=blue; ctx.fillText(`T₁x = ${T1x} N   T₁y = ${T1y} N`, x+pad, yy); yy+=lineH;
+    ctx.fillStyle=red;  ctx.fillText(`T₂x = ${T2x} N   T₂y = ${T2y} N`, x+pad, yy); yy+=lineH;
+
+    ctx.fillStyle=getCSS('--mg','#111827'); ctx.fillText(`mg = ${W.toFixed(1)} N`, x+pad, yy);
+    ctx.restore();
+  }
+
+  function labelAt(x,y,text,color='#0f172a',align='center',baseline='alphabetic',weight='normal'){
+    ctx.save();
+    ctx.font=`${weight} ${13*state.scale}px system-ui, sans-serif`;
+    ctx.textAlign=align; ctx.textBaseline=baseline;
+    ctx.fillStyle=color;
+    ctx.fillText(text,x,y);
+    ctx.restore();
+  }
+
+  function roundRect(x,y,w,h,r){
+    const rr=Math.min(r,w/2,h/2);
+    ctx.beginPath();
+    ctx.moveTo(x+rr,y);
+    ctx.arcTo(x+w,y,x+w,y+h,rr);
+    ctx.arcTo(x+w,y+h,x,y+h,rr);
+    ctx.arcTo(x,y+h,x,y,rr);
+    ctx.arcTo(x,y,x+w,y,rr);
+    ctx.closePath();
+  }
+  function getCSS(name,fallback){
+    const v=getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return v || fallback;
+  }
+
+  // อินพุต & ปุ่ม
+  wInput.oninput=()=>{ state.W=Math.max(1,+wInput.value||100); draw(); };
+  toggleBtn.onclick=()=>{ state.showVectors=!state.showVectors; toggleBtn.textContent = state.showVectors? 'ซ่อนเวกเตอร์แรง':'แสดงเวกเตอร์แรง'; draw(); };
+  compChk.oninput=()=>{ state.showComps = compChk.checked; draw(); };
+  resetBtn.onclick=()=>{
+    state.W=100; wInput.value=100;
+    state.th1=Math.PI/4; state.th2=Math.PI/4;
+    state.showVectors=false; compChk.checked=false;
+    toggleBtn.textContent='แสดงเวกเตอร์แรง';
+
+    state.infoBase = {...INFO_BASE};
+    state.info = { x:INFO_BASE.x, y:INFO_BASE.y, w:INFO_BASE.w, h:INFO_BASE.h };
+
+    resizeCanvas();
+  };
+
+  // --- ช่วยจับเชือกง่ายขึ้นบนมือถือ ---
+  function pointSegDist(px,py,x1,y1,x2,y2){
+    const vx=x2-x1, vy=y2-y1;
+    const wx=px-x1, wy=py-y1;
+    const c1 = vx*wx + vy*wy;
+    if(c1<=0) return Math.hypot(px-x1,py-y1);
+    const c2 = vx*vx + vy*vy;
+    if(c2<=c1) return Math.hypot(px-x2,py-y2);
+    const t = c1/c2;
+    const bx = x1 + t*vx, by = y1 + t*vy;
+    return Math.hypot(px-bx,py-by);
+  }
+  function hitRope(x,y){
+    if(!state.isMobile) return null;
+    const {cx,cy}=getCenter();
+    const L=state.R;
+    const exR=cx+L*Math.cos(state.th2), eyR=cy-L*Math.sin(state.th2);
+    const exL=cx-L*Math.cos(state.th1), eyL=cy-L*Math.sin(state.th1);
+
+    const thresh = 14*state.scale;
+    const dL = pointSegDist(x,y, exL,eyL, cx,cy);
+    const dR = pointSegDist(x,y, cx,cy, exR,eyR);
+
+    if(dL<=thresh && dL<=dR) return 'left';
+    if(dR<=thresh) return 'right';
+    return null;
+  }
+
+  // ลากวงแหวน + ลากแผงข้อมูล
+  const pointer={down:false,id:null};
+  cv.addEventListener('pointerdown',(e)=>{
+    cv.setPointerCapture(e.pointerId); pointer.down=true; pointer.id=e.pointerId;
+    const p=localPos(e);
+
+    if(inRect(p.x,p.y,state.info)) {
+      state.infoDrag={dx:p.x-state.info.x, dy:p.y-state.info.y};
+      state.dragging='panel';
+      return;
+    }
+
+    const hit = hitHandle(p.x,p.y) || hitRope(p.x,p.y);
+    state.dragging = hit ? hit : null;
+  });
+
+  cv.addEventListener('pointermove',(e)=>{
+    if(!pointer.down) return;
+    const p=localPos(e);
+
+    if(state.dragging==='panel' && state.infoDrag){
+      const dispW=cv.width/state.dpr, dispH=cv.height/state.dpr;
+      state.info.x = clamp(p.x - state.infoDrag.dx, 4, dispW - state.info.w - 4);
+      state.info.y = clamp(p.y - state.infoDrag.dy, 4, dispH - state.info.h - 4);
+      draw();
+      return;
+    }
+
+    if(state.dragging){
+      const {cx,cy}=getCenter();
+      const vx=p.x-cx, vy=p.y-cy;
+
+      if(state.dragging==='left'){
+        const a=Math.atan2(-vy,-vx);
+        state.th1 = clamp(Math.abs(a), Math.PI*5/180, Math.PI*85/180);
+      } else if(state.dragging==='right'){
+        const a=Math.atan2(-vy, vx);
+        state.th2 = clamp(Math.abs(a), Math.PI*5/180, Math.PI*85/180);
+      }
+      draw();
+    }
+  });
+
+  ['pointerup','pointercancel'].forEach(ev=>cv.addEventListener(ev,(e)=>{
+    if(pointer.id===e.pointerId){
+      pointer.down=false; pointer.id=null;
+      state.dragging=null; state.infoDrag=null;
+    }
+  }));
+
+  function hitHandle(x,y){
+    const {cx,cy}=getCenter();
+    const L=state.R;
+    const exR=cx+L*Math.cos(state.th2), eyR=cy-L*Math.sin(state.th2);
+    const exL=cx-L*Math.cos(state.th1), eyL=cy-L*Math.sin(state.th1);
+    const d2=(ax,ay)=> (ax-x)*(ax-x)+(ay-y)*(ay-y);
+
+    const base = state.isMobile ? 26 : 14;
+    const rr=(base*state.scale)*(base*state.scale);
+
+    if(d2(exR,eyR)<rr) return 'right';
+    if(d2(exL,eyL)<rr) return 'left';
+    return null;
+  }
+
+  function localPos(e){
+    const r=cv.getBoundingClientRect();
+    const x=(e.clientX - r.left);
+    const y=(e.clientY - r.top);
+    return { x, y };
+  }
+  function inRect(x,y,rect){
+    return x>=rect.x && x<=rect.x+rect.w && y>=rect.y && y<=rect.y+rect.h;
+  }
+
+  window.addEventListener('resize', resizeCanvas);
+  resizeCanvas();
+})();
+</script>
+</body>
+</html>

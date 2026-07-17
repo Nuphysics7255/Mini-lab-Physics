@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>กระดานเอียงสองอัน + แรง + องค์ประกอบ</title>
+<style>
+  :root{
+    --ink:#0f172a;
+    --muted:#475569;
+  }
+  body{
+    margin:0;
+    font-family:system-ui,"Noto Sans Thai",sans-serif;
+    background:#fff;
+    color:var(--ink);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:8px;
+    padding:10px;
+  }
+  #wrap{width:100%;max-width:980px;}
+
+  #labTitle{
+    margin:2px 0 6px;
+    font-size:20px;
+    font-weight:800;
+    letter-spacing:.2px;
+    color:var(--ink);
+  }
+
+  canvas{
+    width:100%;
+    background:#fff;
+    border:1px solid #e5e7eb;
+    border-radius:14px;
+    touch-action:none;
+  }
+  #panel{
+    margin-top:6px;
+    background:#f8fafc;
+    border:1px solid #e5e7eb;
+    border-radius:12px;
+    padding:10px 12px;
+    display:flex;
+    flex-wrap:wrap;
+    gap:12px;
+    align-items:center;
+  }
+  label{font-size:14px;}
+  input[type="number"]{
+    width:70px;
+    padding:4px 6px;
+    border:1px solid #cbd5e1;
+    border-radius:6px;
+    font-size:14px;
+  }
+  button{
+    border:1px solid #cbd5e1;
+    background:#fff;
+    border-radius:8px;
+    padding:4px 10px;
+    cursor:pointer;
+  }
+  #vals{font-size:13px;color:var(--muted);margin-top:4px;}
+  #footerLink{margin-top:6px;font-size:13px;color:#475569;}
+  #footerLink a{color:#2563eb;text-decoration:underline;}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="labTitle">สมดุลของทรงกลมบนไม้คาน</div>
+
+  <canvas id="cv" width="950" height="460"></canvas>
+  <div id="panel">
+    <label>θ₁ (ซ้าย):
+      <input id="ang1" type="number" value="55" min="15" max="80" step="1"> °
+    </label>
+    <label>θ₂ (ขวา):
+      <input id="ang2" type="number" value="60" min="15" max="80" step="1"> °
+    </label>
+    <label>มวล m:
+      <input id="mass" type="number" value="2.0" min="0.1" step="0.1"> kg
+    </label>
+    <button id="btnVec">แสดงเวกเตอร์ของแรง</button>
+    <label style="display:flex;align-items:center;gap:4px;">
+      <input id="chkTriangle" type="checkbox" /> แสดงการต่อเวกเตอร์
+    </label>
+    <label style="display:flex;align-items:center;gap:4px;">
+      <input id="chkComponents" type="checkbox" /> แสดงองค์ประกอบของแรง
+    </label>
+  </div>
+  <div id="vals"></div>
+  <p id="footerLink">
+    ศึกษาเพิ่มเติมที่เพจ
+    <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener noreferrer">คลายปมฟิสิกส์</a>
+  </p>
+</div>
+
+<script>
+// ========== ค่าเริ่มต้นและตัวแปรหลัก ==========
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+
+const ang1Input = document.getElementById('ang1');
+const ang2Input = document.getElementById('ang2');
+const massInput = document.getElementById('mass');
+const btnVec = document.getElementById('btnVec');
+const chkTriangle = document.getElementById('chkTriangle');
+const chkComponents = document.getElementById('chkComponents');
+const valsBox = document.getElementById('vals');
+
+const W = cv.width, H = cv.height;
+const origin = { x: W/2, y: 360 };
+const floorY = origin.y;
+
+const boardLen = 320;
+const ballR = 90;
+const boardOuterWidth = 18;
+const boardHalf = boardOuterWidth/2;
+const circleLine = 3;
+const circleHalf = circleLine/2;
+const contactDistBase = ballR + boardHalf + circleHalf;
+
+let theta1 = deg2rad(55);
+let theta2 = deg2rad(60);
+let mass = 2.0;
+let showVectors = false;
+let dragging = null;
+
+// ตำแหน่งเลื่อนของป้ายแต่ละป้าย และกรอบสำหรับตรวจการคลิก/แตะ
+const labelOffsets = Object.create(null);
+let labelHitboxes = [];
+
+function getLabelOffset(id){
+  if(!labelOffsets[id]) labelOffsets[id] = { x:0, y:0 };
+  return labelOffsets[id];
+}
+
+function fontPixelSize(font){
+  const m = String(font || '').match(/(\d+(?:\.\d+)?)px/);
+  return m ? parseFloat(m[1]) : 14;
+}
+
+// วาดข้อความพร้อมบันทึกพื้นที่ให้ลากได้
+function drawDraggableText(id, text, x, y, options={}){
+  const off = getLabelOffset(id);
+  const px = x + off.x;
+  const py = y + off.y;
+
+  const font = options.font || "13px 'Noto Sans Thai',sans-serif";
+  const fillStyle = options.fillStyle || '#111827';
+  const textAlign = options.textAlign || 'left';
+  const textBaseline = options.textBaseline || 'alphabetic';
+  const rotation = options.rotation || 0;
+  const padding = options.padding ?? (IS_COARSE ? 12 : 7);
+
+  ctx.save();
+  ctx.font = font;
+  ctx.fillStyle = fillStyle;
+  ctx.textAlign = textAlign;
+  ctx.textBaseline = textBaseline;
+  ctx.translate(px, py);
+  if(rotation) ctx.rotate(rotation);
+  ctx.fillText(text, 0, 0);
+
+  const width = Math.max(12, ctx.measureText(text).width);
+  const height = fontPixelSize(font) * 1.35;
+
+  let left = 0;
+  if(textAlign === 'center') left = -width/2;
+  else if(textAlign === 'right' || textAlign === 'end') left = -width;
+
+  let top = -height;
+  if(textBaseline === 'middle') top = -height/2;
+  else if(textBaseline === 'top' || textBaseline === 'hanging') top = 0;
+  else if(textBaseline === 'bottom' || textBaseline === 'ideographic') top = -height;
+
+  // แปลงมุมทั้ง 4 จุดกลับเป็นพิกัด canvas เพื่อสร้างกรอบ hit-test
+  const corners = [
+    {x:left-padding, y:top-padding},
+    {x:left+width+padding, y:top-padding},
+    {x:left+width+padding, y:top+height+padding},
+    {x:left-padding, y:top+height+padding}
+  ].map(p=>{
+    const c = Math.cos(rotation), s = Math.sin(rotation);
+    return {
+      x: px + p.x*c - p.y*s,
+      y: py + p.x*s + p.y*c
+    };
+  });
+
+  labelHitboxes.push({
+    id,
+    minX: Math.min(...corners.map(p=>p.x)),
+    maxX: Math.max(...corners.map(p=>p.x)),
+    minY: Math.min(...corners.map(p=>p.y)),
+    maxY: Math.max(...corners.map(p=>p.y))
+  });
+  ctx.restore();
+}
+
+function findLabelAt(x,y){
+  for(let i=labelHitboxes.length-1;i>=0;i--){
+    const b = labelHitboxes[i];
+    if(x>=b.minX && x<=b.maxX && y>=b.minY && y<=b.maxY) return b.id;
+  }
+  return null;
+}
+
+const g = 9.81;
+
+// ✅ เพิ่ม: ตรวจว่าเป็นจอสัมผัส + ขยาย hit area ให้แตะง่าย
+const IS_COARSE = window.matchMedia && window.matchMedia('(pointer:coarse)').matches;
+const HIT_RADIUS = IS_COARSE ? 60 : 22; // มือถือแตะง่ายขึ้นชัดเจน
+
+// ✅ เพิ่ม: แปลงพิกัดจากจอจริง -> พิกัดใน canvas (แก้ปัญหาหลักของมือถือ)
+function getCanvasPoint(e){
+  const rect = cv.getBoundingClientRect();
+  const scaleX = cv.width / rect.width;
+  const scaleY = cv.height / rect.height;
+  return {
+    x: (e.clientX - rect.left) * scaleX,
+    y: (e.clientY - rect.top) * scaleY
+  };
+}
+
+// ========== ฟังก์ชันช่วย ==========
+function deg2rad(d){ return d*Math.PI/180; }
+function rad2deg(r){ return r*180/Math.PI; }
+function clamp(v,mn,mx){ return Math.min(Math.max(v,mn),mx); }
+
+// คำนวณตำแหน่งบอล-จุดสัมผัส-แรงปฏิกิริยา
+function computeAll(){
+  const m1 = Math.tan(theta1);
+  const m2 = Math.tan(theta2);
+  const A = contactDistBase * Math.sqrt(m1*m1 + 1);
+  const B = contactDistBase * Math.sqrt(m2*m2 + 1);
+  const cx_math = (A - B) / (m1 + m2);
+  const cy_math = A - m1 * cx_math;
+
+  // จุดสัมผัสซ้าย
+  const denom1 = (m1*m1 + 1);
+  const x1 = cx_math - m1*(m1*cx_math + cy_math)/denom1;
+  const y1 = cy_math - (m1*cx_math + cy_math)/denom1;
+
+  // จุดสัมผัสขวา
+  const denom2 = (m2*m2 + 1);
+  const x2 = cx_math + m2*(-m2*cx_math + cy_math)/denom2;
+  const y2 = cy_math - (-m2*cx_math + cy_math)/denom2;
+
+  // เวกเตอร์หน่วยปฏิกิริยา
+  const v1 = { x: cx_math - x1, y: cy_math - y1 };
+  const v2 = { x: cx_math - x2, y: cy_math - y2 };
+  const len1 = Math.hypot(v1.x, v1.y);
+  const len2 = Math.hypot(v2.x, v2.y);
+
+  const u1 = { x: v1.x/len1, y: v1.y/len1 };
+  const u2 = { x: v2.x/len2, y: v2.y/len2 };
+
+  const mg = mass * g;
+  let N1, N2;
+  if(Math.abs(u1.x) < 1e-6){
+    N2 = mg / (u2.y);
+    N1 = 0;
+  }else{
+    N2 = mg / (u2.y - u1.y * (u2.x/u1.x));
+    N1 = -(u2.x/u1.x) * N2;
+  }
+
+  return {
+    centerCanvas: { x: origin.x + cx_math, y: origin.y - cy_math },
+    contact1Canvas: { x: origin.x + x1, y: origin.y - y1 },
+    contact2Canvas: { x: origin.x + x2, y: origin.y - y2 },
+    u1, u2,
+    N1, N2, mg
+  };
+}
+
+// วาดกระดาน
+function drawBoard(start, angle, length, side){
+  ctx.save();
+  ctx.lineWidth = boardOuterWidth;
+  ctx.lineCap = 'square';
+
+  const end = {
+    x: start.x + Math.cos(angle) * length,
+    y: start.y - Math.sin(angle) * length
+  };
+
+  ctx.strokeStyle = '#263238';
+  ctx.beginPath();
+  ctx.moveTo(start.x, start.y);
+  ctx.lineTo(end.x, end.y);
+  ctx.stroke();
+
+  ctx.lineWidth = 12;
+  const grd = ctx.createLinearGradient(start.x, start.y, end.x, end.y);
+  grd.addColorStop(0, '#bd9052');
+  grd.addColorStop(0.5, '#d9a766');
+  grd.addColorStop(1, '#a56c2f');
+  ctx.strokeStyle = grd;
+  ctx.beginPath();
+  ctx.moveTo(start.x, start.y);
+  ctx.lineTo(end.x, end.y);
+  ctx.stroke();
+
+  if(side === 'left'){
+    drawDraggableText('board1', 'กระดาน 1', end.x - 90, end.y - 12, {
+      font:"16px 'Noto Sans Thai',sans-serif", fillStyle:'#000'
+    });
+  }else{
+    drawDraggableText('board2', 'กระดาน 2', end.x - 4, end.y - 12, {
+      font:"16px 'Noto Sans Thai',sans-serif", fillStyle:'#000'
+    });
+  }
+
+  ctx.restore();
+}
+
+// มุม θ1 θ2 ด้านบน
+function drawAnglesText(){
+  ctx.save();
+  ctx.strokeStyle = '#c4c4c4';
+  ctx.lineWidth = 2;
+  let r = 45;
+  ctx.beginPath();
+  ctx.arc(origin.x, origin.y, r, Math.PI, Math.PI+theta1, false);
+  ctx.stroke();
+  drawDraggableText(
+    'theta1Top',
+    'θ₁ = ' + (rad2deg(theta1)).toFixed(1) + '°',
+    origin.x - 140,
+    origin.y - 20,
+    { font:"14px 'Noto Sans Thai',sans-serif", fillStyle:'#555' }
+  );
+  drawDraggableText(
+    'theta2Top',
+    'θ₂ = ' + (rad2deg(theta2)).toFixed(1) + '°',
+    origin.x + 30,
+    origin.y - 20,
+    { font:"14px 'Noto Sans Thai',sans-serif", fillStyle:'#555' }
+  );
+  ctx.restore();
+}
+
+// ลูกศรทั่วไป + ป้าย (ใช้กับเวกเตอร์หลัก)
+function drawArrowWithLabel(id,x1,y1,x2,y2,color,text,offsetX=0,offsetY=0){
+  const headLen = 10;
+  const dx=x2-x1, dy=y2-y1;
+  const ang=Math.atan2(dy,dx);
+  ctx.save();
+  ctx.strokeStyle=color;
+  ctx.fillStyle=color;
+  ctx.lineWidth=3;
+  ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x2,y2);
+  ctx.lineTo(x2 - headLen*Math.cos(ang - Math.PI/6), y2 - headLen*Math.sin(ang - Math.PI/6));
+  ctx.lineTo(x2 - headLen*Math.cos(ang + Math.PI/6), y2 - headLen*Math.sin(ang + Math.PI/6));
+  ctx.lineTo(x2,y2);ctx.fill();
+
+  const off=4;
+  const tx = x2 + off*Math.cos(ang) + offsetX;
+  const ty = y2 + off*Math.sin(ang) + offsetY;
+  drawDraggableText(id, text, tx+4, ty, {
+    font:"13px 'Noto Sans Thai',sans-serif",
+    fillStyle:color,
+    textBaseline:'middle'
+  });
+  ctx.restore();
+}
+
+// ลูกศรหมุนตามแนว (ใช้กับ N1 และ mg ในสามเหลี่ยม)
+function drawArrowRotLabel(id, pStart, pEnd, color, text, offset, side='right'){
+  const x1=pStart.x, y1=pStart.y;
+  const x2=pEnd.x, y2=pEnd.y;
+  const dx=x2-x1, dy=y2-y1;
+  const ang=Math.atan2(dy,dx);
+  const headLen=9;
+  ctx.save();
+  ctx.strokeStyle=color;
+  ctx.fillStyle=color;
+  ctx.lineWidth=3;
+  ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x2,y2);
+  ctx.lineTo(x2 - headLen*Math.cos(ang - Math.PI/6), y2 - headLen*Math.sin(ang - Math.PI/6));
+  ctx.lineTo(x2 - headLen*Math.cos(ang + Math.PI/6), y2 - headLen*Math.sin(ang + Math.PI/6));
+  ctx.lineTo(x2,y2);ctx.fill();
+
+  const normal = side === 'left'
+    ? { x: Math.sin(ang), y: -Math.cos(ang) }
+    : { x: -Math.sin(ang), y: Math.cos(ang) };
+  const dist = offset || 10;
+  const tx = (x1+x2)/2 + normal.x*dist;
+  const ty = (y1+y2)/2 + normal.y*dist;
+
+  drawDraggableText(id, text, tx, ty, {
+    font:"12px 'Noto Sans Thai',sans-serif",
+    fillStyle:color,
+    textBaseline:'middle',
+    rotation:ang
+  });
+  ctx.restore();
+}
+
+// เฉพาะ N2 ในการต่อเวกเตอร์: ป้ายอยู่ที่ปลายลูกศร, สูงขึ้น 10px, ขยับขวา 30px
+function drawArrowHorizontalLabelAtTip(id, pStart, pEnd, color, text){
+  const x1=pStart.x, y1=pStart.y;
+  const x2=pEnd.x, y2=pEnd.y;
+  const dx=x2-x1, dy=y2-y1;
+  const ang=Math.atan2(dy,dx);
+  const headLen=9;
+
+  ctx.save();
+  ctx.strokeStyle=color;
+  ctx.fillStyle=color;
+  ctx.lineWidth=3;
+  ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x2,y2);
+  ctx.lineTo(x2 - headLen*Math.cos(ang - Math.PI/6), y2 - headLen*Math.sin(ang - Math.PI/6));
+  ctx.lineTo(x2 - headLen*Math.cos(ang + Math.PI/6), y2 - headLen*Math.sin(ang + Math.PI/6));
+  ctx.lineTo(x2,y2);ctx.fill();
+
+  ctx.font = "12px 'Noto Sans Thai',sans-serif";
+  const labelX = x2 - ctx.measureText(text).width/2 + 30;
+  drawDraggableText(id, text, labelX, y2 - 10, {
+    font:"12px 'Noto Sans Thai',sans-serif",
+    fillStyle:color,
+    textBaseline:'bottom'
+  });
+  ctx.restore();
+}
+
+// มุมบนเส้นปะจากจุดสัมผัสไปศูนย์กลาง
+function drawNormalMgAngles(mid1, mid2){
+  ctx.save();
+  drawDraggableText('normalAngle1', (rad2deg(theta1)).toFixed(1)+'°', mid1.x + 4, mid1.y + 20, {
+    font:"12px 'Noto Sans Thai',sans-serif", fillStyle:'#6b7280'
+  });
+  drawDraggableText('normalAngle2', (rad2deg(theta2)).toFixed(1)+'°', mid2.x - 20, mid2.y + 20, {
+    font:"12px 'Noto Sans Thai',sans-serif", fillStyle:'#6b7280'
+  });
+  ctx.restore();
+}
+
+// วาดสามเหลี่ยมการต่อเวกเตอร์ด้านขวา
+function drawVectorTriangle(geom){
+  const baseX = 770;
+  const baseY = 170;
+
+  const baseLen = 80;
+  const mgLen = baseLen;
+  const N1Len = baseLen * (geom.N1 / geom.mg);
+  const N2Len = baseLen * (geom.N2 / geom.mg);
+
+  const u1c = { x: geom.u1.x, y: -geom.u1.y };
+  const u2c = { x: geom.u2.x, y: -geom.u2.y };
+  const mgDir = { x:0, y:1 };
+
+  const p0 = { x: baseX, y: baseY };
+  const p1 = { x: p0.x + u1c.x * N1Len, y: p0.y + u1c.y * N1Len };
+  const p2 = { x: p1.x + u2c.x * N2Len, y: p1.y + u2c.y * N2Len };
+  const p3 = { x: p2.x + mgDir.x * mgLen, y: p2.y + mgDir.y * mgLen };
+
+  ctx.save();
+  ctx.strokeStyle = '#d4d4d8';
+  ctx.setLineDash([4,4]);
+  ctx.beginPath();
+  ctx.moveTo(p0.x,p0.y);
+  ctx.lineTo(p1.x,p1.y);
+  ctx.lineTo(p2.x,p2.y);
+  ctx.lineTo(p0.x,p0.y);
+  ctx.stroke();
+  ctx.restore();
+
+  drawArrowRotLabel('triangleN1', p0, p1, '#0ea5e9', 'N₁ = ' + geom.N1.toFixed(1) + ' N', 12, 'right');
+  drawArrowHorizontalLabelAtTip('triangleN2', p1, p2, '#10b981', 'N₂ = ' + geom.N2.toFixed(1) + ' N');
+  drawArrowRotLabel('triangleMg', p2, p3, '#ef4444', 'mg = ' + geom.mg.toFixed(1) + ' N', 12, 'right');
+}
+
+function drawSimpleArrow(x1,y1,x2,y2){
+  const headLen = 7;
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const ang = Math.atan2(dy,dx);
+  ctx.beginPath();
+  ctx.moveTo(x1,y1);
+  ctx.lineTo(x2,y2);
+  ctx.stroke();
+  ctx.save();
+  ctx.setLineDash([]);
+  ctx.beginPath();
+  ctx.moveTo(x2,y2);
+  ctx.lineTo(x2 - headLen*Math.cos(ang - Math.PI/6), y2 - headLen*Math.sin(ang - Math.PI/6));
+  ctx.lineTo(x2 - headLen*Math.cos(ang + Math.PI/6), y2 - headLen*Math.sin(ang + Math.PI/6));
+  ctx.lineTo(x2,y2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawComponents(geom){
+  const baseLen = 80;
+  const N1Len = baseLen * (geom.N1 / geom.mg);
+  const N2Len = baseLen * (geom.N2 / geom.mg);
+
+  const c = geom.centerCanvas;
+  const u1c = { x: geom.u1.x, y: -geom.u1.y };
+  const u2c = { x: geom.u2.x, y: -geom.u2.y };
+
+  const N1head = { x: c.x + u1c.x * N1Len, y: c.y + u1c.y * N1Len };
+  const N2head = { x: c.x + u2c.x * N2Len, y: c.y + u2c.y * N2Len };
+
+  ctx.save();
+  ctx.setLineDash([5,4]);
+  ctx.lineWidth = 2;
+
+  ctx.strokeStyle = 'rgba(14,165,233,0.4)';
+  ctx.fillStyle = 'rgba(14,165,233,0.6)';
+  drawSimpleArrow(c.x, c.y, N1head.x, c.y);
+  drawDraggableText('N1x', 'N₁x', N1head.x - 10, c.y + 15, {
+    font:"11px 'Noto Sans Thai',sans-serif", fillStyle:'rgba(14,165,233,0.75)'
+  });
+
+  ctx.strokeStyle = 'rgba(14,165,233,0.4)';
+  drawSimpleArrow(N1head.x, c.y, N1head.x, N1head.y);
+  drawDraggableText('N1y', 'N₁y', N1head.x +5, (c.y + N1head.y)/2, {
+    font:"11px 'Noto Sans Thai',sans-serif", fillStyle:'rgba(14,165,233,0.75)'
+  });
+
+  ctx.strokeStyle = 'rgba(16,185,129,0.35)';
+  ctx.fillStyle = 'rgba(16,185,129,0.6)';
+  drawSimpleArrow(c.x, c.y, N2head.x, c.y);
+  drawDraggableText('N2x', 'N₂x', N2head.x + 4, c.y + 15, {
+    font:"11px 'Noto Sans Thai',sans-serif", fillStyle:'rgba(16,185,129,0.75)'
+  });
+
+  ctx.strokeStyle = 'rgba(16,185,129,0.35)';
+  drawSimpleArrow(N2head.x, c.y, N2head.x, N2head.y);
+  drawDraggableText('N2y', 'N₂y', N2head.x - 20, (c.y + N2head.y)/2, {
+    font:"11px 'Noto Sans Thai',sans-serif", fillStyle:'rgba(16,185,129,0.75)'
+  });
+
+  ctx.restore();
+}
+
+// ========== วาดรวม ==========
+function draw(){
+  labelHitboxes = [];
+  ctx.clearRect(0,0,W,H);
+
+  ctx.strokeStyle = '#b2b6ba';
+  ctx.lineWidth = 6;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(50, floorY);
+  ctx.lineTo(W-50, floorY);
+  ctx.stroke();
+
+  drawBoard(origin, Math.PI - theta1, boardLen, 'left');
+  drawBoard(origin, theta2, boardLen, 'right');
+
+  const geom = computeAll();
+
+  ctx.fillStyle = 'rgba(178,198,225,0.8)';
+  ctx.strokeStyle = '#1f3c5a';
+  ctx.lineWidth = circleLine;
+  ctx.beginPath();
+  ctx.arc(geom.centerCanvas.x, geom.centerCanvas.y, ballR, 0, Math.PI*2);
+  ctx.fill();
+  ctx.stroke();
+
+  drawAnglesText();
+
+  if(showVectors){
+    ctx.save();
+    ctx.setLineDash([6,4]);
+    ctx.strokeStyle = '#a1a1aa';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(geom.contact1Canvas.x, geom.contact1Canvas.y);
+    ctx.lineTo(geom.centerCanvas.x, geom.centerCanvas.y);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(geom.contact2Canvas.x, geom.contact2Canvas.y);
+    ctx.lineTo(geom.centerCanvas.x, geom.centerCanvas.y);
+    ctx.stroke();
+    ctx.restore();
+
+    const baseLen = 80;
+    const mgLen = baseLen;
+    const N1Len = baseLen * (geom.N1 / geom.mg);
+    const N2Len = baseLen * (geom.N2 / geom.mg);
+
+    drawArrowWithLabel(
+      'forceMg',
+      geom.centerCanvas.x,
+      geom.centerCanvas.y,
+      geom.centerCanvas.x,
+      geom.centerCanvas.y + mgLen,
+      '#ef4444',
+      `mg = ${geom.mg.toFixed(2)} N`
+    );
+
+    const u1c = { x: geom.u1.x, y: -geom.u1.y };
+    drawArrowWithLabel(
+      'forceN1',
+      geom.centerCanvas.x,
+      geom.centerCanvas.y,
+      geom.centerCanvas.x + u1c.x * N1Len,
+      geom.centerCanvas.y + u1c.y * N1Len,
+      '#0ea5e9',
+      `N₁ = ${geom.N1.toFixed(2)} N`,
+      -10, -10
+    );
+
+    const u2c = { x: geom.u2.x, y: -geom.u2.y };
+    drawArrowWithLabel(
+      'forceN2',
+      geom.centerCanvas.x,
+      geom.centerCanvas.y,
+      geom.centerCanvas.x + u2c.x * N2Len,
+      geom.centerCanvas.y + u2c.y * N2Len,
+      '#10b981',
+      `N₂ = ${geom.N2.toFixed(2)} N`,
+      0, -10
+    );
+
+    const mid1 = {
+      x: (geom.contact1Canvas.x + geom.centerCanvas.x)/2,
+      y: (geom.contact1Canvas.y + geom.centerCanvas.y)/2
+    };
+    const mid2 = {
+      x: (geom.contact2Canvas.x + geom.centerCanvas.x)/2,
+      y: (geom.contact2Canvas.y + geom.centerCanvas.y)/2
+    };
+    drawNormalMgAngles(mid1, mid2);
+
+    valsBox.textContent =
+      `mg = ${geom.mg.toFixed(2)} N | N₁ = ${geom.N1.toFixed(2)} N | N₂ = ${geom.N2.toFixed(2)} N`;
+
+    if(chkTriangle.checked){
+      drawVectorTriangle(geom);
+    }
+  }else{
+    valsBox.textContent = '';
+    if(chkTriangle.checked){
+      drawVectorTriangle(geom);
+    }
+  }
+
+  if(chkComponents.checked){
+    drawComponents(geom);
+  }
+}
+
+// ========== event listeners ==========
+ang1Input.addEventListener('input', ()=>{
+  theta1 = deg2rad(clamp(parseFloat(ang1Input.value),15,80));
+  draw();
+});
+ang2Input.addEventListener('input', ()=>{
+  theta2 = deg2rad(clamp(parseFloat(ang2Input.value),15,80));
+  draw();
+});
+massInput.addEventListener('input', ()=>{
+  mass = Math.max(0.05, parseFloat(massInput.value) || 0.05);
+  draw();
+});
+btnVec.addEventListener('click', ()=>{
+  showVectors = !showVectors;
+  btnVec.textContent = showVectors ? 'ซ่อนเวกเตอร์ของแรง' : 'แสดงเวกเตอร์ของแรง';
+  draw();
+});
+chkTriangle.addEventListener('change', ()=> draw());
+chkComponents.addEventListener('change', ()=> draw());
+
+// ====== ลากเพื่อปรับมุมกระดาน ======
+function pointToSegmentDist(px,py, x1,y1, x2,y2){
+  const A = px - x1;
+  const B = py - y1;
+  const C = x2 - x1;
+  const D = y2 - y1;
+  const dot = A*C + B*D;
+  const len_sq = C*C + D*D;
+  let param = -1;
+  if(len_sq !== 0) param = dot / len_sq;
+  let xx, yy;
+  if(param < 0){ xx = x1; yy = y1; }
+  else if(param > 1){ xx = x2; yy = y2; }
+  else{
+    xx = x1 + param*C;
+    yy = y1 + param*D;
+  }
+  const dx = px - xx;
+  const dy = py - yy;
+  return Math.sqrt(dx*dx + dy*dy);
+}
+
+cv.addEventListener('pointerdown', (e)=>{
+  const p = getCanvasPoint(e);
+  const x = p.x, y = p.y;
+
+  // ให้การลากป้ายมีลำดับก่อนการลากกระดาน
+  const labelId = findLabelAt(x,y);
+  if(labelId){
+    const off = getLabelOffset(labelId);
+    dragging = {
+      type:'label',
+      id:labelId,
+      startX:x,
+      startY:y,
+      startOffsetX:off.x,
+      startOffsetY:off.y
+    };
+    try{ cv.setPointerCapture(e.pointerId); }catch(_){}
+    e.preventDefault();
+    return;
+  }
+
+  const leftEnd = {
+    x: origin.x + Math.cos(Math.PI - theta1)*boardLen,
+    y: origin.y - Math.sin(Math.PI - theta1)*boardLen
+  };
+  const rightEnd = {
+    x: origin.x + Math.cos(theta2)*boardLen,
+    y: origin.y - Math.sin(theta2)*boardLen
+  };
+
+  const dL = pointToSegmentDist(x,y, origin.x,origin.y, leftEnd.x,leftEnd.y);
+  const dR = pointToSegmentDist(x,y, origin.x,origin.y, rightEnd.x,rightEnd.y);
+
+  if(dL < HIT_RADIUS) dragging = { type:'board', side:'left' };
+  else if(dR < HIT_RADIUS) dragging = { type:'board', side:'right' };
+  else dragging = null;
+
+  if(dragging){
+    try{ cv.setPointerCapture(e.pointerId); }catch(_){}
+  }
+});
+
+cv.addEventListener('pointermove', (e)=>{
+  if(!dragging) return;
+
+  const p = getCanvasPoint(e);
+  const x = p.x, y = p.y;
+
+  if(dragging.type === 'label'){
+    const off = getLabelOffset(dragging.id);
+    off.x = dragging.startOffsetX + (x - dragging.startX);
+    off.y = dragging.startOffsetY + (y - dragging.startY);
+    draw();
+    e.preventDefault();
+    return;
+  }
+
+  const vx = x - origin.x;
+  const vy = origin.y - y;
+
+  // คุมง่าย + เสถียร
+  const denom = Math.max(12, Math.abs(vx));
+  let ang = Math.atan2(vy, denom);
+  ang = clamp(ang, deg2rad(15), deg2rad(80));
+
+  if(dragging.side === 'left'){
+    theta1 = ang;
+    ang1Input.value = Math.round(rad2deg(theta1));
+  }else{
+    theta2 = ang;
+    ang2Input.value = Math.round(rad2deg(theta2));
+  }
+  draw();
+});
+
+cv.addEventListener('pointerup', (e)=>{
+  dragging = null;
+  try{ cv.releasePointerCapture(e.pointerId); }catch(_){}
+});
+cv.addEventListener('pointercancel', (e)=>{
+  dragging = null;
+  try{ cv.releasePointerCapture(e.pointerId); }catch(_){}
+});
+
+// วาดครั้งแรก
+draw();
+</script>
+</body>
+</html>

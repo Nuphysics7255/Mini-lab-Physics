@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mini Lab : สมดุล 3 แรง</title>
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['\\(','\\)'], ['$', '$']], displayMath: [['\\[','\\]']] },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+  <style>
+    :root{
+      --blue:#2563eb; --orange:#f97316; --purple:#7c3aed; --green:#16a34a;
+      --bg:#f7fbff; --card:#ffffff; --ink:#0f172a; --muted:#64748b; --line:#dbeafe;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:"Sarabun","Noto Sans Thai",system-ui,sans-serif;background:linear-gradient(180deg,#eef7ff,#ffffff);color:var(--ink)}
+    header{padding:16px 20px 8px;text-align:center}
+    h1{margin:0;font-size:clamp(24px,4vw,40px);color:#0f3b74;line-height:1.15}
+    .sub{font-size:clamp(14px,2vw,18px);color:#475569;margin-top:6px}
+    .wrap{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:14px;padding:12px;max-width:1280px;margin:auto}
+    .lab,.panel,.formula{background:rgba(255,255,255,.92);border:1px solid #d8e8fb;border-radius:22px;box-shadow:0 12px 30px rgba(37,99,235,.10)}
+    .lab{position:relative;min-height:620px;overflow:hidden}
+    svg{width:100%;height:100%;display:block;touch-action:none;background:radial-gradient(circle at center,#fff 0,#f8fbff 55%,#eef6ff 100%)}
+    .panel{padding:14px;max-height:620px;overflow:auto}
+    .group{border:1px solid var(--line);border-radius:16px;padding:12px;margin-bottom:12px;background:#fbfdff}
+    .group h3{margin:0 0 8px;font-size:18px;color:#0f3b74}
+    .row{display:grid;grid-template-columns:92px 1fr 64px;gap:8px;align-items:center;margin:8px 0}
+    label{font-weight:700;font-size:14px;color:#334155}
+    input[type=range]{width:100%}
+    input[type=number]{width:64px;border:1px solid #cbd5e1;border-radius:10px;padding:6px;text-align:center;font-size:14px}
+    button{width:100%;border:0;border-radius:14px;padding:11px 10px;margin:5px 0;font-size:16px;font-weight:800;cursor:pointer;background:#e2e8f0;color:#0f172a;transition:.15s}
+    button:hover{transform:translateY(-1px);filter:brightness(.98)}
+    .primary{background:#2563eb;color:white}.orange{background:#fed7aa;color:#7c2d12}.purple{background:#ddd6fe;color:#4c1d95}.green{background:#bbf7d0;color:#14532d}.ghost{background:#f1f5f9;color:#334155}
+    .active{outline:3px solid rgba(37,99,235,.25)}
+    .readout{font-size:14px;line-height:1.55;background:#f8fafc;border-radius:14px;padding:10px;border:1px dashed #cbd5e1}
+    .formula{grid-column:1/-1;padding:14px 18px;margin:0 12px 14px;display:none}
+    .formula.show{display:block}
+    .formula h2{font-size:18px;color:#0f3b74;margin:0 0 6px}
+    .formula-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .box{background:#ffffff;border:1px solid #dbeafe;border-radius:16px;padding:10px 12px;min-height:110px;overflow:auto;line-height:1.45;font-size:14px}
+    .mjx-container{font-size:72%!important; max-width:100%; overflow-x:auto; overflow-y:hidden; padding:2px 0}
+    .box h3{margin:0 0 4px;font-size:15px;color:#334155}
+    .badge{position:absolute;left:16px;top:16px;background:rgba(255,255,255,.88);border:1px solid #bfdbfe;border-radius:16px;padding:10px 12px;font-weight:800;color:#0f3b74;box-shadow:0 8px 20px rgba(15,59,116,.12)}
+    .note{position:absolute;right:16px;bottom:16px;background:rgba(255,255,255,.9);border:1px solid #bbf7d0;border-radius:16px;padding:10px 12px;color:#14532d;font-weight:800;max-width:360px}
+    .footer{text-align:center;color:#475569;padding:8px 0 16px;font-weight:700}
+    .vec-label{font-size:12px;font-weight:700;paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round}
+    .angle-label{font-size:14px;font-weight:800;fill:#334155;paint-order:stroke;stroke:#fff;stroke-width:4px}
+    .checkrow{display:flex;align-items:center;gap:8px;margin:8px 0 4px;padding:8px 10px;border-radius:12px;background:#f8fafc;border:1px solid #e2e8f0;font-weight:700;color:#334155}
+    .checkrow input{width:18px;height:18px}
+    .tip-drag-zone{cursor:grab;fill:transparent;stroke:none;pointer-events:all}
+    .tip-drag-zone:active{cursor:grabbing}
+    .draggable-label{cursor:move;user-select:none}
+    @media(max-width:900px){.wrap{grid-template-columns:1fr}.panel{max-height:none}.lab{min-height:540px}.formula-grid{grid-template-columns:1fr}.row{grid-template-columns:84px 1fr 58px}}
+  </style>
+</head>
+<body>
+<header>
+  <h1>Mini Lab : สมดุล 3 แรง</h1>
+  <div class="sub">ปรับแรง 2 แรง → สร้างแรงที่ 3 เพื่อให้แรงลัพธ์เป็นศูนย์</div>
+</header>
+<div class="wrap">
+  <section class="lab">
+    <div class="badge" id="modeBadge">โหมด: แรงกระทำที่วัตถุ</div>
+    <svg id="svg" viewBox="0 0 820 620" aria-label="พื้นที่ทดลอง">
+      <defs>
+        <marker id="arrowBlue" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L8,4 L0,8 Z" fill="#2563eb"/></marker>
+        <marker id="arrowOrange" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L8,4 L0,8 Z" fill="#f97316"/></marker>
+        <marker id="arrowPurple" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L8,4 L0,8 Z" fill="#7c3aed"/></marker>
+        <marker id="arrowGreen" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L8,4 L0,8 Z" fill="#16a34a"/></marker>
+      </defs>
+      <g id="grid"></g>
+      <g id="angles"></g>
+      <g id="vectors"></g>
+      <g id="objectLayer"></g>
+    </svg>
+    <div class="note" id="note">ลากปลายลูกศร F₁/F₂ เพื่อปรับขนาดและมุม หรือปรับจากแผงควบคุม แล้วกด “สร้างสมดุล”</div>
+  </section>
+
+  <aside class="panel">
+    <div class="group">
+      <h3 style="color:#2563eb">แรงที่ 1 : F₁</h3>
+      <div class="row"><label>ขนาด</label><input id="f1" type="range" min="20" max="160" value="100"><input id="f1n" type="number" min="20" max="160" value="100"></div>
+      <div class="row"><label>มุม</label><input id="a1" type="range" min="0" max="360" value="25"><input id="a1n" type="number" min="0" max="360" value="25"></div>
+    </div>
+    <div class="group">
+      <h3 style="color:#f97316">แรงที่ 2 : F₂</h3>
+      <div class="row"><label>ขนาด</label><input id="f2" type="range" min="20" max="160" value="85"><input id="f2n" type="number" min="20" max="160" value="85"></div>
+      <div class="row"><label>มุม</label><input id="a2" type="range" min="0" max="360" value="145"><input id="a2n" type="number" min="0" max="360" value="145"></div>
+    </div>
+    <div class="group">
+      <button class="primary" id="eqBtn">สร้างสมดุล</button>
+      <button class="green" id="resBtn">แสดงแรงลัพธ์ของ F₁ + F₂</button>
+      <button class="orange" id="headBtn">หางต่อหัว</button>
+      <label class="checkrow"><input type="checkbox" id="showOriginal" checked> แสดงเวกเตอร์เดิมในโหมดหางต่อหัว</label>
+      <button class="ghost" id="resetBtn">ล้างการแสดงผล</button>
+    </div>
+    <div class="readout" id="readout"></div>
+  </aside>
+</div>
+
+<section class="formula" id="formulaPanel">
+  <h2 id="formulaTitle">สูตรสำคัญ</h2>
+  <div class="formula-grid">
+    <div class="box" id="formulaA"></div>
+    <div class="box" id="formulaB"></div>
+  </div>
+</section>
+<div class="footer">ศึกษาเพิ่มเติมที่เพจ คลายปมฟิสิกส์</div>
+
+<script>
+const svg = document.getElementById('svg');
+const grid = document.getElementById('grid');
+const vectors = document.getElementById('vectors');
+const angles = document.getElementById('angles');
+const objectLayer = document.getElementById('objectLayer');
+const note = document.getElementById('note');
+const badge = document.getElementById('modeBadge');
+const formulaPanel = document.getElementById('formulaPanel');
+const formulaTitle = document.getElementById('formulaTitle');
+const formulaA = document.getElementById('formulaA');
+const formulaB = document.getElementById('formulaB');
+const readout = document.getElementById('readout');
+let state = { f1:100, a1:25, f2:85, a2:145, showF3:false, showR:false, mode:'body', headProgress:1, showOriginal:true, labelOffsets:{} };
+let headAnimId=null;
+const cx=410, cy=300, scale=1.35;
+
+function rad(deg){return deg*Math.PI/180}
+function deg(x){return x*180/Math.PI}
+function vec(mag,ang){return {x:mag*Math.cos(rad(ang)), y:-mag*Math.sin(rad(ang))}}
+function mag(v){return Math.hypot(v.x,v.y)}
+function angleOf(v){let a=deg(Math.atan2(-v.y,v.x)); return (a+360)%360}
+function fmt(n){return Number(n).toFixed(1).replace('.0','')}
+function pt(base,v){return {x:base.x+v.x*scale,y:base.y+v.y*scale}}
+function el(name,attrs={}){const e=document.createElementNS('http://www.w3.org/2000/svg',name); for(const k in attrs)e.setAttribute(k,attrs[k]); return e}
+function clear(node){while(node.firstChild)node.removeChild(node.firstChild)}
+function line(x1,y1,x2,y2,stroke,w=4,marker=''){const l=el('line',{x1,y1,x2,y2,stroke,'stroke-width':w,'stroke-linecap':'round'}); if(marker)l.setAttribute('marker-end',`url(#${marker})`); return l}
+function text(x,y,txt,fill,cls='vec-label'){const t=el('text',{x,y,fill,class:cls,'text-anchor':'middle'}); t.textContent=txt; return t}
+function textMulti(x,y,lines,fill,cls='vec-label'){
+  const t=el('text',{x,y,fill,class:cls,'text-anchor':'middle'});
+  lines.forEach((line,i)=>{ const sp=el('tspan',{x,dy:i?12:0}); sp.textContent=line; t.appendChild(sp); });
+  return t;
+}
+function makeLabelDraggable(t, key, baseX, baseY){
+  const off = state.labelOffsets[key] || {x:0,y:0};
+  const nx = baseX + off.x, ny = baseY + off.y;
+  t.setAttribute('x', nx); t.setAttribute('y', ny);
+  t.querySelectorAll('tspan').forEach(sp=>sp.setAttribute('x', nx));
+  t.classList.add('draggable-label');
+  t.dataset.labelKey = key;
+  t.dataset.baseX = baseX;
+  t.dataset.baseY = baseY;
+  t.addEventListener('pointerdown', startLabelDrag);
+  return t;
+}
+function addDragText(parent, x, y, txt, fill, cls, key){
+  const t = text(x,y,txt,fill,cls);
+  parent.appendChild(makeLabelDraggable(t,key,x,y));
+  return t;
+}
+function addDragTextMulti(parent, x, y, lines, fill, cls, key){
+  const t = textMulti(x,y,lines,fill,cls);
+  parent.appendChild(makeLabelDraggable(t,key,x,y));
+  return t;
+}
+function normAng(a){ return (a%360+360)%360; }
+function ccwDelta(a,b){ return normAng(b-a); }
+function cwDelta(a,b){ return normAng(a-b); }
+function isOnCCW(start,end,a){
+  const total=ccwDelta(start,end), part=ccwDelta(start,a);
+  return part>1e-6 && part<total-1e-6;
+}
+function sectorAngle(a,b,exclude){
+  // เลือกส่วนโค้งระหว่างแรง 2 แรง โดยไม่ผ่านแรงตัวที่เหลือ
+  if(isOnCCW(a,b,exclude)) return {start:a,end:b,dir:'cw',value:cwDelta(a,b)};
+  return {start:a,end:b,dir:'ccw',value:ccwDelta(a,b)};
+}
+function angleArc(center, r, startDeg, endDeg, dir, color, label, opacity=1){
+  let total = dir==='ccw' ? ccwDelta(startDeg,endDeg) : cwDelta(startDeg,endDeg);
+  const steps = Math.max(8, Math.ceil(total/8));
+  const pts=[];
+  for(let i=0;i<=steps;i++){
+    const a = dir==='ccw' ? startDeg + total*i/steps : startDeg - total*i/steps;
+    pts.push([center.x+r*Math.cos(rad(a)), center.y-r*Math.sin(rad(a))]);
+  }
+  const d = pts.map((p,i)=>(i?'L':'M')+` ${p[0]} ${p[1]}`).join(' ');
+  const p=el('path',{d,fill:'none',stroke:color,'stroke-width':2,'stroke-dasharray':'4 4','stroke-linecap':'round',opacity});
+  angles.appendChild(p);
+  const mid = dir==='ccw' ? startDeg + total/2 : startDeg - total/2;
+  const lx=center.x+(r+16)*Math.cos(rad(mid)), ly=center.y-(r+16)*Math.sin(rad(mid));
+  const lab=makeLabelDraggable(text(lx,ly,label,color,'angle-label'), `${label}-${Math.round(center.x)}-${Math.round(center.y)}`, lx, ly);
+  lab.setAttribute('opacity', opacity);
+  angles.appendChild(lab);
+}
+
+function angleBetweenSegmentsDeg(vA, vB){
+  const dot = vA.x*vB.x + vA.y*vB.y;
+  const mA = Math.hypot(vA.x,vA.y), mB = Math.hypot(vB.x,vB.y);
+  return deg(Math.acos(Math.max(-1,Math.min(1,dot/(mA*mB)))));
+}
+function drawTriangleAngle(vertex, pA, pB, label, color, r=24){
+  const a1 = angleOf({x:(pA.x-vertex.x)/scale, y:(pA.y-vertex.y)/scale});
+  const a2 = angleOf({x:(pB.x-vertex.x)/scale, y:(pB.y-vertex.y)/scale});
+  const interior = angleBetweenSegmentsDeg({x:pA.x-vertex.x,y:pA.y-vertex.y},{x:pB.x-vertex.x,y:pB.y-vertex.y});
+  const dir = ccwDelta(a1,a2) <= 180 ? 'ccw' : 'cw';
+  angleArc(vertex,r,a1,a2,dir,color,label ? `${label}=${fmt(interior)}°` : `${fmt(interior)}°`);
+}
+
+function drawGrid(){
+  clear(grid);
+  for(let x=20;x<820;x+=40) grid.appendChild(line(x,0,x,620,'#eaf2ff',1));
+  for(let y=20;y<620;y+=40) grid.appendChild(line(0,y,820,y,'#eaf2ff',1));
+  grid.appendChild(line(0,cy,820,cy,'#dbeafe',1.6)); grid.appendChild(line(cx,0,cx,620,'#dbeafe',1.6));
+}
+function addTipDragZone(end, forceKey){
+  // วงจับปลายลูกศรแบบมองไม่เห็น: ไม่มีจุดบนหัวลูกศร แต่ยังลากปลายลูกศรได้ง่าย
+  const h=el('circle',{cx:end.x,cy:end.y,r:18,class:'tip-drag-zone','data-force':forceKey});
+  h.addEventListener('pointerdown',startDrag);
+  vectors.appendChild(h);
+}
+function drawVector(base, v, color, marker, label, offset=0, dashed=false, forceKey=null, showMagnitude=true){
+  const end=pt(base,v); const g=el('g');
+  const l=line(base.x,base.y,end.x,end.y,color,3,marker); if(dashed)l.setAttribute('stroke-dasharray','8 6'); g.appendChild(l);
+  const a=angleOf(v);
+  // ให้ชื่อแรงและขนาดแรงอยู่กลางเวกเตอร์ ไม่ไปชิดปลายลูกศร
+  const nx = -Math.sin(rad(a)), ny = -Math.cos(rad(a));
+  const midx=(base.x+end.x)/2 + nx*12;
+  const midy=(base.y+end.y)/2 + ny*12;
+  const keyBase = `body-${label}`;
+  if(showMagnitude) g.appendChild(makeLabelDraggable(textMulti(midx,midy,[label,`${fmt(mag(v))} N`],color), keyBase, midx, midy));
+  else g.appendChild(makeLabelDraggable(text(midx,midy,label,color), keyBase, midx, midy));
+  vectors.appendChild(g);
+  if(forceKey) addTipDragZone(end, forceKey);
+  return end;
+}
+function drawObject(){
+  clear(objectLayer);
+  objectLayer.appendChild(el('circle',{cx,cy,r:19,fill:'#fff',stroke:'#0f3b74','stroke-width':4}));
+  objectLayer.appendChild(el('circle',{cx,cy,r:6,fill:'#0f3b74'}));
+}
+function compute(){
+  const v1=vec(state.f1,state.a1), v2=vec(state.f2,state.a2);
+  const R={x:v1.x+v2.x,y:v1.y+v2.y};
+  const v3={x:-R.x,y:-R.y};
+  const F3=mag(v3), a3=angleOf(v3), Rmag=mag(R), Rang=angleOf(R);
+  const theta12 = smallestAngle(state.a1,state.a2);
+  const s1 = sectorAngle(state.a2,a3,state.a1);     // θ₁ ระหว่าง F₂ กับ F₃ โดยไม่ผ่าน F₁
+  const s2 = sectorAngle(state.a1,a3,state.a2);     // θ₂ ระหว่าง F₁ กับ F₃ โดยไม่ผ่าน F₂
+  const s3 = sectorAngle(state.a1,state.a2,a3);     // θ₃ ระหว่าง F₁ กับ F₂ โดยไม่ผ่าน F₃
+  return {v1,v2,R,v3,F3,a3,Rmag,Rang,theta12,theta1:s1.value,theta2:s2.value,theta3:s3.value,s1,s2,s3};
+}
+function smallestAngle(a,b){let d=Math.abs(((a-b+180)%360)-180); return d;}
+function drawAngleSet(center,c,opacity=1){
+  // ส่วนโค้งเล็กลง และจัด θ₂ ให้วัดระหว่าง F₁ กับ F₃ อีกฝั่งหนึ่ง โดยไม่ผ่าน F₂
+  angleArc(center,34,c.s1.start,c.s1.end,c.s1.dir,'#2563eb',`θ₁=${fmt(c.theta1)}°`, opacity);
+  angleArc(center,50,c.s2.start,c.s2.end,c.s2.dir,'#ef4444',`θ₂=${fmt(c.theta2)}°`, opacity);
+  angleArc(center,66,c.s3.start,c.s3.end,c.s3.dir,'#7c3aed',`θ₃=${fmt(c.theta3)}°`, opacity);
+}
+function drawBody(){
+  const c=compute(); clear(vectors); clear(angles); drawGrid(); drawObject();
+  drawVector({x:cx,y:cy},c.v1,'#2563eb','arrowBlue','F₁',34,false,'f1');
+  drawVector({x:cx,y:cy},c.v2,'#f97316','arrowOrange','F₂',34,false,'f2');
+  if(state.showR) drawVector({x:cx,y:cy},c.R,'#16a34a','arrowGreen','R',34,true,null);
+  if(state.showF3) drawVector({x:cx,y:cy},c.v3,'#7c3aed','arrowPurple','F₃',34,false,null);
+  if(state.showF3) drawAngleSet({x:cx,y:cy},c);
+}
+function mixPoint(a,b,t){ return {x:a.x+(b.x-a.x)*t, y:a.y+(b.y-a.y)*t}; }
+function drawVectorPx(base, end, color, marker, label, forceMag, dashed=false){
+  const g=el('g');
+  const l=line(base.x,base.y,end.x,end.y,color,3,marker); if(dashed)l.setAttribute('stroke-dasharray','8 6'); g.appendChild(l);
+  const dx=end.x-base.x, dy=end.y-base.y;
+  const len=Math.hypot(dx,dy)||1;
+  const nx=-dy/len, ny=dx/len;
+  const midx=(base.x+end.x)/2 + nx*12;
+  const midy=(base.y+end.y)/2 + ny*12;
+  g.appendChild(makeLabelDraggable(textMulti(midx,midy,[label,`${fmt(forceMag)} N`],color), `head-${label}`, midx, midy));
+  vectors.appendChild(g);
+  return end;
+}
+function drawVectorPxTo(parent, base, end, color, marker, label, forceMag, opacity=1, dashed=false){
+  const g=el('g',{opacity});
+  const l=line(base.x,base.y,end.x,end.y,color,3,marker); if(dashed)l.setAttribute('stroke-dasharray','8 6'); g.appendChild(l);
+  const dx=end.x-base.x, dy=end.y-base.y;
+  const len=Math.hypot(dx,dy)||1;
+  const nx=-dy/len, ny=dx/len;
+  const midx=(base.x+end.x)/2 + nx*12;
+  const midy=(base.y+end.y)/2 + ny*12;
+  g.appendChild(makeLabelDraggable(textMulti(midx,midy,[label,`${fmt(forceMag)} N`],color), `original-${label}`, midx, midy));
+  parent.appendChild(g);
+  return end;
+}
+function drawHeadTail(){
+  const c=compute(); clear(vectors); clear(angles); clear(objectLayer); drawGrid();
+  const start={x:170,y:360};
+  const common={x:cx,y:cy};
+  const target0=start;
+  const target1=pt(target0,c.v1);
+  const target2=pt(target1,c.v2);
+  const target3=pt(target2,c.v3);
+  const body1s=common, body1e=pt(common,c.v1);
+  const body2s=common, body2e=pt(common,c.v2);
+  const body3s=common, body3e=pt(common,c.v3);
+  const t=state.headProgress ?? 1;
+  if(state.showOriginal){
+    drawObject();
+    drawVectorPxTo(vectors, common, pt(common,c.v1), '#2563eb', 'arrowBlue', 'F₁', state.f1, 1);
+    drawVectorPxTo(vectors, common, pt(common,c.v2), '#f97316', 'arrowOrange', 'F₂', state.f2, 1);
+    drawVectorPxTo(vectors, common, pt(common,c.v3), '#7c3aed', 'arrowPurple', 'F₃', c.F3, 1);
+    drawAngleSet(common,c,1);
+  }
+  const b1=mixPoint(body1s,target0,t), e1=mixPoint(body1e,target1,t);
+  const b2=mixPoint(body2s,target1,t), e2=mixPoint(body2e,target2,t);
+  const b3=mixPoint(body3s,target2,t), e3=mixPoint(body3e,target3,t);
+  drawVectorPx(b1,e1,'#2563eb','arrowBlue','F₁',state.f1);
+  drawVectorPx(b2,e2,'#f97316','arrowOrange','F₂',state.f2);
+  drawVectorPx(b3,e3,'#7c3aed','arrowPurple','F₃',c.F3);
+  if(t>0.92){
+    // แสดงเฉพาะมุมระหว่างเวกเตอร์ในรูปหางต่อหัว
+    drawTriangleAngle(target0,target1,target2,'B','#ef4444',23);
+    drawTriangleAngle(target1,target0,target2,'C','#7c3aed',23);
+    drawTriangleAngle(target2,target1,target0,'A','#2563eb',23);
+    vectors.appendChild(el('circle',{cx:target0.x,cy:target0.y,r:5,fill:'#0f3b74'}));
+    vectors.appendChild(el('circle',{cx:target3.x,cy:target3.y,r:5,fill:'#0f3b74'}));
+    addDragText(vectors,(target0.x+target3.x)/2,target0.y+36,'สามเหลี่ยมปิดพอดี ⇒ ΣF = 0','#0f3b74','angle-label','head-close-note');
+  }else{
+    addDragText(vectors,cx,cy+105,'กำลังเลื่อนเวกเตอร์ไปประกอบแบบหางต่อหัว','#0f3b74','angle-label','head-moving-note');
+  }
+}
+function drawTailTail(){
+  const c=compute(); clear(vectors); clear(angles); drawGrid(); drawObject();
+  drawVector({x:cx,y:cy},c.v1,'#2563eb','arrowBlue','F₁',34,false,'f1');
+  drawVector({x:cx,y:cy},c.v2,'#f97316','arrowOrange','F₂',34,false,'f2');
+  drawVector({x:cx,y:cy},c.v3,'#7c3aed','arrowPurple','F₃',34,false,null);
+  drawAngleSet({x:cx,y:cy},c);
+}
+function update(){
+  const c=compute();
+  if(state.mode==='head') drawHeadTail(); else if(state.mode==='tail') drawTailTail(); else drawBody();
+  readout.innerHTML = `<b>ค่าปัจจุบัน</b><br>F₁ = ${fmt(state.f1)} N, มุมแรง = ${fmt(state.a1)}°<br>F₂ = ${fmt(state.f2)} N, มุมแรง = ${fmt(state.a2)}°<br>${state.showF3?`F₃ = ${fmt(c.F3)} N, มุมแรง = ${fmt(c.a3)}°<br>θ₁=${fmt(c.theta1)}°, θ₂=${fmt(c.theta2)}°, θ₃=${fmt(c.theta3)}°<br><b>ตรวจสอบ:</b> ΣFₓ ≈ 0, ΣFᵧ ≈ 0`:`แรงลัพธ์ R = ${fmt(c.Rmag)} N`}`;
+  if(state.mode==='body') badge.textContent='โหมด: แรงกระทำที่วัตถุ';
+  if(state.mode==='head') badge.textContent='โหมด: หางต่อหัว';
+  if(state.mode==='tail') badge.textContent='โหมด: หางต่อหาง';
+  if(window.MathJax) MathJax.typesetPromise?.();
+}
+function showHeadFormula(){
+  const c=compute();
+  const A = 180 - c.theta1; // มุมในสามเหลี่ยม ตรงข้าม F₁
+  const B = 180 - c.theta2; // มุมในสามเหลี่ยม ตรงข้าม F₂
+  const C = 180 - c.theta3; // มุมในสามเหลี่ยม ตรงข้าม F₃
+  formulaPanel.classList.add('show');
+  formulaTitle.textContent='การแทนค่าสูตร : กฎของ sin และทฤษฎีของลามี';
+  formulaA.innerHTML = `<h3>แบบที่ 1 : กฎของ sin</h3>
+  <p>ใช้มุมภายในสามเหลี่ยมของแรง โดย A อยู่ตรงข้าม F₁, B อยู่ตรงข้าม F₂, C อยู่ตรงข้าม F₃</p>
+  \\[\\frac{F_1}{\\sin A}=\\frac{F_2}{\\sin B}=\\frac{F_3}{\\sin C}\\]
+  \\[A=${fmt(A)}^\\circ,\\quad B=${fmt(B)}^\\circ,\\quad C=${fmt(C)}^\\circ\\]
+  \\[\\frac{${fmt(state.f1)}}{\\sin ${fmt(A)}^\\circ}=\\frac{${fmt(state.f2)}}{\\sin ${fmt(B)}^\\circ}=\\frac{${fmt(c.F3)}}{\\sin ${fmt(C)}^\\circ}\\]`;
+  formulaB.innerHTML = `<h3>แบบที่ 2 : ทฤษฎีของลามี</h3>
+  <p>ใช้มุมระหว่างแรงจริงแบบหางต่อหาง โดย θ₁ ตรงข้าม F₁, θ₂ ตรงข้าม F₂, θ₃ ตรงข้าม F₃</p>
+  \\[\\frac{F_1}{\\sin\\theta_1}=\\frac{F_2}{\\sin\\theta_2}=\\frac{F_3}{\\sin\\theta_3}\\]
+  \\[\\theta_1=${fmt(c.theta1)}^\\circ,\\quad \\theta_2=${fmt(c.theta2)}^\\circ,\\quad \\theta_3=${fmt(c.theta3)}^\\circ\\]
+  \\[\\frac{${fmt(state.f1)}}{\\sin ${fmt(c.theta1)}^\\circ}=\\frac{${fmt(state.f2)}}{\\sin ${fmt(c.theta2)}^\\circ}=\\frac{${fmt(c.F3)}}{\\sin ${fmt(c.theta3)}^\\circ}\\]`;
+}
+function showLamiFormula(){
+  const c=compute(); formulaPanel.classList.add('show'); formulaTitle.textContent='หางต่อหาง : ทฤษฎีของลามี';
+  formulaA.innerHTML = `<h3>ทฤษฎีของลามี</h3>
+  \\[\\frac{F_1}{\\sin\\theta_1}=\\frac{F_2}{\\sin\\theta_2}=\\frac{F_3}{\\sin\\theta_3}\\]
+  <p>เมื่อแรง 3 แรงกระทำที่จุดเดียวกันและอยู่ในสมดุล</p>
+  <p>θ₁ คือมุมระหว่าง F₂ และ F₃, θ₂ คือมุมระหว่าง F₁ และ F₃, θ₃ คือมุมระหว่าง F₁ และ F₂</p>`;
+  formulaB.innerHTML = `<h3>แทนค่าจากภาพ</h3>
+  \\[\\theta_1=${fmt(c.theta1)}^\\circ,\\quad \\theta_2=${fmt(c.theta2)}^\\circ,\\quad \\theta_3=${fmt(c.theta3)}^\\circ\\]
+  \\[\\frac{${fmt(state.f1)}}{\\sin ${fmt(c.theta1)}^\\circ}=\\frac{${fmt(state.f2)}}{\\sin ${fmt(c.theta2)}^\\circ}=\\frac{${fmt(c.F3)}}{\\sin ${fmt(c.theta3)}^\\circ}\\]
+  <p><b>จำง่าย:</b> แรงใดอยู่ตรงข้ามมุมใด ให้นำแรงนั้นหารด้วย sin ของมุมนั้น</p>`;
+}
+let draggingLabel=null;
+let draggingForce=null;
+function startLabelDrag(evt){
+  draggingLabel = {
+    key: evt.currentTarget.dataset.labelKey,
+    baseX: Number(evt.currentTarget.dataset.baseX),
+    baseY: Number(evt.currentTarget.dataset.baseY)
+  };
+  evt.currentTarget.setPointerCapture(evt.pointerId);
+  evt.stopPropagation();
+  evt.preventDefault();
+}
+function svgPoint(evt){
+  const p=svg.createSVGPoint(); p.x=evt.clientX; p.y=evt.clientY;
+  return p.matrixTransform(svg.getScreenCTM().inverse());
+}
+function startDrag(evt){
+  draggingForce=evt.currentTarget.getAttribute('data-force');
+  evt.currentTarget.setPointerCapture(evt.pointerId);
+  evt.preventDefault();
+}
+svg.addEventListener('pointermove',evt=>{
+  const p=svgPoint(evt);
+  if(draggingLabel){
+    state.labelOffsets[draggingLabel.key] = {x:p.x-draggingLabel.baseX, y:p.y-draggingLabel.baseY};
+    update();
+    return;
+  }
+  if(!draggingForce) return;
+  const dx=(p.x-cx)/scale, dy=(p.y-cy)/scale;
+  const m=Math.max(20,Math.min(160,Math.hypot(dx,dy)));
+  const a=normAng(deg(Math.atan2(-dy,dx)));
+  if(draggingForce==='f1'){
+    state.f1=Number(m.toFixed(1)); state.a1=Number(a.toFixed(1));
+    document.getElementById('f1').value=state.f1; document.getElementById('f1n').value=state.f1;
+    document.getElementById('a1').value=state.a1; document.getElementById('a1n').value=state.a1;
+  }else if(draggingForce==='f2'){
+    state.f2=Number(m.toFixed(1)); state.a2=Number(a.toFixed(1));
+    document.getElementById('f2').value=state.f2; document.getElementById('f2n').value=state.f2;
+    document.getElementById('a2').value=state.a2; document.getElementById('a2n').value=state.a2;
+  }
+  update();
+});
+svg.addEventListener('pointerup',()=>{draggingForce=null; draggingLabel=null;});
+svg.addEventListener('pointercancel',()=>{draggingForce=null; draggingLabel=null;});
+
+function playHeadTailAnimation(){
+  if(headAnimId) cancelAnimationFrame(headAnimId);
+  state.headProgress=0;
+  const startTime=performance.now();
+  const duration=900;
+  const step=(now)=>{
+    const raw=Math.min(1,(now-startTime)/duration);
+    state.headProgress=1-Math.pow(1-raw,3);
+    update();
+    if(raw<1) headAnimId=requestAnimationFrame(step);
+  };
+  headAnimId=requestAnimationFrame(step);
+}
+
+function bind(id,key){
+  const r=document.getElementById(id), n=document.getElementById(id+'n');
+  const sync=(v)=>{state[key]=Number(v); r.value=v; n.value=v; if(key==='f1'||key==='a1'||key==='f2'||key==='a2'){state.mode='body'; state.headProgress=1;} update();};
+  r.addEventListener('input',e=>sync(e.target.value)); n.addEventListener('input',e=>sync(e.target.value));
+}
+bind('f1','f1'); bind('a1','a1'); bind('f2','f2'); bind('a2','a2');
+document.getElementById('showOriginal').addEventListener('change',e=>{state.showOriginal=e.target.checked; update();});
+document.getElementById('eqBtn').onclick=()=>{state.showF3=true; state.mode='body'; state.headProgress=1; note.textContent='สร้าง F₃ ให้มีขนาดเท่ากับแรงลัพธ์ แต่ทิศตรงข้าม จึงสมดุล'; update();};
+document.getElementById('resBtn').onclick=()=>{state.showR=!state.showR; state.mode='body'; state.headProgress=1; note.textContent='R คือแรงลัพธ์ของ F₁ + F₂ ส่วน F₃ ต้องหันตรงข้ามกับ R'; update();};
+document.getElementById('headBtn').onclick=()=>{state.showF3=true; state.mode='head'; note.textContent='หางต่อหัว: แสดงการเลื่อนเวกเตอร์จากจุดเดียวกันไปต่อกันแบบหางต่อหัว'; showHeadFormula(); playHeadTailAnimation();};
+document.getElementById('resetBtn').onclick=()=>{state.showF3=false; state.showR=false; state.mode='body'; state.headProgress=1; formulaPanel.classList.remove('show'); note.textContent='ลากปลายลูกศร F₁/F₂ เพื่อปรับขนาดและมุม หรือปรับจากแผงควบคุม แล้วกด “สร้างสมดุล”'; update();};
+drawGrid(); update();
+</script>
+</body>
+</html>

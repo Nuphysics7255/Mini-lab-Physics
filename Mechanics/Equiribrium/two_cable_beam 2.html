@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>คานแขวนด้วยเชือก 2 เส้น + กล่องเลื่อนตำแหน่งได้ (Responsive + Arrow Anim)</title>
+<style>
+  :root{
+    --ink:#0f172a;
+    --muted:#64748b;
+    --panel:#ffffff;
+    --beam:#b8860b;
+    --bg:#f8fafc;
+  }
+  body{
+    margin:0;
+    background:#fff;
+    font-family:system-ui,"Noto Sans Thai",sans-serif;
+    color:var(--ink);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:10px;
+    padding:12px 8px 20px;
+  }
+  h2{
+    margin:4px 0 0;
+    font-size:18px;
+    text-align:center;
+  }
+  #wrap{
+    width:min(100%, 980px);
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    align-items:center;
+  }
+  #cv{
+    border:1px solid #e2e8f0;
+    border-radius:12px;
+    background:var(--bg);
+    touch-action:none;
+  }
+  #panel{
+    background:#fff;
+    border:1px solid #e2e8f0;
+    border-radius:12px;
+    padding:10px 12px;
+    width:100%;
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    align-items:center;
+  }
+  #panel label{
+    font-size:13px;
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+  }
+
+  /* ให้ Mg / mg อยู่บรรทัดเดียวกัน (ตัวหนังสือ + ช่องกรอก) */
+  #panel label.inlineField{
+    flex-direction:row;
+    align-items:center;
+    gap:8px;
+  }
+  #panel label.inlineField > span{
+    line-height:1.2;
+    white-space:nowrap;
+  }
+
+  #panel input{
+    padding:3px 6px;
+    border:1px solid #cbd5e1;
+    border-radius:6px;
+    width:90px;
+  }
+  button{
+    border:1px solid #0f172a20;
+    background:#e2e8f0;
+    border-radius:8px;
+    padding:4px 14px;
+    cursor:pointer;
+    font-size:13px;
+  }
+  button.active{
+    background:#0f172a;
+    color:#fff;
+  }
+  a{color:#2563eb;text-decoration:none;}
+  a:hover{text-decoration:underline;}
+  #formula{
+    background:#fff7ed;
+    border:1px solid #fed7aa;
+    border-radius:10px;
+    padding:8px 10px;
+    font-size:13px;
+    line-height:1.4;
+    width:100%;
+  }
+  @media (max-width:600px){
+    #panel{
+      flex-direction:column;
+      align-items:flex-start;
+    }
+    #panel input{
+      width:110px;
+    }
+    /* คง Mg / mg ให้เป็นบรรทัดเดียวแม้อยู่บนมือถือ */
+    #panel label.inlineField input{
+      width:110px;
+    }
+  }
+</style>
+
+<!-- MathJax -->
+<script>
+  window.MathJax = {
+    tex: {inlineMath: [['\\(','\\)'], ['$', '$']]},
+    svg: {fontCache: 'global'}
+  };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+</head>
+
+<body>
+  <div id="wrap">
+    <h2>คานไม้แขวนด้วยเชือก 2 เส้น + กล่องแขวนเลื่อนตำแหน่งได้</h2>
+    <canvas id="cv" width="900" height="420"></canvas>
+
+    <div id="panel">
+      <label class="inlineField">
+        <span>น้ำหนักคาน \(Mg\) (N)</span>
+        <input type="number" id="beamW" value="200" min="0" step="10">
+      </label>
+
+      <label class="inlineField">
+        <span>น้ำหนักกล่อง \(mg\) (N)</span>
+        <input type="number" id="boxW" value="80" min="0" step="5">
+      </label>
+
+      <label>ตำแหน่งกล่อง x (cm)
+        <small>0 = ปลายซ้าย, 100 = ปลายขวา</small>
+        <input type="number" id="boxX" value="40" min="0" max="100" step="1">
+      </label>
+
+      <button id="toggleV">แสดงเวกเตอร์แรง</button>
+
+      <span style="font-size:13px;margin-left:auto;">
+        ศึกษาเพิ่มเติมได้ที่
+        <a href="https://www.facebook.com/resolvephysics" target="_blank">เพจ คลายปมฟิสิกส์</a>
+      </span>
+    </div>
+
+    <div id="formula">
+      สูตรที่ใช้ (คานยาว \(L = 100 \mathrm{~cm}\) แขวนที่ปลายทั้งสอง และเป็นคานสม่ำเสมอ):<br>
+      \[
+        T_2 = \frac{Mg\left(\frac{L}{2}\right) + mg(x)}{L}, \quad
+        T_1 = Mg + mg - T_2
+      \]
+      โดยที่ \(x\) คือระยะจากปลายซ้ายของคาน (cm)
+    </div>
+  </div>
+
+<script>
+(function(){
+  const BASE_W = 900;
+  const BASE_H = 420;
+  const cv = document.getElementById('cv');
+  const ctx = cv.getContext('2d');
+
+  // ตำแหน่งฐาน
+  const ceilingY = 60;
+  const leftX = 120;
+  const rightX = 780;
+  const beamY = 220;
+  const beamH = 26;
+  const beamL = rightX - leftX;
+
+  // input
+  const beamInput = document.getElementById('beamW');
+  const boxInput = document.getElementById('boxW');
+  const posInput = document.getElementById('boxX');
+  const toggleBtn = document.getElementById('toggleV');
+
+  // state จริง
+  let Mg = Number(beamInput.value);
+  let mg = Number(boxInput.value);
+  let xcm = Number(posInput.value);
+  let showVectors = false;
+
+  // state สำหรับลาก
+  let dragging = false;
+
+  // responsive scale
+  let scale = 1;
+
+  // มือถือ
+  let isMobile = window.matchMedia("(max-width:600px)").matches;
+
+  // ตัวแปรแอนิเมชันลูกศร
+  let targetT1 = 0, targetT2 = 0, targetMg = Mg, targetmg = mg;
+  let animT1 = 0, animT2 = 0, animMg = Mg, animmg = mg;
+
+  function resizeCanvas(){
+    const wrap = document.getElementById('wrap');
+    const w = wrap.clientWidth - 4;
+    const targetW = Math.min(w, BASE_W);
+    cv.width = targetW;
+    cv.height = targetW * (BASE_H / BASE_W);
+    scale = targetW / BASE_W;
+    isMobile = window.matchMedia("(max-width:600px)").matches;
+  }
+
+  function cmToPx(xcm){
+    return leftX + (xcm/100)*beamL;
+  }
+  function pxToCm(px){
+    return ((px - leftX)/beamL)*100;
+  }
+
+  function computeTargets(){
+    const L = 100;
+    const x = xcm;
+    const T2 = (Mg/2) + (mg*(x/L));
+    const T1 = (Mg + mg) - T2;
+    targetT1 = T1;
+    targetT2 = T2;
+    targetMg = Mg;
+    targetmg = mg;
+  }
+
+  function lerp(current, target, t){
+    return current + (target - current) * t;
+  }
+
+  function setLabelFont(basePx){
+    const px = isMobile ? (basePx + 10) : basePx;
+    const w = isMobile ? 700 : 400;
+    ctx.font = `${w} ${px}px system-ui,'Noto Sans Thai'`;
+  }
+
+  function drawTextSharp(text, x, y, fill){
+    if(isMobile){
+      ctx.save();
+      setLabelFont(12); // base 12 => mobile 22
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = "rgba(255,255,255,0.95)";
+      ctx.strokeText(text, x, y);
+      ctx.fillStyle = fill || "#0f172a";
+      ctx.fillText(text, x, y);
+      ctx.restore();
+    }else{
+      ctx.fillStyle = fill || "#0f172a";
+      ctx.fillText(text, x, y);
+    }
+  }
+
+  // ✅ เพิ่ม labelOffsetY เพื่อขยับป้ายเฉพาะบางอัน (ตามที่สั่ง)
+  function drawArrow(x1,y1,x2,y2,label,color,labelOffsetY=0){
+    const headLen = 10;
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const angle = Math.atan2(dy, dx);
+    ctx.strokeStyle = color || "#0f172a";
+    ctx.fillStyle = color || "#0f172a";
+    ctx.beginPath();
+    ctx.moveTo(x1,y1);
+    ctx.lineTo(x2,y2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x2,y2);
+    ctx.lineTo(x2 - headLen*Math.cos(angle - Math.PI/6),
+               y2 - headLen*Math.sin(angle - Math.PI/6));
+    ctx.lineTo(x2 - headLen*Math.cos(angle + Math.PI/6),
+               y2 - headLen*Math.sin(angle + Math.PI/6));
+    ctx.lineTo(x2,y2);
+    ctx.fill();
+
+    if(label){
+      drawTextSharp(label, x2 + 6, y2 + 4 + labelOffsetY, color || "#0f172a");
+    }
+  }
+
+  function draw(){
+    ctx.clearRect(0,0,cv.width,cv.height);
+    ctx.save();
+    ctx.scale(scale, scale);
+
+    // เพดาน
+    ctx.fillStyle = "#020617";
+    ctx.fillRect(40, ceilingY-8, BASE_W-80, 10);
+
+    // เชือกซ้าย
+    ctx.strokeStyle = "#1f2937";
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(leftX, ceilingY+2);
+    ctx.lineTo(leftX, beamY);
+    ctx.stroke();
+
+    // เชือกขวา
+    ctx.beginPath();
+    ctx.moveTo(rightX, ceilingY+2);
+    ctx.lineTo(rightX, beamY);
+    ctx.stroke();
+
+    // คาน
+    ctx.fillStyle = "#b8860b";
+    ctx.strokeStyle = "#1f2937";
+    ctx.beginPath();
+    ctx.rect(leftX, beamY, beamL, beamH);
+    ctx.fill();
+    ctx.stroke();
+
+    const midX = (leftX + rightX)/2;
+
+    // กล่อง (แสดงเฉพาะตอน mg > 0)
+    const hasBox = mg > 0.0001;
+    const boxX = cmToPx(xcm);
+    const hookY = beamY + beamH;
+    const boxY = hookY + 10;
+    const boxW = 46;
+    const boxH = 38;
+
+    if (hasBox) {
+      // เชือกกล่อง
+      ctx.strokeStyle = "#1f2937";
+      ctx.beginPath();
+      ctx.moveTo(boxX, hookY);
+      ctx.lineTo(boxX, boxY);
+      ctx.stroke();
+
+      // กล่อง
+      ctx.fillStyle = "#f97316";
+      ctx.strokeStyle = "#1f2937";
+      ctx.beginPath();
+      ctx.rect(boxX - boxW/2, boxY, boxW, boxH);
+      ctx.fill();
+      ctx.stroke();
+
+      // label x
+      ctx.fillStyle = "#0f172a";
+      setLabelFont(12);
+      const textX = "x = " + xcm.toFixed(1) + " cm";
+      if(isMobile){
+        ctx.lineWidth = 5;
+        ctx.strokeStyle = "rgba(255,255,255,0.95)";
+        ctx.strokeText(textX, boxX - 30, hookY - 10);
+      }
+      ctx.fillText(textX, boxX - 30, hookY - 10);
+    }
+
+    // เวกเตอร์
+    if(showVectors){
+      const maxF = Math.max(animT1, animT2, animMg, (hasBox ? animmg : 0), 1);
+      const maxPix = 80;
+      const sc = maxPix / maxF;
+
+      // T1
+      drawArrow(leftX, beamY, leftX, beamY - animT1*sc, "T1="+animT1.toFixed(1)+"N", "#ef4444", 0);
+      // T2
+      drawArrow(rightX, beamY, rightX, beamY - animT2*sc, "T2="+animT2.toFixed(1)+"N", "#ef4444", 0);
+
+      // ✅ Mg: เฉพาะมือถือ ขยับลง 25px
+      const mgLabelDY = isMobile ? 25 : 0;
+      drawArrow(midX, beamY + beamH + 4, midX, beamY + beamH + 4 + animMg*sc, "Mg="+animMg.toFixed(1)+"N", "#0f172a", mgLabelDY);
+
+      // mg (ไม่สั่งให้ขยับ)
+      if (hasBox) {
+        const boxCenterY = boxY + boxH/2;
+        drawArrow(boxX, boxCenterY, boxX, boxCenterY + animmg*sc, "mg="+animmg.toFixed(1)+"N", "#0f172a", 0);
+      }
+    }
+
+    // ✅ ปลายซ้าย/ขวา: เฉพาะมือถือ ขยับลง 25px
+    const endLabelDY = isMobile ? 25 : 0;
+    ctx.fillStyle = "#475569";
+    setLabelFont(11);
+    const yEnds = beamY + beamH + 70 + endLabelDY;
+
+    if(isMobile){
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = "rgba(255,255,255,0.95)";
+      ctx.strokeText("ปลายซ้าย = x = 0 cm", leftX, yEnds);
+      ctx.strokeText("ปลายขวา = x = 100 cm", rightX - 120, yEnds);
+    }
+    ctx.fillText("ปลายซ้าย = x = 0 cm", leftX, yEnds);
+    ctx.fillText("ปลายขวา = x = 100 cm", rightX - 120, yEnds);
+
+    ctx.restore();
+  }
+
+  // อินพุตเปลี่ยน
+  beamInput.addEventListener('input', ()=>{
+    Mg = Number(beamInput.value) || 0;
+    computeTargets();
+  });
+  boxInput.addEventListener('input', ()=>{
+    mg = Number(boxInput.value) || 0;
+    computeTargets();
+  });
+  posInput.addEventListener('input', ()=>{
+    let v = Number(posInput.value);
+    if(v < 0) v = 0;
+    if(v > 100) v = 100;
+    xcm = v;
+    computeTargets();
+  });
+  toggleBtn.addEventListener('click', ()=>{
+    showVectors = !showVectors;
+    toggleBtn.classList.toggle('active', showVectors);
+  });
+
+  // ลากกล่อง (ถ้า mg = 0 จะไม่ให้ลาก)
+  cv.addEventListener('pointerdown', (e)=>{
+    if (mg <= 0) return;
+    const rect = cv.getBoundingClientRect();
+    const mx = (e.clientX - rect.left) / scale;
+    const my = (e.clientY - rect.top) / scale;
+    const boxX = cmToPx(xcm);
+    const boxY = beamY + beamH + 10;
+    if(mx > boxX-30 && mx < boxX+30 && my > boxY-10 && my < boxY+60){
+      dragging = true;
+    }
+  });
+  cv.addEventListener('pointermove', (e)=>{
+    if(!dragging) return;
+    const rect = cv.getBoundingClientRect();
+    const mx = (e.clientX - rect.left) / scale;
+    const clamped = Math.min(Math.max(mx, leftX), rightX);
+    const cm = pxToCm(clamped);
+    xcm = Math.min(Math.max(cm, 0), 100);
+    posInput.value = xcm.toFixed(0);
+    computeTargets();
+  });
+  cv.addEventListener('pointerup', ()=> dragging=false);
+  cv.addEventListener('pointerleave', ()=> dragging=false);
+
+  window.addEventListener('resize', resizeCanvas);
+
+  // วงจรแอนิเมชัน
+  function animate(){
+    animT1 = lerp(animT1, targetT1, 0.12);
+    animT2 = lerp(animT2, targetT2, 0.12);
+    animMg = lerp(animMg, targetMg, 0.12);
+    animmg = lerp(animmg, targetmg, 0.12);
+    draw();
+    requestAnimationFrame(animate);
+  }
+
+  // init
+  resizeCanvas();
+  computeTargets();
+  animT1 = targetT1;
+  animT2 = targetT2;
+  animMg = targetMg;
+  animmg = targetmg;
+  animate();
+})();
+</script>
+</body>
+</html>
