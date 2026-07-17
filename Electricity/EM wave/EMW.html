@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Electromagnetic Wave 3D — E, B, C</title>
+  <style>
+    :root{ --bg:#000; --ink:#e5e7eb; --sky:#e0f2fe; --mint:#dcfce7; --rose:#ffe4e6; --lav:#f3f0ff; --blue:#0ea5e9; --green:#22c55e; --pink:#fb7185 }
+    html,body{height:100%}
+    body{margin:0; background:var(--bg); overflow:hidden; font-family:Inter,system-ui,Segoe UI,Arial,sans-serif}
+    #stage{position:fixed; inset:0}
+    canvas{display:block;}
+    .hint{position:fixed; left:12px; bottom:12px; color:var(--ink); font-size:13px; opacity:.85; user-select:none}
+    .hint b{opacity:1}
+    .footer{position:fixed; bottom:12px; right:12px; color:#f9fafb; font-size:14px; background:rgba(14,165,233,.2); padding:6px 10px; border-radius:8px}
+    .ui{position:fixed; right:12px; top:12px; z-index:30; display:flex; flex-direction:column; gap:8px}
+    .ui button{padding:8px 14px; border:none; border-radius:12px; cursor:pointer; font-size:14px; font-weight:700; box-shadow:0 6px 20px rgba(0,0,0,.15)}
+    .btn{background:var(--sky); color:#0369a1}
+    .btn:hover{filter:brightness(0.95)}
+    .btn-green{background:var(--mint); color:#065f46}
+    .btn-rose{background:var(--rose); color:#9f1239}
+
+    .panel{position:fixed; inset:0; background:linear-gradient(135deg,#ffffff 0%, #fff7f9 50%, #f0faff 100%); color:#111; display:none; flex-direction:column; align-items:center; justify-content:flex-start; overflow-y:auto; padding:24px; z-index:50}
+    .panel h2{color:var(--blue); margin:8px 0 16px}
+    .panel .content{max-width:900px; text-align:left; line-height:1.7; background:#ffffffd9; border:1px solid #eaeaea; border-radius:16px; padding:18px 22px; box-shadow:0 10px 30px rgba(2,6,23,.06)}
+    .panel .note{background:var(--lav); border:1px dashed #c4b5fd; border-radius:12px; padding:12px; margin-top:12px}
+    .panel .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:18px}
+    .close{margin:18px 0 0; padding:10px 16px; border:none; border-radius:12px; background:var(--pink); color:#fff; cursor:pointer; font-weight:800}
+
+    .quiz{max-width:900px; width:100%;}
+    .qcard{background:#ffffff; border:1px solid #e5e7eb; border-radius:16px; padding:16px; margin:10px 0; box-shadow:0 8px 24px rgba(2,6,23,.06)}
+    .qcard.correct{border-color:#bbf7d0}
+    .qcard.wrong{border-color:#fecaca}
+    .opt{display:flex; gap:10px; align-items:flex-start; padding:10px; border-radius:10px; cursor:pointer; border:1px solid #e5e7eb}
+    .opt:hover{background:#f8fafc}
+    .opt input{margin-top:3px}
+    .explain{background:#f1f5f9; border-left:4px solid var(--blue); border-radius:10px; padding:10px 12px; margin-top:10px}
+    .score{font-weight:800; color:#065f46; background:var(--mint); border:1px solid #bbf7d0; padding:10px 14px; border-radius:12px; display:inline-block}
+  </style>
+
+  <!-- MathJax: ให้เราคุมการเรนเดอร์เอง -->
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
+      svg: { fontCache: 'global' },
+      startup: { typeset: false }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+  <!-- Import maps สำหรับ three.js -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="stage"></div>
+  <div class="hint">หมุนกล้องด้วยเมาส์ • ซูมด้วยล้อเมาส์ • <u>แตะ/คลิกสองครั้ง</u> เพื่อหยุด/เล่น • <b>แดง=E</b> <b>น้ำเงิน=B</b> <b>เขียว=C</b></div>
+  <div class="footer">ศึกษาเพิ่มเติมที่ <a href="https://www.facebook.com/resolvephysics" target="_blank" style="color:#0ea5e9;font-weight:600">เพจคลายปมฟิสิกส์</a></div>
+  <div class="ui">
+    <button id="toggleAnim" class="btn">⏯ หยุด/เล่น</button>
+    <button id="openPanel" class="btn-green">📘 สรุปเนื้อหา</button>
+    <button id="openQuiz" class="btn-rose">📝 แบบฝึกหัด</button>
+  </div>
+
+  <!-- ====== สรุปเนื้อหา ====== -->
+  <div id="panel" class="panel">
+    <h2>สรุปคลื่นแม่เหล็กไฟฟ้า</h2>
+    <div class="content">
+      <p><b>คลื่นแม่เหล็กไฟฟ้า</b> เกิดจากการสั่นพร้อมกันของสนามไฟฟ้า (E) และสนามแม่เหล็ก (B) ที่ตั้งฉากกัน และทั้งคู่อยู่ตั้งฉากกับทิศการเคลื่อนที่ (C) เป็น <i>คลื่นตามขวาง</i>.</p>
+      <div class="grid">
+        <div>
+          <ul>
+            <li>$$\vec{E} \perp \vec{B}$$</li>
+            <li>$$\vec{E} \perp \vec{C},\; \vec{B} \perp \vec{C}$$</li>
+            <li><b>เฟสตรงกัน:</b> $$E$$ และ $$B$$ สั่นพร้อมกัน</li>
+          </ul>
+        </div>
+        <div class="note">
+          <b>ครอสเวกเตอร์ (Right-Hand Rule)</b><br/>
+          $$\vec{E} \times \vec{B} = \vec{C}$$<br>
+          เวกเตอร์พอยน์ติ้ง (ทิศการส่งพลังงานเฉลี่ย):<br>
+          $$\vec{S} = \frac{1}{\mu}\,\vec{E}\times\vec{B} \;\parallel\; \vec{C}$$
+        </div>
+      </div>
+
+      <h3>สมการคลื่นระนาบที่แพร่ในแกน x</h3>
+      <p><b>สนามไฟฟ้า:</b><br>$$\vec{E}(x,t)=E_0\sin(kx-\omega t)\,\hat{y}$$</p>
+      <p><b>สนามแม่เหล็ก:</b><br>$$\vec{B}(x,t)=B_0\sin(kx-\omega t)\,\hat{z}$$</p>
+
+      <div class="grid">
+        <div class="note">
+          <b>อัตราส่วนแอมพลิจูด</b><br>
+          $$\dfrac{E_0}{B_0}=c \quad (\text{ในสุญญากาศ})$$ <br>
+          $$v=\dfrac{\omega}{k}$$
+        </div>
+        <div class="note">
+          <b>ความเร็วในตัวกลาง</b><br>
+          $$v=\dfrac{1}{\sqrt{\varepsilon\,\mu}}, \qquad n=\dfrac{c}{v}$$ <br>
+          เมื่อเปลี่ยนตัวกลาง: $$f \;\text{คงที่}, \; v \;\text{และ}\; \lambda \;\text{เปลี่ยน}$$ <br>
+          $$\lambda=\dfrac{v}{f}$$
+        </div>
+      </div>
+    </div>
+    <button id="closePanel" class="close">ปิด</button>
+  </div>
+
+  <!-- ====== แบบฝึกหัด ====== -->
+  <div id="quizPanel" class="panel" style="display:none">
+    <h2>แบบฝึกหัดพื้นฐาน — คลื่นแม่เหล็กไฟฟ้า</h2>
+    <div class="quiz">
+      <div id="quizBox"></div>
+      <div style="display:flex; gap:10px; margin-top:12px">
+        <button id="submitQuiz" class="btn-green">✅ ตรวจคำตอบ</button>
+        <button id="resetQuiz" class="btn">↺ เริ่มใหม่</button>
+      </div>
+      <div id="scoreBox" style="margin-top:12px"></div>
+    </div>
+    <button id="closeQuiz" class="close">ปิด</button>
+  </div>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    // ===== MathJax helper =====
+    function mjxRender(scope=document.body){
+      const MJ = window.MathJax;
+      if(!MJ) return;
+      const run = () => {
+        if(MJ.typesetClear) MJ.typesetClear([scope]);
+        if(MJ.typesetPromise) return MJ.typesetPromise([scope]);
+        return Promise.resolve(MJ.typeset ? MJ.typeset() : null);
+      };
+      (MJ.startup?.promise || Promise.resolve()).then(run);
+    }
+
+    // ===== Scene =====
+    const stage = document.getElementById('stage');
+    const renderer = new THREE.WebGLRenderer({antialias:true});
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    stage.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x000000);
+
+    const camera = new THREE.PerspectiveCamera(55, window.innerWidth/window.innerHeight, 0.1, 2000);
+    camera.position.set(10,8,24);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+
+    const light = new THREE.HemisphereLight(0xffffff, 0x202020, 0.8);
+    scene.add(light);
+
+    // ===== Wave params =====
+    const N = 160, span = 40, A = 3.5, lambda = 10;
+    const k = (2*Math.PI)/lambda, omega = 0.06;
+    const x0 = new Float32Array(N);
+    for(let i=0;i<N;i++) x0[i] = -span/2 + (span*(i/(N-1)));
+
+    const red = 0xff3b30, blue = 0x3b82f6, green = 0x22c55e;
+
+    // ===== Helpers =====
+    function textSprite(text, color="#ffffff", size=2){
+      const c=document.createElement('canvas');
+      c.width=512; c.height=256; const g=c.getContext('2d');
+      g.scale(2,2); g.font='bold 64px Inter,system-ui,Arial'; g.fillStyle=color; g.textBaseline='middle';
+      const tw=g.measureText(text).width; g.fillText(text, 128 - tw/2, 64);
+      const tex=new THREE.CanvasTexture(c); tex.minFilter=THREE.LinearFilter;
+      const spr=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true}));
+      spr.scale.set(size*2.6, size*1.3, 1); return spr;
+    }
+
+    // ===== Field arrows =====
+    const arrowsE=[], arrowsB=[]; const count=40;
+    for(let i=0;i<count;i++){
+      const x=-span/2 + (span*(i/(count-1)));
+      const aE=new THREE.ArrowHelper(new THREE.Vector3(0,1,0), new THREE.Vector3(x,0,0), 1, red);
+      const aB=new THREE.ArrowHelper(new THREE.Vector3(0,0,1), new THREE.Vector3(x,0,0), 1, blue);
+      scene.add(aE,aB); arrowsE.push(aE); arrowsB.push(aB);
+    }
+
+    // ===== Axes for E and B =====
+    const axisMatE=new THREE.LineDashedMaterial({color:red, dashSize:0.6, gapSize:0.4});
+    const axisMatB=new THREE.LineDashedMaterial({color:blue, dashSize:0.6, gapSize:0.4});
+    const eAxisGeo=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,-A-2,0), new THREE.Vector3(0,A+2,0)]);
+    const bAxisGeo=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,-A-2), new THREE.Vector3(0,0,A+2)]);
+    const eAxis=new THREE.Line(eAxisGeo,axisMatE); eAxis.computeLineDistances(); scene.add(eAxis);
+    const bAxis=new THREE.Line(bAxisGeo,axisMatB); bAxis.computeLineDistances(); scene.add(bAxis);
+    const eLabel=textSprite('E-axis', '#ff3b30', 1.6); eLabel.position.set(0, A+2.2, 0); scene.add(eLabel);
+    const bLabel=textSprite('B-axis', '#3b82f6', 1.6); bLabel.position.set(0, 0, A+2.2); scene.add(bLabel);
+
+    // ===== Propagation direction C =====
+    const cArrow=new THREE.ArrowHelper(new THREE.Vector3(1,0,0), new THREE.Vector3(-span/2-5,0,0), 7, green);
+    scene.add(cArrow);
+    const cLabel=textSprite('C', '#22c55e', 2.2); cLabel.position.copy(cArrow.position).add(new THREE.Vector3(4,1.4,0)); scene.add(cLabel);
+
+    // ===== Sinusoidal guides =====
+    const posE=new Float32Array(N*3), posB=new Float32Array(N*3);
+    const geomE=new THREE.BufferGeometry(); geomE.setAttribute('position', new THREE.BufferAttribute(posE,3));
+    const geomB=new THREE.BufferGeometry(); geomB.setAttribute('position', new THREE.BufferAttribute(posB,3));
+    const lineE=new THREE.Line(geomE, new THREE.LineBasicMaterial({color:red}));
+    const lineB=new THREE.Line(geomB, new THREE.LineBasicMaterial({color:blue}));
+    scene.add(lineE,lineB);
+
+    function updateCurves(t){
+      for(let i=0;i<N;i++){
+        const x=x0[i]; const phase=k*x - omega*t;
+        const Ey=A*Math.sin(phase); const Bz=A*Math.sin(phase);
+        posE[3*i]=x; posE[3*i+1]=Ey; posE[3*i+2]=0;
+        posB[3*i]=x; posB[3*i+1]=0;  posB[3*i+2]=Bz;
+      }
+      geomE.attributes.position.needsUpdate=true;
+      geomB.attributes.position.needsUpdate=true;
+    }
+
+    // ===== Animate =====
+    let t=0, paused=false;
+    function tick(){
+      if(!paused){
+        t+=1;
+        for(let i=0;i<count;i++){
+          const x=-span/2 + (span*(i/(count-1)));
+          const phase=k*x - omega*t; 
+          const Ey=Math.sin(phase); 
+          const Bz=Math.sin(phase);
+          arrowsE[i].setDirection(new THREE.Vector3(0, Math.sign(Ey)||1, 0));
+          arrowsE[i].setLength(Math.max(0.0001,Math.abs(Ey))*2.2);
+          arrowsB[i].setDirection(new THREE.Vector3(0, 0, Math.sign(Bz)||1));
+          arrowsB[i].setLength(Math.max(0.0001,Math.abs(Bz))*2.2);
+        }
+        updateCurves(t);
+      }
+      controls.update(); 
+      renderer.render(scene,camera);
+      requestAnimationFrame(tick);
+    }
+    tick();
+
+    // ===== UI wiring =====
+    const toggle = ()=>{ paused=!paused };
+    document.getElementById('toggleAnim').onclick=toggle;
+
+    // Double-click (desktop)
+    renderer.domElement.addEventListener('dblclick', toggle);
+
+    // Double-tap (mobile)
+    let lastTap=0;
+    renderer.domElement.addEventListener('touchend', (e)=>{
+      const now=Date.now();
+      if(now - lastTap < 300){ toggle(); e.preventDefault(); }
+      lastTap = now;
+    }, {passive:false});
+
+    // Keyboard toggle
+    window.addEventListener('keydown', (e)=>{
+      if(e.code==='Space' || e.key.toLowerCase()==='p'){ e.preventDefault(); toggle(); }
+    });
+
+    // ===== Panels & Quiz =====
+    const panel=document.getElementById('panel');
+    const quizPanel=document.getElementById('quizPanel');
+    const quizBox=document.getElementById('quizBox');
+    const scoreBox=document.getElementById('scoreBox');
+
+    document.getElementById('openPanel').onclick=()=>{ panel.style.display='flex'; mjxRender(panel); };
+    document.getElementById('closePanel').onclick=()=>{ panel.style.display='none'; };
+
+    const questions=[
+      {
+        q:'ข้อใด <b>ถูกต้อง</b> เกี่ยวกับทิศทางของ E, B และ C ในคลื่นแม่เหล็กไฟฟ้า?',
+        opts:[
+          'E ∥ B และทั้งคู่ ∥ C',
+          'E ⟂ B และทั้งคู่ ⟂ C',
+          'E ⟂ B แต่ทั้งคู่ ∥ C',
+          'E ∥ C แต่ B ⟂ C'
+        ],
+        correct:1,
+        exp:'คลื่นแม่เหล็กไฟฟ้าเป็นคลื่นตามขวาง: $\\vec{E} \\perp \\vec{B}$ และทั้งสองตั้งฉากกับทิศการแพร่กระจาย $(\\vec{C})$.'
+      },
+      {
+        q:'สมการใด <b>ถูกต้อง</b> ในสุญญากาศ?',
+        opts:[
+          '$$ \\dfrac{E_0}{B_0} = v $$',
+          '$$ \\dfrac{E_0}{B_0} = c $$',
+          '$$ E_0 = B_0 $$',
+          '$$ v = \\sqrt{ \\varepsilon \\mu } $$'
+        ],
+        correct:1,
+        exp:'ในสุญญากาศ $E_0/B_0 = c$ และ $v = 1/ \\sqrt{ \\varepsilon \\mu }$.'
+      },
+      {
+        q:'เมื่อคลื่นเดินจากอากาศเข้าสู่แก้ว (ดัชนีหักเหมากขึ้น) ข้อใดเป็นจริง?',
+        opts:[
+          'ความถี่เพิ่ม, ความยาวคลื่นคงที่',
+          'ความถี่คงที่, ความยาวคลื่นลดลง',
+          'ความถี่ลดลง, ความยาวคลื่นเพิ่มขึ้น',
+          'ทั้งความถี่และความยาวคลื่นลดลง'
+        ],
+        correct:1,
+        exp:'เมื่อเปลี่ยนตัวกลาง ความถี่ $f$ <b>คงที่</b>; ความเร็ว $v$ ลดลงในแก้ว จึงทำให้ $\\lambda = v/f$ ลดลง.'
+      },
+      {
+        q:'ทิศการส่งพลังงานเฉลี่ย (เวกเตอร์พอยน์ติ้ง) มีความสัมพันธ์อย่างไร?',
+        opts:[
+          '$$ \\vec{S} = \\frac{1}{\\mu}\\, \\vec{E} \\times \\vec{B} $$ และชี้ไปทางเดียวกับ C',
+          '$$ \\vec{S} = \\mu\\, \\vec{E} \\times \\vec{B} $$ และตั้งฉากกับ C',
+          '$$ \\vec{S} = \\vec{E} + \\vec{B} $$ และสวนกับ C',
+          'ไม่มีความสัมพันธ์แน่นอน'
+        ],
+        correct:0,
+        exp:'เวกเตอร์พอยน์ติ้ง $\\vec{S} = (1/\\mu)\\, \\vec{E} \\times \\vec{B}$ และ $\\vec{S} \\parallel \\vec{C}$.'
+      }
+    ];
+
+    function renderQuiz(){
+      quizBox.innerHTML='';
+      questions.forEach((it,idx)=>{
+        const card=document.createElement('div'); card.className='qcard';
+        const q=document.createElement('div'); q.innerHTML=`<b>ข้อ ${idx+1}.</b> ${it.q}`; card.appendChild(q);
+        it.opts.forEach((op,j)=>{
+          const opt=document.createElement('label'); opt.className='opt';
+          opt.innerHTML=`<input type="radio" name="q${idx}" value="${j}"> <span>${op}</span>`; card.appendChild(opt);
+        });
+        const ex=document.createElement('div'); ex.className='explain'; ex.style.display='none'; ex.innerHTML=it.exp; card.appendChild(ex);
+        quizBox.appendChild(card);
+      });
+      scoreBox.innerHTML='';
+      mjxRender(quizPanel);
+    }
+
+    function gradeQuiz(){
+      let score=0; const cards=quizBox.querySelectorAll('.qcard');
+      cards.forEach((card,i)=>{
+        const sel=card.querySelector('input[type="radio"]:checked');
+        const ex=card.querySelector('.explain');
+        const idx= sel? parseInt(sel.value,10) : -1;
+        if(idx===questions[i].correct){ score++; card.classList.add('correct'); card.classList.remove('wrong'); }
+        else { card.classList.add('wrong'); card.classList.remove('correct'); }
+        ex.style.display='block';
+      });
+      scoreBox.innerHTML=`<span class="score">ได้คะแนน ${score}/${questions.length}</span>`;
+      mjxRender(quizPanel);
+    }
+
+    document.getElementById('openQuiz').onclick=()=>{ quizPanel.style.display='flex'; renderQuiz(); };
+    document.getElementById('closeQuiz').onclick=()=>{ quizPanel.style.display='none'; };
+    document.getElementById('submitQuiz').onclick=gradeQuiz;
+    document.getElementById('resetQuiz').onclick=renderQuiz;
+
+    // Resize
+    window.addEventListener('resize',()=>{
+      camera.aspect=window.innerWidth/window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth,window.innerHeight);
+    });
+  </script>
+</body>
+</html>

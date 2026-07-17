@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Mini Lab : การกระเจิงของแสง</title>
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)'], ['$', '$']], displayMath: [['\\[','\\]']] },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+<style>
+  :root{
+    --blue:#2f6fd6; --deep:#204d7c; --soft:#edf3fb; --line:#d8e3ef;
+    --orange:#fff3df; --orange-line:#efc58f; --green:#eef9ea; --green-line:#b9dcae;
+    --red:#d84848; --gray:#f5f7fa; --text:#18324a;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:linear-gradient(#f8fbff,#eef5ff);color:var(--text);padding:18px 14px 130px;}
+  .wrap{max-width:1180px;margin:auto;}
+  header{text-align:center;margin:6px 0 14px;}
+  .title{font-size:clamp(24px,3.8vw,42px);font-weight:900;color:var(--blue);line-height:1.15}
+  .subtitle{font-size:clamp(18px,2.5vw,28px);font-weight:900;color:var(--deep);margin-top:4px}
+  .main{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(310px,.65fr);gap:14px;align-items:start}
+  .card{background:white;border:1.5px solid var(--line);border-radius:24px;box-shadow:0 10px 28px rgba(28,70,120,.10);overflow:hidden}
+  .labTop{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:12px 14px;background:var(--soft);border-bottom:1px solid var(--line)}
+  .pill{display:inline-flex;align-items:center;gap:8px;border-radius:999px;background:white;border:1px solid var(--line);padding:8px 12px;font-weight:800;color:#2e5f93;font-size:15px}
+  canvas{display:block;width:100%;height:auto;background:#0c1730;touch-action:none}
+  .readout{padding:12px 14px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;background:#fbfdff;border-top:1px solid var(--line)}
+  .metric{background:#f6f9fc;border:1px solid #e2ebf4;border-radius:16px;padding:9px;text-align:center;font-weight:800;font-size:14px}
+  .metric b{display:block;font-size:19px;color:var(--blue);margin-top:3px}
+  .panel{padding:14px;display:grid;gap:12px}
+  .control{background:#f8fbff;border:1px solid #e1ebf5;border-radius:18px;padding:12px}
+  .control label{display:flex;justify-content:space-between;gap:8px;font-weight:850;color:#254a72;margin-bottom:8px;font-size:15px}
+  input[type=range]{width:100%;accent-color:#2f6fd6}
+  .btns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  button{border:0;border-radius:16px;padding:11px 12px;font-weight:900;font-size:15px;box-shadow:0 4px 0 rgba(0,0,0,.13);cursor:pointer;color:#18324a}
+  button:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(0,0,0,.13)}
+  .blue{background:#8bc5ff}.gray{background:#e6ebf1}.orange{background:#ffe4c4}.green{background:#dff2da}.active{outline:3px solid rgba(47,111,214,.35)}
+  .explain{padding:14px;display:grid;gap:12px}
+  .box{border-radius:20px;padding:13px 14px;border:1.5px solid #d8e3ef;background:#fff;font-size:15px;line-height:1.7}
+  .box h3{margin:0 0 6px;font-size:19px;color:var(--blue)}
+  .box.sky{background:#f2f8ff;border-color:#b9d8ff}.box.sunrise{background:#fff4ef;border-color:#ffc2a6}.box.cloud{background:#fbfbfb}.box.storm{background:#f1f3f6;border-color:#b8c1cc}
+  .note{background:var(--orange);border:1.5px solid var(--orange-line);border-radius:20px;padding:13px;line-height:1.7;font-size:15px}
+  .formula{background:#fffaf2;border:1.5px solid var(--orange-line);border-radius:18px;padding:12px;margin-top:8px;overflow:auto;text-align:center}
+  .footerLink{position:fixed;left:0;right:0;bottom:0;padding:10px calc(12px + env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left));background:rgba(255,255,255,.88);backdrop-filter:blur(8px);border-top:1px solid #dbe5ef;text-align:center;font-weight:850;z-index:20}
+  .footerLink a{color:#1f62d0;text-decoration:underline}
+  .modal{position:fixed;inset:0;background:rgba(15,32,55,.55);display:none;z-index:50;padding:calc(18px + env(safe-area-inset-top)) 14px calc(120px + env(safe-area-inset-bottom));overflow:auto}
+  .modal.show{display:block}.modalCard{max-width:900px;margin:auto;background:#fff7ee;border:2px solid var(--orange-line);border-radius:26px;padding:18px;box-shadow:0 20px 60px rgba(0,0,0,.25);line-height:1.75}.close{position:fixed;right:16px;top:calc(12px + env(safe-area-inset-top));width:52px;height:52px;border-radius:18px;background:#e7eef6;color:#45688f;font-size:28px;box-shadow:0 4px 0 rgba(0,0,0,.13)}
+  .modeHint{position:absolute;left:14px;top:14px;background:rgba(255,255,255,.88);border:1px solid #d8e3ef;border-radius:18px;padding:9px 12px;font-size:14px;font-weight:850;color:#244d78;max-width:min(430px,calc(100% - 28px));line-height:1.45}
+  .canvasWrap{position:relative}
+  @media(max-width:850px){body{padding:10px 10px 140px}.main{grid-template-columns:1fr}.readout{grid-template-columns:repeat(2,1fr)}.labTop{flex-wrap:wrap}.panel{grid-template-columns:1fr}.btns{grid-template-columns:1fr 1fr}canvas{min-height:360px;object-fit:cover}.modeHint{font-size:12px;max-width:calc(100% - 28px)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="title">Mini Lab</div>
+  <div class="subtitle">การกระเจิงของแสงในบรรยากาศ</div>
+</header>
+<div class="main">
+  <section class="card">
+    <div class="labTop">
+      <span class="pill">🌈 แสงขาว = แดง + เขียว + น้ำเงิน</span>
+      <span class="pill" id="modeName">โหมด: ท้องฟ้ากลางวันสีฟ้า</span>
+    </div>
+    <div class="canvasWrap">
+      <div class="modeHint" id="hint">โมเลกุลอากาศเล็กมาก จึงกระเจิงแสงสีน้ำเงินได้มากกว่าแสงสีแดง</div>
+      <canvas id="c" width="960" height="560"></canvas>
+    </div>
+    <div class="readout">
+      <div class="metric">กระเจิงน้ำเงิน <b id="blueVal">สูง</b></div>
+      <div class="metric">กระเจิงแดง <b id="redVal">ต่ำ</b></div>
+      <div class="metric">แสงตรงถึงตา <b id="directVal">ขาว</b></div>
+      <div class="metric">สิ่งที่เห็น <b id="seeVal">ฟ้า</b></div>
+    </div>
+  </section>
+  <aside class="card panel">
+    <div class="btns">
+      <button class="blue active" data-mode="day">🌤️ กลางวัน</button>
+      <button class="orange" data-mode="sunrise">🌅 เช้า/เย็น</button>
+      <button class="green" data-mode="cloud">☁️ เมฆขาว</button>
+      <button class="gray" data-mode="storm">⛈️ เมฆฝนดำ</button>
+    </div>
+    <div class="control"><label>ขนาดอนุภาค/ละออง <span id="sizeTxt">เล็กมาก</span></label><input id="size" type="range" min="1" max="100" value="10"></div>
+    <div class="control"><label>จำนวนอนุภาค/ความหนาแน่น <span id="densTxt">ปานกลาง</span></label><input id="dens" type="range" min="1" max="100" value="38"></div>
+    <div class="control"><label>ระยะทางผ่านบรรยากาศ <span id="pathTxt">สั้น</span></label><input id="path" type="range" min="1" max="100" value="22"></div>
+    <div class="btns">
+      <button class="blue" id="play">⏸ หยุด</button>
+      <button class="gray" id="reset">🔄 รีเซ็ต</button>
+      <button class="orange" id="formulaBtn">Σ สูตรสำคัญ</button>
+      <button class="green" id="quizBtn">📝 ภารกิจ</button>
+    </div>
+    <div class="note"><b>หลักคิดสั้น ๆ</b><br>อนุภาคเล็กกว่า ความยาวคลื่นของแสงมาก → เกิด Rayleigh scattering ทำให้แสงสั้นอย่างสีน้ำเงินกระเจิงมากกว่า ส่วนอนุภาคใหญ่ระดับหยดน้ำ → กระเจิงทุกสีใกล้เคียงกัน จึงเห็นเป็นสีขาวหรือเทา/ดำเมื่อแสงผ่านได้น้อย</div>
+  </aside>
+</div>
+<section class="card explain" style="margin-top:14px">
+  <div class="box sky"><h3>🌤️ ทำไมท้องฟ้ากลางวันมีสีฟ้า?</h3>โมเลกุลอากาศมีขนาดเล็กมาก จึงกระเจิงแสงสีน้ำเงินได้เด่นกว่าแสงสีแดง แสงสีน้ำเงินที่กระเจิงจากหลายทิศจึงเข้าตาเรา ทำให้ท้องฟ้าดูเป็นสีฟ้า</div>
+  <div class="box sunrise"><h3>🌅 ทำไมตอนเช้า/เย็นดวงอาทิตย์ดูแดง?</h3>แสงจากดวงอาทิตย์เดินทางผ่านบรรยากาศไกลกว่าเดิม แสงสีน้ำเงินถูกกระเจิงออกไประหว่างทางมาก เหลือแสงแดง/ส้มเดินทางตรงมาถึงตาได้มากกว่า</div>
+  <div class="box cloud"><h3>☁️ ทำไมเมฆมีสีขาว?</h3>เมฆประกอบด้วยหยดน้ำหรือผลึกน้ำแข็งที่ใหญ่กว่าโมเลกุลอากาศมาก จึงกระเจิงแสงทุกสีใกล้เคียงกัน เมื่อแสงทุกสีรวมกันจึงเห็นเป็นสีขาว</div>
+  <div class="box storm"><h3>⛈️ ทำไมเมฆฝนฟ้าคะนองมีสีดำ?</h3>เมฆฝนหนาและมีหยดน้ำจำนวนมาก แสงถูกกระเจิง สะท้อน และดูดกลืนหลายครั้งจนผ่านลงมาถึงตาได้น้อย ด้านล่างของเมฆจึงดูมืดหรือดำ</div>
+</section>
+</div>
+<div class="footerLink">ศึกษาเพิ่มเติมที่ <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">เพจคลายปมฟิสิกส์</a></div>
+<div class="modal" id="formulaModal"><button class="close" onclick="formulaModal.classList.remove('show')">×</button><div class="modalCard"><h2 style="color:#1f62d0;margin-top:0">Σ สูตรสำคัญและหลักการ</h2><p><b>1) Rayleigh scattering</b> ใช้กับอนุภาคเล็กมากเมื่อเทียบกับความยาวคลื่นของแสง เช่น โมเลกุลอากาศ</p><div class="formula">\[ I \propto \frac{1}{\lambda^4} \]</div><p>แสงที่มีความยาวคลื่นสั้นกว่า เช่น สีน้ำเงิน จะกระเจิงได้มากกว่าแสงสีแดง</p><p><b>2) Mie scattering / การกระเจิงจากหยดน้ำ</b> ใช้กับอนุภาคขนาดใหญ่ระดับหยดน้ำในเมฆ แสงหลายสีถูกกระเจิงใกล้เคียงกัน จึงเห็นเป็นสีขาว แต่ถ้าเมฆหนามาก แสงผ่านลงมาน้อย จึงเห็นเป็นสีเทาหรือดำ</p><p><b>จุดที่ต้องระวัง:</b> ท้องฟ้าสีฟ้าไม่ได้แปลว่าอากาศมีสีฟ้า แต่เป็นผลจากแสงสีน้ำเงินถูกกระเจิงเข้าตาเรามากกว่า</p></div></div>
+<div class="modal" id="quizModal"><button class="close" onclick="quizModal.classList.remove('show')">×</button><div class="modalCard" style="background:#f4fff0;border-color:#b9dcae"><h2 style="color:#23743a;margin-top:0">📝 ภารกิจสังเกต</h2><ol><li>กดโหมด “กลางวัน” แล้วสังเกตว่าแสงสีใดกระเจิงออกด้านข้างมากที่สุด</li><li>กดโหมด “เช้า/เย็น” แล้วสังเกตว่าเมื่อระยะทางผ่านบรรยากาศยาวขึ้น แสงตรงที่เหลือเป็นสีใด</li><li>กดโหมด “เมฆขาว” แล้วเพิ่มขนาดอนุภาค จะเห็นว่าทุกสีถูกกระเจิงใกล้เคียงกัน</li><li>กดโหมด “เมฆฝนดำ” แล้วเพิ่มความหนาแน่น จะเห็นว่าแสงผ่านออกมาน้อยลงมาก</li></ol></div></div>
+<script>
+const canvas=document.getElementById('c'),ctx=canvas.getContext('2d');
+const size=document.getElementById('size'),dens=document.getElementById('dens'),path=document.getElementById('path');
+const sizeTxt=document.getElementById('sizeTxt'),densTxt=document.getElementById('densTxt'),pathTxt=document.getElementById('pathTxt');
+const modeName=document.getElementById('modeName'),hint=document.getElementById('hint');
+const blueVal=document.getElementById('blueVal'),redVal=document.getElementById('redVal'),directVal=document.getElementById('directVal'),seeVal=document.getElementById('seeVal');
+let mode='day',running=true,t=0,particles=[];
+function rand(a,b){return a+Math.random()*(b-a)}
+function resetParticles(){particles=[];let n=Math.round(Number(dens.value)*1.7+30);for(let i=0;i<n;i++){particles.push({x:rand(210,820),y:rand(75,460),r:rand(1,3),p:rand(0,Math.PI*2),s:rand(.4,1.2)})}}
+function setMode(m){mode=m;document.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle('active',b.dataset.mode===m));if(m==='day'){size.value=10;dens.value=38;path.value=22;modeName.textContent='โหมด: ท้องฟ้ากลางวันสีฟ้า';hint.textContent='โมเลกุลอากาศเล็กมาก จึงกระเจิงแสงสีน้ำเงินได้มากกว่าแสงสีแดง'}
+if(m==='sunrise'){size.value=12;dens.value=48;path.value=88;modeName.textContent='โหมด: ดวงอาทิตย์เช้า/เย็นสีแดง';hint.textContent='แสงเดินทางผ่านบรรยากาศไกลขึ้น สีน้ำเงินถูกกระเจิงออกไปมาก เหลือแดง/ส้มเดินทางตรง'}
+if(m==='cloud'){size.value=74;dens.value=58;path.value=38;modeName.textContent='โหมด: เมฆสีขาว';hint.textContent='หยดน้ำในเมฆใหญ่พอที่จะกระเจิงทุกสีใกล้เคียงกัน แสงรวมจึงยังดูขาว'}
+if(m==='storm'){size.value=88;dens.value=92;path.value=70;modeName.textContent='โหมด: เมฆฝนฟ้าคะนองสีดำ';hint.textContent='เมฆหนาแน่น แสงถูกกระเจิงและดูดกลืนหลายครั้ง จึงผ่านลงมาถึงด้านล่างน้อย'}
+resetParticles();updateText()}
+document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
+[size,dens,path].forEach(el=>el.oninput=()=>{updateText();resetParticles()});
+play.onclick=()=>{running=!running;play.textContent=running?'⏸ หยุด':'▶️ เล่น'}; reset.onclick=()=>setMode(mode);
+formulaBtn.onclick=()=>formulaModal.classList.add('show'); quizBtn.onclick=()=>quizModal.classList.add('show');
+function updateText(){let sv=+size.value,dv=+dens.value,pv=+path.value;sizeTxt.textContent=sv<25?'เล็กมาก':sv<60?'ปานกลาง':'ใหญ่';densTxt.textContent=dv<35?'น้อย':dv<70?'ปานกลาง':'มาก';pathTxt.textContent=pv<35?'สั้น':pv<70?'ปานกลาง':'ยาว';
+let ray=(101-sv)/100, mie=sv/100, b=ray*2.4+mie*.9, r=ray*.35+mie*.85; if(mode==='storm'){b*=.45;r*=.45} if(mode==='sunrise'){directVal.textContent='แดง/ส้ม';seeVal.textContent='แดง'} else if(mode==='cloud'){directVal.textContent='ขาว';seeVal.textContent='ขาว'} else if(mode==='storm'){directVal.textContent='น้อยมาก';seeVal.textContent='ดำ/เทา'} else {directVal.textContent='ขาว';seeVal.textContent='ฟ้า'} blueVal.textContent=b>1.5?'สูง':b>.8?'ปานกลาง':'ต่ำ'; redVal.textContent=r>.75?'ปานกลาง/สูง':r>.4?'ปานกลาง':'ต่ำ'}
+function bg(){let g=ctx.createLinearGradient(0,0,0,canvas.height); if(mode==='day'){g.addColorStop(0,'#74bfff');g.addColorStop(1,'#d9f1ff')} if(mode==='sunrise'){g.addColorStop(0,'#ff9e6b');g.addColorStop(.55,'#ffd19c');g.addColorStop(1,'#6a8fc4')} if(mode==='cloud'){g.addColorStop(0,'#8cc9ff');g.addColorStop(1,'#e9f6ff')} if(mode==='storm'){g.addColorStop(0,'#465266');g.addColorStop(1,'#1d2530')} ctx.fillStyle=g;ctx.fillRect(0,0,canvas.width,canvas.height)}
+function arrow(x1,y1,x2,y2,color,w=4){ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=w;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();let a=Math.atan2(y2-y1,x2-x1);ctx.beginPath();ctx.moveTo(x2,y2);ctx.lineTo(x2-15*Math.cos(a-.45),y2-15*Math.sin(a-.45));ctx.lineTo(x2-15*Math.cos(a+.45),y2-15*Math.sin(a+.45));ctx.closePath();ctx.fill()}
+function draw(){if(running)t+=0.016;bg();
+ // sun and ground/cloud mass
+ let sunX=95,sunY=112;ctx.beginPath();ctx.arc(sunX,sunY,44,0,Math.PI*2);ctx.fillStyle=mode==='storm'?'rgba(255,210,90,.35)':'#ffd35a';ctx.fill();
+ ctx.font='900 18px system-ui';ctx.fillStyle='#123d70';ctx.fillText('แสงขาวจากดวงอาทิตย์',30,185);
+ let startX=145,startY=142,endX=850,endY=300; if(mode==='sunrise'){startY=110;endY=395}else if(mode==='storm'){endY=360}else if(mode==='cloud'){endY=270}
+ arrow(startX,startY,endX,endY,'rgba(255,255,255,.95)',8);
+ ['#e74b4b','#4bdf72','#2b78ff'].forEach((col,i)=>{arrow(startX,startY+14+i*12,endX-60,endY+14+i*12,col,3)})
+ // particles
+ let sv=+size.value,dv=+dens.value,pv=+path.value; let rr=1.2+sv/16; particles.forEach((p,i)=>{let x=p.x+Math.sin(t*p.s+p.p)*3,y=p.y+Math.cos(t*p.s+p.p)*2; ctx.globalAlpha=mode==='storm'?0.62:0.72; ctx.beginPath();ctx.arc(x,y,rr*(.55+p.r/4),0,Math.PI*2); ctx.fillStyle=sv<35?'rgba(230,245,255,.65)':(mode==='storm'?'rgba(90,100,112,.78)':'rgba(255,255,255,.82)');ctx.fill();ctx.globalAlpha=1});
+ // scattered rays intensity
+ let ray=(101-sv)/100,mie=sv/100,blue=ray*1.1+mie*.45,red=ray*.16+mie*.45; let count=Math.floor(dv/12+6);
+ for(let i=0;i<count;i++){let px=260+i*58+(Math.sin(t+i)*8),py=180+Math.sin(i*2.1)*105;let ang=-1.2+Math.sin(i)*2.4;let len=mode==='storm'?35:45+pv*.25;let all=sv>45;
+   if(all){['rgba(245,80,80,.45)','rgba(80,225,110,.45)','rgba(45,120,255,.45)'].forEach((col,k)=>arrow(px,py,px+Math.cos(ang+k*.08)*len,py+Math.sin(ang+k*.08)*len,col,2));}
+   else {arrow(px,py,px+Math.cos(ang)*len*blue,py+Math.sin(ang)*len*blue,'rgba(35,105,255,.70)',3);arrow(px,py,px+Math.cos(ang+.22)*len*red,py+Math.sin(ang+.22)*len*red,'rgba(235,65,65,.30)',2)}
+ }
+ // observer and visual result
+ ctx.fillStyle='rgba(20,35,50,.85)';ctx.fillRect(810,390,55,85);ctx.beginPath();ctx.arc(837,362,30,0,Math.PI*2);ctx.fill();ctx.fillStyle='white';ctx.font='900 20px system-ui';ctx.fillText('ตา',820,475);
+ let resultColor=mode==='day'?'#4aa9ff':mode==='sunrise'?'#ff684c':mode==='cloud'?'#ffffff':'#20252d';ctx.beginPath();ctx.arc(837,340,18,0,Math.PI*2);ctx.fillStyle=resultColor;ctx.fill();ctx.strokeStyle='rgba(0,0,0,.25)';ctx.stroke();
+ // storm/cloud block
+ if(mode==='cloud'||mode==='storm'){for(let i=0;i<9;i++){ctx.beginPath();ctx.arc(360+i*38,210+Math.sin(i)*18,48+Math.sin(i*1.7)*12,0,Math.PI*2);ctx.fillStyle=mode==='cloud'?'rgba(255,255,255,.82)':'rgba(45,51,61,.82)';ctx.fill()}ctx.fillStyle=mode==='storm'?'rgba(12,15,20,.75)':'rgba(255,255,255,.25)';ctx.fillRect(310,220,390,120)}
+ ctx.fillStyle='rgba(255,255,255,.9)';ctx.font='900 22px system-ui';ctx.fillText(modeName.textContent.replace('โหมด: ',''),26,524);
+ requestAnimationFrame(draw)}
+setMode('day');draw();
+</script>
+</body>
+</html>

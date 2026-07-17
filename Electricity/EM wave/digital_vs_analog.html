@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>สัญญาณดิจิตอล 2 ระดับ (-5V ถึง +5V)</title>
+<style>
+  :root{
+    --ink:#0f172a;
+    --muted:#64748b;
+    --panel:#ffffff;
+    --line:#e2e8f0;
+    --analog:#ef4444;
+    --digital:#0f766e;
+    --accent:#0ea5e9;
+    --danger:#f97316;
+  }
+  body{
+    margin:0;
+    background:#fff;
+    font-family:system-ui,"Noto Sans Thai",sans-serif;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:10px;
+    padding:10px 6px 30px;
+  }
+  h2{margin:4px 0 0;text-align:center;font-size:1rem;color:var(--ink);}
+  #wrap{
+    width:min(100%, 920px);
+    background:var(--panel);
+    border:1px solid #e2e8f0;
+    border-radius:16px;
+    padding:10px 10px 16px;
+    box-shadow:0 10px 25px rgba(15,23,42,.06);
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  canvas{
+    width:100%;
+    background:#fff;
+    border:1px solid #e2e8f0;
+    border-radius:12px;
+    touch-action:none;
+  }
+  #controls{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    align-items:center;
+  }
+  label{
+    font-size:.7rem;
+    color:var(--muted);
+    display:flex;
+    gap:4px;
+    align-items:center;
+  }
+  input[type=range]{width:120px;}
+  button{
+    background:#eff6ff;
+    border:1px solid #bfdbfe;
+    border-radius:999px;
+    padding:5px 16px;
+    font-size:.72rem;
+    color:var(--ink);
+    cursor:pointer;
+  }
+  button:hover{background:#dbeafe;}
+  .badge{
+    background:#e0f2fe;
+    border-radius:999px;
+    padding:2px 10px;
+    font-size:.6rem;
+  }
+  .footer-link{
+    font-size:.65rem;
+    color:var(--ink);
+  }
+  .footer-link a{
+    color:#0ea5e9;
+    text-decoration:none;
+    font-weight:600;
+  }
+  #modal, #exerciseModal{
+    position:fixed;
+    inset:0;
+    background:rgba(15,23,42,.35);
+    display:none;
+    justify-content:center;
+    align-items:flex-start;
+    padding:24px 10px;
+    z-index:50;
+  }
+  #modalBox, #exerciseBox{
+    background:#fff;
+    border-radius:14px;
+    width:min(100%, 680px);
+    border:2px solid #bfdbfe;
+    box-shadow:0 20px 50px rgba(15,23,42,.15);
+    max-height:90vh;
+    overflow-y:auto;
+  }
+  #modalHead, #exerciseHead{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:10px 14px;
+    border-bottom:1px solid #e2e8f0;
+    background:#eff6ff;
+    border-radius:14px 14px 0 0;
+  }
+  #modalContent, #exerciseContent{
+    padding:10px 14px 16px;
+    font-size:.7rem;
+    color:var(--ink);
+    line-height:1.45;
+  }
+  .closeBtn{
+    background:#f43f5e;
+    color:#fff;
+    border:none;
+    border-radius:999px;
+    padding:3px 10px;
+    font-size:.65rem;
+    cursor:pointer;
+  }
+  .tag{
+    display:inline-block;
+    background:#dbeafe;
+    padding:1px 8px;
+    border-radius:999px;
+    font-size:.6rem;
+    margin-bottom:4px;
+  }
+  .box{
+    border:1px solid #e2e8f0;
+    border-radius:10px;
+    padding:6px 8px;
+    margin-bottom:8px;
+    background:#fff;
+  }
+  .choice{
+    display:flex;
+    gap:6px;
+    align-items:flex-start;
+    margin-bottom:6px;
+    border:1px solid #e2e8f0;
+    border-radius:8px;
+    padding:6px 8px;
+    background:#fff;
+  }
+  .choice input{margin-top:3px;}
+  #resultBox{
+    margin-top:8px;
+    padding:6px 8px;
+    border-radius:8px;
+    font-size:.68rem;
+  }
+  @media (max-width:540px){
+    #controls{flex-direction:column;align-items:flex-start;}
+    input[type=range]{width:100%;}
+  }
+</style>
+<script>
+  window.MathJax = { tex: {inlineMath: [['$','$'], ['\\(','\\)']]} };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+</head>
+<body>
+  <div id="wrap">
+    <h2>สัญญาณดิจิตอล 2 ระดับจากสัญญาณอะนาลอกที่มีช่วง -5V ถึง +5V</h2>
+    <p style="font-size:.68rem;color:var(--muted);margin:0 2px 4px">
+      เส้นแดง = สัญญาณอะนาลอก (ต่อเนื่อง) • เส้นเขียว = สัญญาณดิจิตอล (0/1 หรือ -1/+1) • ใช้เกณฑ์ตัดสินจากแรงดันที่กำหนด
+    </p>
+    <canvas id="cv" width="880" height="260"></canvas>
+    <div id="controls">
+      <button id="btnPlay">หยุด</button>
+      <button id="btnReset">รีเซ็ต</button>
+      <label>ความถี่สัญญาณ:
+        <input type="range" id="freq" min="0.5" max="3" step="0.1" value="1.2" />
+        <span id="freqVal">1.2</span> Hz
+      </label>
+      <label>เกณฑ์ตัดสิน (V):
+        <input type="range" id="thres" min="-5" max="5" step="0.1" value="0" />
+        <span id="thresVal">0.0</span> V
+      </label>
+      <span class="badge" id="logicState">สถานะ: 0 (LOW)</span>
+      <button id="btnExplain">อธิบายหลักการ</button>
+      <button id="btnExercise">แบบฝึกหัด</button>
+    </div>
+    <p class="footer-link">
+      ศึกษาเพิ่มเติมได้ที่เพจ 
+      <a href="https://www.facebook.com/resolvephysics" target="_blank">คลายปมฟิสิกส์</a>
+    </p>
+  </div>
+
+  <!-- Modal อธิบายหลักการ -->
+  <div id="modal">
+    <div id="modalBox">
+      <div id="modalHead">
+        <div style="font-size:.78rem;font-weight:600;color:var(--ink);">อธิบายหลักการ: อะนาลอก vs ดิจิตอล และการตัดสินใจเป็น 0/1</div>
+        <button class="closeBtn" id="btnClose">ปิด</button>
+      </div>
+      <div id="modalContent">
+        <div class="box">
+          <div class="tag">1. อะนาลอกคืออะไร?</div>
+          <div>อะนาลอกคือสัญญาณที่เปลี่ยนค่าได้ต่อเนื่องตามเวลา เช่น เสียงพูด แรงดันในวงจร</div>
+        </div>
+        <div class="box">
+          <div class="tag">2. ดิจิตอลคืออะไร?</div>
+          <div>ดิจิตอลคือสัญญาณที่มีจำนวนระดับจำกัด เช่น 0 และ 1 ทำให้ทน noise และประมวลผลได้ง่าย</div>
+        </div>
+        <div class="box">
+          <div class="tag">3. กรณี 0 ถึง 5 V</div>
+          <div>ถ้าแรงดัน &lt; เกณฑ์ → 0 (LOW) และถ้าแรงดัน &gt; เกณฑ์ → 1 (HIGH)</div>
+        </div>
+        <div class="box">
+          <div class="tag">4. กรณี -5 ถึง +5 V</div>
+          <div>
+            ถ้าสัญญาณมีทั้งขั้วลบและบวก เราตั้งเกณฑ์ไว้ที่ 0V แล้วตีความได้ 2 แบบ<br>
+            • แบบ 0/1 : มากกว่า 0 → 1, น้อยกว่า 0 → 0<br>
+            • แบบ -1/+1 : มากกว่า 0 → +1, น้อยกว่า 0 → -1<br>
+            แล้วแต่ระบบและเกณฑ์ที่กำหนด
+          </div>
+        </div>
+        <div class="box" style="border-color:#fee4e2;background:#fff7ed;">
+          <div class="tag" style="background:#fed7aa;">5. กฎเกณฑ์การตัดสินใจ</div>
+          <div>กำหนด threshold ตัวเดียว เช่น \(V_{TH}\) แล้วเช็กว่าแรงดันสูงกว่าหรือต่ำกว่า ก็รู้เลยว่าเป็น 0 หรือ 1</div>
+        </div>
+        <div class="box" style="border-color:#bfdbfe;background:#eff6ff;">
+          <div class="tag" style="background:#bae6fd;">6. ทำไมบางระบบใช้ +1 และ -1</div>
+          <div>เพื่อให้สัญญาณสมดุลรอบศูนย์ (เฉลี่ย ≈ 0) และคำนวณง่ายในงานสื่อสาร / DSP ถึงจะเป็น +1/-1 ก็ยังถือว่าเป็นดิจิตอล 2 ระดับอยู่ดี</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal แบบฝึกหัด -->
+  <div id="exerciseModal">
+    <div id="exerciseBox">
+      <div id="exerciseHead">
+        <div style="font-size:.78rem;font-weight:600;color:var(--ink);">แบบฝึกหัด: ดิจิตอล 2 ระดับ</div>
+        <button class="closeBtn" id="btnCloseExercise">ปิด</button>
+      </div>
+      <div id="exerciseContent">
+        <p style="margin-top:0;font-size:.7rem;color:var(--muted);">
+          เลือกคำตอบที่ถูกต้องที่สุดในแต่ละข้อ แล้วกด "ตรวจคะแนน"
+        </p>
+        <!-- ข้อ 1 -->
+        <div class="box">
+          <div style="font-weight:600;margin-bottom:6px;">ข้อที่ 1</div>
+          <div style="margin-bottom:6px;">
+            ถ้าสัญญาณอยู่ในช่วง -5V ถึง +5V และตั้งเกณฑ์ไว้ที่ 0V แล้ววัดได้ +3V ระบบจะอ่านค่าเป็นอะไร?
+          </div>
+          <label class="choice"><input type="radio" name="q1" value="a"><span>ก. 0</span></label>
+          <label class="choice"><input type="radio" name="q1" value="b"><span>ข. 1 เพราะมากกว่าเกณฑ์</span></label>
+          <label class="choice"><input type="radio" name="q1" value="c"><span>ค. อ่านไม่ได้เพราะเป็นอะนาลอก</span></label>
+          <label class="choice"><input type="radio" name="q1" value="d"><span>ง. ต้องเป็น +5V เท่านั้นถึงจะอ่านได้</span></label>
+        </div>
+        <!-- ข้อ 2 -->
+        <div class="box">
+          <div style="font-weight:600;margin-bottom:6px;">ข้อที่ 2</div>
+          <div style="margin-bottom:6px;">
+            ข้อใดอธิบายความแตกต่างของสัญญาณอะนาลอกและดิจิตอลได้ถูกต้องที่สุด
+          </div>
+          <label class="choice"><input type="radio" name="q2" value="a"><span>ก. อะนาลอกมี 2 ค่า แต่ดิจิตอลมีได้หลายค่า</span></label>
+          <label class="choice"><input type="radio" name="q2" value="b"><span>ข. อะนาลอกเปลี่ยนค่าได้ต่อเนื่อง แต่ดิจิตอลมีระดับจำกัด</span></label>
+          <label class="choice"><input type="radio" name="q2" value="c"><span>ค. ดิจิตอลต้องเป็นคลื่นไซน์เท่านั้น</span></label>
+          <label class="choice"><input type="radio" name="q2" value="d"><span>ง. อะนาลอกต้องเป็นจำนวนเต็มเท่านั้น</span></label>
+        </div>
+        <!-- ข้อ 3 -->
+        <div class="box">
+          <div style="font-weight:600;margin-bottom:6px;">ข้อที่ 3</div>
+          <div style="margin-bottom:6px;">
+            ระบบ 0–5V ตั้งเกณฑ์ 2.5V วัดได้ 1.0V ควรอ่านเป็นค่าใด?
+          </div>
+          <label class="choice"><input type="radio" name="q3" value="a"><span>ก. 0 (LOW)</span></label>
+          <label class="choice"><input type="radio" name="q3" value="b"><span>ข. 1 (HIGH)</span></label>
+          <label class="choice"><input type="radio" name="q3" value="c"><span>ค. ค่ากลาง</span></label>
+          <label class="choice"><input type="radio" name="q3" value="d"><span>ง. อ่านไม่ได้</span></label>
+        </div>
+        <!-- ข้อ 4 -->
+        <div class="box">
+          <div style="font-weight:600;margin-bottom:6px;">ข้อที่ 4</div>
+          <div style="margin-bottom:6px;">
+            สัญญาณที่เปลี่ยนระหว่าง 2 ระดับ คือ -1 กับ +1 ต่อเนื่องตลอดเวลา จัดเป็นสัญญาณแอนะล็อก
+          </div>
+          <label class="choice"><input type="radio" name="q4" value="a"><span>ก. ถูก</span></label>
+          <label class="choice"><input type="radio" name="q4" value="b"><span>ข. ผิด</span></label>
+          <!-- ข้อความเฉลยถูกย้ายไปแสดงตอนกดตรวจ -->
+        </div>
+        <button id="btnCheck" style="margin-top:4px;">ตรวจคะแนน</button>
+        <div id="resultBox" style="display:none;background:#ecfdf3;border:1px solid #bbf7d0;"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const cv = document.getElementById("cv");
+const ctx = cv.getContext("2d");
+const freq = document.getElementById("freq");
+const thres = document.getElementById("thres");
+const freqVal = document.getElementById("freqVal");
+const thresVal = document.getElementById("thresVal");
+const logicState = document.getElementById("logicState");
+const btnExplain = document.getElementById("btnExplain");
+const modal = document.getElementById("modal");
+const btnClose = document.getElementById("btnClose");
+const btnPlay = document.getElementById("btnPlay");
+const btnReset = document.getElementById("btnReset");
+const btnExercise = document.getElementById("btnExercise");
+const exerciseModal = document.getElementById("exerciseModal");
+const btnCloseExercise = document.getElementById("btnCloseExercise");
+const btnCheck = document.getElementById("btnCheck");
+const resultBox = document.getElementById("resultBox");
+
+let f = parseFloat(freq.value);
+let threshold = parseFloat(thres.value);
+let time = 0;
+let running = true;
+
+function drawGrid(){
+  const w = cv.width, h = cv.height;
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0,0,w,h);
+
+  ctx.strokeStyle = "#f1f5f9";
+  ctx.lineWidth = 1;
+  for(let x=0; x<w; x+=40){
+    ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,h); ctx.stroke();
+  }
+  for(let y=0; y<h; y+=40){
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke();
+  }
+
+  const y0 = h/2;
+  ctx.strokeStyle = "#94a3b8";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(0,y0);
+  ctx.lineTo(w,y0);
+  ctx.stroke();
+  ctx.fillStyle = "#475569";
+  ctx.font = "11px system-ui";
+  ctx.fillText("0 V", 6, y0 - 4);
+}
+
+function analogVolt(x, t){
+  const w = cv.width;
+  const tt = (x/w)*2*Math.PI*f + t;
+  const sinv = Math.sin(tt);
+  return sinv * 5;
+}
+
+function drawScene(){
+  const w = cv.width, h = cv.height;
+  drawGrid();
+
+  const yTh = h/2 - (threshold/5)*(h/2);
+  ctx.setLineDash([5,5]);
+  ctx.strokeStyle = "#cbd5e1";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(0,yTh);
+  ctx.lineTo(w,yTh);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = "#475569";
+  ctx.font = "11px system-ui";
+  ctx.fillText("เกณฑ์ " + threshold.toFixed(1) + " V", 8, yTh - 6);
+
+  ctx.strokeStyle = "#ef4444";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  for(let x=0;x<w;x++){
+    const v = analogVolt(x, time);
+    const y = h/2 - (v/5)*(h/2);
+    if(x===0) ctx.moveTo(x,y);
+    else ctx.lineTo(x,y);
+  }
+  ctx.stroke();
+  ctx.fillStyle = "#ef4444";
+  ctx.fillText("สัญญาณอะนาลอก (ต่อเนื่อง) -5V ถึง +5V", 8, 18);
+
+  ctx.strokeStyle = "#0f766e";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  let prevY = null;
+  for(let x=0;x<w;x+=4){
+    const v = analogVolt(x, time);
+    const isHigh = v >= threshold;
+    const yDig = isHigh ? h*0.2 : h*0.8;
+    if(x===0) ctx.moveTo(x,yDig);
+    else{
+      ctx.lineTo(x,yDig);
+      if(prevY !== null && prevY !== yDig){
+        ctx.lineTo(x,yDig);
+      }
+    }
+    prevY = yDig;
+  }
+  ctx.stroke();
+  ctx.fillStyle = "#0f766e";
+  ctx.fillText("สัญญาณดิจิตอลที่แปลงจากอะนาลอก (0 / 1)", 8, 34);
+
+  const midV = analogVolt(w/2, time);
+  const isHighMid = midV >= threshold;
+  logicState.textContent = "สถานะ: " + (isHighMid? "1 (HIGH)" : "0 (LOW)");
+}
+
+function loop(){
+  drawScene();
+  if(running){
+    time += 0.03;
+  }
+  requestAnimationFrame(loop);
+}
+loop();
+
+freq.addEventListener("input", ()=>{
+  f = parseFloat(freq.value);
+  freqVal.textContent = f.toFixed(1);
+});
+thres.addEventListener("input", ()=>{
+  threshold = parseFloat(thres.value);
+  thresVal.textContent = threshold.toFixed(1);
+});
+
+btnExplain.addEventListener("click", ()=> modal.style.display = "flex");
+btnClose.addEventListener("click", ()=> modal.style.display = "none");
+modal.addEventListener("click", (e)=>{ if(e.target === modal) modal.style.display = "none"; });
+
+btnPlay.addEventListener("click", ()=>{
+  running = !running;
+  btnPlay.textContent = running ? "หยุด" : "เล่น";
+});
+btnReset.addEventListener("click", ()=>{
+  freq.value = 1.2;
+  thres.value = 0;
+  f = 1.2;
+  threshold = 0;
+  freqVal.textContent = "1.2";
+  thresVal.textContent = "0.0";
+});
+
+btnExercise.addEventListener("click", ()=>{
+  exerciseModal.style.display = "flex";
+  resultBox.style.display = "none";
+});
+btnCloseExercise.addEventListener("click", ()=> exerciseModal.style.display = "none");
+exerciseModal.addEventListener("click", (e)=>{ if(e.target === exerciseModal) exerciseModal.style.display = "none"; });
+
+btnCheck.addEventListener("click", ()=>{
+  const answers = { q1:"b", q2:"b", q3:"a", q4:"b" };
+  let score = 0;
+  let explainHTML = "";
+
+  for(let i=1;i<=4;i++){
+    const sel = document.querySelector(`input[name="q${i}"]:checked`);
+    const correct = answers[`q${i}`];
+    if(sel && sel.value === correct){
+      score++;
+      explainHTML += `<p style="margin-bottom:4px;">ข้อที่ ${i}: ✅ ถูกต้อง</p>`;
+    } else {
+      let exp = "";
+      if(i===1){
+        exp = "ตั้งเกณฑ์ที่ 0V ถ้าสัญญาณมากกว่า 0V ต้องอ่านเป็น 1";
+      } else if(i===2){
+        exp = "อะนาลอกเปลี่ยนค่าได้ต่อเนื่อง ส่วนดิจิตอลมีระดับไม่กี่ระดับ เช่น 0,1";
+      } else if(i===3){
+        exp = "สัญญาณ 1.0V ต่ำกว่าเกณฑ์ 2.5V จึงต้องอ่านเป็น 0 (LOW)";
+      } else if(i===4){
+        exp = "ถึงเวลาจะต่อเนื่อง แต่ค่ามีแค่ 2 ระดับ (-1,+1) จึงจัดเป็นดิจิตอล 2 ระดับมากกว่าอะนาลอก";
+      }
+      explainHTML += `<p style="margin-bottom:4px;">ข้อที่ ${i}: ❌ ยังไม่ถูก — ${exp}</p>`;
+    }
+  }
+
+  resultBox.style.display = "block";
+  if(score === 4){
+    resultBox.style.background = "#ecfdf3";
+    resultBox.style.border = "1px solid #bbf7d0";
+  }else{
+    resultBox.style.background = "#fef2f2";
+    resultBox.style.border = "1px solid #fecaca";
+  }
+  resultBox.innerHTML = `<div style="font-weight:600;margin-bottom:4px;">ได้ ${score}/4 คะแนน</div>${explainHTML}`;
+});
+</script>
+</body>
+</html>

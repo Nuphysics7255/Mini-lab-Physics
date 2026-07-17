@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Interactive Labs: โพลารอยด์ — ความสว่างผ่านแผ่นโพลารอยด์</title>
+<style>
+  :root{ --ink:#0f172a; --muted:#64748b; --line:#e5e7eb; --bg:#ffffff; --accent:#2563eb; }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; touch-action:manipulation}
+  html,body{height:100%}
+  body{margin:0; font-family:system-ui, Inter, 'Noto Sans Thai', sans-serif; color:var(--ink); background:var(--bg)}
+  header{padding:12px 16px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; gap:8px}
+  h1{font-size:18px; margin:0}
+  .tag{font-size:12px; color:var(--muted)}
+  .pill{display:inline-flex; gap:6px; align-items:center; border:1px solid var(--line); padding:6px 10px; border-radius:999px; font-size:12px; background:#fff}
+
+  main{display:grid; grid-template-columns: 360px 1fr; gap:12px; height:calc(100% - 57px)}
+  @media (max-width: 960px){ main{grid-template-columns: 1fr; height:auto} }
+  .left{padding:12px; border-right:1px solid var(--line); background:#f8fafc}
+  .right{position:relative}
+  .card{background:#fff; border:1px solid var(--line); border-radius:16px; padding:12px}
+  .stack{display:grid; gap:10px}
+  .row{display:grid; grid-template-columns: 1fr auto; gap:8px; align-items:center}
+  .row label{font-size:14px}
+  input[type="range"]{width:200px}
+  select, button, input[type="color"], input[type="checkbox"]{font:inherit}
+  button{border:1px solid var(--line); background:#fff; padding:8px 10px; border-radius:10px; cursor:pointer}
+  button.primary{background:var(--accent); color:#fff; border-color:transparent}
+
+  .beamWrap{position:absolute; inset:0; padding:12px}
+  .stage{position:relative; width:100%; height:100%; min-height:560px; background:radial-gradient(800px 900px at 50% 10%, #e0f2fe 0, #f1f5f9 55%, #f8fafc 100%); border-top-left-radius:16px; overflow:hidden}
+
+  /* Source & direction */
+  .source{position:absolute; left:50%; top:0; transform:translate(-50%, -35%); display:grid; place-items:center}
+  .lamp{width:70px; height:70px; border-radius:50%; background:radial-gradient(circle at 35% 35%, #fff 0 20%, #fde68a 45%, #f59e0b 70%, #ea580c 100%); box-shadow:0 0 30px 6px rgba(245,158,11,.45)}
+  .dirArrow{position:absolute; left:50%; top:64px; width:2px; height:40px; background:#0f172a99; transform:translateX(-50%)}
+  .dirArrow::after{content:""; position:absolute; left:50%; bottom:-6px; transform:translateX(-50%); border-left:7px solid transparent; border-right:7px solid transparent; border-top:10px solid #0f172a99}
+
+  /* Polarizers */
+  .pol{position:absolute; width:160px; height:170px; left:50%; transform:translate(-50%, -50%) rotate(var(--deg,0deg)); display:grid; place-items:center; cursor:grab; user-select:none; touch-action:none}
+  .pol:active{cursor:grabbing}
+  .panelPol{position:absolute; inset:12% 12%; background:repeating-linear-gradient( 90deg, rgba(2,6,23,.08) 0 3px, rgba(2,6,23,0) 3px 6px ); border:1px solid rgba(2,6,23,.15); border-radius:12px; backdrop-filter:brightness(1)}
+  .axis{position:absolute; top:12%; bottom:12%; width:9px; left:calc(50% - 4.5px); border-radius:6px; background:linear-gradient(#0f172a,#0f172a) center/2px 100% no-repeat, linear-gradient(#94a3b8,#e2e8f0); opacity:.95}
+  .axisCap{position:absolute; left:50%; transform:translateX(-50%); width:72px; height:72px; border:1px dashed #64748b55; border-radius:50%; display:grid; place-items:center; font-size:12px; color:#0f172a; background:#ffffffb3}
+  .label{position:absolute; top:-28px; background:#fff; padding:4px 8px; border:1px solid var(--line); border-radius:999px; font-size:12px}
+
+  /* Output area — light grey by request */
+  .out{position:absolute; left:50%; bottom:12px; transform:translateX(-50%); height:110px; width:74%; background:linear-gradient(180deg, rgba(148,163,184,.15), rgba(226,232,240,.45)); border:1px solid rgba(148,163,184,.45); border-radius:10px; box-shadow:inset 0 0 32px rgba(15,23,42,.08)}
+  .out .meter{position:absolute; inset:0; backdrop-filter:brightness(var(--outBrightness,1)); border-radius:10px}
+  .out .colorwash{position:absolute; inset:0; border-radius:10px; opacity:var(--washAlpha,0.6); mix-blend-mode:multiply; pointer-events:none}
+  .out .read{position:absolute; inset:auto 10px 8px auto; font-size:12px; background:#fff; border:1px solid var(--line); border-radius:999px; padding:2px 8px}
+
+  /* Live badges */
+  .badge{position:absolute; background:#fff; border:1px solid var(--line); border-radius:8px; padding:4px 8px; font-size:12px; transform-origin:left center}
+  .vars{display:grid; gap:6px; font-size:13px}
+
+  /* Overlays */
+  .overlay{position:fixed; inset:0; display:none; place-items:center; backdrop-filter:blur(3px); background:#0b122044; z-index:30}
+  .overlay .sheet{background:linear-gradient(135deg,#ffffff 0,#f0f9ff 40%,#eef2ff 100%); border:1px solid #dbeafe; border-radius:16px; box-shadow:0 12px 40px rgba(2,6,23,.18); max-width:680px; width:min(92vw,680px); padding:16px}
+  .overlay .sheet h2{margin:.2rem 0 .8rem 0; background:linear-gradient(90deg,#0ea5e9,#6366f1); -webkit-background-clip:text; background-clip:text; color:transparent}
+  .overlay .sheet .eq{display:inline-block; padding:2px 6px; border-radius:6px; background:#f8fafc; border:1px solid #e2e8f0}
+  .overlay .sheet .btn{background:#2563eb; color:#fff; border:none; border-radius:10px; padding:8px 12px; cursor:pointer}
+</style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Interactive Labs: โพลารอยด์ — ความสว่างผ่านแผ่นโพลารอยด์</h1>
+      <div class="tag">แหล่งกำเนิดด้านบน → P₁ กลาง → P₂ ล่าง (สอดแทรก P₃ ได้) • ลากหมุนด้วยนิ้ว/เมาส์</div>
+    </div>
+    <div class="pill">ศึกษาเพิ่มเติมที่ <a class="brand" href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">เพจคลายปมฟิสิกส์</a></div>
+  </header>
+
+  <main>
+    <!-- Controls -->
+    <section class="left">
+      <div class="stack">
+        <div class="card">
+          <div class="row"><label>ชนิดแสงขาเข้า</label>
+            <select id="srcType">
+              <option value="unpol">ไม่โพลาไรซ์ (Unpolarized)</option>
+              <option value="lin">เชิงเส้น (Linear)</option>
+            </select>
+          </div>
+          <div class="row" id="phiWrap" style="display:none">
+            <label>มุมโพลาไรซ์ของแหล่ง (φ) = <span id="phiVal">0</span>°</label>
+            <input id="phi" type="range" min="0" max="180" step="1" value="0" />
+          </div>
+          <div class="row">
+            <label>ความเข้มเริ่มต้น I₀ = <span id="I0Val">100</span>%</label>
+            <input id="I0" type="range" min="1" max="200" step="1" value="100" />
+          </div>
+          <div class="row">
+            <label>สีของแสง</label>
+            <input id="color" type="color" value="#ffffff" />
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="row"><label>มุมแผ่น P₁ (θ₁) = <span id="t1Val">0</span>°</label>
+            <input id="t1" type="range" min="0" max="180" step="1" value="0" />
+          </div>
+          <div class="row"><label>มุมแผ่น P₂ (θ₂) = <span id="t2Val">90</span>°</label>
+            <input id="t2" type="range" min="0" max="180" step="1" value="90" />
+          </div>
+          <div class="row"><label><input id="useP3" type="checkbox" /> ใช้แผ่นที่ 3 (P₃)</label><span></span></div>
+          <div class="row" id="p3Wrap" style="display:none"><label>มุมแผ่น P₃ (θ₃) = <span id="t3Val">45</span>°</label>
+            <input id="t3" type="range" min="0" max="180" step="1" value="45" />
+          </div>
+        </div>
+
+        <div class="card">
+          <b>ตัวแปรผลลัพธ์สด</b>
+          <div class="vars">
+            <div>P₁: E₁ = <b><span id="E1">0.00</span></b>, I₁ = <b><span id="I1">0</span>%</b></div>
+            <div id="vP3" style="display:none">P₃: E₃ = <b><span id="E3">0.00</span></b>, I₃ = <b><span id="I3">0</span>%</b></div>
+            <div>สุดท้าย: E<sub>out</sub> = <b><span id="Eout">0.00</span></b>, I<sub>out</sub> = <b><span id="IoutL">0</span>%</b></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px">
+            <button id="explain" class="primary">อธิบายหลักการ</button>
+            <button id="quiz">แบบฝึกหัด</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Stage -->
+    <section class="right">
+      <div class="beamWrap">
+        <div class="stage" id="stage">
+          <!-- Source & direction -->
+          <div class="source"><div class="lamp" aria-label="แหล่งกำเนิดแสง"></div></div>
+          <div class="dirArrow" title="ทิศทางแสงลง"></div>
+
+          <!-- Polarizer positions -->
+          <div id="P1" class="pol" style="top:45%">
+            <div class="panelPol"></div>
+            <div class="axis"></div>
+            <div class="axisCap" style="top:-38px">แกน P₁</div>
+            <div class="label">θ₁</div>
+          </div>
+
+          <div id="P3" class="pol" style="top:60%; display:none">
+            <div class="panelPol"></div>
+            <div class="axis"></div>
+            <div class="axisCap" style="top:-38px">แกน P₃</div>
+            <div class="label">θ₃</div>
+          </div>
+
+          <div id="P2" class="pol" style="top:78%">
+            <div class="panelPol"></div>
+            <div class="axis"></div>
+            <div class="axisCap" style="top:-38px">แกน P₂ (Analyser)</div>
+            <div class="label">θ₂</div>
+          </div>
+
+          <!-- Output area -->
+          <div class="out" id="out"><div class="meter"></div><div class="colorwash" id="wash"></div><div class="read">I<sub>out</sub>: <span id="readI">0</span>%</div></div>
+
+          <!-- Stage-level badges (decoupled from plate rotation) -->
+          <div class="badge" id="bP1">θ₁=<b><span id="bT1">0</span>°</b> | E₁=<b><span id="bE1">0.00</span></b>, I₁=<b><span id="bI1">0</span>%</b></div>
+          <div class="badge" id="bP3" style="display:none">θ₃=<b><span id="bT3">45</span>°</b> | E₃=<b><span id="bE3">0.00</span></b>, I₃=<b><span id="bI3">0</span>%</b></div>
+          <div class="badge" id="bP2">θ₂=<b><span id="bT2">90</span>°</b> | E<sub>out</sub>=<b><span id="bEout">0.00</span></b>, I<sub>out</sub>=<b><span id="bIout">0</span>%</b></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Overlays: Explain & Quiz -->
+  <div class="overlay" id="ovExplain">
+    <div class="sheet">
+      <h2>อธิบายหลักการ (ย่อยง่าย)</h2>
+      <p><b>โพลาไรซ์</b> คือทิศการสั่นของเวกเตอร์สนามไฟฟ้า (E) ซึ่งตั้งฉากกับทิศการเคลื่อนที่ของแสง แผ่นโพลารอยด์ <b>ยอมให้ผ่านเฉพาะองค์ประกอบของ E ที่ขนานกับแกนของแผ่น</b></p>
+      <p>กฎของมาลุส (ความเข้ม): <span class="eq">I = I<sub>in</sub> cos²(Δθ)</span></p>
+      <p>สนามไฟฟ้าหลังแผ่น (เชิงเส้น): <span class="eq">E<sub>out</sub> = E<sub>in</sub> cos(Δθ)</span> • หลายแผ่น: <span class="eq">E<sub>หลังP1</sub> = E₀ cos(θ₁-φ)</span> → <span class="eq">E<sub>หลังP3</sub> = E<sub>หลังP1</sub> cos(θ₃-θ₁)</span> → <span class="eq">E<sub>out</sub> = E<sub>ก่อนP2</sub> cos(θ₂-θ₃)</span></p>
+      <div style="margin-top:10px"><button class="btn" id="btnCloseExplain">ปิด</button></div>
+    </div>
+  </div>
+
+  <div class="overlay" id="ovQuiz">
+    <div class="sheet">
+      <h2>แบบฝึกหัด</h2>
+      <ol>
+        <li>
+          แสงไม่โพลาไรซ์ I₀=100 ผ่าน P₁ (θ₁=0°) และ P₂ (θ₂=90°). จะได้ I<sub>out</sub> เท่าใด?
+          <ul>
+            <li>A) 50</li>
+            <li>B) 0</li>
+            <li>C) 25</li>
+          </ul>
+          <details><summary>เฉลย</summary>
+            หลัง P₁: เหลือ ½ I₀ = 50. P₂ ตั้งฉากกับโพลาไรซ์ ⇒ cos²90°=0 ⇒ I<sub>out</sub>=0.
+          </details>
+        </li>
+        <li>
+          ตั้ง P₁=0°, P₂=90°. แทรก P₃=45° ระหว่างกลาง อุดมคติ I₀=100 จะได้ I<sub>out</sub> เท่าใด?
+          <ul>
+            <li>A) 12.5</li>
+            <li>B) 25</li>
+            <li>C) 50</li>
+          </ul>
+          <details><summary>เฉลย</summary>
+            หลัง P₁: 50 → ผ่าน P₃ ที่ 45°: ×cos²45° = ×½ ⇒ 25 → ผ่าน P₂ ที่ 45° อีกครั้ง: ×½ ⇒ 12.5.
+          </details>
+        </li>
+        <li>
+          ถ้าแหล่งเป็นเชิงเส้น φ=30°, P₁=0°, P₂=30° (ไม่มี P₃). I₀=100, I<sub>out</sub>=?
+          <details><summary>เฉลย</summary>
+            หลัง P₁: I₁=100×cos²(0°-30°)=75. ต่อด้วย P₂: Δθ=30°-0°=30° ⇒ I<sub>out</sub>=75×cos²30°≈56.3.
+          </details>
+        </li>
+      </ol>
+      <div style="margin-top:10px"><button class="btn" id="btnCloseQuiz">ปิด</button></div>
+    </div>
+  </div>
+
+<script>
+  const $ = (s)=>document.querySelector(s);
+  const deg2rad = d=> d*Math.PI/180;
+
+  // Controls
+  const srcType = $('#srcType');
+  const I0 = $('#I0'); const I0Val = $('#I0Val');
+  const phi = $('#phi'); const phiVal = $('#phiVal'); const phiWrap = $('#phiWrap');
+  const t1 = $('#t1'), t2 = $('#t2'), t3 = $('#t3');
+  const t1Val = $('#t1Val'), t2Val = $('#t2Val'), t3Val = $('#t3Val');
+  const useP3 = $('#useP3'); const p3Wrap = $('#p3Wrap');
+  const color = $('#color');
+
+  // Stage & badges
+  const P1 = $('#P1'), P2 = $('#P2'), P3 = $('#P3');
+  const out = $('#out'); const wash = $('#wash');
+  const stage = $('#stage');
+
+  function syncLabels(){
+    I0Val.textContent = I0.value;
+    phiVal.textContent = phi.value;
+    t1Val.textContent = t1.value; if(P1) P1.style.setProperty('--deg', t1.value+'deg');
+    t2Val.textContent = t2.value; if(P2) P2.style.setProperty('--deg', t2.value+'deg');
+    t3Val.textContent = t3.value; if(P3) P3.style.setProperty('--deg', t3.value+'deg');
+
+    // angle text on badges
+    const setTxt=(sel,val)=>{ const el=$(sel); if(el) el.textContent=val };
+    setTxt('#bT1', t1.value); setTxt('#bT2', t2.value); if($('#bT3')) setTxt('#bT3', t3.value);
+
+    // toggle P3
+    phiWrap.style.display = srcType.value==='lin' ? '' : 'none';
+    p3Wrap.style.display = useP3.checked ? '' : 'none';
+    if(P3) P3.style.display = useP3.checked ? 'block' : 'none';
+
+    positionBadges();
+  }
+
+  function compute(){
+    const I0num = +I0.value; // percent scale
+    // After P1
+    let I1;
+    if(srcType.value==='unpol') I1 = 0.5*I0num; else { const d1 = Math.abs(+t1.value - +phi.value); I1 = I0num*Math.cos(deg2rad(d1))**2; }
+    const E1 = Math.sqrt(Math.max(I1,0));
+
+    // After P3 (optional)
+    let Ibefore = I1; let refAngle = +t1.value;
+    if(useP3.checked){ const d13 = Math.abs(+t3.value - refAngle); Ibefore = I1 * Math.cos(deg2rad(d13))**2; refAngle = +t3.value; }
+    const I3 = Ibefore; const E3 = Math.sqrt(Math.max(I3,0));
+
+    // After P2 (final)
+    const d_last = Math.abs(+t2.value - refAngle);
+    const Iout = Ibefore * Math.cos(deg2rad(d_last))**2;
+    const Eout = Math.sqrt(Math.max(Iout,0));
+
+    // Visual mapping & color (light grey base; tint only when >0)
+    const brighten = v => Math.max(0.05, Math.min(1.0, v/100));
+    if(out){ out.style.setProperty('--outBrightness', brighten(Iout)); }
+    if(wash){ wash.style.background = color.value; wash.style.opacity = (Iout<=0? 0 : Math.min(0.9, 0.25 + Iout/120)); }
+    const readI = $('#readI'); if(readI) readI.textContent = Math.round(Iout);
+
+    // Update readouts
+    const fx = n => (Math.round(n*100)/100).toFixed(2);
+    const setTxt2 = (sel, val)=>{ const el=$(sel); if(el) el.textContent = val };
+    setTxt2('#E1', fx(E1)); setTxt2('#I1', Math.round(I1)); setTxt2('#bE1', fx(E1)); setTxt2('#bI1', Math.round(I1));
+    if(useP3.checked){ $('#vP3').style.display='block'; $('#bP3').style.display='block'; setTxt2('#E3', fx(E3)); setTxt2('#I3', Math.round(I3)); setTxt2('#bE3', fx(E3)); setTxt2('#bI3', Math.round(I3)); }
+    else{ $('#vP3').style.display='none'; $('#bP3').style.display='none'; }
+    setTxt2('#Eout', fx(Eout)); setTxt2('#IoutL', Math.round(Iout)); setTxt2('#bEout', fx(Eout)); setTxt2('#bIout', Math.round(Iout));
+  }
+
+  // Smooth drag-rotate (mouse/touch) — eased to feel slower
+  function makeRotatable(targetEl, sliderEl){
+    if(!targetEl || !sliderEl) return;
+    let dragging=false, targetAngle=+sliderEl.value, currentAngle=+sliderEl.value;
+
+    function tick(){
+      // ease current toward target
+      const diff = ((targetAngle - currentAngle + 540)%360) - 180; // shortest path
+      currentAngle += diff * 0.15; // easing factor (slower = smaller)
+      if(Math.abs(diff) > 0.01){
+        const val180 = ((currentAngle%360)+360)%360; // 0..360
+        const periodic = val180>180? val180-180 : val180; // 0..180 periodic
+        sliderEl.value = Math.round(periodic);
+        targetEl.style.setProperty('--deg', Math.round(periodic)+'deg');
+        syncLabels(); compute(); positionBadges();
+        requestAnimationFrame(tick);
+      }
+    }
+
+    function setFromEvent(ev){
+      const r = targetEl.getBoundingClientRect();
+      const cx = r.left + r.width/2; const cy = r.top + r.height/2;
+      const x = (ev.touches? ev.touches[0].clientX : ev.clientX);
+      const y = (ev.touches? ev.touches[0].clientY : ev.clientY);
+      let ang = Math.atan2(y - cy, x - cx) * 180/Math.PI; // -180..180
+      ang = (ang+360)%360; // 0..360
+      targetAngle = ang; // store target; easing loop animates toward it
+      requestAnimationFrame(tick);
+    }
+
+    targetEl.addEventListener('pointerdown',(e)=>{ dragging=true; targetEl.setPointerCapture(e.pointerId); setFromEvent(e); });
+    targetEl.addEventListener('pointermove',(e)=>{ if(!dragging) return; setFromEvent(e); });
+    const stop=()=>{ dragging=false; };
+    targetEl.addEventListener('pointerup', stop);
+    targetEl.addEventListener('pointercancel', stop);
+  }
+
+  function positionBadges(){
+    if(!stage) return;
+    const s = stage.getBoundingClientRect();
+    const place = (badge, pol, dxRight, upPx)=>{
+      if(!badge || !pol) return;
+      const r = pol.getBoundingClientRect();
+      const left = (r.left + r.width/2) - s.left + dxRight;
+      const top = r.top - s.top - upPx;
+      badge.style.left = left + 'px';
+      badge.style.top = top + 'px';
+    };
+    place(document.querySelector('#bP1'), P1, 110, 20);
+    if(useP3.checked){ const bp3=document.querySelector('#bP3'); if(bp3) { bp3.style.display='block'; place(bp3, P3, 110, 20); } }
+    place(document.querySelector('#bP2'), P2, 110, 120);
+  }
+
+  window.addEventListener('resize', positionBadges);
+
+  // Bind
+  [srcType,I0,phi,t1,t2,t3,useP3].forEach(el=> el && el.addEventListener('input', ()=>{ syncLabels(); compute(); }));
+  color?.addEventListener('input', ()=> compute());
+  makeRotatable($('#P1'), $('#t1'));
+  makeRotatable($('#P2'), $('#t2'));
+  makeRotatable($('#P3'), $('#t3'));
+
+  // Init
+  syncLabels(); compute(); positionBadges();
+
+  // Overlays
+  const ovExplain = document.querySelector('#ovExplain');
+  const ovQuiz = document.querySelector('#ovQuiz');
+  document.querySelector('#explain')?.addEventListener('click', ()=> ovExplain.style.display='grid');
+  document.querySelector('#quiz')?.addEventListener('click', ()=> ovQuiz.style.display='grid');
+  document.querySelector('#btnCloseExplain')?.addEventListener('click', ()=> ovExplain.style.display='none');
+  document.querySelector('#btnCloseQuiz')?.addEventListener('click', ()=> ovQuiz.style.display='none');
+</script>
+</body>
+</html>

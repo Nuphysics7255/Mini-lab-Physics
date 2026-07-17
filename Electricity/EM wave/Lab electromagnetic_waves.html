@@ -1,0 +1,633 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Hertz EM 3D — Burst 1.0s + Ring Y+90 + Summary (MathJax) + Quiz</title>
+<style>
+  :root{
+    --bg:#020617; --ink:#e2e8f0; --panel:#0b1220;
+    --steel:#9aa8b6; --copper:#b87333; --bat:#3b82f6; --switch:#f97316;
+    --spark:#ffd84d; --flash:#fff6a9; --led-on:#22c55e; --led-off:#ef4444;
+    --E:#ef4444; --B:#60a5fa;
+
+    /* Pastel palette for SUMMARY/QUIZ */
+    --p-text:#0f172a;            /* slate-900 */
+    --p-muted:#334155;           /* slate-700 */
+    --p-card:#ffffff;            /* white card */
+    --p-border:#e2e8f0;          /* slate-200 */
+    --p-chip:#e0f2fe;            /* sky-100 */
+    --p-chip-border:#bae6fd;     /* sky-200 */
+    --p-blue:#38bdf8;            /* sky-400 */
+    --p-yellow:#fde68a;          /* amber-300 */
+    --p-lilac:#e9d5ff;           /* violet-200 */
+    --p-green:#86efac;           /* green-300 */
+  }
+
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);font-family:Inter,system-ui,sans-serif;color:var(--ink);overflow:hidden}
+
+  /* ==== 3D stage & UI ==== */
+  #stage{position:fixed;inset:0}
+  .ui{position:fixed;top:12px;left:12px;z-index:20;display:flex;gap:10px;align-items:center;
+      background:rgba(11,18,32,.6);border:1px solid rgba(148,163,184,.3);padding:8px 10px;border-radius:12px;backdrop-filter:blur(6px)}
+  .btn{background:#f97316;color:white;border:none;padding:8px 14px;border-radius:10px;cursor:pointer;font-weight:700;letter-spacing:.2px;box-shadow:0 6px 18px rgba(249,115,22,.25)}
+  .btn:hover{filter:brightness(1.05)}
+  .pill{padding:4px 10px;border:1px solid rgba(148,163,184,.35);border-radius:999px;font-size:12px;background:#0b1220}
+  .led{width:12px;height:12px;border-radius:999px;box-shadow:0 0 10px rgba(0,0,0,.4) inset, 0 0 10px rgba(34,197,94,0);border:1px solid rgba(148,163,184,.35)}
+  .led.on{background:var(--led-on); box-shadow:0 0 10px rgba(34,197,94,.9)}
+  .led.off{background:var(--led-off); box-shadow:0 0 10px rgba(239,68,68,.9)}
+  .ui-right{position:fixed;top:12px;right:12px;z-index:20;display:flex;gap:10px}
+  .ghost{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.25);color:#e2e8f0}
+
+  /* ==== Home overlay ==== */
+  .overlay{position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;
+           background:radial-gradient(1000px 700px at 70% 25%, rgba(14,165,233,.18), transparent 45%),
+                      radial-gradient(900px 700px at 20% 85%, rgba(139,92,246,.18), transparent 45%),
+                      rgba(2,6,23,.66); backdrop-filter: blur(8px)}
+  .card{width:min(960px,92vw); background:rgba(11,18,32,.85); border:1px solid rgba(148,163,184,.28); border-radius:16px;
+        box-shadow: 0 20px 60px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.06); padding:22px}
+  .title{font-weight:900; font-size:28px; letter-spacing:.3px; margin:4px 0 14px}
+  .note{font-size:15px; opacity:.95; line-height:1.7}
+
+  .nowrap{white-space:nowrap; display:inline-flex; gap:8px; align-items:baseline}
+  .chip-link{display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px;
+             background:var(--p-chip); border:1px solid var(--p-chip-border); color:#0c4a6e; text-decoration:none; font-weight:800}
+  .chip-link:hover{filter:brightness(1.03)}
+  .cta{display:flex; gap:10px; margin-top:16px; flex-wrap:wrap}
+  .cta .btn{padding:10px 16px; border-radius:12px}
+
+  /* ==== Summary panel (PASTEL) ==== */
+  .modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center;
+         background:rgba(2,6,23,.55); backdrop-filter: blur(8px)}
+  .modal.show{display:flex}
+  .panel{
+    width:min(1000px,94vw); max-height:90vh; overflow:auto;
+    background:var(--p-card); color:var(--p-text);
+    border:1px solid var(--p-border); border-radius:18px;
+    box-shadow:0 20px 60px rgba(0,0,0,.35);
+    padding:20px 22px
+  }
+  .panel h2{margin:.2rem 0 1rem; font-size:26px; color:#0f172a}
+  .grid{display:grid; grid-template-columns:1fr; gap:14px}
+  @media (min-width:900px){ .grid{grid-template-columns:1fr 1fr} }
+  .box{
+    background:linear-gradient(180deg, #f0f9ff, #fff7ed); /* ฟ้าอ่อน -> ครีมอ่อน */
+    border:1px solid var(--p-border); border-radius:14px; padding:14px 16px
+  }
+  .box h3{margin:.2rem 0 .6rem; font-size:18px; color:#0e7490}
+  .box p, .box li{line-height:1.8; color:var(--p-muted)}
+  .formula{background:#fff; border:1px solid var(--p-border); border-radius:12px; padding:10px 14px; overflow:auto}
+  .pastel-tag{display:inline-block; padding:2px 10px; border-radius:999px; font-size:12px; margin-left:8px; background:var(--p-yellow); color:#78350f}
+
+  /* ==== Quiz panel ==== */
+  .quiz-list{display:grid; gap:14px}
+  .qcard{background:#fff; border:1px solid var(--p-border); border-radius:14px; padding:14px}
+  .qtitle{font-weight:800; color:#0369a1; margin-bottom:8px}
+  .opt{display:flex; gap:10px; align-items:flex-start; margin:6px 0}
+  .opt input{margin-top:3px}
+  .explain{display:none; margin-top:8px; background:#fefce8; border:1px solid #fde68a; border-radius:12px; padding:10px; color:#713f12}
+  .scorebar{margin:10px 0; padding:10px 12px; background:#ecfeff; border:1px solid #bae6fd; border-radius:12px; color:#155e75; font-weight:800}
+
+  /* buttons inside pastel panels */
+  .btn-pastel{background:linear-gradient(135deg, #38bdf8, #60a5fa); color:#083344}
+  .btn-green{background:linear-gradient(135deg, #86efac, #34d399); color:#064e3b}
+  .btn-dark{background:#1f2937; color:#e5e7eb}
+  a {color:#0ea5e9; text-decoration:underline}
+</style>
+
+<!-- MathJax (render LaTeX with MathJax) -->
+<script>
+  window.MathJax = {
+    tex: {inlineMath: [['\\(','\\)'], ['$', '$']], displayMath: [['\\[','\\]']]},
+    svg: {fontCache: 'global'}
+  };
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+</head>
+<body>
+  <div id="stage"></div>
+
+  <!-- Top-left UI -->
+  <div class="ui">
+    <div class="led off" id="ledUi" title="Switch LED"></div>
+    <button class="btn" id="btnSwitch">Toggle Switch</button>
+    <span id="swState" class="pill">Switch: OFF</span>
+  </div>
+
+  <!-- Top-right UI -->
+  <div class="ui-right">
+    <button class="btn ghost" id="btnHome">หน้าแรก</button>
+    <button class="btn ghost" id="btnSummary">สรุปเนื้อหา</button>
+    <button class="btn ghost" id="btnQuiz">แบบฝึกหัด</button>
+  </div>
+
+  <!-- Home overlay -->
+  <div class="overlay" id="homeOverlay" aria-hidden="false">
+    <div class="card">
+      <div class="title">Hertz EM Experiment 3D <span style="background:#0b7285;color:#cffafe;padding:3px 8px;border-radius:999px;font-size:12px;margin-left:8px">Burst 1.0s</span></div>
+      <p class="note">
+        ทดลองสาธิต “การกำเนิดคลื่นแม่เหล็กไฟฟ้าและการเหนี่ยวนำ” ด้วยเครื่องกำเนิดสปาร์ก-แก็ป (ซ้าย) → คลื่น EM → วงแหวนรับ (ขวา)
+        <span class="nowrap">
+          <span style="color:#fee780;font-weight:800">ศึกษาเพิ่มเติมได้ที่</span>
+          <a class="chip-link" href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">
+            เพจ คลายปมฟิสิกส์
+          </a>
+        </span>
+      </p>
+      <div class="cta">
+        <button class="btn" id="btnStart">เริ่มการทดลอง</button>
+        <button class="btn ghost" id="btnOpenSummary">สรุปเนื้อหา</button>
+        <button class="btn ghost" id="btnOpenQuiz">แบบฝึกหัด</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary modal (Pastel) -->
+  <div class="modal" id="summaryModal" aria-hidden="true">
+    <div class="panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px">
+        <h2>สรุปเนื้อหา: คลื่นแม่เหล็กไฟฟ้า (EM Wave)</h2>
+        <div>
+          <button class="btn btn-green" id="btnCloseSummary">ปิด</button>
+          <button class="btn btn-dark" id="btnBackHome1">กลับสู่หน้าแรก</button>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="box">
+          <h3>คลื่นแม่เหล็กไฟฟ้าคืออะไร?</h3>
+          <p>เป็นคลื่นที่มีสนามไฟฟ้า \( \vec{E} \) และสนามแม่เหล็ก \( \vec{B} \) สั่นตั้งฉากกัน และตั้งฉากกับทิศการเคลื่อนที่ เดินทางได้ในสุญญากาศด้วยอัตราเร็ว</p>
+          <div class="formula">\( c=\dfrac{1}{\sqrt{\mu_0\,\varepsilon_0}} \approx 3.00\times10^8\ \mathrm{m/s} \)</div>
+        </div>
+
+        <div class="box">
+          <h3>ใครค้นพบจากการทดลองเป็นคนแรก?</h3>
+          <p><strong>ไฮน์ริช เฮิรตซ์ (Heinrich Hertz)</strong> ค.ศ. 1886–1889 พิสูจน์การมีอยู่ของคลื่น EM ด้วยสปาร์ก-แก็ปและวงแหวนรับที่มีช่องว่างเล็ก ๆ</p>
+        </div>
+
+        <div class="box">
+          <h3>ทำไมมี “สปาร์ก” ที่วงแหวนรับได้?</h3>
+          <p>คลื่น EM ทำให้ฟลักซ์แม่เหล็ก \( \Phi_B \) ในวงแหวนเปลี่ยนตามเวลา → เกิดแรงเคลื่อนไฟฟ้าเหนี่ยวนำ (EMF) ตามกฎของฟาราเดย์</p>
+          <div class="formula">\( \mathcal{E} = -\dfrac{d\Phi_B}{dt} \)</div>
+          <p>หากแรงดันชั่วขณะมากพอ จะจุดประกายข้ามช่องว่างทองแดงได้</p>
+        </div>
+
+        <div class="box">
+          <h3>อุปกรณ์นี้ใครสร้างคนแรก?</h3>
+          <p>ชุด “เครื่องกำเนิดสปาร์ก-แก็ป + วงแหวนรับ (resonant ring)” ถูก <strong>เฮิรตซ์</strong> ใช้เป็นครั้งแรกในการพิสูจน์คลื่น EM</p>
+        </div>
+
+        <div class="box">
+          <h3>คลื่น EM เกิดจากอะไร?</h3>
+          <p><strong>ประจุไฟฟ้าที่มีความเร่ง</strong> หรือ <strong>กระแสสลับ/กระแสที่เปลี่ยนแปลงเร็ว</strong> ทำให้ \( \vec{E}, \vec{B} \) เปลี่ยนตามเวลาและแพร่กระจายออกไปเป็นคลื่น</p>
+        </div>
+
+        <div class="box">
+          <h3>สมบัติสำคัญ</h3>
+          <ul>
+            <li>เดินทางในสุญญากาศด้วยความเร็ว \( c \)</li>
+            <li>เป็นคลื่นขวาง: \( \vec{E}\perp\vec{B}\perp\vec{k} \)</li>
+            <li>ความถี่และความยาวคลื่น: \( c=f\lambda \)</li>
+            <li>คลื่นระนาบอิสระมี \( E=cB \)</li>
+            <li>พลังงาน/ทิศกระแสพลังงาน: เวกเตอร์พอยน์ติง \( \vec{S}=\dfrac{1}{\mu_0}\,\vec{E}\times\vec{B} \)</li>
+          </ul>
+        </div>
+
+        <div class="box">
+          <h3>สูตรสำคัญ (Key formulas)</h3>
+          <div class="formula">
+            \[
+              c=\frac{1}{\sqrt{\mu_0\varepsilon_0}},\quad
+              c=f\lambda,\quad
+              E=cB,\quad
+              \vec S=\frac{1}{\mu_0}(\vec E\times\vec B),\quad
+              \mathcal{E}=-\frac{d\Phi_B}{dt}
+            \]
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:14px; display:flex; gap:10px; flex-wrap:wrap; align-items:center">
+        <a class="chip-link" href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">เพจ คลายปมฟิสิกส์</a>
+        <button class="btn btn-pastel" id="btnSummaryToQuiz">ทำแบบฝึกหัด</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quiz modal -->
+  <div class="modal" id="quizModal" aria-hidden="true">
+    <div class="panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px">
+        <h2>แบบฝึกหัดพื้นฐาน: คลื่นแม่เหล็กไฟฟ้า</h2>
+        <div>
+          <button class="btn btn-green" id="btnCloseQuiz">ปิด</button>
+          <button class="btn btn-dark" id="btnBackHome2">กลับสู่หน้าแรก</button>
+        </div>
+      </div>
+
+      <div class="quiz-list" id="quizList">
+        <!-- Q1 -->
+        <div class="qcard" data-ans="b">
+          <div class="qtitle">1) ข้อใด <u>ถูกต้อง</u> สำหรับคลื่นแม่เหล็กไฟฟ้าในสุญญากาศ</div>
+          <label class="opt"><input type="radio" name="q1" value="a">\( \vec{E} \parallel \vec{B} \parallel \vec{k} \)</label>
+          <label class="opt"><input type="radio" name="q1" value="b">\( \vec{E}\perp\vec{B}\perp\vec{k} \) และ \( E=cB \)</label>
+          <label class="opt"><input type="radio" name="q1" value="c">ต้องมีตัวกลางเสมอ</label>
+          <label class="opt"><input type="radio" name="q1" value="d">เดินทางช้ากว่าเสียงในอากาศ</label>
+          <div class="explain">
+            เฉลย: ข้อ (ข) คลื่น EM เป็นคลื่นขวางคู่ \( \vec{E},\vec{B} \) และมี \( E=cB \) ในสุญญากาศ
+          </div>
+        </div>
+
+        <!-- Q2 -->
+        <div class="qcard" data-ans="c">
+          <div class="qtitle">2) ความยาวคลื่นของสัญญาณวิ่งด้วย \( c \) ที่ความถี่ \( f=100\,\mathrm{MHz} \) คือเท่าใด</div>
+          <label class="opt"><input type="radio" name="q2" value="a">\( 0.003\,\mathrm{m} \)</label>
+          <label class="opt"><input type="radio" name="q2" value="b">\( 0.03\,\mathrm{m} \)</label>
+          <label class="opt"><input type="radio" name="q2" value="c">\( 3.0\,\mathrm{m} \)</label>
+          <label class="opt"><input type="radio" name="q2" value="d">\( 30\,\mathrm{m} \)</label>
+          <div class="explain">
+            เฉลย: \( \lambda=\dfrac{c}{f}=\dfrac{3.0\times10^8}{1.0\times10^8}=3.0\,\mathrm{m} \)
+          </div>
+        </div>
+
+        <!-- Q3 -->
+        <div class="qcard" data-ans="d">
+          <div class="qtitle">3) เหตุผลที่เกิดสปาร์กที่ช่องว่างของวงแหวนรับคือ</div>
+          <label class="opt"><input type="radio" name="q3" value="a">เพราะคลื่นเป็นคลื่นตามยาว</label>
+          <label class="opt"><input type="radio" name="q3" value="b">เพราะความดันอากาศต่ำลง</label>
+          <label class="opt"><input type="radio" name="q3" value="c">เพราะสนามไฟฟ้าคงที่สูงมาก</label>
+          <label class="opt"><input type="radio" name="q3" value="d">เพราะฟลักซ์แม่เหล็กเปลี่ยนเร็ว → เกิด EMF (กฎของฟาราเดย์)</label>
+          <div class="explain">
+            เฉลย: ข้อ (ง) \( \mathcal{E}=-\dfrac{d\Phi_B}{dt} \) ทำให้เกิดแรงดันชั่วขณะที่อาจจุดประกายได้
+          </div>
+        </div>
+
+        <!-- Q4 -->
+        <div class="qcard" data-ans="a">
+          <div class="qtitle">4) ข้อใด <u>ไม่ใช่</u> แหล่งกำเนิดคลื่น EM</div>
+          <label class="opt"><input type="radio" name="q4" value="a">ประจุเคลื่อนที่ด้วยความเร็วคงที่สม่ำเสมอ</label>
+          <label class="opt"><input type="radio" name="q4" value="b">ประจุที่มีความเร่ง</label>
+          <label class="opt"><input type="radio" name="q4" value="c">วงจรที่มีกระแสสลับ</label>
+          <label class="opt"><input type="radio" name="q4" value="d">สปาร์ก-แก็ประหว่างขั้วโลหะ</label>
+          <div class="explain">
+            เฉลย: ข้อ (ก) ประจุที่เคลื่อนที่ “คงที่” ไม่แผ่รังสี; ต้องมีความเร่งจึงปล่อยคลื่น EM
+          </div>
+        </div>
+      </div>
+
+      <div class="scorebar" id="scoreBar" style="display:none"></div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:6px">
+        <button class="btn btn-pastel" id="btnCheck">ตรวจคำตอบ</button>
+        <button class="btn btn-green" id="btnResetQuiz">ทำใหม่</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== THREE / Experiment code (unchanged logic except UI hooks) ===== -->
+  <script type="importmap">
+    {"imports": {"three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
+  </script>
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    /* ========= 3D Setup ========= */
+    const renderer=new THREE.WebGLRenderer({antialias:true});
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth,window.innerHeight);
+    document.getElementById('stage').appendChild(renderer.domElement);
+
+    const scene=new THREE.Scene();
+    scene.background=new THREE.Color('#020617');
+    const camera=new THREE.PerspectiveCamera(55,window.innerWidth/window.innerHeight,0.1,1000);
+    camera.position.set(7,4,10);
+
+    const controls=new OrbitControls(camera,renderer.domElement);
+    controls.target.set(-2,0,0); controls.update();
+
+    window.addEventListener('resize',()=>{
+      camera.aspect=window.innerWidth/window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth,window.innerHeight);
+    });
+
+    scene.add(new THREE.AmbientLight(0xffffff,0.9));
+    const dir=new THREE.DirectionalLight(0xffffff,0.6); dir.position.set(5,10,7); scene.add(dir);
+
+    const steelMat = new THREE.MeshStandardMaterial({ color:'#9aa8b6', metalness:0.7, roughness:0.35 });
+    const copperMat= new THREE.MeshStandardMaterial({ color:'#b87333', metalness:1.0, roughness:0.15, emissive:'#ff9944', emissiveIntensity:0.15 });
+    const batMat   = new THREE.MeshStandardMaterial({ color:'#3b82f6', metalness:0.5, roughness:0.4 });
+    const switchMat= new THREE.MeshStandardMaterial({ color:'#f97316', metalness:0.6, roughness:0.3 });
+    const plateMat = new THREE.MeshStandardMaterial({ color:'#c0c8d0', metalness:0.8, roughness:0.25 });
+
+    function makeLabel(txt,color,size=110){
+      const cvs=document.createElement('canvas'); cvs.width=256; cvs.height=128;
+      const ctx=cvs.getContext('2d'); ctx.fillStyle=color; ctx.font=`bold ${size}px Arial`; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(txt, cvs.width/2, cvs.height/2);
+      const tex=new THREE.CanvasTexture(cvs);
+      const spr=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true}));
+      spr.scale.set(1.2,0.4,0.4); return spr;
+    }
+    function makeVerticalCoil(radius, turns, height, mat, coreMat){
+      const curve = new THREE.Curve();
+      curve.getPoint = function(t){
+        const angle = turns * Math.PI * 2 * t;
+        const x = radius * Math.cos(angle);
+        const z = radius * Math.sin(angle);
+        const y = height * (t - 0.5);
+        return new THREE.Vector3(x,y,z);
+      };
+      const geom = new THREE.TubeGeometry(curve, 200, 0.09, 24, false);
+      const coil = new THREE.Mesh(geom, mat);
+      const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.25,0.25,height+0.6,32), coreMat);
+      coil.add(rod);
+      return coil;
+    }
+
+    /* Sparks / audio */
+    function createRadialTex(inner='#fff6a9', outer='rgba(255,255,255,0)'){
+      const c=document.createElement('canvas'); c.width=c.height=128; const g=c.getContext('2d');
+      const grd=g.createRadialGradient(64,64,0,64,64,64);
+      grd.addColorStop(0, inner); grd.addColorStop(1, outer);
+      g.fillStyle=grd; g.fillRect(0,0,128,128);
+      return new THREE.CanvasTexture(c);
+    }
+    function flashAtWorld(worldPos,size=0.6){
+      const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:createRadialTex('#fff6a9','rgba(255,255,255,0)'),transparent:true}));
+      sprite.scale.set(size,size,size); sprite.position.copy(worldPos);
+      scene.add(sprite);
+      let life=0; const id=setInterval(()=>{life+=0.05; sprite.material.opacity=1-life; if(life>=1){scene.remove(sprite); clearInterval(id);} },30);
+    }
+    function drawZigzagSpark(pA, pB, opts={}){
+      const {segments=16, jitter=0.12, lifetime=150, repeats=4} = opts;
+      const dir = new THREE.Vector3().subVectors(pB,pA);
+      const len = dir.length(); if(len===0) return;
+      dir.normalize();
+      const tmp = Math.abs(dir.y) < 0.99 ? new THREE.Vector3(0,1,0) : new THREE.Vector3(1,0,0);
+      const u = new THREE.Vector3().crossVectors(dir,tmp).normalize();
+      const v = new THREE.Vector3().crossVectors(dir,u).normalize();
+      const geom = new THREE.BufferGeometry();
+      const mat = new THREE.LineBasicMaterial({ color:0xfff4b1, transparent:true, opacity:1, blending:THREE.AdditiveBlending, depthWrite:false });
+      const line = new THREE.Line(geom, mat); scene.add(line);
+      function regen(){
+        const pts=[];
+        for(let i=0;i<=segments;i++){
+          const t=i/segments; const base=new THREE.Vector3().copy(pA).addScaledVector(dir,len*t);
+          const amp = jitter*(0.4+0.6*Math.random()); const sgn = (i%2? -1:1);
+          const offU=u.clone().multiplyScalar((Math.random()-0.5)*amp*2);
+          const offV=v.clone().multiplyScalar(sgn*amp*(0.5+Math.random()*0.6));
+          pts.push(base.add(offU).add(offV));
+        }
+        geom.setFromPoints(pts);
+      }
+      let n=0; regen();
+      const flick=setInterval(()=>{ mat.opacity=0.6+0.35*Math.random(); regen(); if(++n>=repeats) clearInterval(flick); },30);
+      setTimeout(()=>{ scene.remove(line); geom.dispose(); mat.dispose(); }, lifetime);
+    }
+    let audioCtx=null;
+    function playSparkSound(){
+      if(!audioCtx){ audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+      const sr=audioCtx.sampleRate, dur=0.08;
+      const buf=audioCtx.createBuffer(1, Math.floor(sr*dur), sr); const data=buf.getChannelData(0);
+      for(let i=0;i<data.length;i++){ const t=i/sr; data[i]=(Math.random()*2-1)*Math.exp(-t*40); }
+      const src=audioCtx.createBufferSource(); src.buffer=buf;
+      const bp=audioCtx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=2500; bp.Q.value=0.7;
+      const g=audioCtx.createGain(); g.gain.value=0.8;
+      src.connect(bp).connect(g).connect(audioCtx.destination); src.start();
+    }
+
+    /* Groups & objects */
+    const transformerGroup = new THREE.Group();
+    const ringGroup = new THREE.Group();
+    scene.add(transformerGroup, ringGroup);
+
+    const fluxGroup = new THREE.Group(); scene.add(fluxGroup);
+    function makeLinkedFluxCurve(zOffset=0){
+      const xA=-2.8, xB=-1.2; const yRod=1.3, yCore=1.5; const z=zOffset; const cr=0.18;
+      const p = (x,y)=> new THREE.Vector3(x,y,z);
+      const pts=[ p(xA,0), p(xA,yRod-cr), p(xA,yRod),
+        p(xA+cr, yRod+(yCore-yRod)/2), p(xB-cr, yRod+(yCore-yRod)/2),
+        p(xB,yRod), p(xB,0), p(xB,-yRod+cr), p(xB,-yRod),
+        p(xB-cr,-yRod-(yCore-yRod)/2), p(xA+cr,-yRod-(yCore-yRod)/2),
+        p(xA,-yRod), p(xA,-cr), p(xA,0) ];
+      const curve = new THREE.CatmullRomCurve3(pts, true, 'catmullrom', 0.15);
+      return curve.getPoints(240);
+    }
+    function buildFluxLoops(){
+      fluxGroup.clear();
+      const zsep = 0.1, zOffsets=[-zsep,0,zsep];
+      zOffsets.forEach((zOff,idx)=>{
+        const dense=makeLinkedFluxCurve(zOff);
+        const g=new THREE.BufferGeometry().setFromPoints(dense);
+        const m=new THREE.LineDashedMaterial({color:0xffffff, dashSize:0.16, gapSize:0.12, linewidth:1, transparent:true, opacity:0.85, depthTest:false, depthWrite:false});
+        const line=new THREE.Line(g,m); line.computeLineDistances(); line.renderOrder=900;
+        line.userData={ speed:0.6+0.15*idx, pts:dense };
+        fluxGroup.add(line);
+      });
+      fluxGroup.visible=false;
+    }
+    buildFluxLoops();
+
+    /* Transformer & ring */
+    const battery=new THREE.Mesh(new THREE.BoxGeometry(2.4,1.6,1.6),batMat); battery.position.set(-6,0,0);
+    const batLabel = makeLabel('Battery','#ffffff',80); batLabel.position.set(battery.position.x, battery.position.y, 1.1);
+    transformerGroup.add(battery, batLabel);
+
+    const sw=new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.3,0.2,32), switchMat); sw.position.set(-6,1.1,0);
+    const stem=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.12,0.3,24), steelMat); stem.position.set(-6,0.95,0);
+    transformerGroup.add(sw, stem);
+
+    const ledMatOn  = new THREE.MeshStandardMaterial({ color:'#22c55e', emissive:'#22c55e', emissiveIntensity:0.8, metalness:0.1, roughness:0.3 });
+    const ledMatOff = new THREE.MeshStandardMaterial({ color:'#111827', emissive:'#111827', emissiveIntensity:0.08, metalness:0.1, roughness:0.6 });
+    const led3D = new THREE.Mesh(new THREE.SphereGeometry(0.06, 16, 12), ledMatOff); led3D.position.set(-5.6,1.45,0);
+    transformerGroup.add(led3D);
+
+    const coreGeo = new THREE.BoxGeometry(2.2,0.6,0.6);
+    const coreTop = new THREE.Mesh(coreGeo, steelMat); coreTop.position.set(-2, 1.5, 0);
+    const coreBot = coreTop.clone(); coreBot.position.set(-2,-1.5, 0);
+
+    const coilPri = makeVerticalCoil(0.6, 8, 2.6, copperMat, steelMat); coilPri.position.set(-2.8,0,0);
+    const coilSec = makeVerticalCoil(0.6,12, 2.6, copperMat, steelMat); coilSec.position.set(-1.2,0,0);
+    transformerGroup.add(coreTop, coreBot, coilPri, coilSec);
+
+    const plateTop=new THREE.Mesh(new THREE.BoxGeometry(0.9,4.5,0.1),plateMat); plateTop.position.set(1.2, 3.0, 0);
+    const plateBot=plateTop.clone(); plateBot.position.set(1.2,-3.0, 0);
+    const sphereTop=new THREE.Mesh(new THREE.SphereGeometry(0.12,24,16),steelMat); sphereTop.position.set(1.2, 0.25,0);
+    const sphereBot=new THREE.Mesh(new THREE.SphereGeometry(0.12,24,16),steelMat); sphereBot.position.set(1.2,-0.25,0);
+    transformerGroup.add(plateTop, plateBot, sphereTop, sphereBot);
+
+    const wireMatGray2 = new THREE.LineBasicMaterial({ color:0x888888, linewidth:3 });
+    const topWire = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(1.2,0.25,0), new THREE.Vector3(1.2,1.5,0), new THREE.Vector3(1.2,3.0,0)]), wireMatGray2);
+    const botWire = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(1.2,-0.25,0), new THREE.Vector3(1.2,-1.5,0), new THREE.Vector3(1.2,-3.0,0)]), wireMatGray2);
+
+    const redWire = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-5.0, 0.35, 0), new THREE.Vector3(-4.4, 0.50, 0), new THREE.Vector3(-4.1, 0.45, 0), new THREE.Vector3(-3.9, 0.35, 0), new THREE.Vector3(-3.8, 0.25, 0)]), new THREE.LineBasicMaterial({color:0xff0000}));
+    const grayWire = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-5.0, -0.35, 0), new THREE.Vector3(-4.4, -0.50, 0), new THREE.Vector3(-4.1, -0.45, 0), new THREE.Vector3(-3.9, -0.35, 0), new THREE.Vector3(-3.8, -0.25, 0)]), new THREE.LineBasicMaterial({color:0x888888}));
+
+    const plusLbl = makeLabel('+','#ffffff',160); plusLbl.scale.set(0.35,0.35,0.35); plusLbl.position.set(-4.9,0.35,1.0);
+    const minusLbl= makeLabel('-','#ffffff',160); minusLbl.scale.set(0.35,0.35,0.35); minusLbl.position.set(-4.9,-0.35,1.0);
+
+    const connBox = new THREE.Mesh(new THREE.BoxGeometry(0.4,0.6,0.4), steelMat); connBox.position.set(-3.8, 0, 0);
+    const secConnBox = new THREE.Mesh(new THREE.BoxGeometry(0.3,0.5,0.3), steelMat); secConnBox.position.set(-0.4,0,0);
+
+    const copperLineMat = new THREE.LineBasicMaterial({ color:0xb87333 });
+    const upperLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-0.4,0.15,0), new THREE.Vector3(1.2,0.25,0)]), copperLineMat);
+    const lowerLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-0.4,-0.15,0), new THREE.Vector3(1.2,-0.25,0)]), copperLineMat);
+
+    transformerGroup.add(topWire, botWire, redWire, grayWire, plusLbl, minusLbl, connBox, secConnBox, upperLine, lowerLine);
+
+    const transBox = new THREE.Mesh(new THREE.BoxGeometry(3.5,3.5,2), new THREE.MeshStandardMaterial({ color:'#555555', transparent:true, opacity:0.2, depthWrite:false }));
+    transBox.position.set(-2,0,0); transformerGroup.add(transBox);
+
+    /* Ring receiver — rotate Y +90° */
+    const R=1.5, GAP=0.3, ARC=Math.PI*2-GAP;
+    const ring=new THREE.Mesh(new THREE.TorusGeometry(R,0.05,16,100,ARC),copperMat);
+    ring.rotation.set(Math.PI/2,0,Math.PI/2); ring.rotateY(Math.PI/2);
+    ring.position.set(7,0,0); ringGroup.add(ring);
+
+    const rs1=new THREE.Mesh(new THREE.SphereGeometry(0.12,24,16), copperMat);
+    const rs2=rs1.clone(); const inward=0.04; const u0=0.0; const u1=ARC;
+    rs1.position.set((R-inward)*Math.cos(u0),(R-inward)*Math.sin(u0),0);
+    rs2.position.set((R-inward)*Math.cos(u1),(R-inward)*Math.sin(u1),0);
+    ring.add(rs1,rs2);
+
+    /* EM sine burst (1.0s) */
+    const emGroup = new THREE.Group(); scene.add(emGroup);
+    const waveCfg = { x0:1.25, x1:7.0, speed:2.2, k:(2*Math.PI)/0.8, omega:6.0, Eamp:0.45, Bamp:0.45, samples:160, duration:1.0 };
+    const exGeom = new THREE.BufferGeometry(), bxGeom = new THREE.BufferGeometry();
+    const Epos = new Float32Array(waveCfg.samples*3), Bpos = new Float32Array(waveCfg.samples*3);
+    exGeom.setAttribute('position', new THREE.BufferAttribute(Epos,3));
+    bxGeom.setAttribute('position', new THREE.BufferAttribute(Bpos,3));
+    const Eline = new THREE.Line(exGeom, new THREE.LineBasicMaterial({ color:new THREE.Color(getComputedStyle(document.documentElement).getPropertyValue('--E')||'#ef4444'), linewidth:2, transparent:true, opacity:0.95 }));
+    const Bline = new THREE.Line(bxGeom, new THREE.LineBasicMaterial({ color:new THREE.Color(getComputedStyle(document.documentElement).getPropertyValue('--B')||'#60a5fa'), linewidth:2, transparent:true, opacity:0.95 }));
+    Eline.visible=false; Bline.visible=false; emGroup.add(Eline,Bline);
+    let burstActive=false, burstStart=0;
+
+    function startEMBurst(){ burstActive=true; burstStart=performance.now()/1000; Eline.visible=true; Bline.visible=true; setTimeout(()=>stopEMBurst(), waveCfg.duration*1000); }
+    function stopEMBurst(){ burstActive=false; Eline.visible=false; Bline.visible=false; }
+    function updateSineLines(t){
+      const {x0,x1,k,omega,Eamp,Bamp,samples,speed}=waveCfg; const tau=t-burstStart; const xShift=speed*tau; const len=x1-x0;
+      for(let i=0;i<samples;i++){
+        const u=i/(samples-1), x=x0+u*len, phase=k*(x-xShift)-omega*t;
+        Epos[3*i]=x; Epos[3*i+1]=Eamp*Math.sin(phase); Epos[3*i+2]=0;
+        Bpos[3*i]=x; Bpos[3*i+1]=0; Bpos[3*i+2]=Bamp*Math.sin(phase);
+      }
+      exGeom.attributes.position.needsUpdate=true; bxGeom.attributes.position.needsUpdate=true;
+    }
+
+    /* Switch & interactions */
+    const raycaster = new THREE.Raycaster(); const mouse = new THREE.Vector2();
+    function onPointer(e){ const r=renderer.domElement.getBoundingClientRect();
+      mouse.x=((e.clientX-r.left)/r.width)*2-1; mouse.y=-((e.clientY-r.top)/r.height)*2+1;
+      raycaster.setFromCamera(mouse,camera); const hits=raycaster.intersectObjects([sw,stem],false); if(hits.length){toggleSwitch();}
+    }
+    renderer.domElement.addEventListener('pointerdown', onPointer);
+
+    let switchOn=false; const swState=document.getElementById('swState'); const ledUi=document.getElementById('ledUi');
+    document.getElementById('btnSwitch').addEventListener('click',()=>toggleSwitch());
+    function setLed(on){ ledUi.classList.toggle('on',on); ledUi.classList.toggle('off',!on); led3D.material= on? ledMatOn:ledMatOff; }
+
+    function sparkBetween(objA,objB){
+      const pA = objA.getWorldPosition ? objA.getWorldPosition(new THREE.Vector3()) : objA.clone();
+      const pB = objB.getWorldPosition ? objB.getWorldPosition(new THREE.Vector3()) : objB.clone();
+      drawZigzagSpark(pA,pB); flashAtWorld(pA,0.6); flashAtWorld(pB,0.6);
+    }
+
+    function toggleSwitch(){
+      switchOn=!switchOn;
+      sw.position.y = switchOn? 0.9 : 1.1; stem.position.y = switchOn? 0.85: 0.95; stem.scale.y = switchOn? 0.75: 1.0;
+      swState.textContent='Switch: ' + (switchOn? 'ON':'OFF'); setLed(switchOn);
+
+      fluxGroup.visible=switchOn;
+
+      sparkBetween(sphereTop,sphereBot);
+      const wp1=new THREE.Vector3(); ring.localToWorld(wp1.copy(rs1.position));
+      const wp2=new THREE.Vector3(); ring.localToWorld(wp2.copy(rs2.position));
+      drawZigzagSpark(wp1,wp2); flashAtWorld(wp1,0.6); flashAtWorld(wp2,0.6);
+      playSparkSound();
+
+      stopEMBurst(); startEMBurst();
+    }
+
+    /* Animation */
+    let last=performance.now()/1000;
+    function animate(){
+      requestAnimationFrame(animate);
+      const now=performance.now()/1000; const dt=Math.min(0.033, now-last); last=now; controls.update();
+      if(burstActive){ updateSineLines(now); }
+      if(fluxGroup.visible){
+        for(const line of fluxGroup.children){
+          if(line.isLine && line.material && 'dashOffset' in line.material){ line.material.dashOffset -= 0.02; }
+        }
+      }
+      renderer.render(scene,camera);
+    }
+    animate();
+
+    /* ===== UI: Home / Summary / Quiz ===== */
+    const homeOverlay=document.getElementById('homeOverlay');
+    const summaryModal=document.getElementById('summaryModal');
+    const quizModal=document.getElementById('quizModal');
+
+    const btnStart=document.getElementById('btnStart');
+    const btnOpenSummary=document.getElementById('btnOpenSummary');
+    const btnSummary=document.getElementById('btnSummary');
+    const btnCloseSummary=document.getElementById('btnCloseSummary');
+    const btnBackHome1=document.getElementById('btnBackHome1');
+    const btnHome=document.getElementById('btnHome');
+
+    const btnOpenQuiz=document.getElementById('btnOpenQuiz');
+    const btnQuiz=document.getElementById('btnQuiz');
+    const btnCloseQuiz=document.getElementById('btnCloseQuiz');
+    const btnBackHome2=document.getElementById('btnBackHome2');
+    const btnSummaryToQuiz=document.getElementById('btnSummaryToQuiz');
+
+    function showHome(on=true){ homeOverlay.style.display = on? 'flex' : 'none'; homeOverlay.setAttribute('aria-hidden', on? 'false':'true'); }
+    function showSummary(on=true){ summaryModal.classList.toggle('show', on); summaryModal.setAttribute('aria-hidden', on? 'false':'true'); if(on) window.MathJax && MathJax.typesetPromise && MathJax.typesetPromise(); }
+    function showQuiz(on=true){ quizModal.classList.toggle('show', on); quizModal.setAttribute('aria-hidden', on? 'false':'true'); if(on) window.MathJax && MathJax.typesetPromise && MathJax.typesetPromise(); }
+
+    btnStart?.addEventListener('click', ()=> showHome(false));
+    btnOpenSummary?.addEventListener('click', ()=> showSummary(true));
+    btnSummary?.addEventListener('click', ()=> showSummary(true));
+    btnCloseSummary?.addEventListener('click', ()=> showSummary(false));
+    btnBackHome1?.addEventListener('click', ()=> { showSummary(false); showHome(true); });
+    btnHome?.addEventListener('click', ()=> showHome(true));
+
+    btnOpenQuiz?.addEventListener('click', ()=> showQuiz(true));
+    btnQuiz?.addEventListener('click', ()=> showQuiz(true));
+    btnCloseQuiz?.addEventListener('click', ()=> showQuiz(false));
+    btnBackHome2?.addEventListener('click', ()=> { showQuiz(false); showHome(true); });
+    btnSummaryToQuiz?.addEventListener('click', ()=> { showSummary(false); showQuiz(true); });
+
+    /* ===== Quiz grading ===== */
+    const quizList=document.getElementById('quizList');
+    const btnCheck=document.getElementById('btnCheck');
+    const btnResetQuiz=document.getElementById('btnResetQuiz');
+    const scoreBar=document.getElementById('scoreBar');
+
+    btnCheck.addEventListener('click', ()=>{
+      let total=0, correct=0;
+      scoreBar.style.display='block';
+      [...quizList.querySelectorAll('.qcard')].forEach((card, idx)=>{
+        total++;
+        const qname='q'+(idx+1);
+        const ans=card.getAttribute('data-ans');
+        const chosen=quizList.querySelector('input[name="'+qname+'"]:checked')?.value;
+        const explain=card.querySelector('.explain');
+        if(chosen===ans){ correct++; explain.style.display='block'; explain.style.background='#ecfeff'; explain.style.borderColor='#bae6fd'; explain.style.color='#155e75'; }
+        else{ explain.style.display='block'; explain.style.background='#fef2f2'; explain.style.borderColor='#fecaca'; explain.style.color='#7f1d1d'; }
+      });
+      scoreBar.textContent = `คะแนนของคุณ: ${correct}/${total} คะแนน`;
+      window.MathJax && MathJax.typesetPromise && MathJax.typesetPromise();
+    });
+
+    btnResetQuiz.addEventListener('click', ()=>{
+      [...quizList.querySelectorAll('input[type="radio"]')].forEach(r=> r.checked=false);
+      [...quizList.querySelectorAll('.explain')].forEach(e=> e.style.display='none');
+      scoreBar.style.display='none';
+      window.MathJax && MathJax.typesetPromise && MathJax.typesetPromise();
+    });
+
+  </script>
+</body>
+</html>
