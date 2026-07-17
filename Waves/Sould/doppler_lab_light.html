@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>การทดลองปรากฏการณ์ดอปเปลอร์ของเสียง</title>
+
+<style>
+:root{
+  --ink:#0f172a; --muted:#64748b; --line:#e5e7eb; --bg:#ffffff;
+  --blue:#2563eb; --blue2:#1d4ed8;
+  --gray:#e5e7eb; --grayBorder:#d1d5db;
+  --orangeBg:#fff7ed; --orangeBorder:#fb923c;
+  --greenBg:#f0fdf4; --greenBorder:#86efac;
+  --quizCard:#ffffff; --quizCardBorder:#e5e7eb;
+  --danger:#ef4444;
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial,sans-serif}
+
+header{position:sticky;top:0;z-index:10;background:#fff;border-bottom:1px solid var(--line)}
+header .bar{max-width:1200px;margin:0 auto;padding:10px 14px;display:flex;gap:10px;align-items:center;justify-content:space-between}
+.title{font-weight:800;color:var(--blue);}
+.badge{display:flex;gap:10px;align-items:center;color:var(--muted);font-size:13px;flex-wrap:wrap}
+.pill{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--line);padding:4px 8px;border-radius:999px}
+.sw{width:14px;height:14px;border-radius:3px;display:inline-block}
+.sw.amb{background:#ef4444}
+.sw.wave{background:#94a3b8}
+.sw.vec{background:var(--blue)}
+
+.wrap{max-width:1200px;margin:0 auto;padding:12px;display:grid;gap:12px;grid-template-columns:1fr}
+@media(min-width:1100px){ .wrap{grid-template-columns:2fr 1fr} }
+
+.board{position:relative;background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;min-height:560px}
+canvas{display:block;width:100%;height:560px}
+
+.panel{background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px;display:grid;gap:12px;align-content:start}
+.how{font-size:13px;color:#334155;background:#f8fafc;border:1px solid var(--line);border-radius:12px;padding:10px}
+.row{display:grid;gap:10px}
+.grid2{grid-template-columns:1fr 1fr}
+.grid3{grid-template-columns:1fr 1fr 1fr}
+@media(max-width:1099px){ .grid2,.grid3{grid-template-columns:1fr} }
+
+.ctrl label{font-size:12px;color:var(--muted);display:flex;gap:8px;align-items:baseline;justify-content:space-between}
+.ctrl .val{font-variant-numeric:tabular-nums;color:var(--ink)}
+
+.num{display:grid;grid-template-columns:34px 1fr 34px;gap:8px;align-items:center}
+.num input[type="number"]{width:100%;padding:10px 10px;border-radius:12px;border:1px solid var(--line);font-size:15px}
+.small input[type="number"]{padding:9px 10px;font-size:14px}
+
+button{appearance:none;border:1px solid var(--line);background:#fff;padding:10px 12px;border-radius:12px;cursor:pointer;
+  box-shadow:0 2px 0 rgba(0,0,0,.12),0 6px 12px rgba(0,0,0,.06);transition:transform .06s ease, box-shadow .12s ease, filter .12s ease; position:relative}
+button:hover{filter:brightness(1.03)}
+button:active{transform:translateY(1px);box-shadow:0 1px 0 rgba(0,0,0,.14),0 3px 6px rgba(0,0,0,.08)}
+button::after{content:"";position:absolute;inset:0;border-radius:inherit;box-shadow:inset 0 1px 0 rgba(255,255,255,.6);pointer-events:none}
+
+.btnBlue{background:var(--blue);border-color:var(--blue);color:#fff}
+.btnGray{background:var(--gray);border-color:var(--grayBorder);color:#111827}
+.btnOrange{background:#fed7aa;border-color:#fdba74;color:#7c2d12}
+.btnGreen{background:#bbf7d0;border-color:#86efac;color:#14532d}
+.btnBlack{background:#111827;border-color:#111827;color:#fff}
+.btns{display:flex;flex-wrap:wrap;gap:8px}
+
+.readout{border:1px solid var(--line);border-radius:12px;padding:10px;background:#fff}
+.readout .big{font-size:16px;font-weight:700}
+.readout .sub{font-size:12px;color:var(--muted);margin-top:4px}
+
+footer{padding:10px 14px 26px;color:var(--muted);text-align:center}
+footer a{color:var(--blue)}
+
+/* ===== Modals (มาตรฐานเพจแบบที่ 2) ===== */
+.modal{position:fixed;inset:0;z-index:50;display:none}
+.modal.show{display:block}
+.modal .backdrop{position:absolute;inset:0;background:rgba(15,23,42,.35)}
+.modal .sheet{position:absolute;inset:0;display:flex;flex-direction:column;padding:
+  calc(env(safe-area-inset-top) + 12px) 12px calc(env(safe-area-inset-bottom) + 12px) 12px}
+.modal .panelBox{flex:1;overflow:auto;border-radius:16px;border:1px solid var(--line);background:#fff}
+.modal.formula .panelBox{background:var(--orangeBg);border-color:var(--orangeBorder)}
+.modal.quiz .panelBox{background:var(--greenBg);border-color:var(--greenBorder)}
+
+.modalTopbar{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:10px;justify-content:space-between;
+  padding:10px 12px;border-bottom:1px solid rgba(148,163,184,.35);backdrop-filter:saturate(1.2) blur(6px)}
+.modal.formula .modalTopbar{background:rgba(255,247,237,.92)}
+.modal.quiz .modalTopbar{background:rgba(240,253,244,.92)}
+
+.pillBtn{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:10px 12px;border:1px solid var(--line);background:#fff;
+  box-shadow:0 2px 0 rgba(0,0,0,.12),0 6px 12px rgba(0,0,0,.06);cursor:pointer;font-weight:700}
+.pillBtn.orange{background:#fed7aa;border-color:#fdba74;color:#7c2d12}
+.pillBtn.green{background:#bbf7d0;border-color:#86efac;color:#14532d}
+.pillBtn.blue{background:var(--blue);border-color:var(--blue);color:#fff}
+.pillBtn.gray{background:var(--gray);border-color:var(--grayBorder);color:#111827}
+
+.closeX{position:fixed;top:calc(env(safe-area-inset-top) + 10px);right:12px;z-index:60;
+  width:44px;height:44px;border-radius:999px;border:1px solid var(--line);background:#fff;
+  box-shadow:0 2px 0 rgba(0,0,0,.12),0 6px 12px rgba(0,0,0,.06);display:grid;place-items:center;cursor:pointer;font-size:18px}
+/* content */
+.content{padding:12px}
+.h1{font-size:22px;font-weight:900;margin:6px 0 10px 0;color:var(--blue)}
+.h2{font-size:18px;font-weight:900;margin:14px 0 8px 0;color:var(--blue)}
+.card{background:rgba(255,255,255,.86);border:1px solid var(--line);border-radius:14px;padding:12px}
+.card.orangeInner{background:rgba(226,232,240,.55);border-color:rgba(100,116,139,.35)}
+.eq{font-variant-numeric:tabular-nums}
+.note{font-size:12px;color:var(--muted)}
+.hidden{display:none}
+
+/* quiz */
+.quizHeader{display:flex;align-items:center;gap:10px;justify-content:space-between;flex-wrap:wrap}
+.quizTopic{background:#d1fae5;border:1px solid #86efac;border-radius:14px;padding:10px 12px;font-weight:800;color:#14532d}
+.qCard{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:12px;margin:10px 0}
+.qTitle{font-weight:900;color:var(--blue);margin:0 0 8px 0}
+.choices{display:grid;gap:8px;margin:8px 0}
+.choice{display:flex;gap:10px;align-items:flex-start;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:10px;cursor:pointer}
+.choice input{margin-top:2px}
+.choice .lbl{font-weight:800}
+.explain{margin-top:10px;border-top:1px dashed #cbd5e1;padding-top:10px}
+.ans{color:#dc2626;font-weight:900}
+.fixedCheck{position:fixed;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom) + 12px);z-index:55;display:none}
+.modal.quiz.show .fixedCheck{display:block}
+.fixedCheck .bar{max-width:980px;margin:0 auto;display:flex;gap:10px;align-items:center;justify-content:space-between}
+.score{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-weight:900}
+
+img.inline{max-width:100%;height:auto;border-radius:12px;border:1px solid #e2e8f0;background:#fff}
+.qCard[data-q="1"] img.inline{width:20%;}
+.qCard[data-q="4"] img.inline{width:288px;}
+@media (max-width:680px){
+  .qCard[data-q="1"] img.inline{width:70%;}
+  .qCard[data-q="4"] img.inline{width:90%; max-width:312px;}
+}
+
+
+@media(max-width:900px){
+  /* Mobile standard2 */
+  .wrap{grid-template-columns:1fr}
+  .board{min-height:420px}
+  canvas{height:35vh; min-height:260px; max-height:360px}
+  .panel{max-height:42vh;overflow:auto}
+  .mobileBar{position:fixed;left:10px;right:10px;bottom:calc(env(safe-area-inset-bottom) + 10px);z-index:20;display:flex;gap:8px;align-items:center;justify-content:center}
+  .mobileBar.hidden{display:none}
+  .sqBtn{width:64px;height:54px;border-radius:14px;display:grid;place-items:center;font-weight:900}
+  .sqBtn span{display:block;font-size:11px;font-weight:800;line-height:1.05}
+  .hideBtn{position:fixed;left:10px;bottom:calc(env(safe-area-inset-bottom) + 72px);z-index:21;width:44px;height:44px;border-radius:14px;display:grid;place-items:center}
+}
+@media(min-width:901px){
+  .mobileBar,.hideBtn{display:none}
+}
+
+.ansSquare{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border:1.8px solid #0f172a;border-radius:4px;font-weight:900;background:#fff;margin-left:8px;vertical-align:middle}
+.noteRed{color:#dc2626;font-weight:800;margin-top:8px}
+.signImg{--signScale:1;transform:translate(-100px,50px) scale(var(--signScale,1))}
+/* Mobile-only tweaks (มาตรฐานเพจแบบที่ 2) */
+@media(max-width:900px){
+  .board{min-height:392px}
+  canvas{height:392px}
+  header .badge{display:none}
+  .mainBtns{display:none} /* ซ่อนปุ่มซ้ำบนมือถือ ให้ใช้ปุ่มลอยเท่านั้น */
+  .signImg{--signScale:0.60}
+    .signImg{transform:translate(0px,-6px) scale(var(--signScale,1)); margin-left:auto; margin-right:auto; display:block;}
+/* ลดขนาด MathJax ในหัวข้อสูตร (มือถือ) */
+  #formulaModal .content{font-size:14px}
+  #formulaModal .content .mjx-chtml{font-size:1em}
+  #formulaModal mjx-container{font-size:1em !important; max-width:100% !important; overflow-x:visible; display:block;}
+  #formulaModal .eqMobileSmall mjx-container{font-size:0.85em !important;}
+  #formulaModal .eqTargetSmall{font-size: calc(1em - 5px) !important;}
+  #formulaModal .eqTargetSmall mjx-container{font-size: calc(1em - 5px) !important;}
+
+  #formulaModal mjx-container[display="true"]{margin: 0.2em auto !important;}
+  #formulaModal mjx-container svg{max-width:100% !important; height:auto !important;}
+}
+
+
+/* --- Doppler Lab: responsive tweaks (v9) --- */
+.wavelengthImg{
+  display:block;
+  margin: 0 auto;
+}
+@media (max-width: 768px){
+  .wavelengthImg{
+    display:block;
+    margin: 8px auto 0 auto !important;
+    width: min(70vw, 220px) !important;
+    max-width: 220px !important;
+    height:auto !important;
+    transform: translate(30px, -8px) !important;
+    left: 0 !important;
+  }
+  .noteLambda{ margin-top:6px; }
+}
+
+@media (min-width: 900px){
+  .wavelengthImg{
+    width:300px !important;
+    max-width:300px !important;
+    transform: translate(-150px, 20px);
+  }
+}
+/* Mobile tighten: section 2 image + reduce blank space */
+@media (max-width: 700px){
+  .cardFreq{ gap:10px !important; padding-bottom:12px !important; }
+  .signWrap{ min-width:0 !important; width:100% !important; }
+  .signImg{ width:92% !important; max-width:360px !important; margin:-10px auto 0 auto !important; }
+}
+</style>
+
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['$','$'], ['\\(','\\)']], displayMath: [['$$','$$'], ['\\[','\\]']] },
+  options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] }
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+
+<body>
+<header>
+  <div class="bar">
+    <div class="title">การทดลองปรากฏการณ์ดอปเปลอร์ของเสียง</div>
+    <div class="badge">
+      <span class="pill"><span class="sw amb"></span>แหล่งกำเนิด</span>
+      <span class="pill"><span class="sw vec"></span>เวกเตอร์ความเร็ว</span>
+      <span class="pill"><span class="sw wave"></span>แนวระลอกคลื่น</span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="board">
+    <canvas id="cv" width="1000" height="560" aria-label="พื้นที่ทดลอง"></canvas>
+  </div>
+
+  <aside class="panel" aria-label="แผงตั้งค่า">
+    <div class="how">
+      ✅ ลาก “รถพยาบาล” หรือ “รถผู้ฟัง” เพื่อย้ายตำแหน่งได้<br/>
+      ✅ ปรับค่าแล้วกด “เล่น ▶️” เพื่อเริ่มการเคลื่อนที่/ปล่อยแนวคลื่น
+    </div>
+
+    <div class="row grid2">
+      <div class="ctrl">
+        <label><span>ความเร็วเสียงในอากาศ $v$ (m/s)</span><span class="val" id="vAirShow">340</span></label>
+        <div class="num">
+          <button class="btnGray" id="vAirMinus" type="button">−</button>
+          <input id="vAir" type="number" min="300" max="380" step="1" value="340"/>
+          <button class="btnGray" id="vAirPlus" type="button">+</button>
+        </div>
+      </div>
+      <div class="ctrl">
+        <label><span>ความถี่ไซเรน $f_S$ (Hz)</span><span class="val" id="fSShow">1000</span></label>
+        <div class="num">
+          <button class="btnGray" id="fSMinus" type="button">−</button>
+          <input id="fS" type="number" min="100" max="3000" step="1" value="1000"/>
+          <button class="btnGray" id="fSPlus" type="button">+</button>
+        </div>
+      </div>
+    </div>
+
+    <details open>
+      <summary style="cursor:pointer;font-weight:900;color:var(--blue)">รถพยาบาล (แหล่งกำเนิด)</summary>
+      <div class="row grid2">
+        <div class="ctrl">
+          <label><span>อัตราเร็ว $v_S$ (m/s)</span><span class="val" id="vSShow">20</span></label>
+          <div class="num">
+            <button class="btnGray" id="vSMinus" type="button">−</button>
+            <input id="vS" type="number" min="0" max="120" step="1" value="20"/>
+            <button class="btnGray" id="vSPlus" type="button">+</button>
+          </div>
+          <div class="note">ใช้ “มุมทิศทาง” เพื่อกำหนดทิศการเคลื่อนที่</div>
+        </div>
+        <div class="ctrl small">
+          <label><span>มุมทิศทาง $\theta_S$ (°)</span><span class="val" id="thSShow">0</span></label>
+          <div class="num">
+            <button class="btnGray" id="thSMinus" type="button">−</button>
+            <input id="thS" type="number" min="0" max="360" step="1" value="0"/>
+            <button class="btnGray" id="thSPlus" type="button">+</button>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <details open>
+      <summary style="cursor:pointer;font-weight:900;color:var(--blue)">รถผู้ฟัง (ผู้สังเกต)</summary>
+      <div class="row grid2">
+        <div class="ctrl">
+          <label><span>อัตราเร็ว $v_L$ (m/s)</span><span class="val" id="vLShow">0</span></label>
+          <div class="num">
+            <button class="btnGray" id="vLMinus" type="button">−</button>
+            <input id="vL" type="number" min="0" max="70" step="1" value="0"/>
+            <button class="btnGray" id="vLPlus" type="button">+</button>
+          </div>
+        </div>
+        <div class="ctrl small">
+          <label><span>มุมทิศทาง $\theta_L$ (°)</span><span class="val" id="thLShow">180</span></label>
+          <div class="num">
+            <button class="btnGray" id="thLMinus" type="button">−</button>
+            <input id="thL" type="number" min="0" max="360" step="1" value="180"/>
+            <button class="btnGray" id="thLPlus" type="button">+</button>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <div class="readout">
+      <div class="big">ผลที่ผู้ฟังได้ยิน: <span id="fL">—</span> Hz</div>
+      <div class="sub">คำนวณจากทิศทางจริง (ใช้องค์ประกอบความเร็วตามแนวเส้นตรงระหว่างแหล่งกำเนิด ↔ ผู้ฟัง)</div>
+    </div>
+
+    <div class="mainBtns">
+      <button class="btnBlue" id="btnPlay">▶️ เล่น</button>
+      <button class="btnGray" id="btnReset">🔄 รีเซ็ต</button>
+      
+      
+    </div>
+
+    <div class="note">หมายเหตุ: “เล่น” จะทำให้ภาพเคลื่อนที่ + ปล่อยแนวคลื่น</div>
+  </aside>
+</div>
+
+<button class="btnBlack hideBtn" id="btnHide" type="button" aria-label="ซ่อน/แสดงปุ่ม"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+  <path d="M3 3l18 18" stroke="white" stroke-width="2" stroke-linecap="round"/>
+  <path d="M10.58 10.58a2 2 0 0 0 2.83 2.83" stroke="white" stroke-width="2" stroke-linecap="round"/>
+  <path d="M9.88 5.08A10.43 10.43 0 0 1 12 5c5 0 9.27 3.11 11 7-0.66 1.48-1.6 2.77-2.75 3.82" stroke="white" stroke-width="2" stroke-linecap="round"/>
+  <path d="M6.23 6.23C4.34 7.55 2.93 9.34 2 12c1.73 3.89 6 7 10 7 1.44 0 2.82-0.2 4.1-0.57" stroke="white" stroke-width="2" stroke-linecap="round"/>
+  <path d="M14.12 14.12A3 3 0 0 1 9.88 9.88" stroke="white" stroke-width="2" stroke-linecap="round"/>
+</svg></button>
+<div class="mobileBar" id="mobileBar">
+  <button class="sqBtn btnBlue" id="mPlay" type="button">▶️<span>เล่น</span></button>
+  <button class="sqBtn btnGray" id="mReset" type="button">🔄<span>รีเซ็ต</span></button>
+  
+  
+</div>
+
+<footer>
+  ศึกษาเพิ่มเติมที่<a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">เพจคลายปมฟิสิกส์</a>
+</footer>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const isMobile = () => window.matchMedia && window.matchMedia('(max-width: 900px)').matches;
+
+  function bindStepper(inputId, minusId, plusId, showId, step=1) {
+    const inp = $(inputId), minus = $(minusId), plus = $(plusId), show = $(showId);
+    const sync = () => {
+      const v = +inp.value || 0;
+      inp.value = v;
+      if(show) show.textContent = v;
+      return v;
+    };
+    const nudge = (d) => {
+      const v = (+inp.value || 0) + d;
+      inp.value = v;
+      inp.dispatchEvent(new Event('change', {bubbles:true}));
+      sync();
+    };
+    minus && minus.addEventListener('click', () => nudge(-step));
+    plus && plus.addEventListener('click', () => nudge(step));
+    inp.addEventListener('input', sync);
+    inp.addEventListener('change', () => {
+      const min = (inp.min !== '') ? +inp.min : -1e9;
+      const max = (inp.max !== '') ? +inp.max : 1e9;
+      inp.value = clamp(+inp.value || 0, min, max);
+      sync();
+    });
+    sync();
+  }
+
+  const cv = $('cv');
+  const ctx = cv.getContext('2d');
+  let W = cv.clientWidth, H = 560;
+  let sceneScale = 1;
+  function updateSceneScale(){ sceneScale = (window.matchMedia && window.matchMedia('(max-width:900px)').matches) ? 0.70 : 1; }
+
+
+  const state = {
+    v: 340, fS: 1000,
+    src: { x: 260, y: 320, speed: 20, thDeg: 0, color:'#ef4444' },
+    lis: { x: 740, y: 320, speed: 0, thDeg: 180, color:'#2563eb' },
+    sim: false,
+    showWaves: true,
+    speedScale: 0.075,
+    t: 0,
+    last: performance.now(),
+    waves: [],
+    acc: 0,
+  };
+
+  function resizeCanvas() {
+    const r = cv.getBoundingClientRect();
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    cv.width = Math.round(r.width * dpr);
+    cv.height = Math.round(r.height * dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    W = r.width; H = r.height;
+
+    updateSceneScale();
+
+    // ให้รถอยู่ในจอเสมอ + ระยะห่างเริ่มต้นใกล้เคียงจอคอม
+    const cx = W*0.5;
+    const d = Math.min(520, W*0.72);
+    state.src.x = cx - d*0.5;
+    state.lis.x = cx + d*0.5;
+    state.src.y = H*0.57;
+    state.lis.y = H*0.57;
+  }
+  window.addEventListener('resize', resizeCanvas);
+  resizeCanvas();
+
+  bindStepper('vAir','vAirMinus','vAirPlus','vAirShow',1);
+  bindStepper('fS','fSMinus','fSPlus','fSShow',1);
+  bindStepper('vS','vSMinus','vSPlus','vSShow',1);
+  bindStepper('thS','thSMinus','thSPlus','thSShow',1);
+  bindStepper('vL','vLMinus','vLPlus','vLShow',1);
+  bindStepper('thL','thLMinus','thLPlus','thLShow',1);
+
+  function readUI() {
+    state.v = +$('vAir').value;
+    state.fS = +$('fS').value;
+    state.src.speed = +$('vS').value;
+    state.src.thDeg = ((+$('thS').value)%360+360)%360;
+    $('thS').value = state.src.thDeg; $('thSShow').textContent = state.src.thDeg;
+
+    state.lis.speed = +$('vL').value;
+    state.lis.thDeg = ((+$('thL').value)%360+360)%360;
+    $('thL').value = state.lis.thDeg; $('thLShow').textContent = state.lis.thDeg;
+  }
+  ['vAir','fS','vS','thS','vL','thL'].forEach(id => $(id).addEventListener('change', () => { readUI(); }));
+  readUI();
+
+  function dirFromDeg(d) {
+    const th = d*Math.PI/180;
+    return {x:Math.cos(th), y:Math.sin(th)};
+  }
+  function dot(a,b) { return a.x*b.x + a.y*b.y; }
+  function norm(v) {
+    const m = Math.hypot(v.x, v.y) || 1;
+    return {x:v.x/m, y:v.y/m};
+  }
+
+  function fListener() {
+    const v = state.v;
+    const fS = state.fS;
+    const s = state.src, L = state.lis;
+    const n = norm({x: L.x - s.x, y: L.y - s.y}); // from src to listener
+
+    const vsD = dirFromDeg(s.thDeg);
+    const vL_D = dirFromDeg(L.thDeg);
+    const vsVec = {x:vsD.x*s.speed, y:vsD.y*s.speed};
+    const vLVec = {x:vL_D.x*L.speed, y:vL_D.y*L.speed};
+
+    const vS_rad = dot(vsVec, n);        // + if source moves toward listener
+    const vL_toward = -dot(vLVec, n);    // + if listener moves toward source
+
+    const denom = (v - vS_rad);
+    const num = (v + vL_toward);
+    if(denom <= 0.1) return 0;
+    return clamp(fS * (num/denom), 0, 40000);
+  }
+
+  function wrap(v,a,b) {
+    const w = b-a;
+    while(v < a) v += w;
+    while(v > b) v -= w;
+    return v;
+  }
+
+  function step(dt) {
+    const s = state.src, L = state.lis;
+    const ds = dirFromDeg(s.thDeg);
+    const dL = dirFromDeg(L.thDeg);
+
+    const k = 8 * state.speedScale;
+    s.x += ds.x * s.speed * dt * k;
+    s.y += ds.y * s.speed * dt * k;
+    L.x += dL.x * L.speed * dt * k;
+    L.y += dL.y * L.speed * dt * k;
+
+    const pad=50;
+    s.x = wrap(s.x, -pad, W+pad);
+    s.y = clamp(s.y, 60, H-40);
+    L.x = wrap(L.x, -pad, W+pad);
+    L.y = clamp(L.y, 60, H-40);
+
+    if(state.showWaves) {
+      const interval = (300*4)/Math.max(state.fS, 1); // visual spacing (4×)
+      state.acc += dt;
+      while(state.acc >= interval) {
+        state.acc -= interval;
+        state.waves.push({x:s.x,y:s.y,t:state.t});
+        if(state.waves.length > 900) state.waves.shift();
+      }
+    } else {
+      state.waves.length = 0;
+    }
+  }
+
+  function roundRect(x,y,w,h,r,fill,stroke) {
+    ctx.beginPath();
+    ctx.moveTo(x+r,y);
+    ctx.arcTo(x+w,y,x+w,y+h,r);
+    ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r);
+    ctx.arcTo(x,y,x+w,y,r);
+    ctx.closePath();
+    if(fill) { ctx.fillStyle = fill; ctx.fill(); }
+    if(stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 2; ctx.stroke(); }
+  }
+
+  function drawAmbulance(x,y) {
+    const s = sceneScale;
+    const w=72*s,h=36*s;
+    ctx.save(); ctx.translate(x,y);
+    roundRect(-w/2,-h/2,w,h,8,'#fff','#ef4444');
+    ctx.fillStyle='#ef4444';
+    ctx.fillRect(-6*s,-11*s,12*s,22*s);
+    ctx.fillRect(-11*s,-6*s,22*s,12*s);
+    const blink = (Math.sin(state.t*6)>0)?1:0;
+    ctx.save(); ctx.translate(0,-h/2-4);
+    roundRect(-12*s,-6*s,24*s,8*s,3*s, blink?'#ef4444':'#2563eb', blink?'#ef4444':'#2563eb');
+    ctx.restore();
+    ctx.fillStyle='#0f172a';
+    ctx.beginPath(); ctx.arc(-22*s,h/2,6*s,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(20*s,h/2,6*s,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+
+  function drawCar(x,y) {
+    const s = sceneScale;
+    const w=70*s,h=34*s;
+    ctx.save(); ctx.translate(x,y);
+    roundRect(-w/2,-h/2,w,h,10*s,'#fff','#3b82f6');
+    ctx.fillStyle='#3b82f6';
+    ctx.fillRect(-20*s,-h/2,40*s,10*s);
+    ctx.fillStyle='#0f172a';
+    ctx.beginPath(); ctx.arc(-22,h/2,6,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(20,h/2,6,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+
+  function drawVector(ent) {
+    const d = dirFromDeg(ent.thDeg);
+    const L = 50 + ent.speed*0.6;
+    const x1=ent.x,y1=ent.y,x2=x1+d.x*L,y2=y1+d.y*L;
+    ctx.strokeStyle = ent.color || '#2563eb'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+    const ang = Math.atan2(d.y,d.x), ah=10;
+    ctx.beginPath();
+    ctx.moveTo(x2,y2);
+    ctx.lineTo(x2-ah*Math.cos(ang-Math.PI/6), y2-ah*Math.sin(ang-Math.PI/6));
+    ctx.moveTo(x2,y2);
+    ctx.lineTo(x2-ah*Math.cos(ang+Math.PI/6), y2-ah*Math.sin(ang+Math.PI/6));
+    ctx.stroke();
+  }
+
+  function drawSubscriptText(x,y,base,sub,opts={}){
+    const color = opts.color || '#0f172a';
+    const size = opts.size || 18;
+    const subSize = Math.max(10, Math.round(size*0.72));
+    const subDy = opts.subDy ?? Math.round(size*0.28);
+    ctx.save();
+    ctx.fillStyle = color;
+    ctx.textBaseline='alphabetic';
+    ctx.font = `700 ${size}px "Sarabun", system-ui`;
+    const wBase = ctx.measureText(base).width;
+    ctx.fillText(base, x, y);
+    ctx.font = `700 ${subSize}px "Sarabun", system-ui`;
+    ctx.fillText(sub, x + wBase + 1, y + subDy);
+    ctx.restore();
+  }
+
+  function drawEntityTags(){
+    const s = state.src, L = state.lis;
+
+    // Tag S (source) above ambulance (red, transparent)
+    ctx.save();
+    ctx.fillStyle = '#ef4444';
+    ctx.font = `800 13px "Sarabun", system-ui`;
+    ctx.textAlign='center'; ctx.textBaseline='alphabetic';
+    // วาด S แบบตัวห้อย (ย่อลงเล็กน้อย)
+    ctx.fillText('S', s.x, s.y - 30 + 4);
+    ctx.restore();
+
+    // Tag L (listener) above car (blue)
+    ctx.save();
+    ctx.fillStyle = '#2563eb';
+    ctx.font = `800 13px "Sarabun", system-ui`;
+    ctx.textAlign='center'; ctx.textBaseline='alphabetic';
+    ctx.fillText('L', L.x, L.y - 30 + 4);
+    ctx.restore();
+
+    // Velocity labels v_S and v_L with numbers (transparent labels)
+    const unit = ' m/s';
+    // source
+    drawSubscriptText(s.x - 30, s.y - 46, 'v', 'S', {color:'#ef4444', size:13});
+    ctx.save();
+    ctx.fillStyle='#ef4444';
+    ctx.font=`700 11px "Sarabun", system-ui`;
+    ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+    ctx.fillText(` = ${Math.abs(s.speed).toFixed(0)}${unit}`, s.x - 30 + 22, s.y - 46);
+    ctx.restore();
+
+    // listener
+    drawSubscriptText(L.x - 30, L.y - 46, 'v', 'L', {color:'#2563eb', size:13});
+    ctx.save();
+    ctx.fillStyle='#2563eb';
+    ctx.font=`700 11px "Sarabun", system-ui`;
+    ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+    ctx.fillText(` = ${Math.abs(L.speed).toFixed(0)}${unit}`, L.x - 30 + 22, L.y - 46);
+    ctx.restore();
+  }
+
+
+  function draw() {
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle='#ffffff';
+    ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='#f8fafc';
+    ctx.fillRect(0, H*0.46, W, H*0.14);
+
+    const s=state.src, L=state.lis;
+    ctx.setLineDash([4,6]);
+    ctx.strokeStyle='#94a3b8';
+    ctx.lineWidth=1.2;
+    ctx.beginPath(); ctx.moveTo(s.x,s.y); ctx.lineTo(L.x,L.y); ctx.stroke();
+    ctx.setLineDash([]);
+
+    if(state.showWaves) {
+      ctx.save();
+      ctx.globalAlpha=0.85;
+      ctx.strokeStyle='rgba(148,163,184,0.9)';
+      const K = 8*state.speedScale;
+      const maxR = Math.hypot(W,H)+40;
+      for(const w of state.waves) {
+        const age = Math.max(0, state.t - w.t);
+        const r = state.v * age * K;
+        if(r<6 || r>maxR) continue;
+        ctx.beginPath(); ctx.lineWidth=1; ctx.arc(w.x,w.y,r,0,Math.PI*2); ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    drawAmbulance(s.x,s.y);
+    drawCar(L.x,L.y);
+    drawVector(s);
+    drawVector(L);
+    drawEntityTags();
+
+    const fL = fListener();
+    $('fL').textContent = (fL>0)? fL.toFixed(1) : '—';
+  }
+
+  function tick(now) {
+    const dt = (now - state.last)/1000;
+    state.last = now;
+    if(state.sim) { state.t += dt; step(dt); }
+    draw();
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+
+  // drag
+  let dragging = null;
+  let off = {x:0,y:0};
+  function getMouse(ev) {
+    const r = cv.getBoundingClientRect();
+    let cx, cy;
+    if(ev && ev.touches && ev.touches[0]) { cx = ev.touches[0].clientX; cy = ev.touches[0].clientY; }
+    else if(ev && ev.changedTouches && ev.changedTouches[0]) { cx = ev.changedTouches[0].clientX; cy = ev.changedTouches[0].clientY; }
+    else { cx = ev.clientX; cy = ev.clientY; }
+    return { x:(cx - r.left), y:(cy - r.top) };
+  }
+  function hit(p, ent) {
+    return (p.x>=ent.x-36 && p.x<=ent.x+36 && p.y>=ent.y-18 && p.y<=ent.y+18);
+  }
+  function startDrag(ev) {
+    if(ev && ev.cancelable) ev.preventDefault();
+    const p = getMouse(ev);
+    if(hit(p, state.src)) { dragging='src'; off.x=p.x-state.src.x; off.y=p.y-state.src.y; }
+    else if(hit(p, state.lis)) { dragging='lis'; off.x=p.x-state.lis.x; off.y=p.y-state.lis.y; }
+  }
+  function onDrag(ev) {
+    if(!dragging) return;
+    if(ev && ev.cancelable) ev.preventDefault();
+    const p = getMouse(ev);
+    if(dragging==='src') {
+      state.src.x = clamp(p.x-off.x, 40, W-40);
+      state.src.y = clamp(p.y-off.y, 60, H-40);
+    } else {
+      state.lis.x = clamp(p.x-off.x, 40, W-40);
+      state.lis.y = clamp(p.y-off.y, 60, H-40);
+    }
+  }
+  function endDrag() { dragging=null; }
+  cv.addEventListener('mousedown', startDrag);
+  window.addEventListener('mousemove', onDrag);
+  window.addEventListener('mouseup', endDrag);
+  cv.addEventListener('touchstart', startDrag, {passive:false});
+  window.addEventListener('touchmove', onDrag, {passive:false});
+  window.addEventListener('touchend', endDrag);
+
+  // play/reset (sound + sim)
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  const actx = new AudioCtx();
+  let osc=null, gain=null, lfo=null, lfoGain=null, lfoDetuneGain=null, dc=null, timer=null;
+
+  function startSiren() {
+    if(!actx) return;
+    stopSiren();
+
+    // โทนไซเรนแบบ “วังหวะ” (amplitude wail) + ความถี่ที่ได้ยิน = f_L แบบเรียลไทม์
+    osc = actx.createOscillator();
+    gain = actx.createGain();
+
+    // ทำให้ดัง-ค่อย-ดังเหมือนไซเรน (LFO)
+    lfo = actx.createOscillator();
+    lfoGain = actx.createGain();
+    lfoDetuneGain = actx.createGain();
+    dc = actx.createConstantSource ? actx.createConstantSource() : null;
+
+    osc.type = 'sine';
+    lfo.type = 'triangle';          // จังหวะขึ้น-ลงชัด
+    lfo.frequency.value = 1.2;      // ความเร็วไซเรน (Hz)
+    // ทำให้เสียง “หวอ” แบบไซเรน: ให้ความถี่ไหลขึ้นลง (ใช้ detune เป็นเซนต์)
+    lfoDetuneGain.gain.value = 450; // +/- cents (ประมาณ +/- 4.5 semitones)
+    lfo.connect(lfoDetuneGain).connect(osc.detune);
+
+    // ระดับเสียง: offset + LFO
+    const baseAmp = 0.035;          // ค่ากลาง
+    const wobble  = 0.025;          // แกว่งขึ้น-ลง
+    gain.gain.value = baseAmp;
+
+    if(dc){
+      dc.offset.value = baseAmp;
+      dc.connect(gain.gain);
+      dc.start();
+      lfoGain.gain.value = wobble;
+      lfo.connect(lfoGain).connect(gain.gain);
+    }else{
+      // fallback: ไม่มี ConstantSourceNode → ใช้ gain ตรงๆ แล้วค่อยตั้งค่าใน interval
+      lfoGain.gain.value = wobble;
+      lfo.connect(lfoGain);
+    }
+
+    osc.connect(gain).connect(actx.destination);
+    osc.start();
+    lfo.start();
+
+    // อัปเดตความถี่ “ที่ผู้ฟังได้ยิน” ตาม f_L และคุมจังหวะเสียงให้สอดคล้อง
+    timer = setInterval(()=>{
+      const f = fListener();
+      if(!f || !isFinite(f)) return;
+
+      // pitch = f_L
+      osc.frequency.setTargetAtTime(clamp(f, 40, 8000), actx.currentTime, 0.02);
+
+      // fallback amplitude modulation (ถ้าไม่มี dc)
+      if(!dc){
+        const t = actx.currentTime;
+        const w = 0.5*(1+Math.sin(2*Math.PI*1.2*t)); // 0..1
+        gain.gain.setTargetAtTime(baseAmp*(0.35 + 0.65*w), t, 0.03);
+      }
+    }, 30);
+  }
+  function stopSiren() {
+    try{ if(timer){clearInterval(timer); timer=null;} }catch(e){}
+    try{ if(lfo){lfo.stop(); lfo.disconnect(); lfo=null;} }catch(e){}
+    try{ if(lfoGain){lfoGain.disconnect(); lfoGain=null;} }catch(e){}
+    try{ if(lfoDetuneGain){lfoDetuneGain.disconnect(); lfoDetuneGain=null;} }catch(e){}
+    try{ if(dc){dc.stop(); dc.disconnect(); dc=null;} }catch(e){}
+    try{ if(osc){osc.stop(); osc.disconnect(); osc=null;} }catch(e){}
+    try{ if(gain){gain.disconnect(); gain=null;} }catch(e){}
+  }
+
+  function setPlayUI() {
+    $('btnPlay').textContent = state.sim ? '⏸️ หยุด' : '▶️ เล่น';
+    $('mPlay').innerHTML = state.sim ? '⏸️<span>หยุด</span>' : '▶️<span>เล่น</span>';
+  }
+
+  async function togglePlay() {
+    await actx.resume();
+    state.sim = !state.sim;
+    if(state.sim) {
+      state.last = performance.now();
+      state.waves.push({x:state.src.x,y:state.src.y,t:state.t-0.1});
+      state.acc = 0;
+      startSiren();
+    } else {
+      stopSiren();
+    }
+    setPlayUI();
+  }
+
+  function resetAll() {
+    readUI();
+    state.sim=false;
+    state.t=0; state.waves=[]; state.acc=0;
+
+    // กลับไปตำแหน่งเริ่มต้น "กลางจอ" (มือถือ/คอม) ให้เหมือนกันเสมอ
+    const cx = W*0.5;
+    const d = Math.min(520, W*0.72);
+    state.src.x = cx - d*0.5;
+    state.lis.x = cx + d*0.5;
+    state.src.y = H*0.57;
+    state.lis.y = H*0.57;
+
+    stopSiren();
+    setPlayUI();
+  }
+
+  $('btnPlay').addEventListener('click', togglePlay);
+  $('mPlay').addEventListener('click', togglePlay);
+  $('btnReset').addEventListener('click', resetAll);
+  $('mReset').addEventListener('click', resetAll);
+  setPlayUI();
+
+  // mobile hide
+  const mobileBar = $('mobileBar');
+  $('btnHide').addEventListener('click', ()=>{
+    if(!isMobile()) return;
+    mobileBar.classList.toggle('hidden');
+  });
+
+  // modals
+  function showModal(modalId) {
+    const m = $(modalId);
+    m.classList.add('show');
+    if(window.MathJax && window.MathJax.typesetPromise) {
+      window.MathJax.typesetPromise([m]).catch(()=>{});
+    }
+  }
+  function hideModal(modal) { modal.classList.remove('show'); }
+
+  function wireModal(modalId) {
+    const m = $(modalId);
+    m.addEventListener('click', (e)=>{
+      const t = e.target;
+      if(t && t.dataset && t.dataset.close) hideModal(m);
+    });
+    window.addEventListener('keydown', (e)=>{ if(e.key==='Escape') hideModal(m); });
+  }
+
+
+
+
+  document.querySelectorAll('[data-close="1"]').forEach(el=>el.addEventListener('click', ()=>{
+    const m = el.closest('.modal');
+    if(m) hideModal(m);
+  }));
+
+  // quiz
+  const quiz = [
+    {
+      q:1,
+      choices:[
+        ['A','ด้านหน้า 0.320 m, ด้านหลัง 0.360 m'],
+        ['B','ด้านหน้า 0.360 m, ด้านหลัง 0.320 m'],
+        ['C','ด้านหน้า 0.300 m, ด้านหลัง 0.340 m'],
+        ['D','ด้านหน้า 0.340 m, ด้านหลัง 0.300 m'],
+        ['E','ด้านหน้า 0.323 m, ด้านหลัง 0.343 m'],
+      ],
+      ans:'A',
+      explain: `
+        <div><b>คำตอบที่ถูก: <span class="ans">A</span></b></div>
+        <div class="note">ใช้สูตรกรณีแหล่งกำเนิดเคลื่อนที่ในตัวกลาง (ผู้ฟังอยู่นิ่ง)</div>
+        <div class="eq eqTargetSmall">ให้ $v=340\\,\\text{m/s},\\,v_S=20\\,\\text{m/s},\\,f_S=1000\\,\\text{Hz}$</div><br/>
+        <div class="eq">ตั้งต้น:</div>
+        <div class="eq">$$\\lambda_\\text{หน้า}=\\frac{v-v_S}{f_S},\\quad \\lambda_\\text{หลัง}=\\frac{v+v_S}{f_S}$$</div>
+        <div class="eq">แทนค่า:</div>
+        <div class="eq">$$\\lambda_\\text{หน้า}=\\frac{340-20}{1000}=0.320\\,\\text{m}$$</div>
+        <div class="eq">$$\\lambda_\\text{หลัง}=\\frac{340+20}{1000}=0.360\\,\\text{m}$$</div>
+      `
+    },
+    {
+      q:2,
+      choices:[
+        ['A','การแทรกสอด'],
+        ['B','การเลี้ยวเบน'],
+        ['C','การหักเห'],
+        ['D','ดอปเปลอร์'],
+        ['E','การสั่นพ้อง'],
+      ],
+      ans:'D',
+      explain: `
+        <div><b>คำตอบที่ถูก: <span class="ans">D</span></b></div>
+        <div>เพราะความถี่ที่ผู้ฟังได้ยินเปลี่ยนไปเมื่อรถไฟเคลื่อนที่เข้าใกล้/ห่างออก (การเคลื่อนที่สัมพัทธ์ระหว่างแหล่งกำเนิดกับผู้ฟัง)</div>
+      `
+    },
+    {
+      q:3,
+      choices:[
+        ['A','ก.'],
+        ['B','ข.'],
+        ['C','ค.'],
+        ['D','ก. และ ง.'],
+        ['E','ข. และ ค.'],
+      ],
+      ans:'D',
+      explain: `
+        <div><b>คำตอบที่ถูก: <span class="ans">D</span></b></div>
+        <div class="note">ผู้ฟังอยู่นิ่ง ใช้สูตรดอปเปลอร์สำหรับ “แหล่งกำเนิดเคลื่อนที่”</div><br/>
+        <div class="eq">ห่างออก: $$f_L = f_S\\frac{v}{v+v_S}$$</div>
+        <div class="eq">เข้าหา: $$f_L = f_S\\frac{v}{v-v_S}$$</div><br/>
+        <div class="eq">ให้ $f_L=273\\,\\text{Hz}$</div>
+        <div class="eq">ลองข้อ ก: $f_S=300$ และ “ห่างออก”</div>
+        <div class="eq">$$\\frac{273}{300}=0.91=\\frac{v}{v+v_S}$$</div>
+        <div class="eq">ทำได้ ⇒ เป็นไปได้</div><br/>
+        <div class="eq">ลองข้อ ง: $f_S=250$ และ “เข้าหา”</div>
+        <div class="eq">$$\\frac{273}{250}=1.092=\\frac{v}{v-v_S}$$</div>
+        <div class="eq">ทำได้ ⇒ เป็นไปได้</div><br/>
+        <div>ดังนั้นเป็นไปได้คือ <b>ก. และ ง.</b>
+        <div class="noteRed">ข้อสังเกต: ถ้าเคลื่อนที่ <b>เข้าหากัน</b> จะได้ยินเสียงมีความถี่สูงกว่าความถี่จริง \(f_L &gt; f_S\) แต่ถ้าเคลื่อนที่ <b>หนีกัน</b> จะได้ยินเสียงมีความถี่ต่ำกว่าความถี่จริง \(f_L &lt; f_S\)</div></div>
+      `
+    },
+    {
+      q:4,
+      choices:[
+        ['A','ก.'],
+        ['B','ข.'],
+        ['C','ค.'],
+        ['D','ง.'],
+        ['E','ค และ ง'],
+      ],
+      ans:'C',
+      explain: `
+        <div><b>คำตอบที่ถูก: <span class="ans">C</span></b></div>
+
+        <div class="eq">ใช้แนวคิดดอปเปลอร์ (กำหนดทิศการเคลื่อนที่ของคลื่นเสียงเป็นทิศ <b>+</b>)</div>
+        <div class="eq">$$\\frac{f_L}{f_S}=\\left(\\frac{v - v_L}{\,v - v_S\,}\\right)$$</div>
+
+        <div class="eq"><b>1) เลือกทิศบวก</b>: ให้ทิศของคลื่นเสียง (ลูกศรในรูป) เป็นทิศ +</div>
+        <div class="eq"><b>2) ใส่เครื่องหมายความเร็ว</b>:</div>
+        <div class="eq">- $v_L$ เป็น <b>บวก</b> เมื่อผู้ฟังเคลื่อนที่ <b>ไปทิศเดียวกับคลื่น</b> (หนีคลื่น)</div>
+        <div class="eq">- $v_L$ เป็น <b>ลบ</b> เมื่อผู้ฟังเคลื่อนที่ <b>สวนทิศคลื่น</b> (วิ่งเข้าหาคลื่น)</div>
+
+        <div class="eq"><b>3) ต้องการความถี่สูงสุด</b> ⇒ ต้องทำให้ตัวเศษ $v - v_L$ <b>มากที่สุด</b></div>
+        <div class="eq">ดังนั้นต้องให้ $v_L$ เป็นค่าติดลบ (สวนทิศคลื่น) ⇒ $v - v_L = v + |v_L|$ มากที่สุด</div>
+
+        <div class="eq"><b>4) อ่านจากรูป</b>: คลื่นเสียงพุ่งจากซ้ายไปขวา ⇒ ถ้ารถจะ “สวนคลื่น” ต้องมีความเร็วไปทางซ้าย</div>
+        <div class="eq">การเคลื่อนที่วงกลมตามเข็มนาฬิกา ที่ตำแหน่ง <b>ค</b> เวกเตอร์ความเร็วชี้ไปทางซ้ายพอดี</div>
+
+        <div class="eq"><b>สรุป</b>: ได้ยินความถี่สูงสุดที่ตำแหน่ง <span class="ansSquare">ค</span></div><div class="noteRed">ข้อสังเกต: ถ้าเคลื่อนที่ <b>เข้าหากัน</b> จะได้ยินเสียงมีความถี่สูงกว่าความถี่จริง \(f_L &gt; f_S\) แต่ถ้าเคลื่อนที่ <b>หนีกัน</b> จะได้ยินเสียงมีความถี่ต่ำกว่าความถี่จริง \(f_L &lt; f_S\)</div>
+      `
+    },
+  ];
+
+  function renderChoices(card, item){
+    const box = card.querySelector('.choices');
+    box.innerHTML = '';
+    item.choices.forEach(([letter, text]) => {
+      const lab = document.createElement('label');
+      lab.className = 'choice';
+      lab.innerHTML = `
+        <input type="radio" name="q${item.q}" value="${letter}"/>
+        <div><div><span class="lbl">${letter}.</span> ${text}</div></div>
+      `;
+      box.appendChild(lab);
+    });
+  }
+  quiz.forEach(item => {
+    const card = document.querySelector('.qCard[data-q="'+item.q+'"]');
+    renderChoices(card, item);
+  });
+
+  function getSelected(q){
+    const el = document.querySelector('input[name="q'+q+'"]:checked');
+    return el ? el.value : null;
+  }
+
+  $('btnCheck').addEventListener('click', () => {
+    let score = 0, answered = 0;
+    quiz.forEach(item => {
+      const card = document.querySelector('.qCard[data-q="'+item.q+'"]');
+      const pick = getSelected(item.q);
+      const ex = card.querySelector('.explain');
+      if(!pick){
+        ex.classList.add('hidden');
+        ex.innerHTML = '';
+        return;
+      }
+      answered++;
+      if(pick === item.ans) score++;
+      ex.classList.remove('hidden');
+      ex.innerHTML = item.explain;
+
+      if(window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetPromise([ex]).catch(()=>{});
+      }
+    });
+    $('scoreBox').textContent = `คะแนน: ${score} / ${quiz.length} (ตอบแล้ว ${answered} ข้อ)`;
+  });
+
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1201 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mini Lab การสั่นพ้องของเสียงในท่อ</title>
+<style>
+  :root{
+    --ink:#0f172a;--muted:#6b7280;--line:#e5e7eb;--panel:#ffffff;--bg:#ffffff;
+    --accent:#2563eb;--red:#ef4444;--blue:#0ea5e9;--green:#16a34a;--amber:#f59e0b;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+  header{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--line);padding:10px 14px;font-weight:700;color:var(--accent);font-size:18px}
+  .wrap{align-items:start !important;display:grid;grid-template-columns:1fr;gap:12px;padding:12px;max-width:1200px;margin:0 auto}
+  @media(min-width:1100px){
+    .wrap{align-items:start !important;grid-template-columns:2fr 1fr;align-items:start;gap:8px}
+    .board{height:auto !important; min-height:unset !important;min-height:120px;height:120px}
+    .panel{margin-top:0 !important; align-self:start !important;align-self:start;margin-top:0}
+  }
+  .board{height:auto !important; min-height:unset !important;position:relative;background:#fff;border:1px solid var(--line);border-radius:16px;min-height:420px;overflow:hidden}
+  .panel{margin-top:0 !important; align-self:start !important;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:12px}
+  h2{margin:6px 0 2px 0;font-size:18px}
+  .row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}
+  .row > label{font-size:14px;color:var(--muted)}
+  .row .val{font-variant-numeric:tabular-nums}
+  .seg{display:grid;gap:8px;border-top:1px dashed var(--line);padding-top:10px}
+  button,select{border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:#fff;cursor:pointer}
+  button.play{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:700}
+  button.stop{background:#fff;color:var(--accent);border-color:var(--accent);font-weight:700}
+  .badge{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:2px 8px;font-size:12px;color:var(--muted)}
+  canvas{display:block;width:100%;height:100%;touch-action:none}
+  .legend{display:flex;gap:10px;flex-wrap:wrap}
+  .dot{width:12px;height:12px;border-radius:50%}
+  .dot.blue{background:var(--blue)}
+  .dot.red{background:var(--red)}
+  .list{font-size:14px;line-height:1.5}
+  .tubeLabel{position:absolute;left:10px;top:10px;font-size:13px;color:var(--muted)}
+  .credit{font-size:13px;color:var(--muted)}
+
+  /* --- สูตรสำคัญ (overlay) --- */
+  button.formula{background:#ffedd5;color:#7c2d12;border-color:#fb923c;font-weight:800}
+  button.formula:hover{filter:brightness(0.98)}
+  .modalOverlay{position:fixed;inset:0;display:none;align-items:stretch;justify-content:center;background:rgba(15,23,42,.55);z-index:9999}
+  .modalCard{width:min(980px,100%);height:100%;background:#fff;border-radius:18px;overflow:hidden;display:flex;flex-direction:column}
+  .modalTop{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:10px;justify-content:space-between;
+    padding:12px 14px;background:#fff;border-bottom:1px solid var(--line)}
+  .modalTitle{font-weight:900;color:var(--accent);font-size:18px}
+  .modalClose{position:fixed;top:calc(10px + env(safe-area-inset-top));right:calc(10px + env(safe-area-inset-right));z-index:10000;border:1px solid var(--line);background:#fff;border-radius:12px;padding:10px 12px;font-weight:900;box-shadow:0 8px 22px rgba(15,23,42,.12)}
+  .modalBody{flex:1;overflow:auto;background:#fff7ed;padding:14px;padding-top:10px;
+    padding-bottom:calc(18px + env(safe-area-inset-bottom, 0px));
+    padding-top:calc(14px + env(safe-area-inset-top, 0px))}
+  .box{background:#fff;border:2px solid #fb923c;border-radius:16px;padding:12px;margin:12px 0}
+  .box h3{margin:0 0 8px 0;color:#1d4ed8;font-size:18px}
+  .box p{margin:6px 0;color:#0f172a;line-height:1.6;font-size:15px}
+  .pill{display:inline-block;background:#e0f2fe;border:1px solid #7dd3fc;color:#075985;border-radius:999px;padding:2px 10px;font-size:12px;font-weight:700}
+  .eq{background:#fff;border:1px dashed #fb923c;border-radius:12px;padding:10px;margin:10px 0;font-size:16px}
+  .eq .latex{display:none}
+  .eq .plain{display:block; color:#444}
+  body.mathjax-ready .eq .latex{display:inline}
+  body.mathjax-ready .eq .plain{display:none}
+  .note{color:#475569;font-size:13px}
+
+  a.brand{color:var(--accent);text-decoration:underline}
+
+/* ---- Quiz + Standing wave toggle ---- */
+.quizBtn{
+  background:#dcfce7; color:#065f46; border:2px solid #86efac;
+  font-weight:800; border-radius:12px; padding:8px 14px;
+}
+.swToggle{
+  display:inline-flex; align-items:center; gap:8px;
+  font-weight:800; color:#1e3a8a; padding:6px 10px;
+  border-radius:12px; background:rgba(219,234,254,.7); border:1px solid rgba(59,130,246,.25);
+}
+.swToggle input{ transform: translateY(1px); }
+#swOverlay{ display:none; position:absolute; inset:0; pointer-events:none; z-index:20; }
+
+
+  /* ===== Top navigation buttons (near close) ===== */
+  .topNavBtn{
+    position:fixed;
+    top: calc(12px + env(safe-area-inset-top, 0px));
+    right: 60px; /* sits left of ❌ */
+    z-index: 100000;
+    border:1px solid #e5e7eb;
+    background:#ffffff;
+    border-radius:999px;
+    padding:8px 12px;
+    font-weight:800;
+    cursor:pointer;
+    box-shadow: 0 6px 18px rgba(0,0,0,.08);
+  }
+
+  /* Ensure ❌ stays rightmost */
+  #closeFormula{
+    right: 12px !important;
+  }
+
+  /* ===== Force FULLSCREEN for สูตรสำคัญ + แบบฝึกหัด overlays ===== */
+  #formulaOverlay{
+    position:fixed !important;
+    inset:0 !important;
+    width:100vw !important;
+    height:100vh !important;
+    padding:0 !important;
+    margin:0 !important;
+  }
+  #formulaOverlay .modalCard{
+    width:100% !important;
+    max-width:100% !important;
+    height:100% !important;
+    margin:0 !important;
+    border-radius:0 !important;
+  }
+
+
+/* =========================
+   Mobile-only controls (แก้เฉพาะมือถือ: ปุ่มใต้จอทดลอง + แผงกระชับ)
+   ========================= */
+@media (max-width: 768px){
+
+  /* มือถือ: ให้หน้าเลื่อนได้ตามจริง แต่คงจอทดลองไว้ด้านบน */
+  body{
+    overflow:auto;
+    min-height:100vh;
+  }
+  .wrap{align-items:start !important;
+    min-height: calc(100vh - 56px);
+    height:auto;
+    overflow:visible;
+    grid-template-columns:1fr;
+    gap:8px;
+    padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  /* จอทดลองนิ่งและเตี้ยพอดี */
+  .board{height:auto !important; min-height:unset !important;
+    height: 30vh !important;
+    min-height: 30vh !important;
+  }
+
+  /* แถบปุ่มใต้จอทดลอง */
+  #mobileUnderBoardBar{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+    width:100%;
+    margin-top:6px;
+    margin-bottom:6px;
+  }
+  #mobileUnderBoardBar[aria-hidden="true"]{ display:none; }
+  #mobileUnderBoardBar button{
+    border-radius:10px !important;
+    padding:11px 10px !important;
+    font-size:15px !important;
+    font-weight:800 !important;
+    line-height:1.15 !important;
+    min-height:46px !important;
+    box-shadow: 0 8px 18px rgba(15,23,42,.10);
+  }
+
+  /* ให้แผงตั้งค่ายาวลงได้เต็ม ไม่ตัดสั้น */
+  .panel{margin-top:0 !important; align-self:start !important;
+    min-height: calc(100vh - 30vh - 92px);
+    height:auto !important;
+    max-height:none !important;
+    overflow:visible !important;
+    -webkit-overflow-scrolling: touch;
+    padding:10px;
+    gap:6px;
+    padding-bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+  }
+  .legend{ gap:6px; }
+  .badge{ font-size:11px; padding:2px 7px; }
+  .row{ gap:4px; }
+  .row > label{
+    font-size:13px;
+    line-height:1.15;
+    margin:0;
+  }
+  .row .val{ font-size:13px; line-height:1.15; }
+  .seg{
+    gap:4px;
+    padding-top:6px;
+  }
+  .seg .row + .row{
+    margin-top:0;
+  }
+  button,select{
+    padding:7px 9px;
+    font-size:14px;
+  }
+  input[type="range"]{
+    margin:0;
+  }
+
+  /* ลด/กันไม่ให้ข้อความในจอทดลองยืดแปลก ๆ และไม่บังรูป */
+  .tubeLabel{
+    font-size: 12px;
+    line-height: 1.2;
+    max-width: calc(100% - 20px);
+    white-space: normal;
+    font-stretch: normal;
+    letter-spacing: 0;
+    background: rgba(255,255,255,.72);
+    backdrop-filter: blur(4px);
+    border-radius: 12px;
+    padding: 6px 8px;
+    top: 8px;
+    left: 10px;
+    right: 10px;
+  }
+
+  /* ซ่อนตำแหน่งเดิมของปุ่มใน panel (JS จะย้ายออกไปไว้ใต้จอทดลอง) */
+  #controls .seg .mobile-moved{
+    display:none !important;
+  }
+
+  /* ไม่ใช้แถบปุ่มลอยล่าง/ปุ่มซ่อนแล้ว */
+  #mobileActionBar,
+  #mobileToggleBtn{
+    display:none !important;
+  }
+
+  /* ซ่อนส่วนท้ายหัวข้อในหน้าสูตร/แบบฝึกหัด เฉพาะมือถือ */
+  .hideOnMobile{ display:none !important; }
+
+  /* เพิ่มพื้นที่เลื่อนด้านล่างในหน้า "สูตรสำคัญ" (มือถือ) กันแถบระบบบัง */
+  #formulaOverlay .modalBody{
+    padding-bottom: calc(160px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+}
+
+@media(min-width:1100px){
+  .wrap{align-items:start !important;
+    display:grid;
+    grid-template-columns: 2fr 1fr;
+    gap:12px;
+    align-items:start;
+  }
+  .board{height:auto !important; min-height:unset !important;
+    grid-column:1;
+  }
+  .control-top{
+    grid-column:2;
+    margin-top:0;
+    align-self:start;
+  }
+  .panel{margin-top:0 !important; align-self:start !important;
+    grid-column:2;
+    margin-top:0;
+  }
+}
+
+</style>
+<script>
+  window.MathJax = {
+    tex: { inlineMath: [['\\(','\\)'], ['$', '$']] },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] }
+  };
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+<style>
+/* ===== Fullscreen: สูตรสำคัญ ===== */
+#formulaOverlay.modalOverlay{
+  align-items:stretch !important;
+  justify-content:stretch !important;
+  padding:0 !important;
+}
+#formulaOverlay .modalCard{
+  width:100% !important;
+  height:100% !important;
+  max-width:100% !important;
+  border-radius:0 !important;
+}
+#closeFormula.modalClose{
+  position:fixed !important;
+  top: calc(12px + env(safe-area-inset-top, 0px)) !important;
+  right: 12px !important;
+  z-index: 100000 !important;
+}
+
+
+
+@media(min-width:1100px){
+  .wrap{align-items:start !important;
+    display:grid;
+    grid-template-columns: 2fr 1fr;
+    gap:12px;
+    align-items:start;
+  }
+  .board{height:auto !important; min-height:unset !important;
+    grid-column:1;
+  }
+  .control-top{
+    grid-column:2;
+    margin-top:0;
+    align-self:start;
+  }
+  .panel{margin-top:0 !important; align-self:start !important;
+    grid-column:2;
+    margin-top:0;
+  }
+}
+
+</style>
+
+
+<style id="oai-desktop-final-fix">
+@media (min-width: 1100px){
+  .wrap{
+    display:grid !important;
+    grid-template-columns: minmax(0, 1.9fr) minmax(360px, 0.9fr) !important;
+    gap: 14px !important;
+    align-items: start !important;
+  }
+
+  .board,
+  .lab-card,
+  .canvas-wrap{
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    align-self: start !important;
+  }
+
+  .board{
+    height: 240px !important;
+    min-height: 240px !important;
+    max-height: 240px !important;
+    overflow: hidden !important;
+  }
+
+  .board canvas,
+  .canvas-wrap canvas{
+    height: 100% !important;
+    max-height: 240px !important;
+    display: block !important;
+  }
+
+  .control-top{
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+    align-self: start !important;
+    margin: 0 0 10px 0 !important;
+    position: static !important;
+  }
+
+  .panel,
+  .settings-panel,
+  .control-panel{
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+    align-self: start !important;
+    margin: 64px 0 0 0 !important;
+  }
+
+  #mobileUnderBoardBar,
+  .mobile-under-board,
+  .bottom-floating-controls{
+    display: none !important;
+  }
+}
+</style>
+
+
+<style id="final-adjust">
+@media (min-width:1100px){
+  .wrap{
+    display:grid;
+    grid-template-columns: minmax(0,1.9fr) minmax(360px,0.9fr);
+    gap:18px;
+    align-items:start;
+  }
+
+  .board{
+    padding-top:100px !important; /* push experiment down */
+  }
+
+  .panel{
+    margin-top:40px !important; /* lower panel slightly (like right image) */
+  }
+}
+</style>
+
+
+<style id="oai-desktop-equal-height-fix">
+@media (min-width:1100px){
+  .wrap{
+    display:grid !important;
+    grid-template-columns:minmax(0,1.9fr) minmax(360px,0.9fr) !important;
+    gap:18px !important;
+    align-items:stretch !important;
+  }
+
+  .board,
+  .lab-card,
+  .canvas-wrap{
+    grid-column:1 !important;
+    grid-row:1 !important;
+    align-self:stretch !important;
+    margin:0 !important;
+  }
+
+  .panel,
+  .settings-panel,
+  .control-panel{
+    grid-column:2 !important;
+    grid-row:1 !important;
+    margin:0 !important;
+    align-self:stretch !important;
+    height:100% !important;
+    display:flex !important;
+    flex-direction:column !important;
+    justify-content:flex-start !important;
+  }
+
+  .panel > *,
+  .settings-panel > *,
+  .control-panel > *{
+    flex-shrink:0 !important;
+  }
+
+  /* keep the experiment visually lower without pushing the whole left card */
+  .board .board-inner,
+  .lab-card .board-inner,
+  .canvas-wrap .board-inner{
+    margin-top:100px !important;
+  }
+
+  /* fallback when there is no dedicated inner wrapper */
+  .board canvas,
+  .lab-card canvas,
+  .canvas-wrap canvas{
+    display:block !important;
+    margin-top:100px !important;
+  }
+
+  .control-top{
+    margin-top:0 !important;
+    position:static !important;
+  }
+
+  #mobileUnderBoardBar,
+  .mobile-under-board,
+  .bottom-floating-controls{
+    display:none !important;
+  }
+}
+</style>
+
+
+<style id="fix-visibility">
+@media (min-width:1100px){
+  .board{
+    height:100% !important;
+    min-height:420px !important;
+    overflow:visible !important;
+    padding-top:0 !important;
+  }
+
+  .board canvas{
+    margin-top:100px !important;
+  }
+}
+</style>
+
+
+<style id="oai-hide-endcorr">
+#endCorr{display:none !important;}
+.badge.endcorr-hidden{display:none !important;}
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  var sel = document.getElementById('endCorr');
+  if(sel){
+    var badge = sel.closest('.badge');
+    if(badge){ badge.classList.add('endcorr-hidden'); }
+    sel.value = 'off';
+  }
+});
+</script>
+
+</head>
+<body>
+  <header>Mini Lab การสั่นพ้องของเสียงในท่อ</header>
+  <div class="wrap">
+    <div class="board">
+      <div class="tubeLabel" id="tubeLabel">ปากท่อ (เปิด) อยู่ซ้าย • ปลายขวาเป็นลูกสูบ (ปิด) — ลากปลายท่อเพื่อปรับความยาว</div>
+      <canvas id="view" aria-label="standing-wave-canvas"></canvas>
+      <div id="swOverlay" aria-hidden="true"></div>
+    </div>
+
+    <div id="mobileUnderBoardBar" aria-hidden="true"></div>
+
+    <div class="panel" id="controls">
+      <div class="legend">
+        <span class="badge">ชนิดท่อ:
+          <select id="tubeType">
+            <option value="oc" selected>ปลายเปิด–ปลายปิด (มีลูกสูบ)</option>
+            <option value="oo">ปลายเปิด–ปลายเปิด (ไม่มีลูกสูบ)</option>
+          </select>
+        </span>
+        
+        <span class="badge">End correction: 
+          <select id="endCorr">
+            <option value="off">ปิด</option>
+            <option value="on">เปิด</option>
+          </select>
+        </span>
+      </div>
+<div class="row">
+        <label>ความถี่สัญญาณจากลำโพง f</label>
+        <div class="val"><span id="fVal">340.0</span> Hz</div>
+      </div>
+      <input type="range" id="f" min="50" max="2000" step="1" value="340"/>
+
+      <div class="row"><label>ความเร็วเสียงในอากาศ v<sub>w</sub></label><div class="val"><b>340</b> m/s</div></div>
+<div class="badge">กำหนดให้ความเร็วเสียงในอากาศคงที่ = 340 m/s</div>
+
+<div class="row">
+        <label>ความยาวท่อ L</label>
+        <div class="val"><span id="LVal">25.0</span> cm</div>
+      </div>
+      <input type="range" id="L" min="25.0" max="120" step="0.1" value="25.0"/>
+
+      <div class="seg">
+        <div style="display:flex; gap:8px; flex-wrap:wrap">
+          <button id="play" class="play">▶ เล่นเสียง</button>
+<button id="openFormula" class="formula">📘 สูตรสำคัญ</button>
+</div>
+<div class="credit">ศึกษาเพิ่มเติมได้ที่เพจ <a class="brand" href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">คลายปมฟิสิกส์</a></div>
+      </div>
+    </div>
+  </div>
+
+<!-- สูตรสำคัญ (Overlay) -->
+  <div class="modalOverlay" id="formulaOverlay" aria-hidden="true">
+    <button class="modalClose" id="closeFormula" aria-label="ปิด">❌</button>
+<div class="modalCard" role="dialog" aria-modal="true" aria-label="สูตรสำคัญและคำอธิบาย">
+      <div class="modalTop">
+        <div class="modalTitle">📘 สูตรสำคัญ <span class="hideOnMobile">— การสั่นพ้องของเสียงในท่อ</span></div>
+</div>
+      <div class="modalBody">
+        <div class="box">
+          <h3>ปรากฏการณ์นี้เกิดจากอะไร?</h3>
+          <p>
+            เมื่อความถี่เสียงจากลำโพง “พอดี” กับความถี่ธรรมชาติของคอลัมน์อากาศในท่อ
+            คลื่นเสียงที่สะท้อนกลับภายในท่อจะ <b>เสริมกัน</b> จนเกิด <b>คลื่นนิ่ง</b> ทำให้เสียงดังผิดปกติ เรียกว่า <b>เรโซแนนซ์ (Resonance)</b>
+          </p>
+          <p class="note">ภาพจำง่าย: ถ้าระยะทางไป-กลับ “เข้าจังหวะ” กัน คลื่นจะยิ่งพอกพูน → ดังขึ้น</p>
+        </div>
+
+        <div class="box">
+          <h3>เสียงจะดัง / เบา เมื่อไร?</h3>
+          <p><b>ดังมาก</b> เมื่อความยาวท่อทำให้เกิดคลื่นนิ่งชัดเจน (เรโซแนนซ์) พลังงานเสียงสะสมในท่อมาก → แอมพลิจูดสูง</p>
+          <p><b>เบา</b> เมื่อความถี่ไม่ตรงเงื่อนไข คลื่นไป-กลับไม่เสริมกัน บางช่วงหักล้างกัน → แอมพลิจูดต่ำ</p>
+        </div>
+
+        <div class="box">
+          <h3>โมเลกุลอากาศข้างในเป็นอย่างไร?</h3>
+          <p>เสียงเป็นคลื่นตามยาว: โมเลกุลอากาศสั่น <b>ไป-กลับ</b> ในแนวเดียวกับท่อ</p>
+          <p><b>คลื่นการกระจัด (Displacement)</b> = มองการ “ขยับ” ของโมเลกุล</p>
+          <p><b>คลื่นความดัน (Pressure)</b> = มองบริเวณ “อัดแน่น/เบาบาง” (ความดันสูง/ต่ำ)</p>
+          <p class="note">สำคัญ: จุดที่การกระจัดมาก → ความดันเปลี่ยนแปลงน้อย และกลับกัน (ตำแหน่งสลับกัน)</p>
+        </div>
+
+        <div class="box">
+          <h3>สูตรเรโซแนนซ์</h3>
+
+          <p><b>1) หลอดปลายปิด 1 ด้าน (ปลายเปิด–ปลายปิด)</b></p>
+          <div class="eq"><span class="latex">\(L_{\text{eff}} = \dfrac{(2n-1)\,\lambda}{4}\), &nbsp;\(n = 1,2,3,\dots\)</span><span class="plain">L_eff = /(2n-1) λ4, n = 1,2,3,…</span></div>
+
+          <p><b>2) หลอดปลายเปิด 2 ด้าน (ปลายเปิด–ปลายเปิด)</b></p>
+          <div class="eq"><span class="latex">\(L_{\text{eff}} = \dfrac{n\,\lambda}{2}\), &nbsp;\(n = 1,2,3,\dots\)</span><span class="plain">L_eff = /n λ2, n = 1,2,3,…</span></div>
+
+          <p>และความยาวคลื่น</p>
+          <div class="eq"><span class="latex">\(\lambda = \dfrac{v}{f}\)</span><span class="plain">λ = /vf</span></div>
+
+
+          <p>และอัตราเร็วเสียงในอากาศเมื่อทราบอุณหภูมิ</p>
+          <div class="eq"><span class="latex">\(v = 331 + 0.6t\)</span><span class="plain">v = 331 + 0.6t</span></div>
+          <p class="note">โดย <b>t</b> คืออุณหภูมิในหน่วยองศาเซลเซียส (°C)</p>
+
+        </div>
+
+        <div class="box">
+          <h3>ระยะจาก “ดัง” ถึง “ดัง” ที่ติดกันห่างกันเท่าไร?</h3>
+          <p>สำหรับทั้ง 2 กรณี (ปลายเปิด–ปิด และปลายเปิด–เปิด) ระยะเรโซแนนซ์ถัดไปห่างกัน</p>
+          <div class="eq"><span class="latex">\(\Delta L = \dfrac{\lambda}{2}\)</span><span class="plain">Δ L = /λ2</span></div>
+        </div>
+
+        <div class="box">
+          <h3>End correction คืออะไร?</h3>
+          <p>
+            ปากท่อที่ “เปิด” ไม่ได้จบการสั่นที่ขอบท่อจริง ๆ เพราะอากาศนอกปากท่อยังสั่นร่วมด้วยเล็กน้อย
+            จึงเหมือนกับว่าท่อยาวกว่าความยาวจริง
+          </p>
+          <div class="eq"><span class="latex">\(L_{\text{eff}} = L + \Delta\)</span><span class="plain">L_eff = L + Δ</span></div>
+          <p>สำหรับปลายเปิด 1 ด้าน โดยประมาณ</p>
+          <div class="eq"><span class="latex">\(\Delta \approx 0.61\,r \approx 0.305\,D\)</span><span class="plain">Δ ≈ 0.61 r ≈ 0.305 D</span></div>
+          <p class="note">โดย \(r\) คือรัศมีท่อ และ \(D\) คือเส้นผ่านศูนย์กลางท่อ</p>
+        </div>
+
+        <div class="box">
+          <h3>สรุปสั้น ๆ</h3>
+          <p>✅ ปรับ \(L\) หรือ \(f\) ให้เข้าเงื่อนไข → ดัง (เรโซแนนซ์)</p>
+          <p>✅ โหมด “การกระจัด” = ดูการขยับโมเลกุล • โหมด “ความดัน” = ดูอัดแน่น/เบาบาง</p>
+          <p>✅ ถ้าเปิด End correction จะใช้ \(L_{\text{eff}}\) แทน \(L\)</p>
+        </div>
+
+        <div class="credit" style="margin-top:14px">ศึกษาเพิ่มเติมได้ที่เพจ <a class="brand" href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">คลายปมฟิสิกส์</a></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const view = document.getElementById('view');
+  const ctx = view.getContext('2d');
+  const el = id => document.getElementById(id);
+
+  const ui = {
+    tubeType: el('tubeType'),
+    tubeLabel: el('tubeLabel'),
+    f: el('f'), fVal: el('fVal'),
+    c: null, cVal: null,
+    diam: null, dVal: null,
+    L: el('L'), LVal: el('LVal'),
+    play: el('play'), snap: null,
+    mode: null, endCorr: el('endCorr'),
+    showNodes: null,
+    readout: null, modesInfo: null,
+  };
+
+  // ---------- Web Audio ----------
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  let actx = null, osc = null, gain = null;
+  let playing = false;
+  let targetGain = 0.06; // will be modulated by resonance
+
+  function ensureAudio(){ if(!actx) actx = new AudioCtx(); }
+
+  function startAudio(){
+    ensureAudio();
+    if(playing) return;
+    osc = actx.createOscillator();
+    gain = actx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = parseFloat(ui.f.value);
+    gain.gain.value = targetGain;
+    osc.connect(gain).connect(actx.destination);
+    osc.start();
+    playing = true;
+    ui.play.textContent = '⏸ หยุดเสียง';
+    ui.play.classList.remove('play');
+    ui.play.classList.add('stop');
+  }
+  function stopAudio(){
+    if(osc){ try{ osc.stop(); }catch(e){} }
+    if(gain){ try{ gain.disconnect(); }catch(e){} }
+    osc = null; gain = null; playing = false;
+    ui.play.textContent = '▶ เล่นเสียง';
+    ui.play.classList.remove('stop');
+    ui.play.classList.add('play');
+  }
+  ui.play.addEventListener('click', () => { playing ? stopAudio() : startAudio(); });
+
+  // ---------- State ----------
+  const state = { t: 0, mode: 'disp', showNodeMarkers: false, showSW: true };
+  window.__tubeState = state;
+  let layout = {mouthX:0, pistonX:0, pxPerMeter:1, topY:0, Lpx:0, w:0, h:0};
+  let dragging = false;
+
+  function readParams(){
+    const f = parseFloat(ui.f.value);
+    const c = 340;
+    const Dcm = 3.0;
+    const Lcm = Math.max(25.0, parseFloat(ui.L.value));
+    const endOn = (ui.endCorr.value==='on');
+    const tubeType = ui.tubeType?.value || 'oc';
+    const r = (Dcm/100)/2; // m
+    const deltaEach = endOn ? 0.61 * r : 0.0; // m ต่อปลายเปิด
+    const delta = (tubeType === 'oo') ? (2*deltaEach) : deltaEach; // m รวม
+    const L = Lcm/100; // m
+    const Leff = L + delta; // m
+    const lambda = c / f; // m
+    return {f,c,Dcm,Lcm,endOn,deltaEach,delta,L,Leff,lambda,tubeType};
+  }
+
+  function format(x,unit,dec=2){ return `${x.toFixed(dec)} ${unit}`; }
+
+  function nearestResonance(tubeType, Leff, lambda){
+    if(lambda<=0) return {n:1, Lres: 0};
+    if(tubeType === 'oo'){
+      const nFloat = 2*Leff/lambda;
+      let n = Math.max(1, Math.round(nFloat));
+      const Lres = n * lambda/2;
+      return {n, Lres};
+    }
+    // open-closed
+    const nFloat = (2*Leff/lambda + 1)/2;
+    let n = Math.max(1, Math.round(nFloat));
+    const Lres = (2*n - 1) * lambda/4;
+    return {n, Lres};
+  }
+
+  ['f','L'].forEach(k=>{
+    ui[k].addEventListener('input',()=>{
+      if(k==='f' && osc) osc.frequency.value = parseFloat(ui.f.value);
+      ui.fVal.textContent = parseFloat(ui.f.value).toFixed(1);
+      ui.LVal.textContent = parseFloat(ui.L.value).toFixed(1);
+      updateReadout();
+    });
+  });
+  ui.endCorr.addEventListener('change', ()=>{ updateReadout(); });
+  ui.tubeType?.addEventListener('change', ()=>{ updateReadout(); });
+
+  function updateReadout(){
+    const p = readParams();
+    const tubeText = (p.tubeType==='oo') ? 'ปากท่อ (เปิด) อยู่ซ้าย • ปลายขวาเปิด — ลากปลายท่อเพื่อปรับความยาว'
+      : 'ปากท่อ (เปิด) อยู่ซ้าย • ปลายขวาเป็นลูกสูบ (ปิด) — ลากปลายท่อเพื่อปรับความยาว';
+    ui.tubeLabel.textContent = tubeText;
+  }
+
+  // ---------- Drawing ----------
+  function resize(){
+    const rect = view.getBoundingClientRect();
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    // ให้ canvas สูงเท่ากับพื้นที่จริงในจอทดลอง (แก้ปัญหา "ตัวอักษรยืด/เพี้ยน" บนมือถือ)
+    view.width = Math.floor(rect.width * dpr);
+    view.height = Math.floor(rect.height * dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  window.addEventListener('resize', resize);
+
+  function draw(){
+    const rect = view.getBoundingClientRect();
+    const w = rect.width; const h = rect.height;
+    ctx.clearRect(0,0,w,h);
+
+    // Layout: มือถือให้ท่ออยู่กึ่งกลางจอทดลอง (ลากง่าย + ไม่ทับข้อความ)
+    const isMobile = window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
+    const topY = isMobile ? (h*0.55) : Math.max(52, h*0.22);
+    const gap = 20; // ช่องว่างระหว่างเส้นโค้งจากลำโพงกับปากท่อ
+    const marginLeft = 40; // ขอบซ้ายสำหรับไอคอนลำโพง
+
+    const speakerX = marginLeft; // ขอบซ้ายของไอคอนลำโพง
+    const speakerW = 24, speakerH = 52;
+
+    // จุดศูนย์กลางของเส้นโค้งแสดงคลื่นให้อยู่ใกล้ลำโพง และห่างปากท่อ 20px
+    const arcCenterX = speakerX + speakerW - 10; // ขยับเข้าไปทางลำโพงเล็กน้อย
+    // ขยับ “ท่อ” ไปทางขวา 30px (แต่ลำโพงไม่ขยับตาม)
+    const tubeShiftX = 30;
+    const mouthX = arcCenterX + gap + tubeShiftX; // ปากท่อห่าง 20px จากเส้นโค้ง + shift
+
+    const p = readParams();
+
+    // สเกลภาพให้ท่อยังอยู่ในกรอบ
+    const pxPerMeter = Math.max(250, (w - (mouthX + 60)) / 1.6);
+    const Lpx = Math.max(100, Math.min(w - (mouthX + 40), p.L * pxPerMeter));
+    const pistonX = mouthX + Lpx;
+
+    // อัปเดต layout สำหรับการลากด้วยเมาส์/นิ้ว
+    layout = {mouthX, pistonX, pxPerMeter, topY, Lpx, w, h, tubeType: p.tubeType};
+
+// --- ท่อทรงกระบอก (มีมิติ + ขอบเทาเข้ม) ---
+const tubeH = 42;
+// ทำปลายท่อให้โค้งเป็นทรงกระบอก (capsule) เพื่อให้ขอบโค้งท่อซ้อนกับขอบวงรีปากท่อได้พอดี
+const tubeR = tubeH/2;
+const tubeY = topY - tubeH/2;
+
+function roundRect(x,y,w,h,r){
+  const rr = Math.min(r, w/2, h/2);
+  ctx.beginPath();
+  ctx.moveTo(x+rr, y);
+  ctx.arcTo(x+w, y, x+w, y+h, rr);
+  ctx.arcTo(x+w, y+h, x, y+h, rr);
+  ctx.arcTo(x, y+h, x, y, rr);
+  ctx.arcTo(x, y, x+w, y, rr);
+  ctx.closePath();
+}
+
+// ตัวท่อ
+roundRect(mouthX, tubeY, Lpx, tubeH, tubeR);
+ctx.fillStyle = '#e5e7eb';
+ctx.fill();
+ctx.lineWidth = 3;
+ctx.strokeStyle = '#475569';
+ctx.stroke();
+
+// เงาไฮไลต์ด้านบนท่อ
+ctx.lineWidth = 2;
+ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+ctx.beginPath();
+ctx.moveTo(mouthX + 14, tubeY + 10);
+ctx.lineTo(pistonX - 14, tubeY + 10);
+ctx.stroke();
+
+// ปากท่อซ้าย/ขวา (แหวน) — ให้ขอบวงรีซ้อนทับกับขอบโค้งปลายท่อ
+// ทำวงรี “แบนลง” เล็กน้อยเพื่อให้ดูสมจริง
+const ringRX = tubeH*0.19;  // แคบลงอีก 50% ในแกน x       // แบนในแกน x (ลดความกว้าง) โดยคงระยะในแกน y เดิม
+const ringRY = tubeH*0.42;       // แบนลงจากเดิม
+// ศูนย์กลางวงรีอยู่กึ่งกลางปลายท่อ (ซ้อนกับปลายโค้งของ capsule)
+const leftRingX = mouthX + ringRX; // ขยับให้ขอบซ้ายของวงรีซ้อนทับขอบท่อซ้าย
+ctx.lineWidth = 4;
+ctx.strokeStyle = '#334155';
+ctx.beginPath();
+ctx.ellipse(leftRingX, topY, ringRX, ringRY, 0, 0, Math.PI*2);
+ctx.stroke();
+
+// ปากท่อขวา (แหวน)
+const rightRingX = pistonX - ringRX; // ขยับให้ขอบขวาของวงรีซ้อนทับขอบท่อขวา
+ctx.beginPath();
+ctx.ellipse(rightRingX, topY, ringRX, ringRY, 0, 0, Math.PI*2);
+ctx.stroke();
+
+// --- ไอคอนลำโพง (วาดใหม่ให้เหมือนไอคอนตัวอย่าง) + แอนิเมชันคลื่นเมื่อเปิดเสียง ---
+ctx.save();
+ctx.translate(speakerX, topY);
+
+// ขนาดไอคอน (คงที่ ไม่ขึ้นกับความยาวท่อ)
+const sp = 1.0;
+ctx.scale(sp, sp);
+ctx.fillStyle = '#111827';
+ctx.strokeStyle = '#111827';
+
+// ฟังก์ชันกรอบมนเล็ก ๆ (สำหรับส่วนท้ายลำโพง)
+function rrect(x,y,w,h,r){
+  const rr = Math.min(r, w/2, h/2);
+  ctx.beginPath();
+  ctx.moveTo(x+rr, y);
+  ctx.arcTo(x+w, y, x+w, y+h, rr);
+  ctx.arcTo(x+w, y+h, x, y+h, rr);
+  ctx.arcTo(x, y+h, x, y, rr);
+  ctx.arcTo(x, y, x+w, y, rr);
+  ctx.closePath();
+}
+
+// 1) กล่องท้ายลำโพง (สี่เหลี่ยมทึบ)
+rrect(-26, -14, 12, 28, 2.5);
+ctx.fill();
+
+// 2) คอ/ช่วงต่อ
+rrect(-14, -10, 6, 20, 2.0);
+ctx.fill();
+
+// 3) กรวยลำโพง (ทรงคางหมู)
+ctx.beginPath();
+ctx.moveTo(-8, -18);
+ctx.lineTo(12, -30);
+ctx.lineTo(12, 30);
+ctx.lineTo(-8, 18);
+ctx.closePath();
+ctx.fill();
+
+// 4) คลื่นเสียง 3 ชั้น (กระพริบ + ขยาย/หด เมื่อเล่นเสียง)
+ctx.lineCap = 'round';
+ctx.lineJoin = 'round';
+
+const a0 = 0.88; // มุมกว้างของคลื่น
+const t = state.t;
+const pulse = playing ? (0.5 + 0.5*Math.sin(t*7.5)) : 0;      // 0..1
+const bump  = playing ? (1.0 + 0.18*Math.sin(t*7.5)) : 1.0;   // ขยาย/หดเล็กน้อย
+
+function wave(r, lw, alpha){
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.lineWidth = lw;
+  ctx.beginPath();
+  ctx.arc(18, 0, r*bump, -a0, a0);
+  ctx.stroke();
+  ctx.restore();
+}
+
+if(playing){
+  wave(10, 3.6, 0.55 + 0.35*pulse);
+  wave(17, 3.6, 0.35 + 0.35*pulse);
+  wave(24, 3.6, 0.20 + 0.30*pulse);
+}else{
+  wave(10, 3.6, 0.85);
+  wave(17, 3.6, 0.70);
+  wave(24, 3.6, 0.55);
+}
+
+ctx.restore();
+
+
+// --- ปลายขวาของท่อ: โหมดปลายปิดมีลูกสูบ / โหมดปลายเปิดไม่มีลูกสูบ ---
+if(p.tubeType === 'oc'){
+  // ลูกสูบ (ขอบหนาเท่าขอบท่อ)
+  const pistonW = 16, pistonH = tubeH + 18;
+  ctx.fillStyle = '#111827';
+  ctx.strokeStyle = '#475569';
+  ctx.lineWidth = 3; // เท่าขอบท่อ
+  roundRect(pistonX - pistonW/2, topY - pistonH/2, pistonW, pistonH, 6);
+  ctx.fill();
+  ctx.stroke();
+}else{
+  // โหมดปลายเปิด–ปลายเปิด: ใช้วงแหวนปากท่อที่วาดไว้แล้ว (rightRingX)
+  // ตัดวงรีเล็กทางขวาสุดออกตามที่ร้องขอ
+}
+
+    if(state.showSW){
+      // คลื่นนิ่งภายในท่อ (ย่อแอมพลิจูดให้อยู่ในท่อ)
+      const lambda = p.lambda; const k = 2*Math.PI/lambda; const omega = 2*Math.PI*p.f;
+      const showDisp = true;
+      const color = getComputedStyle(document.documentElement).getPropertyValue(showDisp?'--blue':'--red').trim();
+      const A = 14; // px
+      ctx.lineWidth = 2; ctx.strokeStyle = color; ctx.beginPath();
+      const N = Math.max(200, Math.floor(Lpx));
+      for(let i=0;i<=N;i++){
+        const xpx = mouthX + (Lpx * i / N);
+        const x = (p.L * i / N);
+        const phase = omega*state.t;
+        const yoff = showDisp ? (A*Math.cos(k*x)*Math.cos(phase)) : (A*Math.sin(k*x)*Math.sin(phase));
+        const y = topY - yoff;
+        if(i===0) ctx.moveTo(xpx,y); else ctx.lineTo(xpx,y);
+      }
+      ctx.stroke();
+    }
+
+    // เส้นฐาน
+    ctx.lineWidth = 1; ctx.strokeStyle = '#cbd5e1';
+    ctx.beginPath(); ctx.moveTo(mouthX, topY); ctx.lineTo(pistonX, topY); ctx.stroke();
+
+    // ป้ายกำกับปลายท่อ
+    ctx.fillStyle = '#475569'; ctx.font = '12px system-ui';
+    ctx.fillText('ปากท่อ (เปิด)', mouthX-6, topY-40);
+    ctx.textAlign = 'right';
+    ctx.fillText((p.tubeType==='oo') ? 'ปลายเปิด' : 'ลูกสูบ (ปิด)', pistonX+54, topY-40);
+    ctx.textAlign = 'start';
+
+    // แสดง Δ ถ้าเปิด End correction
+    const delta = p.delta;
+    if(delta>0){
+      ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1.5;
+      // ชี้ตำแหน่ง End correction ที่ปากท่อด้านขวา (และเขียนรวม 2Δ ในกรณีปลายเปิด–ปลายเปิด)
+      ctx.beginPath(); ctx.moveTo(pistonX+14, topY-18); ctx.lineTo(pistonX+14, topY+18); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(pistonX+14, topY); ctx.lineTo(pistonX+34, topY); ctx.stroke();
+      const dTxt = (p.tubeType==='oo') ? `2Δ ≈ ${(delta*100).toFixed(1)} cm` : `Δ ≈ ${(delta*100).toFixed(1)} cm`;
+      ctx.fillStyle = '#64748b'; ctx.fillText(dTxt, pistonX+38, topY-6);
+    }
+  }
+
+  // ---------- Audio loud/soft modulation by resonance ----------
+  function updateAudioLoudness(){
+    const p = readParams();
+    const k = 2*Math.PI / p.lambda;
+    const kLeff = k * p.Leff;
+    // OC: resonance at (2n-1)π/2 -> |sin| peak
+    // OO: resonance at nπ -> |cos| peak
+    const R = (p.tubeType==='oo') ? Math.cos(kLeff) : Math.sin(kLeff);
+    const amp = Math.abs(R); // 0..1
+    const base = 0.02, span = 0.10; // final gain ≈ 0.02..0.12
+    targetGain = base + span * (amp*amp); // sin^2 envelope, smoother
+    if(gain){
+      const current = gain.gain.value;
+      gain.gain.value = current + 0.1*(targetGain - current);
+    }
+  }
+
+  // ---------- Dragging (piston or tube) — Pointer Events + Mouse/Touch fallback ----------
+  function getRect(){ return view.getBoundingClientRect(); }
+  function posFromClient(clientX, clientY){ const r = getRect(); return {x: clientX - r.left, y: clientY - r.top}; }
+  function isOnPiston(x,y){
+    if(!layout || !layout.Lpx) return false;
+    if(layout.tubeType==='oo') return false; // ปลายเปิด–เปิด ไม่มีลูกสูบ
+    const nearX = Math.abs(x - layout.pistonX) < 40; // กว้างขึ้น
+    const nearY = Math.abs(y - layout.topY) < 56;
+    return nearX && nearY;
+  }
+  function isOnTube(x,y){
+    if(!layout || !layout.Lpx) return false;
+    const nearY = Math.abs(y - layout.topY) < 100; // โซนแนวตั้งกว้างขึ้น จับง่ายบน Chrome/มือถือ // โซนหนาขึ้น
+    const nearX = (x >= layout.mouthX - 20 && x <= layout.w - 40); // คลุมตั้งแต่ปากท่อถึงขอบขวา
+    return nearX && nearY;
+  }
+  function setLengthFromX(x){
+    const xClamped = Math.max(layout.mouthX, Math.min(x, layout.w - 40));
+    const Lm = Math.max(0.05, (xClamped - layout.mouthX) / layout.pxPerMeter); // meters
+    const Lcm = Math.min(120, Math.max(25, Lm*100));
+    ui.L.value = Lcm.toFixed(1);
+    ui.LVal.textContent = Lcm.toFixed(1);
+    updateReadout();
+  }
+  function startDragAt(x,y){
+    if(isOnPiston(x,y) || isOnTube(x,y)){
+      dragging = true;
+      setLengthFromX(x);
+      return true;
+    }
+    return false;
+  }
+  function updateDragAt(x){ if(dragging) setLengthFromX(x); }
+  function endDrag(){ dragging = false; }
+
+  // Pointer Events (modern browsers)
+  view.addEventListener('pointerdown', (evt)=>{
+    const p = posFromClient(evt.clientX, evt.clientY);
+    if(startDragAt(p.x,p.y)){
+      view.setPointerCapture?.(evt.pointerId);
+      evt.preventDefault();
+    }
+  });
+  view.addEventListener('pointermove', (evt)=>{
+    const p = posFromClient(evt.clientX, evt.clientY);
+    view.style.cursor = (isOnPiston(p.x,p.y) || isOnTube(p.x,p.y) || dragging) ? 'ew-resize' : 'default';
+    if(!dragging) return;
+    evt.preventDefault();
+    updateDragAt(p.x);
+  });
+  view.addEventListener('pointerup', (evt)=>{ endDrag(); view.releasePointerCapture?.(evt.pointerId); });
+  view.addEventListener('pointercancel', ()=>{ endDrag(); });
+
+  // Mouse fallback
+  view.addEventListener('mousedown', (evt)=>{
+    const p = posFromClient(evt.clientX, evt.clientY);
+    if(startDragAt(p.x,p.y)) evt.preventDefault();
+  });
+  window.addEventListener('mousemove', (evt)=>{
+    const p = posFromClient(evt.clientX, evt.clientY);
+    view.style.cursor = (isOnPiston(p.x,p.y) || isOnTube(p.x,p.y) || dragging) ? 'ew-resize' : 'default';
+    updateDragAt(p.x);
+  });
+  window.addEventListener('mouseup', ()=>{ endDrag(); });
+
+  // Touch fallback
+  view.addEventListener('touchstart', (evt)=>{
+    if(!evt.touches || !evt.touches[0]) return;
+    const t = evt.touches[0];
+    const p = posFromClient(t.clientX, t.clientY);
+    if(startDragAt(p.x,p.y)) evt.preventDefault();
+  }, {passive:false});
+  window.addEventListener('touchmove', (evt)=>{
+    if(!evt.touches || !evt.touches[0]) return;
+    const t = evt.touches[0];
+    const p = posFromClient(t.clientX, t.clientY);
+    if(dragging) evt.preventDefault();
+    updateDragAt(p.x);
+  }, {passive:false});
+  window.addEventListener('touchend', ()=>{ endDrag(); }, {passive:false});
+
+  // Tap/Click-to-set fallback (แตะครั้งเดียวเพื่อเซ็ตความยาวทันที)
+  view.addEventListener('click', (evt)=>{
+    const p = posFromClient(evt.clientX, evt.clientY);
+    if(isOnTube(p.x,p.y) || isOnPiston(p.x,p.y)) setLengthFromX(p.x);
+  });
+
+  function loop(){
+    state.t += 1/60;
+    resize();
+    draw();
+    updateAudioLoudness();
+    requestAnimationFrame(loop);
+  }
+
+  // Init
+  updateReadout();
+  resize();
+  requestAnimationFrame(loop);
+})();
+</script>
+
+<script>
+  // ---------- สูตรสำคัญ (Overlay) ----------
+  (function(){
+    const formulaOverlay = document.getElementById('formulaOverlay');
+    const openFormula = document.getElementById('openFormula');
+    const closeFormula = document.getElementById('closeFormula');
+
+    function showFormula(){
+      if(!formulaOverlay) return;
+      formulaOverlay.style.display = 'flex';
+      formulaOverlay.setAttribute('aria-hidden','false');
+      document.body.style.overflow = 'hidden';
+    document.body.classList.add('overlay-open');
+      // ให้ MathJax typeset หลังโมดัลแสดงผลแล้ว (กันกรณีไม่เรนเดอร์)
+      if(window.MathJax && window.MathJax.typesetPromise){
+        window.MathJax.typesetPromise().then(()=>{ document.body.classList.add('mathjax-ready'); }).catch(()=>{});
+        setTimeout(()=>{ window.MathJax.typesetPromise().then(()=>{ document.body.classList.add('mathjax-ready'); }).catch(()=>{}); }, 60);
+      }
+    }
+    function hideFormula(){
+      if(!formulaOverlay) return;
+      formulaOverlay.style.display = 'none';
+      formulaOverlay.setAttribute('aria-hidden','true');
+      // อย่าปลด overflow ถ้า quiz ยังเปิดอยู่
+      if(true){ document.body.style.overflow = ''; }
+      document.body.classList.remove('overlay-open');
+    }
+
+    openFormula?.addEventListener('click', (e)=>{ e.preventDefault(); showFormula(); });
+    closeFormula?.addEventListener('click', (e)=>{ e.preventDefault(); hideFormula(); });
+    formulaOverlay?.addEventListener('click', (e)=>{ if(e.target === formulaOverlay) hideFormula(); });
+    window.addEventListener('keydown', (e)=>{ if(e.key === 'Escape' && formulaOverlay?.style.display === 'flex') hideFormula(); });
+  })();
+</script>
+
+
+<script>
+  // Mark MathJax ready (for showing LaTeX version in formula boxes)
+  window.addEventListener('load', ()=>{
+    if(window.MathJax && window.MathJax.typesetPromise){
+      window.MathJax.typesetPromise().then(()=>{ document.body.classList.add('mathjax-ready'); }).catch(()=>{});
+    }
+  });
+</script>
+
+
+
+<!-- Mobile floating action bar (buttons are moved here via JS on mobile only) -->
+<div id="mobileActionBar" aria-hidden="true"></div>
+
+<button id="mobileToggleBtn" aria-label="ซ่อน/แสดงปุ่ม" title="ซ่อน/แสดงปุ่ม" style="display:none">
+  <!-- eye icon like password -->
+  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" stroke="white" stroke-width="1.8"/>
+    <path d="M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z" stroke="white" stroke-width="1.8"/>
+    <path d="M4 4 20 20" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+  </svg>
+</button>
+
+
+
+<script>
+/* Mobile-only: ย้ายปุ่มไปไว้ใต้จอทดลอง (ไม่ใช้ปุ่มลอย) */
+(function(){
+  const mq = window.matchMedia('(max-width: 768px)');
+  const ids = ['play','openFormula'];
+  const placeholders = {};
+  let moved = false;
+
+  function ensurePlaceholders(){
+    ids.forEach(id=>{
+      const el = document.getElementById(id);
+      if(!el || placeholders[id]) return;
+      const ph = document.createElement('span');
+      ph.className = 'mobile-moved';
+      ph.style.display = 'none';
+      el.parentNode.insertBefore(ph, el);
+      placeholders[id] = ph;
+    });
+  }
+
+  function moveUnderBoard(){
+    const bar = document.getElementById('mobileUnderBoardBar');
+    if(!bar) return;
+    ensurePlaceholders();
+    bar.innerHTML = '';
+    ids.forEach(id=>{
+      const el = document.getElementById(id);
+      if(el) bar.appendChild(el);
+    });
+    bar.setAttribute('aria-hidden','false');
+    moved = true;
+  }
+
+  function moveBackToPanel(){
+    const bar = document.getElementById('mobileUnderBoardBar');
+    ids.forEach(id=>{
+      const el = document.getElementById(id);
+      const ph = placeholders[id];
+      if(el && ph && ph.parentNode){
+        ph.parentNode.insertBefore(el, ph.nextSibling);
+      }
+    });
+    if(bar){
+      bar.innerHTML = '';
+      bar.setAttribute('aria-hidden','true');
+    }
+    moved = false;
+  }
+
+  function apply(){
+    if(mq.matches){
+      moveUnderBoard();
+    }else if(moved){
+      moveBackToPanel();
+    }
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', apply);
+  }else{
+    apply();
+  }
+
+  if(mq.addEventListener){
+    mq.addEventListener('change', apply);
+  }else{
+    mq.addListener(apply);
+  }
+})();
+</script>
+
+</body>
+</html>

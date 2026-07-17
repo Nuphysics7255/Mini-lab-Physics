@@ -1,0 +1,1347 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>การแทรกสอดของเสียง — ลำโพง 2 แหล่ง + คนเดิน (มีเสียงจริง) | สูตร & แบบฝึกหัด (ออฟไลน์)</title>
+<style>
+  :root{--ink:#0f172a; --muted:#64748b; --line:#e5e7eb; --bg:#ffffff; --accent:#2563eb; --accent-soft:#eef2ff; --accent-strong:#1d4ed8; --fringe:#22c55e; --card:#f8fafc; --card2:#ffffff;}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{margin:0;font-family:system-ui, Inter, 'Noto Sans Thai', sans-serif;color:var(--ink);background:var(--bg);display:flex;flex-direction:column}
+  header{padding:12px 16px;border-bottom:1px solid var(--line);background:linear-gradient(90deg,#e0f2fe,#ffffff)}
+  header h1{font-size:18px;margin:0}
+  .stage{position:relative;flex:1 1 auto;min-height:0}
+  canvas{display:block;width:100%;height:100%;background:linear-gradient(#f8fafc,#ffffff 40%)}
+  .hud{position:absolute;left:12px;right:12px;bottom:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;background:rgba(255,255,255,.94);backdrop-filter:blur(6px);border:1px solid var(--line);border-radius:14px;padding:10px 12px;box-shadow:0 6px 26px rgba(0,0,0,.12)}
+  .row{display:flex;align-items:center;gap:6px}
+  .row label{font-size:12px;color:var(--muted)}
+  .row input[type="range"]{width:168px}
+  .row input[type="number"]{width:86px;padding:6px;border:1px solid var(--line);border-radius:8px}
+  .chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);padding:7px 11px;border-radius:999px;background:#fff;cursor:pointer;font-size:13px}
+  .chip input{accent-color:var(--accent)}
+  .pill{background:var(--accent-soft);color:#0b4aa0;border-radius:999px;padding:6px 10px;font-size:12px}
+  .counts{margin-left:auto;display:flex;gap:8px;align-items:center}
+  .btn{appearance:none;border:1px solid var(--line);background:#fff;padding:8px 12px;border-radius:10px;cursor:pointer;font-size:14px}
+  .btn.primary{background:var(--accent-strong);color:#fff;border-color:var(--accent-strong)}
+  footer{flex:0 0 auto;border-top:1px solid var(--line);padding:10px 16px;color:#475569;font-size:12px;background:#fbfdff}
+  a{color:#2563eb;text-decoration:none}
+  .listener{position:absolute;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;user-select:none;touch-action:none;transform:translate(-50%,-50%);box-shadow:0 6px 16px rgba(0,0,0,.15);border:1px solid var(--line);background:#ffffffcc;transition: box-shadow .2s ease, transform .1s ease;font-size:18px;}
+  .listener.loud{animation:pulse .6s infinite alternate;background:#ffe8e8;border-color:#fecaca}
+  .listener.quiet{background:#e0f2fe;border-color:#bae6fd}
+  @keyframes pulse{from{box-shadow:0 0 0 0 rgba(239,68,68,.55)} to{box-shadow:0 0 18px 8px rgba(239,68,68,.0)}}
+  details.dd{position:relative} details.dd>summary{list-style:none} details.dd>summary::-webkit-details-marker{display:none}
+  .menu{position:absolute;top:100%;left:0;margin-top:6px;display:none;background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 10px;box-shadow:0 8px 24px rgba(0,0,0,.12);min-width:260px;z-index:20}
+  details.dd[open] .menu{display:block} .menu label{display:flex;align-items:center;gap:8px;padding:6px 4px;font-size:13px;white-space:nowrap}
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;padding:16px;z-index:50}
+  .modal.open{display:flex}
+  .modal-panel{background:#fff;border-radius:16px;max-width:min(980px,94vw);width:100%;box-shadow:0 10px 40px rgba(0,0,0,.18);overflow:hidden}
+  .modal-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line);background:linear-gradient(90deg,#eef2ff,#ffffff)}
+  .modal-body{padding:16px;line-height:1.7} .modal-body p,.modal-body li{font-size:15px}
+  .modal-footer{padding:12px 16px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px;background:#ffffff}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:10px 0}
+  .card2{background:var(--card2);border:1px dashed var(--line);border-radius:12px;padding:12px 14px;margin:10px 0}
+  .tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;background:#e0f2fe;color:#075985;border:1px solid #bae6fd}
+  .modal-body ul{margin:8px 0 12px 20px}
+  details summary{cursor:pointer;color:#1d4ed8}
+  .eq img{display:block; margin:6px 0; max-width:100%;}
+
+  /* v12: ear icon + flash only when loud; stronger green lines; modal reliability */
+  .listener{font-size:22px; position:absolute; z-index:5;}
+  .listener.loud{
+    animation: earPulse 0.35s ease-in-out infinite;
+    filter: drop-shadow(0 0 10px rgba(255,165,0,0.85));
+  }
+  .listener.loud::after{
+    content:"";
+    position:absolute;
+    left:50%; top:50%;
+    width:54px; height:54px;
+    transform:translate(-50%,-50%);
+    border-radius:999px;
+    border:2px solid rgba(255,165,0,0.85);
+    box-shadow:0 0 18px rgba(255,165,0,0.6);
+    animation:ring 0.7s ease-out infinite;
+    pointer-events:none;
+  }
+  @keyframes earPulse{
+    0%{transform:translate(-50%,-50%) scale(1);}
+    50%{transform:translate(-50%,-50%) scale(1.08);}
+    100%{transform:translate(-50%,-50%) scale(1);}
+  }
+  @keyframes ring{
+    0%{opacity:0.9; transform:translate(-50%,-50%) scale(0.55);}
+    100%{opacity:0; transform:translate(-50%,-50%) scale(1.25);}
+  }
+  .modal{z-index:5000;}
+
+
+  /* v13: standard buttons + mobile HUD under canvas */
+  #playBtn{background:#2563eb;color:#fff;border-color:#1d4ed8}
+  #resetBtn{background:#f3f4f6;color:#111827;border-color:#d1d5db}
+  #formulaBtn{background:#ffedd5;color:#9a3412;border-color:#fdba74}
+  #exerciseBtn{background:#dcfce7;color:#166534;border-color:#86efac}
+
+  @media (max-width:768px){
+    .stage{display:flex;flex-direction:column;}
+    canvas{height:56vh;}
+    .hud{position:relative;left:auto;right:auto;bottom:auto;margin:10px 12px 88px; /* leave room for phone bar */ }
+  }
+
+
+  .check-fixed{position:fixed;left:50%;transform:translateX(-50%);bottom:16px;z-index:6000;background:#dcfce7;color:#166534;border-color:#86efac;padding:10px 16px}
+  @media (max-width:768px){
+    .hud{position:relative;left:auto;right:auto;bottom:auto;margin:10px 12px 92px;}
+  }
+
+  /* v15: modal scrolling + mobile safe area */
+  .modal-panel{
+    max-height: calc(100vh - 16px);
+    overflow: hidden;
+  }
+  .modal-body{
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    max-height: calc(100vh - 110px);
+    padding-bottom: 130px;
+  }
+  .modal-header{
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+
+
+  /* v15: visible green checkbox panel */
+  .green-controls-outer{
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:10px 12px;
+    background:#f8fafc;
+    min-width: 280px;
+    margin-top:10px;
+  }
+  .gc-title{font-weight:800;color:#16a34a;margin-bottom:6px}
+  .gc-item{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--ink);margin:6px 0}
+  .gc-item input[type="checkbox"]{width:20px;height:20px;accent-color:#22c55e}
+
+
+  .modal-panel{max-height: calc(100vh - 16px); overflow:hidden;}
+  .modal-body{overflow-y:auto;-webkit-overflow-scrolling:touch;max-height: calc(100vh - 110px);padding-bottom:130px;}
+  .modal-header{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .modal-header-actions{display:flex;align-items:center;gap:10px;}
+  .btn.pillbtn{border-radius:999px;padding:8px 12px;font-weight:700;}
+
+
+  /* v19: formula colors per request */
+  #formulaModal .modal-panel{background:#f1f5f9 !important;} /* gray */
+  #formulaModal .modal-header{background:#b45309;border-bottom:1px solid #92400e;} /* dark orange-brown header */
+  #formulaModal .modal-header h3{color:#fff;}
+  #formulaModal .modal-header .btn{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.25);color:#fff;}
+  #formulaModal .modal-header .btn:hover{background:rgba(255,255,255,.18);} 
+  
+  #formulaModal .formula-card{background:#f3f4f6 !important;border:1px solid #fb923c !important;border-radius:14px;padding:18px;}
+  #formulaModal .formula-tag{background:#fff7ed;border-color:#fb923c;color:#9a3412;}
+  #formulaModal .formula-h{color:#1d4ed8;margin:6px 0 10px;}
+  #formulaModal .formula-eq{font-size:20px;font-weight:800;margin:6px 0 10px;}
+
+/* ===== Override: Exercise header green ===== */
+#exerciseModal .modal-header{
+  background:#dcfce7 !important;
+  border-bottom:1px solid #86efac !important;
+}
+#exerciseModal .modal-header h3{
+  color:#14532d !important;
+}
+
+/* ===== Exercise fullscreen ===== */
+#exerciseModal{padding:0 !important;align-items:stretch !important;justify-content:stretch !important;}
+#exerciseModal .modal-panel{max-width:none !important;width:100vw !important;height:100vh !important;border-radius:0 !important;}
+#exerciseModal .modal-body{max-height: calc(100vh - 96px) !important;padding-bottom: 140px !important;}
+
+/* ===== Override: Formula inner box light gray ===== */
+#formulaModal .card,
+#formulaModal .card2{
+  border:2px solid #f59e0b !important;
+  background:#f3f4f6 !important;
+}
+
+
+  /* ===== Mobile: draggable show/hide controls button ===== */
+  #toggleControlsBtn{
+    position: fixed;
+    z-index: 9999;
+    pointer-events: auto;
+    right: 14px;
+    bottom: 140px;
+    background: #111827;
+    color: #fff;
+    border: 1px solid rgba(255,255,255,.25);
+    border-radius: 12px;
+    padding: 10px 12px;
+    font-weight: 800;
+    font-size: 13px;
+    box-shadow: 0 10px 25px rgba(0,0,0,.22);
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    display: none;
+  }
+  #toggleControlsBtn:active{cursor: grabbing;}
+
+  #toggleControlsBtn .eyeRow{display:flex;align-items:center;gap:8px;white-space:nowrap;}
+  #toggleControlsBtn svg{width:18px;height:18px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto;}
+  #toggleControlsBtn .eyeTxt{color:#fff;}
+
+  body.controls-hidden .hud-actions{display:none !important;}
+  body.controls-hidden #mobileBar{display:none !important;}
+  body.controls-hidden #toggleControlsBtn{bottom: calc(12px + env(safe-area-inset-bottom));}
+  @media (max-width: 820px){
+    #toggleControlsBtn{display:block;}
+  }
+
+</style>
+
+<style>
+/* ===== Fullscreen "สูตรสำคัญ" (ตามมาตรฐานเพจ: โทนส้มอ่อน + กรอบสูตร) ===== */
+#formulaModal.open{padding:0 !important;}
+#formulaModal.open .modal-panel{
+  width:100vw !important;
+  height:100vh !important;
+  max-width:none !important;
+  border-radius:0 !important;
+}
+#formulaModal .modal-header{
+  position:sticky; top:0;
+  padding-top: calc(12px + env(safe-area-inset-top));
+  padding-right: calc(16px + env(safe-area-inset-right));
+  padding-left: calc(16px + env(safe-area-inset-left));
+  background: #ffe9c6 !important;
+}
+#formulaModal .modal-body{
+  background:#fff7e6 !important;
+  padding-bottom: calc(110px + env(safe-area-inset-bottom));
+}
+#formulaModal .card, #formulaModal .card2{
+  border:2px solid #f59e0b !important;
+  background:#fff3cd !important;
+}
+#formulaModal .card2{ border-style:solid !important; opacity:0.98; }
+#formulaModal .tag{
+  background:#ffedd5 !important;
+  border-color:#fdba74 !important;
+  color:#9a3412 !important;
+}
+#formulaModal .btn[data-close="formulaModal" onclick="window.__closeFormula()"]{
+  position:fixed;
+  top: calc(12px + env(safe-area-inset-top));
+  right: calc(12px + env(safe-area-inset-right));
+  border-radius:999px;
+  background:#ef4444;
+  border-color:#ef4444;
+  color:#fff;
+  z-index:10001;
+}
+
+/* ===== Mobile layout: แผงควบคุมอยู่ใต้จอทดลอง (ไม่ซ้อนทับ) ===== */
+@media (max-width: 768px){
+  body{ padding-bottom: calc(74px + env(safe-area-inset-bottom)); }
+  .stage{ display:flex; flex-direction:column; }
+  canvas{ flex:1 1 auto; height:auto !important; min-height: 340px; }
+  .hud{
+    position:static !important;
+    left:auto !important; right:auto !important; bottom:auto !important;
+    margin:10px 12px 0 12px;
+    border-radius:14px;
+  }
+  .counts{ flex-wrap:wrap; gap:8px; }
+  /* hide inline chips on mobile (ใช้แถบปุ่มล่างแทน) */
+  #formulaBtn, #exerciseBtn, #playBtn, #resetBtn{ display:none !important; }
+  #mobileBar{ display:flex !important; }
+}
+
+/* ===== Mobile bottom controls (สี่เหลี่ยม ลอยล่างจอ) ===== */
+#mobileBar{
+  display:none;
+  position:fixed;
+  left:12px;
+  right:12px;
+  bottom: calc(12px + env(safe-area-inset-bottom));
+  gap:10px;
+  z-index:9999;
+}
+#mobileBar .mbtn{
+  flex:1 1 0;
+  height:50px;
+  border-radius:12px;
+  border:1px solid var(--line);
+  box-shadow:0 6px 18px rgba(0,0,0,0.14);
+  font-size:20px;
+  cursor:pointer;
+  user-select:none;
+}
+#mobileBar .mbtn.play{ background:#2563eb; color:#fff; border-color:#2563eb; }
+#mobileBar .mbtn.reset{ background:#9ca3af; color:#fff; border-color:#9ca3af; }
+#mobileBar .mbtn.formula{ background:#ffedd5; color:#9a3412; border-color:#fdba74; }
+#mobileBar .mbtn.quiz{ background:#dcfce7; color:#14532d; border-color:#86efac; }
+
+/* Desktop: keep original overlay HUD */
+@media (min-width: 769px){
+  #mobileBar{ display:none !important; }
+}
+</style>
+
+
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['$','$'], ['\\(','\\)']],
+    displayMath: [['\\[','\\]']],
+    processEscapes: true
+  },
+  svg: { fontCache: 'global' },
+  options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+  startup: {
+    ready: () => {
+      MathJax.startup.defaultReady();
+      MathJax.typesetPromise();
+    }
+  }
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+
+
+<style>
+/* ===== Style Patch v24 ===== */
+
+/* Orange border remains */
+.formula-box, .explain-box {
+    border: 3px solid #f39c12 !important;
+    border-radius: 14px !important;
+    padding: 20px !important;
+    margin-bottom: 25px !important;
+    background: #f2f2f2 !important; /* Light grey inside */
+}
+
+/* Top label strip remains orange */
+.section-label {
+    background: #f39c12 !important;
+    color: white !important;
+    padding: 6px 14px !important;
+    border-radius: 20px !important;
+    display: inline-block !important;
+    margin-bottom: 12px !important;
+    font-weight: 600 !important;
+}
+</style>
+
+<style>
+/* ===== Updated Formula Style ===== */
+#formulaModal .modal-body{
+  background:#eaf2f8 !important; /* light blue-gray */
+}
+
+#formulaModal .card,
+#formulaModal .card2{
+  background:#f4f8fb !important;
+  border:2px solid #f39c12 !important;
+  border-radius:14px !important;
+}
+
+#formulaModal .modal-header{
+  background:#f39c12 !important;
+  color:white !important;
+}
+
+#formulaModal .modal-header h3{
+  color:white !important;
+}
+</style>
+<style>
+
+/* ===== Patch v30: header blue + desktop right panel + mobile spacing + hide floating buttons in quiz ===== */
+header h1{ color:#1d4ed8 !important; } /* blue */
+
+/* Desktop: put canvas left, control panel right (no overlay) */
+@media (min-width: 769px){
+  .stage{ display:flex !important; flex-direction:row !important; align-items:stretch; }
+  canvas{ flex:1 1 auto !important; height:100% !important; }
+  .hud{
+    position:relative !important;
+    left:auto !important; right:auto !important; bottom:auto !important;
+    margin:12px !important;
+    width:min(420px, 34vw) !important;
+    max-height:calc(100% - 24px) !important;
+    overflow:auto !important;
+    align-self:stretch !important;
+    flex:0 0 auto !important;
+  }
+  .counts{ margin-left:0 !important; }
+}
+
+/* Mobile: bring control panel closer to canvas bottom (remove extra blank gap) */
+@media (max-width:768px){
+  canvas{ height:56vh !important; margin-bottom:0 !important; }
+  .hud{ margin:0 12px 92px !important; }
+}
+
+/* Hide bottom floating buttons whenever a modal (formula/exercise) is open */
+body.modalOpen #mobileBar{ display:none !important; }
+
+</style>
+<style>
+
+/* v31: Mobile ear easier to drag */
+@media (max-width:768px){
+  .listener{
+    width:56px !important;
+    height:56px !important;
+    font-size:30px !important;
+  }
+}
+
+</style>
+<style>
+
+/* ===== Patch v32: HUD order + button row + desktop fit + static screen until play ===== */
+.counts{flex-wrap:wrap !important; align-items:flex-start !important;}
+.counts .btn-row{flex-basis:100%; display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;}
+@media (max-width:768px){
+  .counts .btn-row{justify-content:space-between;}
+}
+
+/* Prevent horizontal scroll on desktop */
+html, body{ overflow-x:hidden !important; }
+.stage{ min-width:0 !important; }
+canvas{ min-width:0 !important; }
+
+/* Desktop: slightly smaller right panel to fit */
+@media (min-width: 769px){
+  .hud{ width:min(360px, 32vw) !important; }
+}
+
+</style>
+<style>
+
+/* ===== Patch v33: tighter spacing + restore lambda + longer buttons ===== */
+.row{gap:6px;}
+.row + .row{margin-top:6px;}
+
+.lambda-row{margin-top:4px !important;}
+.lambda-row .pill{padding:6px 10px; font-size:12px;}
+
+.counts{flex-wrap:wrap !important; align-items:flex-start !important;}
+.counts .btn-row{
+  flex-basis:100%;
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+  margin-top:6px;
+}
+.counts .btn-row .chip{
+  flex:1 1 170px;
+  min-width:170px;
+  padding:10px 18px; /* longer */
+  border-radius:12px;
+  justify-content:center;
+}
+
+@media (max-width:768px){
+  .counts .btn-row{justify-content:space-between;}
+  .counts .btn-row .chip{flex:1 1 0; min-width:0;}
+}
+
+</style>
+
+<style>
+/* ===== Patch v34: move action buttons to bottom (2x2) ===== */
+.hud-actions{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:10px;
+  width:100%;
+  margin:10px 0 6px;
+}
+.hud-actions .chip{
+  justify-content:center;
+  padding:12px 12px;
+  border-radius:12px;
+  font-size:14px;
+}
+#closeBtn{
+  background:#ef4444;
+  color:#fff;
+  border-color:#ef4444;
+}
+
+/* Mobile: hide in-panel action buttons (use mobile bottom bar) */
+@media (max-width:768px){
+  .hud-actions{ display:none !important; }
+}
+</style>
+
+</head>
+<body>
+<header><h1>การแทรกสอดของเสียง — ลำโพง 2 แหล่ง + คนเดิน (มีเสียงจริง)</h1></header>
+
+<div class="stage">
+  <canvas id="view"></canvas>
+  <div id="listener" class="listener quiet" title="ลากเพื่อเดิน">👂</div>
+
+  <div class="hud"><div class="row">
+      <label for="sepRange">ระยะห่างลำโพง d (m)</label>
+      <input id="sepRange" type="range" min="0.20" max="3.00" step="0.01" value="1.20" />
+      <input id="sepNum" type="number" min="0.20" max="3.00" step="0.01" value="1.20" />
+    </div>
+    <div class="row">
+      <label for="speedRange">อัตราเร็วเสียง v (m/s)</label>
+      <input id="speedRange" type="range" min="300" max="360" step="1" value="343" />
+      <input id="speedNum" type="number" min="300" max="360" step="1" value="343" />
+    </div>
+    
+    <div class="row">
+      <label for="freqRange">ความถี่ f (Hz)</label>
+      <input id="freqRange" type="range" min="100" max="2000" step="1" value="440" />
+      <input id="freqNum" type="number" min="100" max="2000" step="1" value="440" />
+    </div>
+    
+    
+    <div class="row lambda-row" aria-label="lambda-row">
+  <span class="pill">λ = <b id="lambdaVal">-</b> m</span>
+  <span class="pill" style="display:none;">แนวบัพ: <b id="nodalCount">-</b></span>
+  <span class="pill" style="display:none;">ปฏิบัพ: <b id="antiCount">-</b></span>
+</div>
+
+<!-- แถวปุ่มหลัก (ย้ายลงล่างสุด ไม่อยู่ในกรอบ λ) -->
+<div class="hud-actions" aria-label="hud-actions">
+  <button id="playBtn" class="chip" style="background:var(--accent);color:#fff;border-color:var(--accent-strong);">▶ เปิดเสียง</button>
+  <button id="resetBtn" class="chip">🔄 รีเซ็ต</button>
+  <button id="formulaBtn" class="chip" onclick="window.__openFormula()">Σ สูตรสำคัญ</button>
+  <button id="exerciseBtn" class="chip" onclick="window.__openExercise()">📝 แบบฝึกหัด</button>
+</div>
+
+<div class="row">
+      <label>เฟส</label>
+      <select id="phaseMode">
+        <option value="0">ตรงกัน (φ=0)</option>
+        <option value="PI">ตรงข้าม (φ=π)</option>
+      </select>
+    </div>
+    <div class="green-controls-outer">
+  <div class="gc-title">🟢 แนวสีเขียว</div>
+  <label class="gc-item"><input id="chkNodal" type="checkbox"> แสดงแนวบัพ (เขียวเส้นปะ)</label>
+  <label class="gc-item"><input id="chkAnti" type="checkbox"> แสดงแนวปฏิบัพ (เขียวเส้นเต็ม)</label>
+</div>
+    <div class="row">
+      <label for="volRange">ระดับเสียง</label>
+      <input id="volRange" type="range" min="0" max="1" step="0.01" value="0.12" />
+    </div>
+    <span class="counts">
+      </span>
+  </div>
+</div>
+
+<footer>ศึกษาเพิ่มเติมได้ที่เพจ <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">คลายปมฟิสิกส์</a></footer>
+
+<!-- Mobile bottom controls (มาตรฐานเพจ) -->
+<div id="mobileBar" aria-hidden="true">
+  <button id="mPlay" class="mbtn play">▶️</button>
+  <button id="mReset" class="mbtn reset">🔄</button>
+  <button id="mFormula" class="mbtn formula">Σ</button>
+  <button id="mExercise" class="mbtn quiz">📝</button>
+</div>
+
+<!-- Mobile: draggable show/hide bottom buttons -->
+<button id="toggleControlsBtn" type="button" aria-label="ซ่อน/แสดงปุ่มควบคุม"></button>
+
+
+
+<!-- สูตรสำคัญ -->
+<div id="formulaModal" class="modal" aria-hidden="true">
+  <div class="modal-panel">
+    <div class="modal-header">
+      <h3>สรุปสูตรการแทรกสอดของคลื่นเสียง (2 แหล่ง) </h3>
+      <div class="modal-header-actions">
+        <button class="btn pillbtn" onclick="window.__closeFormula(); window.__openExercise();" title="ไปหน้าแบบฝึกหัด">📝 แบบฝึกหัด</button>
+        <button class="btn" data-close="formulaModal" onclick="window.__closeFormula()" title="ปิด">❌</button>
+      </div>
+    </div>
+    
+    
+    <div class="modal-body">
+      <div class="card formula-card">
+        <span class="tag formula-tag">อธิบายแบบเข้าใจง่าย</span>
+        <p><b>การแทรกสอดของเสียง</b> คือการที่คลื่นเสียงจากลำโพง 2 แหล่งเดินทางมาซ้อนทับกันที่ตำแหน่งหนึ่ง ทำให้บางจุด “ดังมาก” และบางจุด “เบามาก” เพราะคลื่นช่วยกันเสริม หรือหักล้างกัน</p>
+        <ul>
+          <li><b>ดัง (ปฏิบัพ)</b>: คลื่นมาถึง “เฟสเดียวกัน” → สันเจอสัน / ท้องเจอท้อง</li>
+          <li><b>เบา (บัพ)</b>: คลื่นมาถึง “เฟสตรงข้าม” → สันเจอท้อง</li>
+        </ul>
+        <p>ตัวตัดสินคือ <b>ผลต่างระยะทาง</b> ระหว่างทางเดินจากลำโพงทั้งสองถึงจุดนั้น: \( \Delta r = |r_2-r_1| \)</p>
+      </div>
+
+      <div class="card formula-card">
+        <span class="tag formula-tag">นิยามสำคัญ</span>
+        <div class="formula-eq">ผลต่างระยะทาง \( \Delta r = |S_1P - S_2P| = d\sin\theta \)</div>
+        <div class="muted" style="line-height:1.75">
+          \(S_1P, S_2P\) คือระยะจากแหล่งกำเนิดเสียงแต่ละตัวถึงจุด \(P\)<br>
+          \(d\) = ระยะห่างระหว่างแหล่งกำเนิดเสียงทั้ง 2 ตัว<br>
+          \(\theta\) = มุมที่เบนจากแนวกลาง
+        </div>
+      </div>
+
+      <div class="card formula-card">
+        <span class="tag formula-tag">เงื่อนไขจำง่าย</span>
+        <h4 class="formula-h">เงื่อนไขจำง่าย (เฟสตรงกัน \( \varphi=0 \))</h4>
+        <ul>
+          <li><b>ปฏิบัพ (A)</b>: \( \Delta r = n\lambda \) หรือ \( |S_1P-S_2P|=n\lambda \) หรือ \( d\sin\theta=n\lambda \)<br><span class="muted">เมื่อ \(n=0,1,2,\ldots\)</span></li>
+          <li style="margin-top:10px;"><b>บัพ (N)</b>: \( \Delta r = \left(n-\tfrac{1}{2}\right)\lambda \) หรือ \( |S_1P-S_2P|=\left(n-\tfrac{1}{2}\right)\lambda \) หรือ \( d\sin\theta=\left(n-\tfrac{1}{2}\right)\lambda \)<br><span class="muted">เมื่อ \(n=1,2,3,\ldots\)</span></li>
+        </ul>
+      </div>
+
+      <div class="card formula-card">
+        <span class="tag formula-tag">เงื่อนไขจำง่าย</span>
+        <h4 class="formula-h">เงื่อนไขจำง่าย (เฟสตรงข้าม \( \varphi=\pi \))</h4>
+        <ul>
+          <li><b>ปฏิบัพ (A)</b>: \( \Delta r = \left(n-\tfrac{1}{2}\right)\lambda \) หรือ \( |S_1P-S_2P|=\left(n-\tfrac{1}{2}\right)\lambda \) หรือ \( d\sin\theta=\left(n-\tfrac{1}{2}\right)\lambda \)<br><span class="muted">เมื่อ \(n=1,2,3,\ldots\)</span></li>
+          <li style="margin-top:10px;"><b>บัพ (N)</b>: \( \Delta r = n\lambda \) หรือ \( |S_1P-S_2P|=n\lambda \) หรือ \( d\sin\theta=n\lambda \)<br><span class="muted">เมื่อ \(n=0,1,2,\ldots\) และแนวกลางคือ \(N_0\)</span></li>
+        </ul>
+        <div class="muted" style="margin-top:10px;">เคล็ดลับ: จำนวนแนว ~ อัตราส่วน \(d/\lambda\) (ยิ่ง \(d\) มากหรือ \(f\) สูง → \(\lambda\) สั้น → แนวถี่ขึ้น)</div>
+      </div>
+    </div>
+</div>
+      </div>
+    </div>
+</div>
+  </div>
+</div>
+
+<!-- แบบฝึกหัด -->
+<div id="exerciseModal" class="modal" aria-hidden="true">
+  <div class="modal-panel">
+    <div class="modal-header">
+      <h3>แบบฝึกหัด — พร้อมเฉลยและการแทนสูตร</h3>
+      <div class="modal-header-actions">
+        <button class="btn pillbtn" onclick="window.__closeExercise(); window.__openFormula();" title="ไปหน้าสูตรสำคัญ">Σ สูตรสำคัญ</button>
+        <button class="btn" data-close="exerciseModal" onclick="window.__closeExercise()" title="ปิด">❌</button>
+      </div>
+    </div>
+    
+    <div class="modal-body">
+      <div class="card">
+        <span class="tag">หัวข้อแบบฝึกหัด</span>
+        <p>เลือกคำตอบ <b>A–E</b> แล้วกด <b>ตรวจคำตอบ</b> เพื่อดูคะแนน และเฉลยละเอียด (จะแสดงเฉลยเฉพาะข้อที่ตอบแล้ว)</p>
+      </div>
+
+      <div id="quiz"></div>
+
+      <div id="scoreBox" class="card" style="display:none;">
+        <b>คะแนนของคุณ:</b> <span id="scoreText"></span>
+      </div>
+
+      <button id="checkBtn" class="chip check-fixed">✅ ตรวจคำตอบ</button>
+    </div>
+</div>
+  </div>
+</div>
+
+<script>
+
+(function(){
+  const canvas = document.getElementById('view');
+  const ctx = canvas.getContext('2d');
+  const DPR = Math.max(1, Math.min(2, window.devicePixelRatio||1));
+  let PX_PER_M = 200;
+
+  // roundRect fallback
+  if (!CanvasRenderingContext2D.prototype.roundRect) {
+    CanvasRenderingContext2D.prototype.roundRect = function(x,y,w,h,r){ this.beginPath(); this.moveTo(x+r,y); this.arcTo(x+w,y,x+w,y+h,r); this.arcTo(x+w,y+h,x,y+h,r); this.arcTo(x,y+h,x,y,r); this.arcTo(x,y,x+w,y,r); this.closePath(); return this; };
+  }
+
+  const sepRange = document.getElementById('sepRange'), sepNum = document.getElementById('sepNum');
+  const freqRange = document.getElementById('freqRange'), freqNum = document.getElementById('freqNum');
+  const speedRange = document.getElementById('speedRange'), speedNum = document.getElementById('speedNum');
+  const phaseMode = document.getElementById('phaseMode');
+  const chkNodal = document.getElementById('chkNodal');
+  const chkAnti  = document.getElementById('chkAnti');
+  const lambdaVal = document.getElementById('lambdaVal');
+  const nodalCountEl = document.getElementById('nodalCount');
+  const antiCountEl = document.getElementById('antiCount');
+  const playBtn = document.getElementById('playBtn');
+  const volRange = document.getElementById('volRange');
+  const listener = document.getElementById('listener');
+  // Hide ear until sound is turned on
+  listener.style.display = 'none';
+
+  let AC = null, osc1=null, osc2=null, g1=null, g2=null, d1=null, d2=null, pan1=null, pan2=null, master=null, comp=null;
+  let audioRunning = false;
+
+  function ensureAudio(){
+    if (AC) return;
+    AC = new (window.AudioContext || window.webkitAudioContext)();
+    osc1 = AC.createOscillator(); osc2 = AC.createOscillator();
+    osc1.type='sine'; osc2.type='sine';
+    g1 = AC.createGain(); g2 = AC.createGain();
+    d1 = AC.createDelay(2.0); d2 = AC.createDelay(2.0);
+    pan1 = AC.createStereoPanner ? AC.createStereoPanner() : null;
+    master = AC.createGain();
+    comp = AC.createDynamicsCompressor();
+    osc1.connect(g1).connect(d1);
+    osc2.connect(g2).connect(d2);
+    if (pan1) {
+      const pan2 = AC.createStereoPanner();
+      d1.connect(pan1).connect(master);
+      d2.connect(pan2).connect(master);
+      window._pan1 = pan1; window._pan2 = pan2;
+    } else {
+      // Safari fallback: no StereoPannerNode
+      d1.connect(master); d2.connect(master);
+    }
+    master.connect(comp).connect(AC.destination);
+    osc1.start(); osc2.start();
+    master.gain.value = Number(volRange.value);
+  }
+
+  function startAudio(){
+    ensureAudio();
+    AC.resume();
+    // restore gain when turning sound on
+    master.gain.setTargetAtTime(Number(volRange.value), AC.currentTime, 0.02);
+    audioRunning = true;
+    // show ear only after sound is on
+    listener.style.display = 'grid';
+    playBtn.textContent = '⏸ ปิดเสียง';
+  }
+  function stopAudio(){
+    if (!AC) return;
+    audioRunning = false;
+    // hide ear when sound is off
+    listener.style.display = 'none';
+    playBtn.textContent = '▶ เปิดเสียง';
+
+    // Ramp down quickly to avoid click
+    try{ master.gain.setTargetAtTime(0, AC.currentTime, 0.01); }catch(e){}
+
+    // Hard stop + disconnect so "หยุด" เงียบสนิท
+    try{ osc1 && osc1.stop(); }catch(e){}
+    try{ osc2 && osc2.stop(); }catch(e){}
+    try{ osc1 && osc1.disconnect(); }catch(e){}
+    try{ osc2 && osc2.disconnect(); }catch(e){}
+    try{ g1 && g1.disconnect(); }catch(e){}
+    try{ g2 && g2.disconnect(); }catch(e){}
+    try{ d1 && d1.disconnect(); }catch(e){}
+    try{ d2 && d2.disconnect(); }catch(e){}
+    try{ master && master.disconnect(); }catch(e){}
+    try{ comp && comp.disconnect && comp.disconnect(); }catch(e){}
+
+    // Close context (next start will recreate everything)
+    try{ AC.close(); }catch(e){}
+    AC = null; osc1=null; osc2=null; g1=null; g2=null; d1=null; d2=null; pan1=null; pan2=null; master=null; comp=null;
+  }
+  volRange.addEventListener('input', ()=>{ if (!AC) return; master.gain.setTargetAtTime(Number(volRange.value), AC.currentTime, 0.02); });
+  playBtn.addEventListener('click', ()=>{ if (!audioRunning) startAudio(); else stopAudio(); });
+
+  function bindPair(rangeEl, numEl){
+    const toNum = ()=>{ numEl.value = rangeEl.value; };
+    const toRange = ()=>{ rangeEl.value = numEl.value; };
+    rangeEl.addEventListener('input', toNum);
+    numEl.addEventListener('input', toRange);
+    toNum();
+  }
+  bindPair(sepRange, sepNum); bindPair(freqRange, freqNum); bindPair(speedRange, speedNum);
+
+  function resize(){
+    // Size canvas based on its rendered size (works for desktop flex layout without overflow)
+    const rect = canvas.getBoundingClientRect();
+    let w = rect.width;
+    let h = rect.height;
+
+    // Fallback for initial layout timing
+    if (w < 10 || h < 10){
+      const headerH = document.querySelector('header')?.offsetHeight || 0;
+      const footerH = document.querySelector('footer')?.offsetHeight || 0;
+      h = Math.max(420, window.innerHeight - headerH - footerH);
+      w = document.body.clientWidth;
+    }
+
+    canvas.width = Math.round(w * DPR);
+    canvas.height = Math.round(h * DPR);
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+
+    PX_PER_M = Math.max(120, Math.min(260, w / 4));
+  }
+  window.addEventListener('resize', resize, {passive:true}); resize();
+
+  let t0 = performance.now();
+  function params(){
+    const d_m = Number(sepRange.value);
+    const f = Number(freqRange.value);
+    const v = Number(speedRange.value);
+    const lambda_m = v / Math.max(1e-6,f);
+    const k = 2*Math.PI / Math.max(1e-6, lambda_m);
+    const w = 2*Math.PI*f;
+    const phi = phaseMode.value === 'PI' ? Math.PI : 0;
+    return {d_m, f, v, lambda_m, k, w, phi};
+  }
+  function sceneGeom(p){
+    const W = canvas.clientWidth, H = canvas.clientHeight;
+    const cx = W/2, cy = H*0.72;
+    const d_px = p.d_m * PX_PER_M;
+    const s1 = {x: cx - d_px/2, y: cy};
+    const s2 = {x: cx + d_px/2, y: cy};
+    return {W,H,cx,cy,s1,s2,d_px};
+  }
+
+  let L = {x:0,y:0};
+  function placeListenerInitial(){ const {W,H} = sceneGeom(params()); L.x=W*0.5; L.y=H*0.42; updateListener(); }
+  placeListenerInitial();
+
+  let dragging=false, dragOffset={x:0,y:0};
+  function pointer(e){ return ('touches' in e) ? {x:e.touches[0].clientX, y:e.touches[0].clientY} : {x:e.clientX, y:e.clientY}; }
+  listener.addEventListener('pointerdown', (e)=>{
+    listener.setPointerCapture(e.pointerId);
+    if (!audioRunning) startAudio();
+    dragging=true;
+    const p = pointer(e);
+    dragOffset.x = p.x - L.x; dragOffset.y = p.y - L.y;
+  });
+  window.addEventListener('pointermove', (e)=>{
+    if(!dragging) return;
+    const p = pointer(e);
+    L.x = p.x - dragOffset.x; L.y = p.y - dragOffset.y;
+    updateListener();
+  }, {passive:true});
+  window.addEventListener('pointerup', ()=>{ dragging=false; });
+  function updateListener(){ listener.style.left = `${L.x}px`; listener.style.top = `${L.y}px`; }
+
+  function classifyAtPoint(p, geom, x, y){
+    const r1 = Math.hypot(x - geom.s1.x, y - geom.s1.y) / PX_PER_M;
+    const r2 = Math.hypot(x - geom.s2.x, y - geom.s2.y) / PX_PER_M;
+    const delta = Math.abs(r1 - r2);
+    const lam = p.lambda_m;
+    const frac = (delta / lam) % 1;
+    const tol = 0.12;
+    const isAnti = (p.phi===0) ? (frac < tol || frac > 1-tol) : (Math.abs(frac-0.5) < tol);
+    const isNodal= (p.phi===0) ? (Math.abs(frac-0.5) < tol) : (frac < tol || frac > 1-tol);
+    return {isAnti, isNodal, r1, r2};
+  }
+
+  function updateCounts(p){
+    const d_over_lambda = (p.d_m / p.lambda_m);
+    function floorSafe(x){ return Math.max(0, Math.floor(x + 1e-9)); }
+    let antiTotal=0, nodalTotal=0;
+    if (p.phi===0){
+      const mA = floorSafe(d_over_lambda);
+      antiTotal = 1 + 2*Math.max(0,mA);
+      const mN = floorSafe(d_over_lambda - 0.5);
+      nodalTotal = 2*Math.max(0, mN + 1);
+    }else{
+      const mN = floorSafe(d_over_lambda);
+      nodalTotal = 1 + 2*Math.max(0,mN);
+      const mA = floorSafe(d_over_lambda - 0.5);
+      antiTotal = 2*Math.max(0, mA + 1);
+    }
+    nodalCountEl.textContent = nodalTotal; antiCountEl.textContent  = antiTotal;
+  }
+
+  function drawScene(now){
+    const p = params();
+    const geom = sceneGeom(p);
+    const {W,H,s1,s2} = geom;
+    lambdaVal.textContent = p.lambda_m.toFixed(3);
+    const step = (W>1000?3:4);
+    ctx.clearRect(0,0,W,H);
+
+    if (audioRunning){
+        const img = ctx.createImageData(Math.ceil(W/step), Math.ceil(H/step));
+        const data = img.data; let i=0;
+        const t = (now - t0)/1000; const wt = p.w * t;
+        for(let y=0;y<H;y+=step){
+          for(let x=0;x<W;x+=step){
+            const r1 = Math.hypot(x - s1.x, y - s1.y) / PX_PER_M;
+            const r2 = Math.hypot(x - s2.x, y - s2.y) / PX_PER_M;
+            const A = Math.sin(p.k*r1 - wt) + Math.sin(p.k*r2 - wt + p.phi);
+            const I = Math.min(1, Math.max(0, 0.5 + 0.5*(A/2)));
+            const R = Math.floor(215 + 25*I);
+            const G = Math.floor(230 + 20*I);
+            const B = 250;
+            data[i++] = R; data[i++] = G; data[i++] = B; data[i++] = 255;
+          }
+        }
+        const tmp = document.createElement('canvas'); tmp.width = img.width; tmp.height = img.height;
+        tmp.getContext('2d').putImageData(img,0,0);
+        ctx.imageSmoothingEnabled = true;
+        ctx.drawImage(tmp,0,0,W,H);    } else {
+      // Static screen before pressing play: no interference shadow
+      const g = ctx.createLinearGradient(0,0,0,H);
+      g.addColorStop(0,'#f8fafc');
+      g.addColorStop(0.4,'#ffffff');
+      g.addColorStop(1,'#ffffff');
+      ctx.fillStyle = g;
+      ctx.fillRect(0,0,W,H);
+    }
+    drawSpeaker(ctx, s1.x, s1.y); drawSpeaker(ctx, s2.x, s2.y); drawFringes(ctx, p, geom, chkNodal.checked, chkAnti.checked);
+    const klass = classifyAtPoint(p, geom, L.x, L.y);
+    listener.classList.remove('loud','quiet');
+    if (klass.isAnti){ listener.classList.add('loud'); listener.textContent='👂'; }
+    else if (klass.isNodal){ listener.classList.add('quiet'); listener.textContent='👂'; }
+    else { listener.textContent='👂'; }
+    updateCounts(p);
+    if (AC){
+      const nowA = AC.currentTime;
+      osc1.frequency.setTargetAtTime(p.f, nowA, 0.02);
+      osc2.frequency.setTargetAtTime(p.f, nowA, 0.02);
+      const tau1 = klass.r1 / p.v;
+      const tau2 = klass.r2 / p.v;
+      d1.delayTime.setTargetAtTime(Math.min(1.9, Math.max(0, tau1)), nowA, 0.02);
+      d2.delayTime.setTargetAtTime(Math.min(1.9, Math.max(0, tau2)), nowA, 0.02);
+      const a1 = 1 / Math.max(0.3, klass.r1);
+      const a2 = 1 / Math.max(0.3, klass.r2);
+      const norm = 0.5;
+      const sign2 = (p.phi===0) ? 1 : -1;
+      g1.gain.setTargetAtTime(a1*norm, nowA, 0.03);
+      g2.gain.setTargetAtTime(a2*norm*sign2, nowA, 0.03);
+      if (window._pan1) {
+        const pan1v = ((s1.x - L.x) / (W/2));
+        const pan2v = ((s2.x - L.x) / (W/2));
+        window._pan1.pan.setTargetAtTime(Math.max(-1, Math.min(1, pan1v)), nowA, 0.05);
+        window._pan2.pan.setTargetAtTime(Math.max(-1, Math.min(1, pan2v)), nowA, 0.05);
+      }
+      master.gain.setTargetAtTime(Number(volRange.value), nowA, 0.05);
+    }
+    requestAnimationFrame(drawScene);
+  }
+
+  
+  function drawSpeaker(ctx, x, y){
+    ctx.save();
+    ctx.translate(x,y);
+
+    // Stand (extend downward so speaker body can be centered at the wave origin)
+    ctx.fillStyle = '#1f2937'; ctx.strokeStyle = '#374151';
+    ctx.fillRect(-4,20,8,40);
+
+    // Speaker body: center aligned to origin (y=0)
+    ctx.fillStyle = '#0ea5e9'; ctx.strokeStyle = '#0284c7';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.roundRect(-20,-20,40,40,6); ctx.fill(); ctx.stroke();
+
+    // Cones (dots) aligned with the wave origin (center dot at y=0)
+    ctx.fillStyle = '#111827';
+    ctx.beginPath(); ctx.arc(0,0,10,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(0,18,6,0,Math.PI*2); ctx.fill();
+
+    ctx.restore();
+  }
+
+
+  function drawFringes(ctx, p, geom, showNodal, showAnti){
+    const d_px = geom.d_px, lambda_px = p.lambda_m * PX_PER_M;
+    const inPhase = (p.phi===0);
+    const cx = geom.W/2, cy = geom.H*0.72;
+    function drawSet(kind){
+      const deltas = [];
+      if (inPhase){
+        if (kind==='anti'){ for(let m=0;m<=Math.floor(d_px/lambda_px);m++) deltas.push(m*lambda_px); }
+        else              { for(let m=0;m<=Math.floor(d_px/lambda_px-0.5);m++) deltas.push((m+0.5)*lambda_px); }
+      }else{
+        if (kind==='anti'){ for(let m=0;m<=Math.floor(d_px/lambda_px-0.5);m++) deltas.push((m+0.5)*lambda_px); }
+        else              { for(let m=0;m<=Math.floor(d_px/lambda_px);m++) deltas.push(m*lambda_px); }
+      }
+      ctx.lineWidth = 2.6;
+      const green = getComputedStyle(document.documentElement).getPropertyValue('--fringe').trim() || '#22c55e';
+      ctx.globalAlpha = 0.95;
+      if (kind==='anti'){ ctx.setLineDash([]);     ctx.strokeStyle = green; }
+      else              { ctx.setLineDash([8,6]); ctx.strokeStyle = green; }
+      for(const Delta of deltas){
+        if (Delta===0 && kind==='nodal' && inPhase) continue;
+        if (Delta>=d_px) continue;
+        const a = Delta/2, cF = d_px/2;
+        const b2 = cF*cF - a*a; if (b2<=0) continue; const b = Math.sqrt(b2);
+        const umax=4, sx=cx, sy=cy;
+        function trace(sign){
+          ctx.beginPath(); let first=true;
+          for(let u=0; u<=umax; u+=0.01){
+            const Xh = sign * a * Math.cosh(u);
+            const Yh = b * Math.sinh(u);
+            const x = sx + Xh; const y = sy - Yh;
+            if (x<-20||x>geom.W+20||y<-20||y>geom.H+20){ if (!first){ ctx.stroke(); } break; }
+            if (first){ ctx.moveTo(x,y); first=false; } else { ctx.lineTo(x,y); }
+          }
+          if (!first) ctx.stroke();
+        }
+        trace(+1); trace(-1);
+      }
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
+    }
+    if (showNodal) drawSet('nodal');
+    if (showAnti)  drawSet('anti');
+  }
+
+  
+  const openModal = (id) => {
+    // close both first
+    document.getElementById('formulaModal').classList.remove('open');
+    document.getElementById('exerciseModal').classList.remove('open');
+
+    const el = document.getElementById(id);
+    el.classList.add('open');
+    el.setAttribute('aria-hidden','false');
+
+    // mark modal open (hide mobile floating buttons)
+    document.body.classList.add('modalOpen');
+
+    // MathJax re-typeset if needed
+    if (window.MathJax && window.MathJax.typesetPromise) window.MathJax.typesetPromise();
+  };
+  const closeModal = (id) => {
+    const el = document.getElementById(id);
+    el.classList.remove('open');
+    el.setAttribute('aria-hidden','true');
+
+    // if no modal is open, remove flag
+    const anyOpen = document.querySelector('.modal.open');
+    if (!anyOpen) document.body.classList.remove('modalOpen');
+  };
+
+  // expose for inline onclick fallback
+  window.__openFormula = ()=> openModal('formulaModal');
+  window.__openExercise = ()=> openModal('exerciseModal');
+  window.__closeFormula = ()=> closeModal('formulaModal');
+  window.__closeExercise = ()=> closeModal('exerciseModal');
+
+  const fBtn = document.getElementById('formulaBtn');
+  const eBtn = document.getElementById('exerciseBtn');
+  if (fBtn) fBtn.addEventListener('click', (ev)=>{ ev.preventDefault(); ev.stopPropagation(); openModal('formulaModal'); }, true);
+  if (eBtn) eBtn.addEventListener('click', (ev)=>{ ev.preventDefault(); ev.stopPropagation(); openModal('exerciseModal'); }, true);
+
+  document.querySelectorAll('[data-close]').forEach(btn=>{
+    btn.addEventListener('click',()=> closeModal(btn.getAttribute('data-close')));
+  });
+  document.getElementById('formulaModal').addEventListener('click',e=>{ if(e.target.id==='formulaModal') closeModal('formulaModal'); });
+  document.getElementById('exerciseModal').addEventListener('click',e=>{ if(e.target.id==='exerciseModal') closeModal('exerciseModal'); });
+  requestAnimationFrame(drawScene);
+})();
+
+</script>
+
+<script>
+(function(){
+  // wiring after DOM ready
+  const ready = () => {
+    const sepRange = document.getElementById('sepRange'), sepNum = document.getElementById('sepNum');
+    const freqRange = document.getElementById('freqRange'), freqNum = document.getElementById('freqNum');
+    const speedRange = document.getElementById('speedRange'), speedNum = document.getElementById('speedNum');
+    const phaseMode = document.getElementById('phaseMode');
+    const chkNodal = document.getElementById('chkNodal');
+    const chkAnti  = document.getElementById('chkAnti');
+    const volRange = document.getElementById('volRange');
+    const playBtn  = document.getElementById('playBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const formulaBtn = document.getElementById('formulaBtn');
+    const exerciseBtn = document.getElementById('exerciseBtn');
+    const closeBtn = document.getElementById('closeBtn');
+
+    // reset defaults (ตามค่าเริ่มต้นในไฟล์)
+    function doReset(){
+      if(!sepRange) return;
+      sepRange.value = 1.20; sepNum.value = 1.20;
+      freqRange.value = 440; freqNum.value = 440;
+      speedRange.value = 343; speedNum.value = 343;
+      phaseMode.value = "0";
+      chkNodal.checked = false;
+      chkAnti.checked = false;
+      volRange.value = 0.12;
+
+      // reposition listener (ใช้ฟังก์ชันในไฟล์หลัก ถ้ามี)
+      if (typeof window.placeListenerInitial === "function") window.placeListenerInitial();
+    }
+
+    if(resetBtn) resetBtn.addEventListener('click', doReset);
+
+    // close button (main screen)
+    if(closeBtn){
+      closeBtn.addEventListener('click', ()=>{
+        // Try to close tab/window; if blocked, show a hint
+        try{ window.close(); }catch(e){}
+        if (!window.closed){
+          alert('สามารถปิดแท็บนี้ได้เลยครับ 🙂');
+        }
+      });
+    }
+
+    // mobile bar wiring (trigger original buttons so logic stays the same)
+    const mPlay = document.getElementById('mPlay');
+    const mReset = document.getElementById('mReset');
+    const mFormula = document.getElementById('mFormula');
+    const mExercise = document.getElementById('mExercise');
+
+    if(mPlay && playBtn){
+      mPlay.addEventListener('click', ()=> playBtn.click());
+      // sync icon with desktop button text
+      const syncPlay = ()=> {
+        const t = (playBtn.textContent || '').trim();
+        mPlay.textContent = t.startsWith('⏸') ? '⏸️' : '▶️';
+      };
+      syncPlay();
+      const mo = new MutationObserver(syncPlay);
+      mo.observe(playBtn, {childList:true, characterData:true, subtree:true});
+    }
+    if(mReset) mReset.addEventListener('click', doReset);
+    if(mFormula && formulaBtn) mFormula.addEventListener('click', ()=> formulaBtn.click());
+    if(mExercise && exerciseBtn) mExercise.addEventListener('click', ()=> exerciseBtn.click());
+
+    // allow closing formula modal by tapping backdrop remains as-is
+  };
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", ready);
+  else ready();
+})();
+</script>
+
+
+
+<script>
+function mjTypeset(){
+  if (window.MathJax && window.MathJax.typesetPromise){
+    return window.MathJax.typesetPromise();
+  }
+  return Promise.resolve();
+}
+</script>
+
+
+<script>
+/* v19: quiz 10Q (A–E) + score + detailed solutions (MathJax via $...$) */
+const QUIZ = [
+  {q:"ลำโพง 2 ตัวเฟสตรงกัน ($\\varphi=0$) ที่จุด P มีผลต่างระยะทาง $\\Delta r=2\\lambda$ จะได้ยินเสียงอย่างไร?",
+   choices:{A:"ดัง (ปฏิบัพ)",B:"เบา (บัพ)",C:"ดังและเบาสลับกัน",D:"เงียบเสมอ",E:"สรุปไม่ได้"},
+   ans:"A",
+   sol:"เฟสตรงกัน: ปฏิบัพเมื่อ $\\Delta r=n\\lambda$. เมื่อ $\\Delta r=2\\lambda\\Rightarrow n=2$ จึงเป็น **ปฏิบัพ** → ดัง"},
+  {q:"เฟสตรงกัน ($\\varphi=0$) ถ้า $\\Delta r=(3+\\tfrac{1}{2})\\lambda$ จุด P เป็นแนวใด?",
+   choices:{A:"ปฏิบัพ",B:"บัพ",C:"แนวกลางเท่านั้น",D:"ขึ้นกับ d อย่างเดียว",E:"ขึ้นกับ v อย่างเดียว"},
+   ans:"B",
+   sol:"เฟสตรงกัน: บัพเมื่อ $\\Delta r=(n+\\tfrac{1}{2})\\lambda$. ค่า $(3+\\tfrac{1}{2})\\lambda$ อยู่ในรูปนี้ → **บัพ**"},
+  {q:"เฟสตรงข้าม ($\\varphi=\\pi$) ที่แนวกลางมี $\\Delta r=0$ จะได้ยินเสียงอย่างไร?",
+   choices:{A:"ดัง",B:"เบา",C:"ดังมากที่สุดเสมอ",D:"ไม่มีทางเกิด",E:"สรุปไม่ได้"},
+   ans:"B",
+   sol:"เฟสตรงข้าม: บัพเมื่อ $\\Delta r=n\\lambda$. แนวกลาง $\\Delta r=0\\Rightarrow n=0$ จึงเป็น **บัพ** → เบา"},
+  {q:"กำหนด $v=340\\,\\text{m/s}$ และ $f=680\\,\\text{Hz}$ ความยาวคลื่น $\\lambda$ เท่าใด?",
+   choices:{A:"0.25 m",B:"0.50 m",C:"1.0 m",D:"2.0 m",E:"4.0 m"},
+   ans:"B",
+   sol:"ใช้ $\\lambda=\\dfrac{v}{f}$ → $\\lambda=\\dfrac{340}{680}=0.50\\,\\text{m}$"},
+  {q:"ลำโพงห่างกัน $d=1.5\\,\\text{m}$ เฟสตรงกัน ต้องการแนวปฏิบัพอันดับที่ 1 ($n=1$) ถ้า $\\lambda=0.50\\,\\text{m}$ จะได้ $\\sin\\theta$ เท่าใด?",
+   choices:{A:"0.10",B:"0.20",C:"0.33",D:"0.50",E:"0.75"},
+   ans:"C",
+   sol:"$\\sin\\theta=\\dfrac{n\\lambda}{d}=\\dfrac{1\\times0.50}{1.5}=0.333\\approx0.33$"},
+  {q:"เฟสตรงกัน ($\\varphi=0$) ถ้าเพิ่มความถี่ $f$ (ขณะที่ $v$ คงที่) แนวจะเปลี่ยนอย่างไรโดยรวม?",
+   choices:{A:"แนวห่างขึ้น",B:"แนวถี่ขึ้น (แนวมากขึ้น)",C:"แนวหายหมด",D:"แนวไม่เปลี่ยน",E:"ขึ้นกับ d เท่านั้น"},
+   ans:"B",
+   sol:"เพิ่ม $f$ → $\\lambda=\\dfrac{v}{f}$ ลดลง → $d/\\lambda$ มากขึ้น → จำนวนแนวมากขึ้น (แนวถี่ขึ้น)"},
+  {q:"ผู้สังเกตเดินผ่านแนวต่าง ๆ ไปเรื่อย ๆ สิ่งที่ได้ยินโดยทั่วไปคืออะไร?",
+   choices:{A:"ดังตลอด",B:"เบาตลอด",C:"ดัง–เบาสลับกัน",D:"คงที่ทุกจุด",E:"ได้ยินเฉพาะตอนหยุดเดิน"},
+   ans:"C",
+   sol:"แนวปฏิบัพให้ดัง แนวบัพให้เบา เมื่อเดินผ่านหลายแนว → ได้ยิน **ดัง–เบาสลับกัน**"},
+  {q:"เฟสตรงข้าม ($\\varphi=\\pi$) ถ้า $\\Delta r=(n+\\tfrac{1}{2})\\lambda$ จะเป็นแนวใด?",
+   choices:{A:"บัพ",B:"ปฏิบัพ",C:"แนวกลางเสมอ",D:"ขึ้นกับ f อย่างเดียว",E:"ขึ้นกับ v อย่างเดียว"},
+   ans:"B",
+   sol:"เฟสตรงข้าม: เงื่อนไขสลับกับกรณีเฟสตรงกัน ดังนั้น $\\Delta r=(n+\\tfrac{1}{2})\\lambda$ → **ปฏิบัพ**"},
+  {q:"ถ้าผู้สังเกตเดินตลอดเส้นทางแล้ว “ได้ยินดังชัด” ทั้งหมด 4 ครั้ง ข้อใดสรุปได้เหมาะสมที่สุด?",
+   choices:{A:"เดินผ่านแนวปฏิบัพ 4 แนว",B:"เดินผ่านแนวบัพ 4 แนว",C:"ความถี่ต้องเป็น 440 Hz",D:"v ต้องเป็น 343 m/s",E:"d ต้องเป็น 1.2 m"},
+   ans:"A",
+   sol:"เสียงดังชัด = ผ่านแนว **ปฏิบัพ** ดังนั้นดัง 4 ครั้ง → ผ่านแนวปฏิบัพ 4 แนว"},
+  {q:"ข้อใดถูกต้องเกี่ยวกับ $\\Delta r=|S_1P-S_2P|$ ?",
+   choices:{A:"ระยะจากลำโพง 1 ถึงลำโพง 2",B:"ผลรวมระยะทางจากลำโพงถึง P",C:"ผลต่างระยะทางจากลำโพงทั้งสองถึง P",D:"มุมเบนจากแนวกลาง",E:"ความยาวคลื่น"},
+   ans:"C",
+   sol:"$\\Delta r$ คือ **ผลต่างระยะทาง** ของทางเดินจากลำโพงทั้งสองถึงจุดเดียวกัน P: $\\Delta r=|S_1P-S_2P|$"}
+];
+
+function buildQuiz(){
+  const root = document.getElementById('quiz');
+  if(!root) return;
+  root.innerHTML = "";
+  QUIZ.forEach((it,i)=>{
+    const n=i+1;
+    const card=document.createElement('div');
+    card.className='card';
+    card.style.marginBottom='12px';
+    card.innerHTML = `
+      <div style="font-weight:800;margin-bottom:8px;">ข้อ ${n}</div>
+      <div style="margin-bottom:10px;">${it.q}</div>
+      ${Object.entries(it.choices).map(([k,v])=>`
+        <label style="display:flex;gap:10px;align-items:flex-start;margin:6px 0;">
+          <input type="radio" name="q${n}" value="${k}">
+          <div><b>${k}.</b> ${v}</div>
+        </label>`).join("")}
+      <div id="sol${n}" style="display:none;margin-top:10px;padding:10px;border:1px solid #e5e7eb;border-radius:10px;background:#fff;">
+        คำตอบที่ถูกคือ <span style="color:red;font-weight:900;">${it.ans}</span><br><br>
+        ${it.sol}
+      </div>`;
+    root.appendChild(card);
+  });
+  mjTypeset();
+}
+
+function checkQuiz(){
+  let score=0;
+  QUIZ.forEach((it,i)=>{
+    const n=i+1;
+    const chosen=document.querySelector(`input[name="q${n}"]:checked`);
+    if(chosen){
+      if(chosen.value===it.ans) score++;
+      document.getElementById(`sol${n}`).style.display='block';
+    }
+  });
+  document.getElementById('scoreText').textContent = `${score} / ${QUIZ.length}`;
+  document.getElementById('scoreBox').style.display='block';
+  mjTypeset();
+}
+
+window.addEventListener('load', ()=>{
+  buildQuiz();
+  const btn=document.getElementById('checkBtn');
+  if(btn) btn.addEventListener('click', checkQuiz);
+});
+</script>
+
+<script>
+function toggleSound(){
+  if(!window.audioCtx){
+    window.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+
+  if(!window.isPlaying){
+    window.osc = audioCtx.createOscillator();
+    window.gainNode = audioCtx.createGain();
+    window.osc.type = "sine";
+    window.osc.frequency.value = 440;
+    window.osc.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    gainNode.gain.value = 0.2;
+    window.osc.start();
+    window.isPlaying = true;
+  } else {
+    if(window.osc){
+      try{ window.osc.stop(); }catch(e){}
+      window.osc.disconnect();
+      window.osc = null;
+    }
+    if(window.gainNode){
+      window.gainNode.disconnect();
+      window.gainNode = null;
+    }
+    if(window.audioCtx){
+      window.audioCtx.close();
+      window.audioCtx = null;
+    }
+    window.isPlaying = false;
+  }
+}
+</script>
+
+<script>
+(function(){
+  const isMobile = () => window.matchMedia && window.matchMedia('(max-width: 820px)').matches;
+
+  function initMobileToggleControls(){
+    const btn = document.getElementById('toggleControlsBtn');
+    const bar = document.getElementById('mobileBar');
+    if(!btn || !bar) return;
+
+    const eyeOpen = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>`;
+    const eyeClosed = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12s3.5-7 9-7c2.1 0 3.9.6 5.4 1.5"/><path d="M21 12s-3.5 7-9 7c-2.1 0-3.9-.6-5.4-1.5"/><path d="M4 4l16 16"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>`;
+    const renderBtn = (hidden)=>{
+      const icon = hidden ? eyeClosed : eyeOpen;
+      const text = hidden ? 'แสดงปุ่ม' : 'ซ่อนปุ่ม';
+      btn.innerHTML = `<span class="eyeRow">${icon}<span class="eyeTxt">${text}</span></span>`;
+      btn.setAttribute('aria-label', hidden ? 'แสดงปุ่มควบคุม' : 'ซ่อนปุ่มควบคุม');
+    };
+
+
+    // default state: visible controls
+    document.body.classList.remove('controls-hidden');
+    bar.setAttribute('aria-hidden','false');
+    renderBtn(false);
+
+    btn.addEventListener('click', (e)=>{
+      // prevent click firing after drag
+      if(btn.__dragged){ btn.__dragged = false; return; }
+      const hidden = document.body.classList.toggle('controls-hidden');
+      renderBtn(hidden);
+      bar.setAttribute('aria-hidden', hidden ? 'true' : 'false');
+    });
+
+    // draggable (pointer events)
+    let dragging=false, pid=null, startX=0, startY=0, origX=0, origY=0;
+
+    const getPos = ()=>{
+      const r = btn.getBoundingClientRect();
+      return {x:r.left, y:r.top};
+    };
+
+    const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
+
+    btn.addEventListener('pointerdown', (ev)=>{
+      if(!isMobile()) return;
+      dragging=true; pid=ev.pointerId;
+      btn.setPointerCapture(pid);
+      btn.__dragged = false;
+      const pos=getPos();
+      startX=ev.clientX; startY=ev.clientY;
+      origX=pos.x; origY=pos.y;
+    });
+
+    btn.addEventListener('pointermove', (ev)=>{
+      if(!dragging || ev.pointerId!==pid) return;
+      const dx = ev.clientX - startX;
+      const dy = ev.clientY - startY;
+      if(Math.abs(dx)+Math.abs(dy) > 6) btn.__dragged = true;
+
+      const vw = window.innerWidth, vh = window.innerHeight;
+      const bw = btn.offsetWidth, bh = btn.offsetHeight;
+
+      const nx = clamp(origX + dx, 6, vw - bw - 6);
+      const ny = clamp(origY + dy, 6, vh - bh - 6);
+
+      btn.style.left = nx + 'px';
+      btn.style.top  = ny + 'px';
+      btn.style.right = 'auto';
+      btn.style.bottom = 'auto';
+    });
+
+    const endDrag = (ev)=>{
+      if(!dragging || ev.pointerId!==pid) return;
+      dragging=false;
+      try{ btn.releasePointerCapture(pid);}catch(_){}
+      pid=null;
+    };
+    btn.addEventListener('pointerup', endDrag);
+    btn.addEventListener('pointercancel', endDrag);
+
+    // keep in viewport on resize
+    window.addEventListener('resize', ()=>{
+      if(!isMobile()) return;
+      const r = btn.getBoundingClientRect();
+      const vw = window.innerWidth, vh = window.innerHeight;
+      const nx = Math.max(6, Math.min(r.left, vw - btn.offsetWidth - 6));
+      const ny = Math.max(6, Math.min(r.top,  vh - btn.offsetHeight - 6));
+      btn.style.left = nx + 'px';
+      btn.style.top  = ny + 'px';
+      btn.style.right='auto';
+      btn.style.bottom='auto';
+    }, {passive:true});
+  }
+
+  // init after DOM ready
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', initMobileToggleControls);
+  }else{
+    initMobileToggleControls();
+  }
+})();
+</script>
+
+</body>
+</html>

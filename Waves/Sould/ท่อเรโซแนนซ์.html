@@ -1,0 +1,1413 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>การสั่นพ้องของเสียงในท่อ (ปลายเปิด–ปลายปิด)</title>
+<style>
+  :root{
+    --ink:#0f172a;--muted:#6b7280;--line:#e5e7eb;--panel:#ffffff;--bg:#ffffff;
+    --accent:#2563eb;--red:#ef4444;--blue:#0ea5e9;--green:#16a34a;--amber:#f59e0b;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+  header{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--line);padding:10px 14px;font-weight:700;color:var(--accent);font-size:18px}
+  .wrap{display:grid;grid-template-columns:1fr;gap:12px;padding:12px;max-width:1200px;margin:0 auto}
+  @media(min-width:1100px){ .wrap{grid-template-columns:2fr 1fr} }
+  .board{position:relative;background:#fff;border:1px solid var(--line);border-radius:16px;min-height:420px;overflow:hidden}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:12px}
+  h2{margin:6px 0 2px 0;font-size:18px}
+  .row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}
+  .row > label{font-size:14px;color:var(--muted)}
+  .row .val{font-variant-numeric:tabular-nums}
+  .seg{display:grid;gap:8px;border-top:1px dashed var(--line);padding-top:10px}
+  button,select{border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:#fff;cursor:pointer}
+  button.play{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:700}
+  button.stop{background:#fff;color:var(--accent);border-color:var(--accent);font-weight:700}
+  .badge{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:2px 8px;font-size:12px;color:var(--muted)}
+  canvas{display:block;width:100%;height:100%;touch-action:none}
+  .legend{display:flex;gap:10px;flex-wrap:wrap}
+  .dot{width:12px;height:12px;border-radius:50%}
+  .dot.blue{background:var(--blue)}
+  .dot.red{background:var(--red)}
+  .list{font-size:14px;line-height:1.5}
+  .tubeLabel{position:absolute;left:10px;top:10px;font-size:13px;color:var(--muted)}
+  .credit{font-size:13px;color:var(--muted)}
+
+  /* --- สูตรสำคัญ (overlay) --- */
+  button.formula{background:#ffedd5;color:#7c2d12;border-color:#fb923c;font-weight:800}
+  button.formula:hover{filter:brightness(0.98)}
+  .modalOverlay{position:fixed;inset:0;display:none;align-items:stretch;justify-content:center;background:rgba(15,23,42,.55);z-index:9999}
+  .modalCard{width:min(980px,100%);height:100%;background:#fff;border-radius:18px;overflow:hidden;display:flex;flex-direction:column}
+  .modalTop{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:10px;justify-content:space-between;
+    padding:12px 14px;background:#fff;border-bottom:1px solid var(--line)}
+  .modalTitle{font-weight:900;color:var(--accent);font-size:18px}
+  .modalClose{position:fixed;top:calc(10px + env(safe-area-inset-top));right:calc(10px + env(safe-area-inset-right));z-index:10000;border:1px solid var(--line);background:#fff;border-radius:12px;padding:10px 12px;font-weight:900;box-shadow:0 8px 22px rgba(15,23,42,.12)}
+  .modalBody{flex:1;overflow:auto;background:#fff7ed;padding:14px;padding-top:10px;
+    padding-bottom:calc(18px + env(safe-area-inset-bottom, 0px));
+    padding-top:calc(14px + env(safe-area-inset-top, 0px))}
+  .box{background:#fff;border:2px solid #fb923c;border-radius:16px;padding:12px;margin:12px 0}
+  .box h3{margin:0 0 8px 0;color:#1d4ed8;font-size:18px}
+  .box p{margin:6px 0;color:#0f172a;line-height:1.6;font-size:15px}
+  .pill{display:inline-block;background:#e0f2fe;border:1px solid #7dd3fc;color:#075985;border-radius:999px;padding:2px 10px;font-size:12px;font-weight:700}
+  .eq{background:#fff;border:1px dashed #fb923c;border-radius:12px;padding:10px;margin:10px 0;font-size:16px}
+  .eq .latex{display:none}
+  .eq .plain{display:block; color:#444}
+  body.mathjax-ready .eq .latex{display:inline}
+  body.mathjax-ready .eq .plain{display:none}
+  .note{color:#475569;font-size:13px}
+
+  a.brand{color:var(--accent);text-decoration:underline}
+
+/* ---- Quiz + Standing wave toggle ---- */
+.quizBtn{
+  background:#dcfce7; color:#065f46; border:2px solid #86efac;
+  font-weight:800; border-radius:12px; padding:8px 14px;
+}
+.swToggle{
+  display:inline-flex; align-items:center; gap:8px;
+  font-weight:800; color:#1e3a8a; padding:6px 10px;
+  border-radius:12px; background:rgba(219,234,254,.7); border:1px solid rgba(59,130,246,.25);
+}
+.swToggle input{ transform: translateY(1px); }
+#quizOverlay{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:99999; align-items:center; justify-content:center; }
+#quizModal{
+  background:#f0fdf4; width:min(1100px,95%); max-height:95%;
+  overflow:auto; border-radius:18px; padding:18px; position:relative;
+  padding-bottom:110px;
+}
+#quizClose{
+  position:fixed; top:calc(10px + env(safe-area-inset-top,0px)); right:calc(10px + env(safe-area-inset-right,0px));
+  background:#fff; border:1px solid #ccc; border-radius:10px; padding:8px 10px; font-weight:900; z-index:100000;
+}
+.quizQ{
+  background:#fff; border:1px solid #d1fae5; border-radius:14px; padding:14px; margin-top:12px; line-height:1.75;
+}
+.quizQ label.opt{ display:block; margin:6px 0; }
+.solBox{
+  display:none; margin-top:10px; background:#fff; border:1px dashed #86efac; border-radius:12px; padding:12px;
+  font-size:16px;
+
+  color:#444;
+  line-height:1.75;
+}
+.solBox mjx-container{max-width:100%; overflow-x:auto; font-size:1.15em;}
+
+#checkQuiz{
+  position:fixed; left:50%; transform:translateX(-50%);
+  bottom:12px; width:min(1060px,95%);
+  background:#22c55e; color:#fff; border:none; border-radius:12px; padding:12px 14px;
+  font-weight:900; font-size:16px; box-shadow:0 10px 24px rgba(15,23,42,.12);
+}
+#quizResult{ margin-top:12px; font-weight:800; }
+#swOverlay{ display:none; position:absolute; inset:0; pointer-events:none; z-index:20; }
+
+
+  /* ===== Top navigation buttons (near close) ===== */
+  .topNavBtn{
+    position:fixed;
+    top: calc(12px + env(safe-area-inset-top, 0px));
+    right: 60px; /* sits left of ❌ */
+    z-index: 100000;
+    border:1px solid #e5e7eb;
+    background:#ffffff;
+    border-radius:999px;
+    padding:8px 12px;
+    font-weight:800;
+    cursor:pointer;
+    box-shadow: 0 6px 18px rgba(0,0,0,.08);
+  }
+  #quizToFormula{ right: 60px; }
+  #formulaToQuiz{ right: 60px; }
+
+  /* Ensure ❌ stays rightmost */
+  #quizClose, #closeFormula{
+    right: 12px !important;
+  }
+
+  /* ===== Force FULLSCREEN for สูตรสำคัญ + แบบฝึกหัด overlays ===== */
+  #formulaOverlay, #quizOverlay{
+    position:fixed !important;
+    inset:0 !important;
+    width:100vw !important;
+    height:100vh !important;
+    padding:0 !important;
+    margin:0 !important;
+  }
+  #formulaOverlay .modalCard{
+    width:100% !important;
+    max-width:100% !important;
+    height:100% !important;
+    margin:0 !important;
+    border-radius:0 !important;
+  }
+  #quizModal{
+    width:100% !important;
+    max-width:100% !important;
+    height:100% !important;
+    margin:0 !important;
+    border-radius:0 !important;
+    overflow:auto !important;
+  }
+
+
+/* =========================
+   Mobile-only controls (มาตรฐานเพจ)
+   ========================= */
+@media (max-width: 768px){
+
+  /* มือถือ: ล็อกจอทดลองให้อยู่นิ่ง และให้เลื่อนเฉพาะแผงตั้งค่า */
+  body{ overflow:hidden; }
+  .wrap{ height: calc(100vh - 56px); overflow:hidden; }
+
+  /* ลดความสูงจอทดลองลงอีก ~20% (เดิม 35vh → 28vh) เพื่อตัดพื้นที่ว่าง */
+  .board{
+    height: 28vh !important;
+    min-height: 28vh !important;
+  }
+
+  /* ให้แผงตั้งค่าเลื่อนขึ้นลงได้ (ขณะจอทดลองอยู่นิ่ง) */
+  .panel{
+    height: calc(100% - 28vh - 12px);
+    overflow:auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: calc(170px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* ลด/กันไม่ให้ข้อความในจอทดลองยืดแปลก ๆ และไม่บังรูป */
+  .tubeLabel{
+    font-size: 12px;
+    line-height: 1.25;
+    max-width: calc(100% - 20px);
+    white-space: normal;
+    font-stretch: normal;
+    letter-spacing: 0;
+    background: rgba(255,255,255,.72);
+    backdrop-filter: blur(4px);
+    border-radius: 12px;
+    padding: 6px 8px;
+    top: 8px;
+    left: 10px;
+    right: 10px;
+  }
+
+  /* เผื่อพื้นที่ให้แถบปุ่มลอยด้านล่าง */
+  .wrap{ padding-bottom: calc(140px + env(safe-area-inset-bottom, 0px)) !important; }
+
+  /* ซ่อนปุ่ม 4 ปุ่มใน panel เดิม (จะถูกย้ายไปแถบลอย) */
+  #controls .seg .mobile-moved{
+    display:none !important;
+  }
+
+  /* แถบปุ่มลอย */
+  #mobileActionBar{
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    width: min(520px, 92vw);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    z-index: 100050;
+    pointer-events: auto;
+  }
+
+  /* ทำให้ปุ่มทั้ง 4 เป็นทรงสี่เหลี่ยมตามมาตรฐานมือถือ */
+  #mobileActionBar button{
+    border-radius: 10px !important;
+    padding: 12px 10px !important;
+    font-size: 15px !important;
+    font-weight: 800 !important;
+    line-height: 1.15 !important;
+    box-shadow: 0 10px 20px rgba(15,23,42,.12);
+  }
+
+  /* ปุ่มซ่อน/แสดง (ตา) */
+  #mobileToggleBtn{
+    position: fixed;
+    right: 14px;
+    bottom: calc(110px + env(safe-area-inset-bottom, 0px));
+    width: 44px;
+    height: 44px;
+    border-radius: 12px; /* สี่เหลี่ยมโค้ง */
+    background: #0b0f19;
+    border: 1px solid rgba(255,255,255,.18);
+    color: #fff;
+    z-index: 100060;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 10px 22px rgba(0,0,0,.22);
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #mobileToggleBtn svg{
+    width: 22px;
+    height: 22px;
+    display:block;
+  }
+
+  /* โหมดซ่อนปุ่ม */
+  body.mobile-hide-actions #mobileActionBar{
+    display:none !important;
+  }
+
+  /* ซ่อนส่วนท้ายหัวข้อในหน้าสูตร/แบบฝึกหัด เฉพาะมือถือ */
+  .hideOnMobile{ display:none !important; }
+
+  /* เมื่ออยู่ในหน้า "สูตรสำคัญ" หรือ "แบบฝึกหัด" (overlay เปิด) ให้ซ่อนแถบปุ่มลอยด้านล่างทั้งหมด */
+  body.overlay-open #mobileActionBar,
+  body.overlay-open #mobileToggleBtn{
+    display:none !important;
+  }
+
+  /* เพิ่มพื้นที่เลื่อนด้านล่างในหน้า "สูตรสำคัญ" (มือถือ) กันแถบระบบบัง */
+  #formulaOverlay .modalBody{
+    padding-bottom: calc(160px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+}
+
+</style>
+<script>
+  window.MathJax = {
+    tex: { inlineMath: [['\\(','\\)'], ['$', '$']] },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] }
+  };
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+<style>
+/* ===== Fullscreen: สูตรสำคัญ ===== */
+#formulaOverlay.modalOverlay{
+  align-items:stretch !important;
+  justify-content:stretch !important;
+  padding:0 !important;
+}
+#formulaOverlay .modalCard{
+  width:100% !important;
+  height:100% !important;
+  max-width:100% !important;
+  border-radius:0 !important;
+}
+#closeFormula.modalClose{
+  position:fixed !important;
+  top: calc(12px + env(safe-area-inset-top, 0px)) !important;
+  right: 12px !important;
+  z-index: 100000 !important;
+}
+
+/* ===== Fullscreen: แบบฝึกหัด ===== */
+#quizOverlay{
+  align-items:stretch !important;
+  justify-content:stretch !important;
+  padding:0 !important;
+}
+#quizModal{
+  width:100vw !important;
+  height:100vh !important;
+  max-width:100vw !important;
+  max-height:100vh !important;
+  margin:0 !important;
+  border-radius:0 !important;
+}
+#quizClose{
+  position:fixed !important;
+  top: calc(12px + env(safe-area-inset-top, 0px)) !important;
+  right: 12px !important;
+  z-index: 100000 !important;
+}
+</style>
+
+</head>
+<body>
+  <header>การสั่นพ้องของเสียงในท่อ (ปลายเปิด–ปลายปิด)</header>
+  <div class="wrap">
+    <div class="board">
+      <div class="tubeLabel" id="tubeLabel">ปากท่อ (เปิด) อยู่ซ้าย • ปลายขวาเป็นลูกสูบ (ปิด) — ลากปลายท่อเพื่อปรับความยาว</div>
+      <canvas id="view" aria-label="standing-wave-canvas"></canvas>
+      <div id="swOverlay" aria-hidden="true"></div>
+    </div>
+
+    <div class="panel" id="controls">
+      <div class="legend">
+        <span class="badge">ชนิดท่อ:
+          <select id="tubeType">
+            <option value="oc" selected>ปลายเปิด–ปลายปิด (มีลูกสูบ)</option>
+            <option value="oo">ปลายเปิด–ปลายเปิด (ไม่มีลูกสูบ)</option>
+          </select>
+        </span>
+        
+        <span class="badge">End correction: 
+          <select id="endCorr">
+            <option value="off">ปิด</option>
+            <option value="on">เปิด</option>
+          </select>
+        </span>
+      </div>
+
+      
+      <div class="row" style="margin-top:10px">
+        <label class="swToggle"><input type="checkbox" id="toggleSW"> แสดงคลื่นนิ่งในท่อ</label>
+      </div>
+
+      <div class="row" style="margin-top:6px">
+        <span class="badge">แสดง: 
+          <select id="mode">
+            <option value="disp">คลื่นการกระจัด (สีน้ำเงิน)</option>
+            <option value="press">คลื่นความดัน (สีแดง)</option>
+          </select>
+        </span>
+      </div>
+
+      <div class="row" style="margin-top:6px">
+        <button id="showNodes">ไฮไลต์ตำแหน่งเสียงดัง (pressure antinodes)</button>
+      </div>
+
+<div class="row">
+        <label>ความถี่สัญญาณจากลำโพง f</label>
+        <div class="val"><span id="fVal">340.0</span> Hz</div>
+      </div>
+      <input type="range" id="f" min="50" max="2000" step="1" value="340"/>
+
+      <div class="row">
+        <label>ความเร็วเสียงในอากาศ v<sub>w</sub></label>
+        <div class="val"><span id="cVal">340.0</span> m/s</div>
+      </div>
+      <input type="range" id="c" min="300" max="360" step="0.1" value="340"/>
+
+      <div class="row">
+        <label>เส้นผ่านศูนย์กลางท่อ D (เพื่อคำนวณ end correction)</label>
+        <div class="val"><span id="dVal">3.0</span> cm</div>
+      </div>
+      <input type="range" id="diam" min="1" max="10" step="0.1" value="3"/>
+
+      <div class="row">
+        <label>ความยาวท่อ L</label>
+        <div class="val"><span id="LVal">25.0</span> cm</div>
+      </div>
+      <input type="range" id="L" min="25.0" max="120" step="0.1" value="25.0"/>
+
+      <div class="seg">
+        <div style="display:flex; gap:8px; flex-wrap:wrap">
+          <button id="play" class="play">▶ เล่นเสียง</button>
+          <button id="snap">ปรับให้เข้าเรโซแนนซ์ที่ใกล้สุด</button>
+<button id="openFormula" class="formula">📘 สูตรสำคัญ</button>
+
+          <button id="openQuiz" class="quizBtn">📝 แบบฝึกหัด</button>
+          
+
+        </div>
+        <div class="list" id="readout"></div>
+        <div class="list" id="modesInfo"></div>
+        <div class="credit">ศึกษาเพิ่มเติมได้ที่เพจ <a class="brand" href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">คลายปมฟิสิกส์</a></div>
+      </div>
+    </div>
+  </div>
+
+<!-- สูตรสำคัญ (Overlay) -->
+  <div class="modalOverlay" id="formulaOverlay" aria-hidden="true">
+    <button class="modalClose" id="closeFormula" aria-label="ปิด">❌</button>
+    <button class="topNavBtn" id="formulaToQuiz" aria-label="ไปหน้าแบบฝึกหัด">📝 แบบฝึกหัด</button>
+    <div class="modalCard" role="dialog" aria-modal="true" aria-label="สูตรสำคัญและคำอธิบาย">
+      <div class="modalTop">
+        <div class="modalTitle">📘 สูตรสำคัญ <span class="hideOnMobile">— การสั่นพ้องของเสียงในท่อ (ปลายเปิด–ปลายปิด)</span></div>
+</div>
+      <div class="modalBody">
+        <div class="box">
+          <h3>ปรากฏการณ์นี้เกิดจากอะไร?</h3>
+          <p>
+            เมื่อความถี่เสียงจากลำโพง “พอดี” กับความถี่ธรรมชาติของคอลัมน์อากาศในท่อ
+            คลื่นเสียงที่สะท้อนกลับภายในท่อจะ <b>เสริมกัน</b> จนเกิด <b>คลื่นนิ่ง</b> ทำให้เสียงดังผิดปกติ เรียกว่า <b>เรโซแนนซ์ (Resonance)</b>
+          </p>
+          <p class="note">ภาพจำง่าย: ถ้าระยะทางไป-กลับ “เข้าจังหวะ” กัน คลื่นจะยิ่งพอกพูน → ดังขึ้น</p>
+        </div>
+
+        <div class="box">
+          <h3>เสียงจะดัง / เบา เมื่อไร?</h3>
+          <p><b>ดังมาก</b> เมื่อความยาวท่อทำให้เกิดคลื่นนิ่งชัดเจน (เรโซแนนซ์) พลังงานเสียงสะสมในท่อมาก → แอมพลิจูดสูง</p>
+          <p><b>เบา</b> เมื่อความถี่ไม่ตรงเงื่อนไข คลื่นไป-กลับไม่เสริมกัน บางช่วงหักล้างกัน → แอมพลิจูดต่ำ</p>
+        </div>
+
+        <div class="box">
+          <h3>โมเลกุลอากาศข้างในเป็นอย่างไร?</h3>
+          <p>เสียงเป็นคลื่นตามยาว: โมเลกุลอากาศสั่น <b>ไป-กลับ</b> ในแนวเดียวกับท่อ</p>
+          <p><b>คลื่นการกระจัด (Displacement)</b> = มองการ “ขยับ” ของโมเลกุล</p>
+          <p><b>คลื่นความดัน (Pressure)</b> = มองบริเวณ “อัดแน่น/เบาบาง” (ความดันสูง/ต่ำ)</p>
+          <p class="note">สำคัญ: จุดที่การกระจัดมาก → ความดันเปลี่ยนแปลงน้อย และกลับกัน (ตำแหน่งสลับกัน)</p>
+        </div>
+
+        <div class="box">
+          <h3>สูตรเรโซแนนซ์</h3>
+
+          <p><b>1) หลอดปลายปิด 1 ด้าน (ปลายเปิด–ปลายปิด)</b></p>
+          <div class="eq"><span class="latex">\(L_{\text{eff}} = \dfrac{(2n-1)\,\lambda}{4}\), &nbsp;\(n = 1,2,3,\dots\)</span><span class="plain">L_eff = /(2n-1) λ4, n = 1,2,3,…</span></div>
+
+          <p><b>2) หลอดปลายเปิด 2 ด้าน (ปลายเปิด–ปลายเปิด)</b></p>
+          <div class="eq"><span class="latex">\(L_{\text{eff}} = \dfrac{n\,\lambda}{2}\), &nbsp;\(n = 1,2,3,\dots\)</span><span class="plain">L_eff = /n λ2, n = 1,2,3,…</span></div>
+
+          <p>และความยาวคลื่น</p>
+          <div class="eq"><span class="latex">\(\lambda = \dfrac{v}{f}\)</span><span class="plain">λ = /vf</span></div>
+
+
+          <p>และอัตราเร็วเสียงในอากาศเมื่อทราบอุณหภูมิ</p>
+          <div class="eq"><span class="latex">\(v = 331 + 0.6t\)</span><span class="plain">v = 331 + 0.6t</span></div>
+          <p class="note">โดย <b>t</b> คืออุณหภูมิในหน่วยองศาเซลเซียส (°C)</p>
+
+        </div>
+
+        <div class="box">
+          <h3>ระยะจาก “ดัง” ถึง “ดัง” ที่ติดกันห่างกันเท่าไร?</h3>
+          <p>สำหรับทั้ง 2 กรณี (ปลายเปิด–ปิด และปลายเปิด–เปิด) ระยะเรโซแนนซ์ถัดไปห่างกัน</p>
+          <div class="eq"><span class="latex">\(\Delta L = \dfrac{\lambda}{2}\)</span><span class="plain">Δ L = /λ2</span></div>
+        </div>
+
+        <div class="box">
+          <h3>End correction คืออะไร?</h3>
+          <p>
+            ปากท่อที่ “เปิด” ไม่ได้จบการสั่นที่ขอบท่อจริง ๆ เพราะอากาศนอกปากท่อยังสั่นร่วมด้วยเล็กน้อย
+            จึงเหมือนกับว่าท่อยาวกว่าความยาวจริง
+          </p>
+          <div class="eq"><span class="latex">\(L_{\text{eff}} = L + \Delta\)</span><span class="plain">L_eff = L + Δ</span></div>
+          <p>สำหรับปลายเปิด 1 ด้าน โดยประมาณ</p>
+          <div class="eq"><span class="latex">\(\Delta \approx 0.61\,r \approx 0.305\,D\)</span><span class="plain">Δ ≈ 0.61 r ≈ 0.305 D</span></div>
+          <p class="note">โดย \(r\) คือรัศมีท่อ และ \(D\) คือเส้นผ่านศูนย์กลางท่อ</p>
+        </div>
+
+        <div class="box">
+          <h3>สรุปสั้น ๆ</h3>
+          <p>✅ ปรับ \(L\) หรือ \(f\) ให้เข้าเงื่อนไข → ดัง (เรโซแนนซ์)</p>
+          <p>✅ โหมด “การกระจัด” = ดูการขยับโมเลกุล • โหมด “ความดัน” = ดูอัดแน่น/เบาบาง</p>
+          <p>✅ ถ้าเปิด End correction จะใช้ \(L_{\text{eff}}\) แทน \(L\)</p>
+        </div>
+
+        <div class="credit" style="margin-top:14px">ศึกษาเพิ่มเติมได้ที่เพจ <a class="brand" href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">คลายปมฟิสิกส์</a></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const view = document.getElementById('view');
+  const ctx = view.getContext('2d');
+  const el = id => document.getElementById(id);
+
+  const ui = {
+    tubeType: el('tubeType'),
+    tubeLabel: el('tubeLabel'),
+    f: el('f'), fVal: el('fVal'),
+    c: el('c'), cVal: el('cVal'),
+    diam: el('diam'), dVal: el('dVal'),
+    L: el('L'), LVal: el('LVal'),
+    play: el('play'), snap: el('snap'),
+    mode: el('mode'), endCorr: el('endCorr'),
+    showNodes: el('showNodes'),
+    readout: el('readout'), modesInfo: el('modesInfo'),
+  };
+
+  // ---------- Web Audio ----------
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  let actx = null, osc = null, gain = null;
+  let playing = false;
+  let targetGain = 0.06; // will be modulated by resonance
+
+  function ensureAudio(){ if(!actx) actx = new AudioCtx(); }
+
+  function startAudio(){
+    ensureAudio();
+    if(playing) return;
+    osc = actx.createOscillator();
+    gain = actx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = parseFloat(ui.f.value);
+    gain.gain.value = targetGain;
+    osc.connect(gain).connect(actx.destination);
+    osc.start();
+    playing = true;
+    ui.play.textContent = '⏸ หยุดเสียง';
+    ui.play.classList.remove('play');
+    ui.play.classList.add('stop');
+  }
+  function stopAudio(){
+    if(osc){ try{ osc.stop(); }catch(e){} }
+    if(gain){ try{ gain.disconnect(); }catch(e){} }
+    osc = null; gain = null; playing = false;
+    ui.play.textContent = '▶ เล่นเสียง';
+    ui.play.classList.remove('stop');
+    ui.play.classList.add('play');
+  }
+  ui.play.addEventListener('click', () => { playing ? stopAudio() : startAudio(); });
+
+  // ---------- State ----------
+  const state = { t: 0, mode: 'disp', showNodeMarkers: false, showSW: false };
+  window.__tubeState = state;
+  let layout = {mouthX:0, pistonX:0, pxPerMeter:1, topY:0, Lpx:0, w:0, h:0};
+  let dragging = false;
+
+  function readParams(){
+    const f = parseFloat(ui.f.value);
+    const c = parseFloat(ui.c.value);
+    const Dcm = parseFloat(ui.diam.value);
+    const Lcm = Math.max(25.0, parseFloat(ui.L.value));
+    const endOn = (ui.endCorr.value==='on');
+    const tubeType = ui.tubeType?.value || 'oc';
+    const r = (Dcm/100)/2; // m
+    const deltaEach = endOn ? 0.61 * r : 0.0; // m ต่อปลายเปิด
+    const delta = (tubeType === 'oo') ? (2*deltaEach) : deltaEach; // m รวม
+    const L = Lcm/100; // m
+    const Leff = L + delta; // m
+    const lambda = c / f; // m
+    return {f,c,Dcm,Lcm,endOn,deltaEach,delta,L,Leff,lambda,tubeType};
+  }
+
+  function format(x,unit,dec=2){ return `${x.toFixed(dec)} ${unit}`; }
+
+  function nearestResonance(tubeType, Leff, lambda){
+    if(lambda<=0) return {n:1, Lres: 0};
+    if(tubeType === 'oo'){
+      const nFloat = 2*Leff/lambda;
+      let n = Math.max(1, Math.round(nFloat));
+      const Lres = n * lambda/2;
+      return {n, Lres};
+    }
+    // open-closed
+    const nFloat = (2*Leff/lambda + 1)/2;
+    let n = Math.max(1, Math.round(nFloat));
+    const Lres = (2*n - 1) * lambda/4;
+    return {n, Lres};
+  }
+
+  function snapToResonance(){
+    const p = readParams();
+    const {Lres} = nearestResonance(p.tubeType, p.Leff, p.lambda);
+    const Ltarget = Math.max(0.05, Lres - p.delta);
+    const Lcm = Math.min(120, Math.max(25, Ltarget*100));
+    ui.L.value = Lcm.toFixed(1);
+    ui.LVal.textContent = Lcm.toFixed(1);
+    updateReadout();
+  }
+  ui.snap.addEventListener('click', snapToResonance);
+
+  ui.showNodes.addEventListener('click', ()=>{
+    state.showNodeMarkers = !state.showNodeMarkers;
+    ui.showNodes.textContent = state.showNodeMarkers ? 'ซ่อนตำแหน่งเสียงดัง' : 'ไฮไลต์ตำแหน่งเสียงดัง (pressure antinodes)';
+  });
+
+  ['f','c','diam','L'].forEach(k=>{
+    ui[k].addEventListener('input',()=>{
+      if(k==='f' && osc) osc.frequency.value = parseFloat(ui.f.value);
+      ui.fVal.textContent = parseFloat(ui.f.value).toFixed(1);
+      ui.cVal.textContent = parseFloat(ui.c.value).toFixed(1);
+      ui.dVal.textContent = parseFloat(ui.diam.value).toFixed(1);
+      ui.LVal.textContent = parseFloat(ui.L.value).toFixed(1);
+      updateReadout();
+    });
+  });
+  ui.mode.addEventListener('change', ()=>{ state.mode = ui.mode.value; updateReadout(); });
+  ui.endCorr.addEventListener('change', ()=>{ updateReadout(); });
+  ui.tubeType?.addEventListener('change', ()=>{ updateReadout(); });
+
+  function updateReadout(){
+    const p = readParams();
+    const {n, Lres} = nearestResonance(p.tubeType, p.Leff, p.lambda);
+
+    // ความคลาดเคลื่อนจาก End correction เท่านั้น ≈ Δ/L (หน่วย %)
+    const detEndPct = 100 * (p.delta / Math.max(1e-9, p.L));
+
+    // pressure antinode positions from open end inside tube
+    const antinodes = [];
+    for(let m=1;;m++){
+      const x = (2*m - 1) * p.lambda / 4; // m
+      if(x <= p.L) antinodes.push(x); else break;
+    }
+
+    const list = antinodes.map((x,i)=>`จุดดังที่ ${i+1}: ห่างจากปากท่อ ${format(x*100,'cm',2)} (pressure antinode)`).join('<br>');
+
+    const tubeText = (p.tubeType==='oo') ? 'ปลายเปิด–ปลายเปิด (ไม่มีลูกสูบ)' : 'ปลายเปิด–ปลายปิด (มีลูกสูบ)';
+    ui.tubeLabel.textContent = (p.tubeType==='oo')
+      ? 'ปากท่อ (เปิด) อยู่ซ้าย • ปลายขวาเปิด — ลากปลายท่อเพื่อปรับความยาว'
+      : 'ปากท่อ (เปิด) อยู่ซ้าย • ปลายขวาเป็นลูกสูบ (ปิด) — ลากปลายท่อเพื่อปรับความยาว';
+
+    const dLine = (p.tubeType==='oo')
+      ? `Δ ต่อปลาย ≈ ${format(p.deltaEach,'m',3)} (รวม 2Δ = ${format(p.delta,'m',3)})`
+      : `Δ ≈ ${format(p.delta,'m',3)}`;
+
+    ui.readout.innerHTML = `ชนิดท่อ: <b>${tubeText}</b><br>λ = ${format(p.lambda,'m',3)} • L = ${format(p.L,'m',3)} • ${dLine} ⇒ <b>L<sub>eff</sub> = ${format(p.Leff,'m',3)}</b> • เรโซแนนซ์ใกล้สุด: n = <b>${n}</b>, L<sub>eff</sub> ≈ ${format(Lres,'m',3)}`;
+
+    ui.modesInfo.innerHTML = ``;
+  }
+
+  // ---------- Drawing ----------
+  function resize(){
+    const rect = view.getBoundingClientRect();
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    // ให้ canvas สูงเท่ากับพื้นที่จริงในจอทดลอง (แก้ปัญหา "ตัวอักษรยืด/เพี้ยน" บนมือถือ)
+    view.width = Math.floor(rect.width * dpr);
+    view.height = Math.floor(rect.height * dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  window.addEventListener('resize', resize);
+
+  function draw(){
+    const rect = view.getBoundingClientRect();
+    const w = rect.width; const h = rect.height;
+    ctx.clearRect(0,0,w,h);
+
+    // Layout: มือถือให้ท่ออยู่กึ่งกลางจอทดลอง (ลากง่าย + ไม่ทับข้อความ)
+    const isMobile = window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
+    const topY = isMobile ? (h*0.55) : Math.max(52, h*0.22);
+    const gap = 20; // ช่องว่างระหว่างเส้นโค้งจากลำโพงกับปากท่อ
+    const marginLeft = 40; // ขอบซ้ายสำหรับไอคอนลำโพง
+
+    const speakerX = marginLeft; // ขอบซ้ายของไอคอนลำโพง
+    const speakerW = 24, speakerH = 52;
+
+    // จุดศูนย์กลางของเส้นโค้งแสดงคลื่นให้อยู่ใกล้ลำโพง และห่างปากท่อ 20px
+    const arcCenterX = speakerX + speakerW - 10; // ขยับเข้าไปทางลำโพงเล็กน้อย
+    // ขยับ “ท่อ” ไปทางขวา 30px (แต่ลำโพงไม่ขยับตาม)
+    const tubeShiftX = 30;
+    const mouthX = arcCenterX + gap + tubeShiftX; // ปากท่อห่าง 20px จากเส้นโค้ง + shift
+
+    const p = readParams();
+
+    // สเกลภาพให้ท่อยังอยู่ในกรอบ
+    const pxPerMeter = Math.max(250, (w - (mouthX + 60)) / 1.6);
+    const Lpx = Math.max(100, Math.min(w - (mouthX + 40), p.L * pxPerMeter));
+    const pistonX = mouthX + Lpx;
+
+    // อัปเดต layout สำหรับการลากด้วยเมาส์/นิ้ว
+    layout = {mouthX, pistonX, pxPerMeter, topY, Lpx, w, h, tubeType: p.tubeType};
+
+// --- ท่อทรงกระบอก (มีมิติ + ขอบเทาเข้ม) ---
+const tubeH = 42;
+// ทำปลายท่อให้โค้งเป็นทรงกระบอก (capsule) เพื่อให้ขอบโค้งท่อซ้อนกับขอบวงรีปากท่อได้พอดี
+const tubeR = tubeH/2;
+const tubeY = topY - tubeH/2;
+
+function roundRect(x,y,w,h,r){
+  const rr = Math.min(r, w/2, h/2);
+  ctx.beginPath();
+  ctx.moveTo(x+rr, y);
+  ctx.arcTo(x+w, y, x+w, y+h, rr);
+  ctx.arcTo(x+w, y+h, x, y+h, rr);
+  ctx.arcTo(x, y+h, x, y, rr);
+  ctx.arcTo(x, y, x+w, y, rr);
+  ctx.closePath();
+}
+
+// ตัวท่อ
+roundRect(mouthX, tubeY, Lpx, tubeH, tubeR);
+ctx.fillStyle = '#e5e7eb';
+ctx.fill();
+ctx.lineWidth = 3;
+ctx.strokeStyle = '#475569';
+ctx.stroke();
+
+// เงาไฮไลต์ด้านบนท่อ
+ctx.lineWidth = 2;
+ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+ctx.beginPath();
+ctx.moveTo(mouthX + 14, tubeY + 10);
+ctx.lineTo(pistonX - 14, tubeY + 10);
+ctx.stroke();
+
+// ปากท่อซ้าย/ขวา (แหวน) — ให้ขอบวงรีซ้อนทับกับขอบโค้งปลายท่อ
+// ทำวงรี “แบนลง” เล็กน้อยเพื่อให้ดูสมจริง
+const ringRX = tubeH*0.19;  // แคบลงอีก 50% ในแกน x       // แบนในแกน x (ลดความกว้าง) โดยคงระยะในแกน y เดิม
+const ringRY = tubeH*0.42;       // แบนลงจากเดิม
+// ศูนย์กลางวงรีอยู่กึ่งกลางปลายท่อ (ซ้อนกับปลายโค้งของ capsule)
+const leftRingX = mouthX + ringRX; // ขยับให้ขอบซ้ายของวงรีซ้อนทับขอบท่อซ้าย
+ctx.lineWidth = 4;
+ctx.strokeStyle = '#334155';
+ctx.beginPath();
+ctx.ellipse(leftRingX, topY, ringRX, ringRY, 0, 0, Math.PI*2);
+ctx.stroke();
+
+// ปากท่อขวา (แหวน)
+const rightRingX = pistonX - ringRX; // ขยับให้ขอบขวาของวงรีซ้อนทับขอบท่อขวา
+ctx.beginPath();
+ctx.ellipse(rightRingX, topY, ringRX, ringRY, 0, 0, Math.PI*2);
+ctx.stroke();
+
+// --- ไอคอนลำโพง (วาดใหม่ให้เหมือนไอคอนตัวอย่าง) + แอนิเมชันคลื่นเมื่อเปิดเสียง ---
+ctx.save();
+ctx.translate(speakerX, topY);
+
+// ขนาดไอคอน (คงที่ ไม่ขึ้นกับความยาวท่อ)
+const sp = 1.0;
+ctx.scale(sp, sp);
+ctx.fillStyle = '#111827';
+ctx.strokeStyle = '#111827';
+
+// ฟังก์ชันกรอบมนเล็ก ๆ (สำหรับส่วนท้ายลำโพง)
+function rrect(x,y,w,h,r){
+  const rr = Math.min(r, w/2, h/2);
+  ctx.beginPath();
+  ctx.moveTo(x+rr, y);
+  ctx.arcTo(x+w, y, x+w, y+h, rr);
+  ctx.arcTo(x+w, y+h, x, y+h, rr);
+  ctx.arcTo(x, y+h, x, y, rr);
+  ctx.arcTo(x, y, x+w, y, rr);
+  ctx.closePath();
+}
+
+// 1) กล่องท้ายลำโพง (สี่เหลี่ยมทึบ)
+rrect(-26, -14, 12, 28, 2.5);
+ctx.fill();
+
+// 2) คอ/ช่วงต่อ
+rrect(-14, -10, 6, 20, 2.0);
+ctx.fill();
+
+// 3) กรวยลำโพง (ทรงคางหมู)
+ctx.beginPath();
+ctx.moveTo(-8, -18);
+ctx.lineTo(12, -30);
+ctx.lineTo(12, 30);
+ctx.lineTo(-8, 18);
+ctx.closePath();
+ctx.fill();
+
+// 4) คลื่นเสียง 3 ชั้น (กระพริบ + ขยาย/หด เมื่อเล่นเสียง)
+ctx.lineCap = 'round';
+ctx.lineJoin = 'round';
+
+const a0 = 0.88; // มุมกว้างของคลื่น
+const t = state.t;
+const pulse = playing ? (0.5 + 0.5*Math.sin(t*7.5)) : 0;      // 0..1
+const bump  = playing ? (1.0 + 0.18*Math.sin(t*7.5)) : 1.0;   // ขยาย/หดเล็กน้อย
+
+function wave(r, lw, alpha){
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.lineWidth = lw;
+  ctx.beginPath();
+  ctx.arc(18, 0, r*bump, -a0, a0);
+  ctx.stroke();
+  ctx.restore();
+}
+
+if(playing){
+  wave(10, 3.6, 0.55 + 0.35*pulse);
+  wave(17, 3.6, 0.35 + 0.35*pulse);
+  wave(24, 3.6, 0.20 + 0.30*pulse);
+}else{
+  wave(10, 3.6, 0.85);
+  wave(17, 3.6, 0.70);
+  wave(24, 3.6, 0.55);
+}
+
+ctx.restore();
+
+
+// --- ปลายขวาของท่อ: โหมดปลายปิดมีลูกสูบ / โหมดปลายเปิดไม่มีลูกสูบ ---
+if(p.tubeType === 'oc'){
+  // ลูกสูบ (ขอบหนาเท่าขอบท่อ)
+  const pistonW = 16, pistonH = tubeH + 18;
+  ctx.fillStyle = '#111827';
+  ctx.strokeStyle = '#475569';
+  ctx.lineWidth = 3; // เท่าขอบท่อ
+  roundRect(pistonX - pistonW/2, topY - pistonH/2, pistonW, pistonH, 6);
+  ctx.fill();
+  ctx.stroke();
+
+  // ป้ายโหนด/ปฎิบัพ ที่ลูกสูบ (ปิด) — แสดงเฉพาะเมื่อเลือก “แสดงคลื่นนิ่งในท่อ”
+  if(state.showSW){
+    ctx.fillStyle = (state.mode==='disp') ? '#0ea5e9' : '#ef4444';
+    ctx.beginPath(); ctx.arc(pistonX+22, topY, 6, 0, Math.PI*2); ctx.fill();
+    ctx.font = '12px system-ui'; ctx.fillStyle = '#475569';
+    ctx.fillText((state.mode==='disp')? 'โหนด (การกระจัด)' : 'ปฏิบัพ (ความดัน)', pistonX+34, topY+4);
+  }
+}else{
+  // โหมดปลายเปิด–ปลายเปิด: ใช้วงแหวนปากท่อที่วาดไว้แล้ว (rightRingX)
+  // ตัดวงรีเล็กทางขวาสุดออกตามที่ร้องขอ
+}
+
+    if(state.showSW){
+    // คลื่นนิ่งภายในท่อ (ย่อแอมพลิจูดให้อยู่ในท่อ)
+    const lambda = p.lambda; const k = 2*Math.PI/lambda; const omega = 2*Math.PI*p.f;
+    const showDisp = (state.mode==='disp');
+    const color = getComputedStyle(document.documentElement).getPropertyValue(showDisp?'--blue':'--red').trim();
+    const A = 14; // px
+    ctx.lineWidth = 2; ctx.strokeStyle = color; ctx.beginPath();
+    const N = Math.max(200, Math.floor(Lpx));
+    for(let i=0;i<=N;i++){
+      const xpx = mouthX + (Lpx * i / N);
+      const x = (p.L * i / N);
+      const phase = omega*state.t;
+      const yoff = showDisp ? (A*Math.cos(k*x)*Math.cos(phase)) : (A*Math.sin(k*x)*Math.sin(phase));
+      const y = topY - yoff;
+      if(i===0) ctx.moveTo(xpx,y); else ctx.lineTo(xpx,y);
+    }
+    ctx.stroke();
+
+    // จุดเสียงดัง (pressure antinodes)
+    if(state.showNodeMarkers){
+      const quarter = lambda/4;
+      for(let m=1;;m++){
+        const x = (2*m-1)*quarter; if(x>p.L) break;
+        const xpx = mouthX + (x/p.L)*Lpx;
+        ctx.fillStyle = '#16a34a';
+        ctx.beginPath(); ctx.arc(xpx, topY, 6, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#059669'; ctx.fillText(`P↑ ${(x*100).toFixed(2)} cm`, xpx+8, topY-8);
+      }
+    }
+    }
+
+    // เส้นฐาน
+    ctx.lineWidth = 1; ctx.strokeStyle = '#cbd5e1';
+    ctx.beginPath(); ctx.moveTo(mouthX, topY); ctx.lineTo(pistonX, topY); ctx.stroke();
+
+    // ป้ายกำกับปลายท่อ
+    ctx.fillStyle = '#475569'; ctx.font = '12px system-ui';
+    ctx.fillText('ปากท่อ (เปิด)', mouthX-6, topY-40);
+    ctx.textAlign = 'right';
+    ctx.fillText((p.tubeType==='oo') ? 'ปลายเปิด' : 'ลูกสูบ (ปิด)', pistonX+54, topY-40);
+    ctx.textAlign = 'start';
+
+    // แสดง Δ ถ้าเปิด End correction
+    const delta = p.delta;
+    if(delta>0){
+      ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1.5;
+      // ชี้ตำแหน่ง End correction ที่ปากท่อด้านขวา (และเขียนรวม 2Δ ในกรณีปลายเปิด–ปลายเปิด)
+      ctx.beginPath(); ctx.moveTo(pistonX+14, topY-18); ctx.lineTo(pistonX+14, topY+18); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(pistonX+14, topY); ctx.lineTo(pistonX+34, topY); ctx.stroke();
+      const dTxt = (p.tubeType==='oo') ? `2Δ ≈ ${(delta*100).toFixed(1)} cm` : `Δ ≈ ${(delta*100).toFixed(1)} cm`;
+      ctx.fillStyle = '#64748b'; ctx.fillText(dTxt, pistonX+38, topY-6);
+    }
+  }
+
+  // ---------- Audio loud/soft modulation by resonance ----------
+  function updateAudioLoudness(){
+    const p = readParams();
+    const k = 2*Math.PI / p.lambda;
+    const kLeff = k * p.Leff;
+    // OC: resonance at (2n-1)π/2 -> |sin| peak
+    // OO: resonance at nπ -> |cos| peak
+    const R = (p.tubeType==='oo') ? Math.cos(kLeff) : Math.sin(kLeff);
+    const amp = Math.abs(R); // 0..1
+    const base = 0.02, span = 0.10; // final gain ≈ 0.02..0.12
+    targetGain = base + span * (amp*amp); // sin^2 envelope, smoother
+    if(gain){
+      const current = gain.gain.value;
+      gain.gain.value = current + 0.1*(targetGain - current);
+    }
+  }
+
+  // ---------- Dragging (piston or tube) — Pointer Events + Mouse/Touch fallback ----------
+  function getRect(){ return view.getBoundingClientRect(); }
+  function posFromClient(clientX, clientY){ const r = getRect(); return {x: clientX - r.left, y: clientY - r.top}; }
+  function isOnPiston(x,y){
+    if(!layout || !layout.Lpx) return false;
+    if(layout.tubeType==='oo') return false; // ปลายเปิด–เปิด ไม่มีลูกสูบ
+    const nearX = Math.abs(x - layout.pistonX) < 40; // กว้างขึ้น
+    const nearY = Math.abs(y - layout.topY) < 56;
+    return nearX && nearY;
+  }
+  function isOnTube(x,y){
+    if(!layout || !layout.Lpx) return false;
+    const nearY = Math.abs(y - layout.topY) < 100; // โซนแนวตั้งกว้างขึ้น จับง่ายบน Chrome/มือถือ // โซนหนาขึ้น
+    const nearX = (x >= layout.mouthX - 20 && x <= layout.w - 40); // คลุมตั้งแต่ปากท่อถึงขอบขวา
+    return nearX && nearY;
+  }
+  function setLengthFromX(x){
+    const xClamped = Math.max(layout.mouthX, Math.min(x, layout.w - 40));
+    const Lm = Math.max(0.05, (xClamped - layout.mouthX) / layout.pxPerMeter); // meters
+    const Lcm = Math.min(120, Math.max(25, Lm*100));
+    ui.L.value = Lcm.toFixed(1);
+    ui.LVal.textContent = Lcm.toFixed(1);
+    updateReadout();
+  }
+  function startDragAt(x,y){
+    if(isOnPiston(x,y) || isOnTube(x,y)){
+      dragging = true;
+      setLengthFromX(x);
+      return true;
+    }
+    return false;
+  }
+  function updateDragAt(x){ if(dragging) setLengthFromX(x); }
+  function endDrag(){ dragging = false; }
+
+  // Pointer Events (modern browsers)
+  view.addEventListener('pointerdown', (evt)=>{
+    const p = posFromClient(evt.clientX, evt.clientY);
+    if(startDragAt(p.x,p.y)){
+      view.setPointerCapture?.(evt.pointerId);
+      evt.preventDefault();
+    }
+  });
+  view.addEventListener('pointermove', (evt)=>{
+    const p = posFromClient(evt.clientX, evt.clientY);
+    view.style.cursor = (isOnPiston(p.x,p.y) || isOnTube(p.x,p.y) || dragging) ? 'ew-resize' : 'default';
+    if(!dragging) return;
+    evt.preventDefault();
+    updateDragAt(p.x);
+  });
+  view.addEventListener('pointerup', (evt)=>{ endDrag(); view.releasePointerCapture?.(evt.pointerId); });
+  view.addEventListener('pointercancel', ()=>{ endDrag(); });
+
+  // Mouse fallback
+  view.addEventListener('mousedown', (evt)=>{
+    const p = posFromClient(evt.clientX, evt.clientY);
+    if(startDragAt(p.x,p.y)) evt.preventDefault();
+  });
+  window.addEventListener('mousemove', (evt)=>{
+    const p = posFromClient(evt.clientX, evt.clientY);
+    view.style.cursor = (isOnPiston(p.x,p.y) || isOnTube(p.x,p.y) || dragging) ? 'ew-resize' : 'default';
+    updateDragAt(p.x);
+  });
+  window.addEventListener('mouseup', ()=>{ endDrag(); });
+
+  // Touch fallback
+  view.addEventListener('touchstart', (evt)=>{
+    if(!evt.touches || !evt.touches[0]) return;
+    const t = evt.touches[0];
+    const p = posFromClient(t.clientX, t.clientY);
+    if(startDragAt(p.x,p.y)) evt.preventDefault();
+  }, {passive:false});
+  window.addEventListener('touchmove', (evt)=>{
+    if(!evt.touches || !evt.touches[0]) return;
+    const t = evt.touches[0];
+    const p = posFromClient(t.clientX, t.clientY);
+    if(dragging) evt.preventDefault();
+    updateDragAt(p.x);
+  }, {passive:false});
+  window.addEventListener('touchend', ()=>{ endDrag(); }, {passive:false});
+
+  // Tap/Click-to-set fallback (แตะครั้งเดียวเพื่อเซ็ตความยาวทันที)
+  view.addEventListener('click', (evt)=>{
+    const p = posFromClient(evt.clientX, evt.clientY);
+    if(isOnTube(p.x,p.y) || isOnPiston(p.x,p.y)) setLengthFromX(p.x);
+  });
+
+  function loop(){
+    state.t += 1/60;
+    resize();
+    draw();
+    updateAudioLoudness();
+    requestAnimationFrame(loop);
+  }
+
+  // Init
+  updateReadout();
+  resize();
+  requestAnimationFrame(loop);
+})();
+</script>
+
+<script>
+  // ---------- สูตรสำคัญ (Overlay) ----------
+  (function(){
+    const formulaOverlay = document.getElementById('formulaOverlay');
+    const openFormula = document.getElementById('openFormula');
+    const closeFormula = document.getElementById('closeFormula');
+
+    function showFormula(){
+      if(!formulaOverlay) return;
+      formulaOverlay.style.display = 'flex';
+      formulaOverlay.setAttribute('aria-hidden','false');
+      document.body.style.overflow = 'hidden';
+    document.body.classList.add('overlay-open');
+      // ให้ MathJax typeset หลังโมดัลแสดงผลแล้ว (กันกรณีไม่เรนเดอร์)
+      if(window.MathJax && window.MathJax.typesetPromise){
+        window.MathJax.typesetPromise().then(()=>{ document.body.classList.add('mathjax-ready'); }).catch(()=>{});
+        setTimeout(()=>{ window.MathJax.typesetPromise().then(()=>{ document.body.classList.add('mathjax-ready'); }).catch(()=>{}); }, 60);
+      }
+    }
+    function hideFormula(){
+      if(!formulaOverlay) return;
+      formulaOverlay.style.display = 'none';
+      formulaOverlay.setAttribute('aria-hidden','true');
+      // อย่าปลด overflow ถ้า quiz ยังเปิดอยู่
+      const quizOverlay = document.getElementById('quizOverlay');
+      if(!(quizOverlay && quizOverlay.style.display === 'flex')){
+        document.body.style.overflow = '';
+      }
+      document.body.classList.remove('overlay-open');
+    }
+
+    openFormula?.addEventListener('click', (e)=>{ e.preventDefault(); showFormula(); });
+    closeFormula?.addEventListener('click', (e)=>{ e.preventDefault(); hideFormula(); });
+    formulaOverlay?.addEventListener('click', (e)=>{ if(e.target === formulaOverlay) hideFormula(); });
+    window.addEventListener('keydown', (e)=>{ if(e.key === 'Escape' && formulaOverlay?.style.display === 'flex') hideFormula(); });
+  })();
+</script>
+
+<!-- ================= QUIZ MODAL ================= -->
+<div id="quizOverlay">
+  <div id="quizModal">
+    <button id="quizClose">❌</button>
+    <button id="quizToFormula" class="topNavBtn" aria-label="ไปหน้าสูตรสำคัญ">📘 สูตรสำคัญ</button>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+      <h2 style="color:#1d4ed8;margin:0">📝 แบบฝึกหัด <span class="hideOnMobile">— หลอดกำทอน</span></h2>
+</div>
+
+    <div class="quizQ" id="q1box">
+      <b>ข้อ 1</b><br>
+      จากการทดลองเรื่องการกำทอนของเสียงโดยใช้หลอดกำทอน พบว่าเกิดกำทอนที่ระยะ 31.25 cm จากปากท่อ และเมื่อเลื่อนลูกสูบต่อไปอีกก็จะเกิดการกำทอนอีกครั้งที่ระยะ 43.75 cm ตามรูป<br>
+      จงหาความถี่ของคลื่นเสียงที่ใช้<br>
+      กำหนดให้ 1) อุณหภูมิอากาศ ณ ขณะนั้นเป็น 15 °C<br>
+      2) ความเร็วเสียงในอากาศที่อุณหภูมิ 0 °C มีค่าเท่ากับ 331 m/s
+      <img alt="รูปประกอบข้อ 1" src="data:image/png;base64,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1aOPPqqBgQHnZSRJTzzxhBobG7Vq1SrdcMMNuvnmm7V48WINDAzI6/Xq3e9+t5YvX67Zs2dryZIlWrx4sVatWqVrr71WPT09uuaaa7R06VJdd911Ki0tVUdHh/MpACDnEZIAABgBX/jCF7R//35t375d//3f/60HHnhAr776qg4cOKCHHnpIr776qhKJxGD7/Px83XDDDbr33ns1ZcoU/eY3v1EymTzpmm/nxRdfVH5+vqZOnfqWvU8nQtmKFSs0f/58hcPhtw1gPT09SqfTCgaDkqSKigp9/etf1/3336+CggJZljUY9E5c1zTNk/539jlG9QMYi978TgoAAM7aihUr9L73vU+XX365pkyZorq6OpWWlioUCqm2tlalpaVv2gvJMAxNnDhRxcXFmjZt2lsGHqfm5mZFIhHV1taqsrLSWX6TvLw81dTUqKioyFmSJLlcLoXDYfX390vHf6b8/Hw988wz6u7ulo4HINM0B1fIMwxDLpdr8L9PnMv+/wAwlgz97gsAAE7bZZddplWrVumKK67Q0qVLdckll6i6ulqhUEgXX3yx6urq1NTUpHvuuUdf/OIXtXHjRh0+fFivv/66Zs6cqTvvvHNw5brnnntOn//85/XII48oHo8PPodt29q8ebNSqZSqqqqUn58/eL6pqUn/+Z//qW9/+9vat2+fDh48qO9+97sqLi7Whz70ocFrOK1YsUJut1sPPfSQnn/+eR05ckTPPvus9uzZI9M0FYlE1N3drcOHD6upqUmZTEa9vb3au3evurq6tGPHDiWTSXV3d6u3t1ctLS1qaWlxPg0A5DQWbgAAYAR4PB75fD75/X55PB65XC719PTI5XLp2muvVXFxscLhsP74xz9q//79isVi6u/vl2EYWrZsmebMmSPj+MIOW7du1caNG1VQUKAFCxYM9kAlk0nt379fRUVFmj179uAy3To+bG79+vXavXu3IpGIenp6Bq+9YMGCrJ/0ZGVlZXK5XOru7lZHR4e6u7sVi8W0aNEiVVdX6/XXXx/c2+nE8t579uwZnBd1YkjeiQ1yTdNUIBDQ1KlT5fV6nU8HADmJJcABABgFiURChw8fVm9vr2bOnKlgMKh0Oq29e/fq4MGDisViKioq0vTp01VbWzv4ONu21dbWpiNHjig/P191dXWD+w4lk0m1trbK5/OprKzspOF78XhcLS0t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" style="width:36%;min-width:200px;max-width:360px;display:block;margin:12px auto;border-radius:10px;border:1px solid #e5e7eb">
+      <div style="margin-top:6px">
+        <label class="opt"><input type="radio" name="q1" value="A"> A. 450 เฮิรตซ์</label>
+        <label class="opt"><input type="radio" name="q1" value="B"> B. 500 เฮิรตซ์</label>
+        <label class="opt"><input type="radio" name="q1" value="C"> C. 680 เฮิรตซ์</label>
+        <label class="opt"><input type="radio" name="q1" value="D"> D. 1,360 เฮิรตซ์</label>
+        <label class="opt"><input type="radio" name="q1" value="E"> E. 2,720 เฮิรตซ์</label>
+      </div>
+      <div class="solBox" id="sol1"></div>
+    </div>
+
+    <div class="quizQ" id="q2box">
+      <b>ข้อ 2</b><br>
+      หลอดกำทอนปลายเปิดทั้ง 2 ข้าง เมื่อเกิดกำทอนกับคลื่นเสียงที่มีความถี่ 350 เฮิรตซ์ ภายในหลอดจะมีตำแหน่งบัพกี่บัพ
+      ถ้าหลอดยาว 1.5 เมตร และความเร็วเสียงในอากาศขณะนั้นเท่ากับ 350 เมตร/วินาที
+      <div style="margin-top:10px">
+        <label class="opt"><input type="radio" name="q2" value="A"> A. 1 บัพ</label>
+        <label class="opt"><input type="radio" name="q2" value="B"> B. 2 บัพ</label>
+        <label class="opt"><input type="radio" name="q2" value="C"> C. 3 บัพ</label>
+        <label class="opt"><input type="radio" name="q2" value="D"> D. 4 บัพ</label>
+        <label class="opt"><input type="radio" name="q2" value="E"> E. 5 บัพ</label>
+      </div>
+      <div class="solBox" id="sol2"></div>
+    </div>
+
+    <div class="quizQ" id="q3box">
+      <b>ข้อ 3</b><br>
+      ท่อทรงกระบอกปลายปิดข้างหนึ่งยาว 2 เมตร ความถี่ต่ำที่สุดของคลื่นเสียงที่ทำให้เกิดการสั่นพ้องในท่อนี้จะเท่ากับกี่เฮิรตซ์
+      กำหนดความเร็วของเสียงในอากาศเท่ากับ 340 เมตรต่อวินาที (ไม่ต้องคิด end-correction)
+      <img alt="รูปประกอบข้อ 3" src="data:image/png;base64,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" style="width:30%;min-width:200px;max-width:320px;display:block;margin:12px auto;border-radius:10px;border:1px solid #e5e7eb">
+      <div style="margin-top:6px">
+        <label class="opt"><input type="radio" name="q3" value="A"> A. 170</label>
+        <label class="opt"><input type="radio" name="q3" value="B"> B. 85</label>
+        <label class="opt"><input type="radio" name="q3" value="C"> C. 42.5</label>
+        <label class="opt"><input type="radio" name="q3" value="D"> D. 21.25</label>
+        <label class="opt"><input type="radio" name="q3" value="E"> E. 25.21</label>
+      </div>
+      <div class="solBox" id="sol3"></div>
+    </div>
+
+    <div class="quizQ" id="q4box">
+      <b>ข้อ 4</b><br>
+      จากข้อ 3 ถ้าค่อย ๆ ปรับความถี่ให้สูงขึ้น จงหาความถี่ที่ทำให้เกิดเสียงดังครั้งที่สาม
+      <div style="margin-top:10px">
+        <label class="opt"><input type="radio" name="q4" value="A"> A. 56.5</label>
+        <label class="opt"><input type="radio" name="q4" value="B"> B. 67.25</label>
+        <label class="opt"><input type="radio" name="q4" value="C"> C. 89.21</label>
+        <label class="opt"><input type="radio" name="q4" value="D"> D. 127.5</label>
+        <label class="opt"><input type="radio" name="q4" value="E"> E. 212.5</label>
+      </div>
+      <div class="solBox" id="sol4"></div>
+    </div>
+
+    <button id="checkQuiz">ตรวจคำตอบ</button>
+    <div id="quizResult"></div>
+
+    <div style="margin-top:14px;color:#1d4ed8">
+      ศึกษาเพิ่มเติมที่เพจ <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener" style="color:#1d4ed8;text-decoration:underline">คลายปมฟิสิกส์</a>
+    </div>
+  </div>
+</div>
+
+
+<script>
+(function(){
+  const state = window.__tubeState || { t:0, mode:'disp', showNodeMarkers:false, showSW:false };
+  const openBtn = document.getElementById('openQuiz');
+  const overlay = document.getElementById('quizOverlay');
+  const closeBtn = document.getElementById('quizClose');
+  const checkBtn = document.getElementById('checkQuiz');
+  const result = document.getElementById('quizResult');
+
+  function openQuiz(){ overlay.style.display='flex'; document.body.style.overflow='hidden';
+    document.body.classList.add('overlay-open'); }
+  function closeQuiz(){ overlay.style.display='none'; document.body.style.overflow=''; }
+
+  openBtn && openBtn.addEventListener('click', openQuiz);
+  closeBtn && closeBtn.addEventListener('click', closeQuiz);
+  overlay && overlay.addEventListener('click', (e)=>{ if(e.target===overlay) closeQuiz(); });
+  window.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && overlay && overlay.style.display==='flex') closeQuiz(); });
+
+  function getAns(name){
+    const el = document.querySelector('input[name="'+name+'"]:checked');
+    return el ? el.value : null;
+  }
+
+  const solMap = {
+    q1: {correct:'D', box:'sol1', html:`<div style="font-weight:900;margin-bottom:6px">เฉลยข้อ 1</div>
+<div>คำตอบที่ถูก: <span style="color:#dc2626;font-weight:900">ตัวเลือก D (1,360 เฮิรตซ์)</span></div>
+<div style="margin-top:10px;line-height:1.85">
+<b>แนวคิดสำคัญ</b>: ระยะเรโซแนนซ์ที่ “ติดกัน” ต่างกัน \\(\\Delta L = \\dfrac{\\lambda}{2}\\)<br><br>
+<b>ขั้นที่ 1</b> หา \\(\\Delta L\\)<br>
+\\(\\Delta L = 43.75 - 31.25\,\\text{cm}\\)<br>
+\\(\\Delta L = 12.50\,\\text{cm}\\)<br><br>
+<b>ขั้นที่ 2</b> หา \\(\\lambda\\)<br>
+\\(\\lambda = 2\\Delta L\\)<br>
+\\(\\lambda = 25.0\,\\text{cm} = 0.25\,\\text{m}\\)<br><br>
+<b>ขั้นที่ 3</b> หาอัตราเร็วเสียงที่ \\(15^\\circ\\text{C}\\)<br>
+\\(v = 331 + 0.6T = 331 + 0.6(15) = 340\,\\text{m/s}\\)<br><br>
+<b>ขั้นที่ 4</b> หา f<br>
+\\(f = \\dfrac{v}{\\lambda} = \\dfrac{340}{0.25} = 1360\,\\text{Hz}\\)
+</div>`},
+    q2: {correct:'C', box:'sol2', html:`<div style="font-weight:900;margin-bottom:6px">เฉลยข้อ 2</div>
+<div>คำตอบที่ถูก: <span style="color:#dc2626;font-weight:900">ตัวเลือก C (3 บัพ)</span></div>
+<div style="margin-top:10px;line-height:1.85">
+<b>ขั้นที่ 1</b> หา \\(\\lambda\\)<br>
+\\(\\lambda = \\dfrac{v}{f} = \\dfrac{350}{350} = 1.0\,\\text{m}\\)<br><br>
+<b>ขั้นที่ 2</b> ปลายเปิด–ปลายเปิด: \\(L = \\dfrac{n\\lambda}{2}\\)<br>
+\\(1.5 = \\dfrac{n(1.0)}{2}\\Rightarrow n=3\\)<br><br>
+<b>ขั้นที่ 3</b> จำนวนบัพ = \\(n\\) ⇒ 3 บัพ
+</div>`},
+    q3: {correct:'C', box:'sol3', html:`<div style="font-weight:900;margin-bottom:6px">เฉลยข้อ 3</div>
+<div>คำตอบที่ถูก: <span style="color:#dc2626;font-weight:900">ตัวเลือก C (42.5 เฮิรตซ์)</span></div>
+<div style="margin-top:10px;line-height:1.85">
+ปลายเปิด–ปลายปิด: มูลฐาน \\(L = \\dfrac{\\lambda}{4}\\Rightarrow \\lambda=4L\\)<br>
+\\(\\lambda = 4(2)=8\,\\text{m}\\)<br>
+\\(f = \\dfrac{v}{\\lambda} = \\dfrac{340}{8} = 42.5\,\\text{Hz}\\)
+</div>`},
+    q4: {correct:'E', box:'sol4', html:`<div style="font-weight:900;margin-bottom:6px">เฉลยข้อ 4</div>
+<div style="margin-top:8px;line-height:1.85">
+หลอดปลายเปิด–ปลายปิด จะดังที่ฮาร์โมนิกคี่เท่านั้น<br>
+ดังนั้น <span class="eq">f = f<sub>1</sub>, 3f<sub>1</sub>, 5f<sub>1</sub>, …</span><br><br>
+จากข้อ 3 ได้ <span class="eq">f<sub>1</sub> = 42.5 Hz</span><br><br>
+<b>เสียงดังครั้งที่สาม</b> คือเรโซแนนซ์ลำดับถัดไป (ฮาร์โมนิกที่ 5)<br>
+ดังนั้น <span class="eq">f<sub>3</sub> = 5f<sub>1</sub> = 5(42.5) = 212.5 Hz</span><br><br>
+สรุป: <span style="color:#dc2626;font-weight:900">212.5 Hz (ตัวเลือก E)</span>
+</div>`},
+  };
+
+  checkBtn && checkBtn.addEventListener('click', ()=>{
+    let score=0, total=0;
+
+    ['q1','q2','q3','q4'].forEach(q=>{
+      const a = getAns(q);
+      const solBox = document.getElementById(solMap[q].box);
+      if(!solBox) return;
+      if(a) {
+        total++;
+        if(a === solMap[q].correct) score++;
+        solBox.style.display = 'block';
+        solBox.innerHTML = solMap[q].html;
+      } else {
+        solBox.style.display = 'none';
+        solBox.innerHTML = '';
+      }
+    });
+
+    result.innerHTML = (total===0)
+      ? "<span style='color:#dc2626;font-weight:900'>กรุณาเลือกคำตอบอย่างน้อย 1 ข้อก่อนกดตรวจคำตอบ</span>"
+      : "<div style='color:#065f46;background:#dcfce7;border:1px solid #86efac;border-radius:12px;padding:10px'>คะแนนที่ได้: <b>"+score+"</b> / <b>"+total+"</b></div>";
+
+    if(window.MathJax && window.MathJax.typesetPromise) {
+      window.MathJax.typesetPromise();
+    }
+  });
+
+    const sw = document.getElementById('toggleSW');
+  const ov = document.getElementById('swOverlay');
+  if(ov){
+    // ไม่ใช้กราฟ/เส้นคลื่นแบบ SVG overlay แล้ว (ให้แสดงเฉพาะคลื่นนิ่ง "ภายในท่อ" บน canvas หลัก)
+    ov.innerHTML = '';
+    ov.style.display = 'none';
+  }
+  if(sw){
+    // ค่าเริ่มต้น: ยังไม่ติ๊ก => ไม่แสดงคลื่นนิ่ง
+    sw.checked = false;
+    state.showSW = false;
+
+    sw.addEventListener('change', ()=>{
+      state.showSW = sw.checked;
+      if(ov) ov.style.display = 'none'; // คงซ่อนไว้เสมอ
+    });
+  }
+})();
+</script>
+
+
+<script>
+  // Mark MathJax ready (for showing LaTeX version in formula boxes)
+  window.addEventListener('load', ()=>{
+    if(window.MathJax && window.MathJax.typesetPromise){
+      window.MathJax.typesetPromise().then(()=>{ document.body.classList.add('mathjax-ready'); }).catch(()=>{});
+    }
+  });
+</script>
+
+
+<script>
+(function(){
+  const quizToFormula = document.getElementById('quizToFormula');
+  const formulaToQuiz = document.getElementById('formulaToQuiz');
+
+  const quizOverlay = document.getElementById('quizOverlay');
+  const formulaOverlay = document.getElementById('formulaOverlay');
+
+  function openFormula(){
+    if(!formulaOverlay) return;
+    formulaOverlay.style.display = 'flex';
+    formulaOverlay.setAttribute('aria-hidden','false');
+    document.body.style.overflow = 'hidden';
+    if(window.MathJax && window.MathJax.typesetPromise){
+      window.MathJax.typesetPromise().catch(()=>{});
+      setTimeout(()=>{ window.MathJax.typesetPromise().catch(()=>{}); }, 60);
+    }
+  }
+  function closeFormula(){
+    if(!formulaOverlay) return;
+    formulaOverlay.style.display = 'none';
+    formulaOverlay.setAttribute('aria-hidden','true');
+    // อย่าปลด overflow ถ้า quiz ยังเปิดอยู่
+    if(!(quizOverlay && quizOverlay.style.display === 'flex')){
+      document.body.style.overflow = '';
+    }
+      // เอาแถบล่างออกเฉพาะตอน overlay เปิด
+    if(!(quizOverlay && quizOverlay.style.display === 'flex')){
+      document.body.classList.remove('overlay-open');
+    }
+  }
+  function openQuiz(){
+    if(!quizOverlay) return;
+    quizOverlay.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    document.body.classList.add('overlay-open');
+  }
+  function closeQuiz(){
+    if(!quizOverlay) return;
+    quizOverlay.style.display = 'none';
+    // อย่าปลด overflow ถ้า formula ยังเปิดอยู่
+    if(!(formulaOverlay && formulaOverlay.style.display === 'flex')){
+      document.body.style.overflow = '';
+    }
+      if(!(formulaOverlay && formulaOverlay.style.display === 'flex')){
+      document.body.classList.remove('overlay-open');
+    }
+  }
+
+  quizToFormula && quizToFormula.addEventListener('click', (e)=>{
+    e.preventDefault();
+    closeQuiz();
+    openFormula();
+  });
+
+  formulaToQuiz && formulaToQuiz.addEventListener('click', (e)=>{
+    e.preventDefault();
+    closeFormula();
+    openQuiz();
+  });
+})();
+</script>
+
+
+<!-- Mobile floating action bar (buttons are moved here via JS on mobile only) -->
+<div id="mobileActionBar" aria-hidden="true"></div>
+
+<button id="mobileToggleBtn" aria-label="ซ่อน/แสดงปุ่ม" title="ซ่อน/แสดงปุ่ม" style="display:none">
+  <!-- eye icon like password -->
+  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" stroke="white" stroke-width="1.8"/>
+    <path d="M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z" stroke="white" stroke-width="1.8"/>
+    <path d="M4 4 20 20" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+  </svg>
+</button>
+
+
+
+<script>
+/* Mobile-only: ย้ายปุ่ม 4 ปุ่มไปลอยด้านล่าง + ปุ่มตาเพื่อซ่อน/แสดง */
+(function(){
+  const mq = window.matchMedia('(max-width: 768px)');
+
+  const ids = ['play','snap','openFormula','openQuiz'];
+  const placeholders = {};
+  let moved = false;
+
+  function ensurePlaceholders(){
+    ids.forEach(id=>{
+      const el = document.getElementById(id);
+      if(!el) return;
+      if(placeholders[id]) return;
+      const ph = document.createElement('span');
+      ph.className = 'mobile-moved';
+      ph.style.display = 'none';
+      el.parentNode.insertBefore(ph, el);
+      placeholders[id] = ph;
+    });
+  }
+
+  function moveToMobileBar(){
+    const bar = document.getElementById('mobileActionBar');
+    const toggle = document.getElementById('mobileToggleBtn');
+    if(!bar || !toggle) return;
+
+    ensurePlaceholders();
+
+    // clear bar then append in desired order
+    bar.innerHTML = '';
+    ids.forEach(id=>{
+      const el = document.getElementById(id);
+      if(!el) return;
+      bar.appendChild(el);
+    });
+
+    // show
+    bar.setAttribute('aria-hidden','false');
+    toggle.style.display = 'flex';
+    moved = true;
+  }
+
+  function moveBackToPanel(){
+    const bar = document.getElementById('mobileActionBar');
+    const toggle = document.getElementById('mobileToggleBtn');
+    if(!bar || !toggle) return;
+
+    // restore each element to its placeholder position
+    ids.forEach(id=>{
+      const el = document.getElementById(id);
+      const ph = placeholders[id];
+      if(el && ph && ph.parentNode){
+        ph.parentNode.insertBefore(el, ph.nextSibling);
+      }
+    });
+
+    // hide bar
+    bar.innerHTML = '';
+    bar.setAttribute('aria-hidden','true');
+    toggle.style.display = 'none';
+    document.body.classList.remove('mobile-hide-actions');
+    moved = false;
+  }
+
+  function apply(){
+    if(mq.matches){
+      moveToMobileBar();
+    }else{
+      if(moved) moveBackToPanel();
+    }
+  }
+
+  // toggle hide/show
+  document.addEventListener('click', (e)=>{
+    const t = e.target.closest('#mobileToggleBtn');
+    if(!t) return;
+    document.body.classList.toggle('mobile-hide-actions');
+  });
+
+  // run after DOM is ready (and after other listeners attached)
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', apply);
+  }else{
+    apply();
+  }
+  // handle resize/orientation changes
+  mq.addEventListener ? mq.addEventListener('change', apply) : mq.addListener(apply);
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>การทดลองความถี่บีต (Beat Frequency) — ปรับค่าโดยพิมพ์ได้ & ปุ่มเล่นสีน้ำเงิน</title>
+<style>
+  :root{
+    --ink:#0f172a; --muted:#64748b; --line:#e5e7eb;
+    --panel:#ffffff; --bg:#ffffff;
+    --blue:#2563eb; --blueDark:#1d4ed8; --red:#ef4444; --violet:#7c3aed;
+    --orange:#fb923c; --orangeSoft:#ffedd5; --orangeLine:#fdba74;
+    --green:#22c55e; --greenSoft:#ecfdf5; --greenLine:#86efac;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Inter,Roboto,Helvetica,Arial,sans-serif}
+  header{padding:14px 16px;border-bottom:1px solid var(--line);font-weight:700}
+  .wrap{max-width:1200px;margin:0 auto;padding:16px;display:grid;gap:16px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px}
+  .ctrl{display:grid;grid-template-columns: 130px 1fr 110px; align-items:center; gap:10px; margin-bottom:8px}
+  .ctrl output{min-width:90px;text-align:right;font-variant-numeric:tabular-nums}
+  input[type="range"]{width:100%}
+  input[type="number"]{
+    width:110px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;
+    font-variant-numeric:tabular-nums;
+  }
+  .btn{
+    display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);
+    background:#f3f4f6;color:#111827;padding:10px 14px;border-radius:12px;
+    cursor:pointer;font-weight:700;user-select:none
+  }
+  .btn-blue{background:var(--blue); color:#fff; border-color:var(--blue)}
+  .btn-blue[data-playing="true"]{ background:var(--blueDark); border-color:var(--blueDark) }
+  .legend{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  .legend .pill{display:inline-block;padding:6px 10px;border-radius:999px;background:#f8fafc;border:1px solid var(--line);font-size:13px}
+  .legend b{font-weight:800}
+  .blue{color:var(--blue)} .red{color:var(--red)} .violet{color:var(--violet)}
+  canvas{width:100%;height:320px;background:#fff;border:1px solid var(--line);border-radius:12px}
+  .kpi{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px}
+  .kpi .item{border:1px solid var(--line);border-radius:12px;padding:12px}
+  .kpi .val{font-size:22px;font-weight:800}
+  .hint{color:var(--muted);font-size:14px}
+  .explain{margin-top:12px;font-size:14px;line-height:1.6;background:#f9fafb;border:1px solid var(--line);padding:10px;border-radius:12px}
+  .alert{display:none;margin-top:8px;padding:8px 10px;border-radius:10px;background:#eef2ff;border:1px solid #c7d2fe;color:#3730a3;font-size:14px}
+  .alert.show{display:block}
+  a.brand{color:#0ea5e9;text-decoration:underline}
+
+  .btn-orange{background:var(--orangeSoft); color:#7c2d12; border-color:var(--orangeLine)}
+  .btn-orange:hover{filter:brightness(0.98)}
+  .btn-green{background:var(--greenSoft); color:#14532d; border-color:var(--greenLine)}
+  .btn-green:hover{filter:brightness(0.98)}
+  /* สูตรสำคัญ (Modal) — มาตรฐานเพจ: พื้นหลังส้มอ่อน + safe-area + ปุ่มปิดลอย */
+  .modal{
+    position:fixed; inset:0; z-index:9999;
+    display:none;
+    background:rgba(15,23,42,.35);
+  }
+  .modal.show{display:block}
+  .modal .sheet{
+    position:absolute; inset:0;
+    background:var(--orangeSoft);
+    overflow:auto;
+    -webkit-overflow-scrolling:touch;
+    padding:
+      calc(14px + env(safe-area-inset-top))
+      14px
+      calc(14px + env(safe-area-inset-bottom))
+      14px;
+  }
+  .modal .topbar{
+    position:sticky; top:0; z-index:2;
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:10px 10px;
+    background:rgba(255,237,213,.92);
+    border:1px solid var(--orangeLine);
+    border-radius:14px;
+    backdrop-filter: blur(6px);
+  }
+  .modal .title{
+    font-weight:900; color:#1d4ed8; /* หัวข้อสีน้ำเงินตามมาตรฐาน */
+    font-size:16px;
+  }
+  .modal .closeX{
+    position:fixed;
+    top: calc(12px + env(safe-area-inset-top));
+    right: calc(12px + env(safe-area-inset-right));
+    z-index:10000;
+    width:44px; height:44px;
+    border-radius:999px;
+    border:1px solid var(--line);
+    background:#fff;
+    cursor:pointer;
+    font-weight:900;
+  }
+  .modal .content{max-width:980px;margin:14px auto 0}
+  .box{
+    background:#fff;
+    border:1px solid var(--orangeLine);
+    border-radius:16px;
+    padding:14px;
+    margin:12px 0;
+  }
+  .box h3{margin:0 0 8px 0; font-size:16px; color:#7c2d12}
+  .box p, .box li{color:#0f172a; line-height:1.75; font-size:15px}
+  .note{background:#fff7ed;border:1px dashed var(--orangeLine)}
+  .formula{
+    background:#fff;
+    border:2px solid var(--orangeLine);
+  }
+  .formula .big{
+    font-size:16px; font-weight:900; color:#7c2d12;
+    margin-bottom:6px
+  }
+  .step{background:#ffffff;border:1px solid #fed7aa}
+  .step .k{display:inline-block; padding:2px 8px; border-radius:999px; background:#fff7ed; border:1px solid #fed7aa; font-weight:800; color:#9a3412; margin-right:8px}
+  .muted{color:var(--muted)}
+  @media (max-width:640px){
+    .modal .title{font-size:15px}
+    .box p, .box li{font-size:14px}
+  }
+
+
+.hl1{color:#1d4ed8;font-weight:900}
+.hl2{color:#ef4444;font-weight:900}
+.hl3{color:#7c2d12;font-weight:900}
+.hl4{color:#16a34a;font-weight:900}
+
+</style>
+
+<!-- MathJax (มาตรฐานเพจ) -->
+<script>
+  window.MathJax = {
+    tex: {inlineMath: [['\\(','\\)'], ['$', '$']], displayMath: [['\\[','\\]']]},
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] }
+  };
+
+  // ปรับค่าด้วยปุ่ม + -
+  function stepValue(id, delta){
+    const el = document.getElementById(id);
+    if(!el) return;
+    const step = parseFloat(el.step || 1);
+    const min = (el.min !== '') ? parseFloat(el.min) : -Infinity;
+    const max = (el.max !== '') ? parseFloat(el.max) : Infinity;
+    let v = parseFloat(el.value || 0) + delta;
+    v = Math.min(max, Math.max(min, v));
+    el.value = v.toFixed(step < 1 ? 2 : 1);
+    el.dispatchEvent(new Event('input', {bubbles:true}));
+  }
+
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js">
+  // ปรับค่าด้วยปุ่ม + -
+  function stepValue(id, delta){
+    const el = document.getElementById(id);
+    if(!el) return;
+    const step = parseFloat(el.step || 1);
+    const min = (el.min !== '') ? parseFloat(el.min) : -Infinity;
+    const max = (el.max !== '') ? parseFloat(el.max) : Infinity;
+    let v = parseFloat(el.value || 0) + delta;
+    v = Math.min(max, Math.max(min, v));
+    el.value = v.toFixed(step < 1 ? 2 : 1);
+    el.dispatchEvent(new Event('input', {bubbles:true}));
+  }
+
+</script>
+
+</head>
+<body>
+  <header>การทดลอง “ความถี่บีต (Beat Frequency)”</header>
+  <div class="wrap">
+    <div class="card">
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div class="legend">
+          <div class="pill">
+            <span class="blue"><b>สีฟ้า</b></span> = f₁ |
+            <span class="red"><b>สีแดง</b></span> = f₂ |
+            <span class="violet"><b>สีม่วง</b></span> = ผลรวม
+          </div>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end">
+  <div id="mainBtnRow" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end">
+  <button id="formulaBtn" class="btn btn-orange" type="button" aria-haspopup="dialog" aria-controls="formulaModal">Σ สูตรสำคัญ</button>
+  <button id="quizBtn" class="btn btn-green" type="button" aria-haspopup="dialog" aria-controls="quizModal">📝 แบบฝึกหัด</button>
+  <button id="playBtn" class="btn btn-blue" data-playing="false" aria-pressed="false">▶ เล่น</button>
+</div>
+</div></div>
+
+      <div id="audibleAlert" class="alert">ความถี่เฉลี่ยต่ำกว่า ~20 Hz จึง “ไม่ได้ยิน” แต่กราฟยังทำงานปกติ</div>
+
+      <canvas id="scope" width="1200" height="320" aria-label="กราฟคลื่น"></canvas>
+
+      
+      <div class="ctrl">
+        <label for="f1Num">f₁ (Hz)</label>
+        <div style="display:flex; gap:6px; align-items:center">
+          <button type="button" class="btn" onclick="stepValue('f1Num', -1)">−</button>
+          <input id="f1Num" type="number" min="0" max="1200" step="1" value="440" inputmode="decimal">
+          <button type="button" class="btn" onclick="stepValue('f1Num', 1)">+</button>
+        </div>
+        <output></output>
+      </div>
+    
+      
+      <div class="ctrl">
+        <label for="f2Num">f₂ (Hz)</label>
+        <div style="display:flex; gap:6px; align-items:center">
+          <button type="button" class="btn" onclick="stepValue('f2Num', -1)">−</button>
+          <input id="f2Num" type="number" min="0" max="1200" step="1" value="444" inputmode="decimal">
+          <button type="button" class="btn" onclick="stepValue('f2Num', 1)">+</button>
+        </div>
+        <output></output>
+      </div>
+    
+      
+      <div class="ctrl" id="ampCtrl">
+        <label for="ampNum">Amplitude</label>
+        <div style="display:flex; gap:6px; align-items:center">
+          <button type="button" class="btn" onclick="stepValue('ampNum', -0.01)">−</button>
+          <input id="ampNum" type="number" min="0" max="1" step="0.01" value="0.3" inputmode="decimal">
+          <button type="button" class="btn" onclick="stepValue('ampNum', 0.01)">+</button>
+        </div>
+        <output></output>
+      </div>
+    
+
+      <div class="kpi">
+        <div class="item">
+          <div class="hint">ความถี่บีต |f₁−f₂|</div>
+          <div id="beatVal" class="val">4.00 Hz</div>
+        </div>
+        <div class="item">
+          <div class="hint">ความถี่เสียงหลัก (≈ (f₁+f₂)/2 เว้นกรณีมีตัวเป็นศูนย์)</div>
+          <div id="sumVal" class="val">≈ 442.00 Hz</div>
+        </div>
+      </div>
+
+      <div class="explain">
+  <b>ความถี่บีต</b> คืออัตราที่เสียงดัง–เบาสลับเมื่อซ้อนสองความถี่ใกล้กัน<br>
+  สูตร: f<sub>beat</sub> = |f₁ − f₂| และเสียงหลัก ≈ (f₁ + f₂)/2<br>
+  <span class="muted">หมายเหตุเชิงการได้ยิน (อ้างอิงแนว สสวท.): เพื่อได้ยิน “จังหวะบีต” ชัด มักต้องมี |f₁−f₂| ≤ 7 Hz (ถ้าเร็วกว่านี้ หูจะเริ่มไม่แยกเป็นจังหวะ)</span>
+</div>
+
+
+<!-- แบบฝึกหัด (Modal) — มาตรฐานเพจ -->
+<div id="quizModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="qTitle">
+  <button class="closeX" id="qClose" type="button" aria-label="ปิด">❌</button>
+  <div class="sheet" style="background:var(--greenSoft);">
+    <div class="topbar" style="background:rgba(236,253,245,.92); border-color:var(--greenLine);">
+      <div id="qTitle" class="title" style="color:#15803d;">แบบฝึกหัด</div>
+    </div>
+
+    <div class="content">
+      <div class="box" style="border-color:var(--greenLine);">
+        <h3 style="color:#14532d;">หัวข้อแบบฝึกหัด</h3>
+        <p style="margin:0">
+          เลือกคำตอบ <b>A–D</b> แล้วกดปุ่ม <b>“ตรวจคำตอบ”</b> เพื่อดูคะแนน + เฉลยละเอียดในแต่ละข้อ
+        </p>
+      </div>
+
+      <form id="quizForm" class="box" style="border-color:var(--greenLine);">
+        <h3 style="color:#14532d; margin-bottom:10px;">ข้อ 1</h3>
+        <p>
+          นักดนตรีคนหนึ่งเล่นไวโอลินความถี่ \(507\ \text{Hz}\) และอีกคนหนึ่งเล่นกีตาร์ความถี่ \(512\ \text{Hz}\)
+          ถ้าทั้งสองเล่นพร้อมกัน จะปรากฏการณ์บีตที่ความถี่เท่าใด
+        </p>
+        <div class="choices" data-q="q1" style="display:grid; gap:8px; margin-top:10px">
+          <label class="box" style="margin:0; border-color:#d1fae5; padding:10px"><input type="radio" name="q1" value="A"> A) \(2.5\ \text{Hz}\)</label>
+          <label class="box" style="margin:0; border-color:#d1fae5; padding:10px"><input type="radio" name="q1" value="B"> B) \(5.0\ \text{Hz}\)</label>
+          <label class="box" style="margin:0; border-color:#d1fae5; padding:10px"><input type="radio" name="q1" value="C"> C) \(10\ \text{Hz}\)</label>
+          <label class="box" style="margin:0; border-color:#d1fae5; padding:10px"><input type="radio" name="q1" value="D"> D) \(509.5\ \text{Hz}\)</label>
+        </div>
+        <div id="sol1" class="box" style="display:none; border-color:#bbf7d0; background:#ffffff;">
+          <h3 style="color:#14532d; margin:0 0 8px 0;">เฉลยข้อ 1</h3>
+          <p style="margin:0 0 8px 0;"><b>คำตอบที่ถูก: <span style="color:#ef4444;">B</span></b></p>
+          \[
+            f_{\text{beat}} = |f_1 - f_2|
+          \]
+          \[
+            f_{\text{beat}} = |507 - 512|
+          \]
+          \[
+            f_{\text{beat}} = 5\ \text{Hz}
+          \]
+          <p class="muted" style="margin:8px 0 0 0;">ดังนั้นความถี่บีตเท่ากับ \(5\ \text{Hz}\)</p>
+        </div>
+
+        <hr style="border:none; border-top:1px solid #d1fae5; margin:14px 0">
+
+        <h3 style="color:#14532d; margin-bottom:10px;">ข้อ 2</h3>
+<p>
+  ในการปรับเทียบเสียงของเปียโนให้ระดับเสียง C โดยเทียบกับส้อมเสียงความถี่ \(256.0\ \text{Hz}\)
+  ถ้าได้ยินเสียงบีตความถี่ \(3.0\) ครั้ง/วินาที ความถี่ที่เป็นไปได้ของเปียโนมีค่าเท่าใด
+</p>
+<div class="choices" data-q="q2" style="display:grid; gap:8px; margin-top:10px">
+  <label class="box" style="margin:0; border-color:#d1fae5; padding:10px"><input type="radio" name="q2" value="A"> A) \(256\ \text{Hz}\)</label>
+  <label class="box" style="margin:0; border-color:#d1fae5; padding:10px"><input type="radio" name="q2" value="B"> B) \(254.5\ \text{Hz}\) หรือ \(257.5\ \text{Hz}\)</label>
+  <label class="box" style="margin:0; border-color:#d1fae5; padding:10px"><input type="radio" name="q2" value="C"> C) \(253\ \text{Hz}\) หรือ \(259\ \text{Hz}\)</label>
+  <label class="box" style="margin:0; border-color:#d1fae5; padding:10px"><input type="radio" name="q2" value="D"> D) \(250\ \text{Hz}\) หรือ \(262\ \text{Hz}\)</label>
+</div>
+<div id="sol2" class="box" style="display:none; border-color:#bbf7d0; background:#ffffff;">
+  <h3 style="color:#14532d; margin:0 0 8px 0;">เฉลยข้อ 2</h3>
+  <p style="margin:0 0 8px 0;"><b>คำตอบที่ถูก: <span style="color:#ef4444;">C</span></b></p>
+  \[
+    f_{\text{beat}} = |f_{\text{piano}} - 256.0|
+  \]
+  \[
+    3.0 = |f_{\text{piano}} - 256.0|
+  \]
+  \[
+    f_{\text{piano}} = 256.0 \pm 3.0
+  \]
+  \[
+    f_{\text{piano}} = 253\ \text{Hz}\ \text{หรือ}\ 259\ \text{Hz}
+  \]
+  <p class="muted" style="margin:8px 0 0 0;">
+    เพราะความถี่บีตเท่ากับผลต่างของความถี่ทั้งสองแหล่ง และ “บีต 3 ครั้ง/วินาที” หมายถึง \(f_{\text{beat}} = 3\ \text{Hz}\)
+  </p>
+</div>
+
+            <hr style="border:none; border-top:1px solid #d1fae5; margin:14px 0">
+
+<hr style="border:none; border-top:1px solid #d1fae5; margin:14px 0">
+
+<h3 style="color:#14532d; margin-bottom:10px;">ข้อ 3</h3>
+<p>
+  คลื่นเสียงจากแหล่งกำเนิดเสียงสองแหล่ง เมื่อมาซ้อนทับกันแล้วเกิดบีต
+  <b>5 ครั้งต่อวินาที</b> ถ้าคลื่นเสียงที่หนึ่งมีความถี่ <b>438 Hz</b>
+  และคลื่นเสียงอีกคลื่นหนึ่งเป็น <b>เสียงทุ้มกว่า</b> คลื่นเสียงที่หนึ่ง
+  คลื่นเสียงอีกคลื่นหนึ่งจะมีความถี่เท่าใด
+</p>
+<div class="choices" data-q="q3" style="display:grid; gap:8px; margin-top:10px">
+  <label class="box" style="margin:0; border-color:#d1fae5; padding:10px"><input type="radio" name="q3" value="A"> A) \(433\ \text{Hz}\)</label>
+  <label class="box" style="margin:0; border-color:#d1fae5; padding:10px"><input type="radio" name="q3" value="B"> B) \(435.5\ \text{Hz}\)</label>
+  <label class="box" style="margin:0; border-color:#d1fae5; padding:10px"><input type="radio" name="q3" value="C"> C) \(440.5\ \text{Hz}\)</label>
+  <label class="box" style="margin:0; border-color:#d1fae5; padding:10px"><input type="radio" name="q3" value="D"> D) \(443\ \text{Hz}\)</label>
+</div>
+<div id="sol3" class="box" style="display:none; border-color:#bbf7d0; background:#ffffff;">
+  <h3 style="color:#14532d; margin:0 0 8px 0;">เฉลยข้อ 3</h3>
+  <p style="margin:0 0 8px 0;"><b>คำตอบที่ถูก: <span style="color:#ef4444;">A</span></b></p>
+
+  <p class="muted" style="margin:0 0 8px 0;">
+    <b>ความรู้พื้นฐาน:</b> เสียงแหลม–ทุ้มขึ้นกับ “ความถี่”<br>
+    • <b>เสียงทุ้ม</b> = ความถี่ต่ำกว่า<br>
+    • <b>เสียงแหลม</b> = ความถี่สูงกว่า
+  </p>
+
+  \[
+    f_{\text{beat}} = |f_1 - f_2|
+  \]
+  \[
+    5 = |438 - f_2|
+  \]
+  \[
+    f_2 = 438 \pm 5
+  \]
+  \[
+    f_2 = 433\ \text{Hz}\ \text{หรือ}\ 443\ \text{Hz}
+  \]
+  <p class="muted" style="margin:8px 0 0 0;">
+    แต่โจทย์บอกว่า “อีกคลื่นหนึ่งเป็นเสียงทุ้มกว่า” ⇒ ต้องมีความถี่ <b>ต่ำกว่า 438 Hz</b><br>
+    ดังนั้น \(f_2 = 433\ \text{Hz}\)
+  </p>
+</div>
+
+            <hr style="border:none; border-top:1px solid #d1fae5; margin:14px 0">
+
+<hr style="border:none; border-top:1px solid #d1fae5; margin:14px 0">
+
+<h3 style="color:#14532d; margin-bottom:10px;">ข้อ 4</h3>
+<p>
+  คุณครูใช้ส้อมเสียงความถี่ <b>512 Hz</b> เปรียบเทียบกับเสียงจากเครื่องดนตรีชนิดหนึ่ง
+  พบว่าได้ยินเสียงบีต <b>4 ครั้งต่อวินาที</b>
+  ข้อใดเป็นความถี่ที่เป็นไปได้ของเครื่องดนตรีนี้
+</p>
+<div class="choices" data-q="q4" style="display:grid; gap:8px; margin-top:10px">
+  <label class="box" style="margin:0; border-color:#d1fae5; padding:10px"><input type="radio" name="q4" value="A"> A) 508 Hz</label>
+  <label class="box" style="margin:0; border-color:#d1fae5; padding:10px"><input type="radio" name="q4" value="B"> B) 516 Hz</label>
+  <label class="box" style="margin:0; border-color:#d1fae5; padding:10px"><input type="radio" name="q4" value="C"> C) 508 Hz หรือ 516 Hz</label>
+  <label class="box" style="margin:0; border-color:#d1fae5; padding:10px"><input type="radio" name="q4" value="D"> D) 504 Hz หรือ 520 Hz</label>
+</div>
+<div id="sol4" class="box" style="display:none; border-color:#bbf7d0; background:#ffffff;">
+  <h3 style="color:#14532d; margin:0 0 8px 0;">เฉลยข้อ 4</h3>
+  <p style="margin:0 0 8px 0;"><b>คำตอบที่ถูก: <span style="color:#ef4444;">C</span></b></p>
+  \[
+    f_{\text{beat}} = |f - 512|
+  \]
+  \[
+    4 = |f - 512|
+  \]
+  \[
+    f = 512 \pm 4
+  \]
+  \[
+    f = 508\ \text{Hz}\ \text{หรือ}\ 516\ \text{Hz}
+  \]
+  <p class="muted" style="margin:8px 0 0 0;">
+    ดังนั้นความถี่ของเครื่องดนตรี “เป็นไปได้ 2 ค่า” (ต่ำกว่าหรือสูงกว่า 512 Hz)
+  </p>
+</div>
+
+            <hr style="border:none; border-top:1px solid #d1fae5; margin:14px 0">
+
+<hr style="border:none; border-top:1px solid #d1fae5; margin:14px 0">
+
+<h3 style="color:#14532d; margin-bottom:10px;">ข้อ 5</h3>
+<p>
+  คุณครูจะได้ยินเสียงบีตได้ชัดเจนก็ต่อเมื่อ
+</p>
+<p style="margin-top:6px">
+  ก. ความถี่ของคลื่นเสียงทั้งสองจะต้องต่างกันไม่เกิน \(7\ \text{Hz}\)<br>
+  ข. แอมพลิจูดของคลื่นเสียงทั้งสองจะต้องไม่ต่างกันมาก<br>
+  ค. ไม่จำเป็นต้องเกิดจากแหล่งกำเนิดเสียงชนิดเดียวกัน
+</p>
+<div class="choices" data-q="q5" style="display:grid; gap:8px; margin-top:10px">
+  <label class="box" style="margin:0; border-color:#d1fae5; padding:10px"><input type="radio" name="q5" value="A"> A) ก และ ข ถูก</label>
+  <label class="box" style="margin:0; border-color:#d1fae5; padding:10px"><input type="radio" name="q5" value="B"> B) ก และ ค ถูก</label>
+  <label class="box" style="margin:0; border-color:#d1fae5; padding:10px"><input type="radio" name="q5" value="C"> C) ข และ ค ถูก</label>
+  <label class="box" style="margin:0; border-color:#d1fae5; padding:10px"><input type="radio" name="q5" value="D"> D) ก, ข และ ค ถูก</label>
+</div>
+<div id="sol5" class="box" style="display:none; border-color:#bbf7d0; background:#ffffff;">
+  <h3 style="color:#14532d; margin:0 0 8px 0;">เฉลยข้อ 5</h3>
+  <p style="margin:0 0 8px 0;"><b>คำตอบที่ถูก: <span style="color:#ef4444;">D</span></b></p>
+
+  <p style="margin:0 0 8px 0;"><b>พิจารณาทีละข้อ</b></p>
+
+  <p style="margin:0 0 8px 0;">
+    <b>ก.</b> ถูก — แนว สสวท. ระบุว่ามนุษย์มักจำแนก “จังหวะบีต” ได้ชัดเมื่อ
+    \[
+      |f_1 - f_2| \le 7\ \text{Hz}
+    \]
+  </p>
+
+  <p style="margin:0 0 8px 0;">
+    <b>ข.</b> ถูก — ถ้าแอมพลิจูดต่างกันมาก คลื่นที่ดังมากจะกลบอีกคลื่น ทำให้การดัง–ค่อยสลับไม่ชัด
+  </p>
+
+  <p style="margin:0 0 8px 0;">
+    <b>ค.</b> ถูก — ไม่จำเป็นต้องเป็นแหล่งกำเนิดชนิดเดียวกัน ขอเพียงเป็น “เสียง” ที่มีความถี่ใกล้กันและซ้อนทับถึงกันได้
+  </p>
+
+  <p class="muted" style="margin:8px 0 0 0;">
+    ดังนั้น ก, ข และ ค ถูกทั้งหมด ⇒ ตอบข้อ D
+  </p>
+</div>
+
+            <div style="height:70px"></div><!-- กันพื้นที่ให้ปุ่มล่าง -->
+      </form>
+
+      <div id="scoreBox" class="box" style="display:none; border-color:var(--greenLine);">
+        <h3 style="color:#14532d; margin:0 0 8px 0;">คะแนน</h3>
+        <div id="scoreText" class="val" style="font-size:20px">0/2</div>
+        <div class="muted" style="margin-top:6px">หมายเหตุ: จะแสดงเฉลยเฉพาะข้อที่เลือกคำตอบแล้วเท่านั้น</div>
+      </div>
+
+      <div class="hint" style="margin-top:16px">
+        ศึกษาเพิ่มเติมที่เพจ <a class="brand" href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">คลายปมฟิสิกส์</a>
+      </div>
+    </div>
+
+    <button id="checkBtn" type="button"
+      style="position:fixed; left:50%; transform:translateX(-50%);
+             bottom: calc(12px + env(safe-area-inset-bottom));
+             z-index:10001;
+             width:min(520px, calc(100% - 24px));
+             padding:12px 14px;
+             border-radius:14px;
+             border:1px solid var(--greenLine);
+             background:#22c55e; color:#fff; font-weight:900; cursor:pointer;">
+      📝 ตรวจคำตอบ
+    </button>
+  </div>
+</div>
+
+      <div class="hint" style="margin-top:10px">
+        ศึกษาเพิ่มเติมได้ที่เพจ <a class="brand" href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">คลายปมฟิสิกส์</a>
+      </div>
+    
+<!-- สูตรสำคัญ (Modal) -->
+<div id="formulaModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="fmTitle">
+  <button class="closeX" id="fmClose" type="button" aria-label="ปิด">❌</button>
+  <div class="sheet">
+    <div class="topbar">
+      <div id="fmTitle" class="title">สูตรสำคัญ — ความถี่บีต (Beat Frequency)</div>
+      
+    </div>
+
+    <div class="content">
+      <div class="box">
+        <h3>1) ความถี่บีตคืออะไร?</h3>
+            <p>
+              <b>บีต (Beat)</b> เป็นปรากฏการณ์ที่เกิดจากคลื่นเสียง 2 แหล่ง ที่มีแอมพลิจูดเท่ากันแต่<span class="hl1">มีความถี่ต่างกันเล็กน้อย</span>
+              เมื่อคลื่นเสียงทั้งสองเคลื่อนที่มาพบกันจะเกิดการรวมกันของคลื่น ทำให้คลื่นลัพธ์มีแอมพลิจูดไม่คงที่ (เปลี่ยนแปลงตลอดเวลา)
+              ส่งผลให้เราได้ยินเสียง <span class="hl2"><b>ดัง</b></span> และ <span class="hl2"><b>ค่อย</b></span> <span class="hl2">สลับกันไปเป็นจังหวะ</span>
+            </p>
+</div>
+
+      <div class="box">
+        <h3>2) เกิดจากอะไร</h3>
+            <ol style="margin:8px 0 0 20px; padding:0">
+              <li style="margin:6px 0">แหล่งกำเนิดเสียงทั้ง 2 แหล่ง อาจเป็นชนิดเดียวกันหรือคนละชนิดก็ได้</li>
+              <li style="margin:6px 0">ความถี่บีตมีค่าเท่ากับ “จำนวนครั้งของเสียงดัง” ที่ได้ยินใน 1 วินาที</li>
+              <li style="margin:6px 0">โดยปกติมนุษย์เราสามารถจำแนกบีตที่มีความถี่ไม่เกิน <b>7 เฮิรตซ์</b> (ดัง 7 ครั้งใน 1 วินาที)</li>
+              <li style="margin:6px 0">
+                ถ้าความถี่ของเสียงจากแหล่งกำเนิดทั้งสองต่างกันมากขึ้น เสียงที่ได้ยินจะเป็นจังหวะเร็วขึ้น
+                <span class="hl3">หากเกิน 7 เฮิรตซ์ จะมีจังหวะมากจนแยกไม่ออก ทำให้รู้สึกว่าเสียงดังอยู่ตลอดเวลา</span>
+              </li>
+            </ol>
+<div class="box note" style="margin-top:12px">
+              <b>เกณฑ์การได้ยินเป็น “จังหวะบีต” (แนวหนังสือ สสวท.)</b><br>
+              โดยทั่วไปจะได้ยินจังหวะบีตชัด เมื่อ
+              \[
+                \boxed{\color{#1d4ed8}{|f_1 - f_2|} \;\le\; \color{#ef4444}{7\ \text{Hz}}}
+              \]
+              <span class="muted">
+                หมายเหตุเพิ่มเติม: ในตำราฟิสิกส์บางเล่มอาจระบุตัวเลขนี้ไว้ที่ประมาณ 7–10 เฮิรตซ์
+                แต่ในหนังสือ สสวท.ใช้ 7 เฮิรตซ์เป็นเกณฑ์มาตรฐานในการสอบ
+                ถ้าความถี่บีตสูงกว่านี้ หูเราจะประมวลผลไม่ทันและรู้สึกเหมือนเป็นเสียงดังต่อเนื่องไปเลย
+              </span>
+            </div>
+</div>
+
+      <div class="box step">
+        <h3>3) พิสูจน์สูตร (ให้เห็นซองบีตชัด ๆ)</h3>
+
+        <p><span class="k">เริ่ม</span>ให้เสียง 2 แหล่งมีแอมพลิจูดเท่ากัน</p>
+        \[
+          y_1 = A\sin(2\pi f_1 t)
+        \]
+        \[
+          y_2 = A\sin(2\pi f_2 t)
+        \]
+
+        <p><span class="k">รวมคลื่น</span></p>
+        \[
+          y = y_1 + y_2
+        \]
+
+        <p><span class="k">ใช้เอกลักษณ์ตรีโกณ</span></p>
+        \[
+          \sin a + \sin b = 2\sin\left(\frac{a+b}{2}\right)\cos\left(\frac{a-b}{2}\right)
+        \]
+
+        <p><span class="k">แทน</span> \(a = 2\pi f_1 t\), \(b = 2\pi f_2 t\)</p>
+        \[
+          y = 2A\sin\left(2\pi\frac{f_1+f_2}{2}\,t\right)
+          \cos\left(2\pi\frac{f_1-f_2}{2}\,t\right)
+        \]
+
+        <div class="box note" style="margin-top:12px">
+          <b>ตีความ</b><br>
+          • พจน์ \(\sin\) คือการสั่นเร็ว (เสียงหลัก) ใกล้เคียง \(\dfrac{f_1+f_2}{2}\)<br>
+          • พจน์ \(\cos\) คือ “ซองความดัง” เปลี่ยนช้า ทำให้เกิดดัง–เบาเป็นจังหวะ
+        </div>
+      </div>
+
+      <div class="box formula">
+        <div class="big">4) สูตรสำคัญ</div>
+        \[
+          \boxed{\color{#1d4ed8}{f_{\text{beat}}} = \color{#ef4444}{|f_1 - f_2|}}
+        \]
+        \[
+          \boxed{\color{#1d4ed8}{f_{\text{เสียงที่ได้ยิน}}} \approx \color{#ef4444}{\frac{f_1 + f_2}{2}}}
+        \]
+        <p class="muted" style="margin:8px 0 0 0">
+          หมายเหตุ: สูตร “ความถี่เสียงที่ได้ยิน” ใช้ได้ดีเมื่อ \(f_1, f_2\) ใกล้กัน และทั้งคู่ไม่เป็นศูนย์
+        </p>
+      </div>
+
+      <div class="box">
+  <h3>การนำไปใช้ประโยชน์ของปรากฏการณ์บีต</h3>
+  <ul style="margin:8px 0 0 18px">
+    <li>ใช้ <b>ตั้งเสียงเครื่องดนตรี</b> ให้ตรงกัน: ฟังบีตแล้วปรับจนบีตหายไป (ความถี่เท่ากัน)</li>
+    <li>ใช้ <b>ตรวจความคลาดเคลื่อนของความถี่</b> ของแหล่งกำเนิดเสียง/ออสซิลเลเตอร์ โดยวัด \(f_{\text{beat}}\)</li>
+    <li>ใช้ในงาน <b>วัดและปรับเทียบสัญญาณ</b> (calibration) เพราะการนับจังหวะบีตทำได้ง่าย</li>
+</ul>
+</div>
+
+          <div class="hint" style="margin-top:16px">
+        ศึกษาเพิ่มเติมที่เพจ <a class="brand" href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">คลายปมฟิสิกส์</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+  </div>
+
+<script>
+(() => {
+  const scope = document.getElementById('scope');
+  const ctx = scope.getContext('2d');
+  const f1 = document.getElementById('f1Num');
+  const f2 = document.getElementById('f2Num');
+  const f1Num = document.getElementById('f1Num');
+  const f2Num = document.getElementById('f2Num');
+  const amp = document.getElementById('ampNum');
+  const oAmp = document.getElementById('oAmp');
+  const beatVal = document.getElementById('beatVal');
+  const sumVal = document.getElementById('sumVal');
+  const playBtn = document.getElementById('playBtn');
+  const audibleAlert = document.getElementById('audibleAlert');
+
+  const formulaBtn = document.getElementById('formulaBtn');
+  const formulaModal = document.getElementById('formulaModal');
+  const fmClose = document.getElementById('fmClose');
+  const quizBtn = document.getElementById('quizBtn');
+  const quizModal = document.getElementById('quizModal');
+  const qClose = document.getElementById('qClose');
+  const checkBtn = document.getElementById('checkBtn');
+  const scoreBox = document.getElementById('scoreBox');
+  const scoreText = document.getElementById('scoreText');
+
+  let audio=null, animating=false, raf=null, t0=performance.now();
+
+  function clamp(v, min, max){
+    if(isNaN(v)) return min;
+    return Math.min(max, Math.max(min, v));
+  }
+
+  function createAudio(){
+    const AC=window.AudioContext||window.webkitAudioContext;
+    const ac=new AC();
+    const g=ac.createGain(); g.gain.value=parseFloat(amp.value);
+    g.connect(ac.destination);
+    const o_1=ac.createOscillator(), o_2=ac.createOscillator();
+    o_1.type='sine'; o_2.type='sine';
+    o_1.frequency.value=+f1.value; o_2.frequency.value=+f2.value;
+    // ป้องกัน clip เมื่อเฟสตรงกัน
+    const g1=ac.createGain(), g2=ac.createGain(); g1.gain.value=0.5; g2.gain.value=0.5;
+    o_1.connect(g1).connect(g); o_2.connect(g2).connect(g);
+    o_1.start(); o_2.start();
+    return {ac,g,o1:o_1,o2:o_2};
+  }
+
+  async function start(){
+    if(animating) return;
+    animating = true;
+    playBtn.dataset.playing="true";
+    playBtn.setAttribute('aria-pressed','true');
+    playBtn.textContent='■ หยุด';
+    if(!audio){
+      audio=createAudio();
+      try{ await audio.ac.resume(); }catch(e){}
+    }
+    tick();
+  }
+  function stop(){
+    animating = false;
+    playBtn.dataset.playing="false";
+    playBtn.setAttribute('aria-pressed','false');
+    playBtn.textContent='▶ เล่น';
+    if (raf) cancelAnimationFrame(raf);
+    if(audio){
+      try{ audio.o1.stop(); audio.o2.stop(); audio.ac.close(); }catch(e){}
+      audio=null;
+    }
+  }
+  playBtn.onclick=()=> (animating?stop():start());
+
+  // สูตรสำคัญ (Modal)
+  function openFormula(){
+    formulaModal.classList.add('show');
+    // ป้องกัน scroll พื้นหลัง
+    document.documentElement.style.overflow='hidden';
+    document.body.style.overflow='hidden';
+    // เรนเดอร์ MathJax เมื่อเปิด
+    if(window.MathJax && window.MathJax.typesetPromise){
+      window.MathJax.typesetPromise([formulaModal]).catch(()=>{});
+    }
+  }
+  function closeFormula(){
+    formulaModal.classList.remove('show');
+    document.documentElement.style.overflow='';
+    document.body.style.overflow='';
+  }
+  if(formulaBtn){
+    formulaBtn.addEventListener('click', openFormula);
+  }
+  if(fmClose){
+    fmClose.addEventListener('click', closeFormula);
+  }
+  // คลิกพื้นหลังเพื่อปิด
+  if(formulaModal){
+    formulaModal.addEventListener('click', (e)=>{
+      if(e.target === formulaModal) closeFormula();
+    });
+  }
+  // กด Esc เพื่อปิด
+  window.addEventListener('keydown', (e)=>{
+    if(e.key === 'Escape'){
+      if(formulaModal && formulaModal.classList.contains('show')) closeFormula();
+      if(quizModal && quizModal.classList.contains('show')) closeQuiz();
+    }
+  });
+
+
+// แบบฝึกหัด (Modal)
+function openQuiz(){
+  quizModal.classList.add('show');
+  document.documentElement.style.overflow='hidden';
+  document.body.style.overflow='hidden';
+  // เรนเดอร์ MathJax เมื่อเปิด
+  if(window.MathJax && window.MathJax.typesetPromise){
+    window.MathJax.typesetPromise([quizModal]).catch(()=>{});
+  }
+}
+function closeQuiz(){
+  quizModal.classList.remove('show');
+  document.documentElement.style.overflow='';
+  document.body.style.overflow='';
+}
+if(quizBtn){
+  quizBtn.addEventListener('click', openQuiz);
+}
+if(qClose){
+  qClose.addEventListener('click', closeQuiz);
+}
+if(quizModal){
+  quizModal.addEventListener('click', (e)=>{
+    if(e.target === quizModal) closeQuiz();
+  });
+}
+
+// ตรวจคำตอบ + คะแนน + เฉลย (แสดงเฉพาะข้อที่เลือกแล้ว)
+function getPicked(name){
+  const el = document.querySelector(`input[name="${name}"]:checked`);
+  return el ? el.value : null;
+}
+function showSolution(id, show){
+  const box = document.getElementById(id);
+  if(!box) return;
+  box.style.display = show ? 'block' : 'none';
+}
+if(checkBtn){
+  checkBtn.addEventListener('click', ()=>{
+    const ans = { q1:'B', q2:'C', q3:'A', q4:'C', q5:'D' };
+    let score = 0, total = 5;
+
+    const p1 = getPicked('q1');
+    const p2 = getPicked('q2');
+
+    // แสดงเฉลยเฉพาะข้อที่เลือกแล้ว
+showSolution('sol1', !!p1);
+showSolution('sol2', !!p2);
+
+const p3 = getPicked('q3');
+const p4 = getPicked('q4');
+const p5 = getPicked('q5');
+
+showSolution('sol3', !!p3);
+showSolution('sol4', !!p4);
+showSolution('sol5', !!p5);
+if(p1 && p1===ans.q1) score++;
+      if(p2 && p2===ans.q2) score++;
+      if(p3 && p3===ans.q3) score++;
+      if(p4 && p4===ans.q4) score++;
+      if(p5 && p5===ans.q5) score++;
+
+    scoreBox.style.display = 'block';
+    scoreText.textContent = `${score}/${total}`;
+
+    // typeset เฉลยที่เพิ่งแสดง
+    if(window.MathJax && window.MathJax.typesetPromise){
+      window.MathJax.typesetPromise([scoreBox, document.getElementById('sol1'), document.getElementById('sol2'), document.getElementById('sol3'), document.getElementById('sol4'), document.getElementById('sol5')]).catch(()=>{});
+    }
+    // เลื่อนลงไปคะแนนเล็กน้อยบนมือถือ
+    scoreBox.scrollIntoView({behavior:'smooth', block:'start'});
+  });
+}
+
+  // sync slider <-> number
+  function syncFromNumber(e){
+    const target = e.target;
+    const isF1 = target.id === 'f1Num';
+    const val = clamp(parseFloat(target.value), 0, 1200);
+    target.value = isFinite(val) ? val.toFixed(1) : '0.0';
+    if(isF1){ f1.value = val; } else { f2.value = val; }
+    updateLabelsAndAudio();
+  }
+
+  f1Num.addEventListener('input', syncFromNumber);
+  f2Num.addEventListener('input', syncFromNumber);
+  amp.addEventListener('input', () => {
+    oAmp.textContent=`${(+amp.value).toFixed(2)}`;
+    if(audio) audio.g.gain.setValueAtTime(parseFloat(amp.value), audio.ac.currentTime);
+  });
+
+  function updateLabelsAndAudio(){
+    const f1n = +f1.value, f2n = +f2.value;
+    beatVal.textContent = `${Math.abs(f1n-f2n).toFixed(2)} Hz`;
+    let main;
+    if(f1n===0 && f2n===0) main=0;
+    else if(f1n===0) main=f2n;
+    else if(f2n===0) main=f1n;
+    else main=(f1n+f2n)/2;
+    sumVal.textContent = (main===0)? '0 Hz' : `≈ ${main.toFixed(2)} Hz`;
+    if (main < 20) audibleAlert.classList.add('show'); else audibleAlert.classList.remove('show');
+
+    if(audio){
+      audio.o1.frequency.setValueAtTime(f1n, audio.ac.currentTime);
+      audio.o2.frequency.setValueAtTime(f2n, audio.ac.currentTime);
+    }
+    if(!animating) draw(); // วาดทันทีเมื่อหยุด
+  }
+
+  // animation loop
+  function tick(){ if(!animating) return; draw(); raf=requestAnimationFrame(tick); }
+
+  function draw(){
+    const w=scope.width,h=scope.height,mid=h/2;
+    const blue = getComputedStyle(document.documentElement).getPropertyValue('--blue').trim() || '#2563eb';
+    const red = getComputedStyle(document.documentElement).getPropertyValue('--red').trim() || '#ef4444';
+    const violet = getComputedStyle(document.documentElement).getPropertyValue('--violet').trim() || '#7c3aed';
+
+    ctx.clearRect(0,0,w,h);
+    // grid
+    ctx.strokeStyle='#e5e7eb'; ctx.lineWidth=1;
+    ctx.beginPath(); for(let x=0;x<=w;x+=120){ ctx.moveTo(x,0); ctx.lineTo(x,h); } ctx.stroke();
+    // midline
+    ctx.strokeStyle='#cbd5e1'; ctx.beginPath(); ctx.moveTo(0,mid); ctx.lineTo(w,mid); ctx.stroke();
+
+    const f1n=+f1.value, f2n=+f2.value;
+    const t=(performance.now()-t0)/1000;
+    const sps=1200, dt=1/1200;
+
+    let maxAbs=1;
+    const y1=new Array(sps), y2=new Array(sps), ys=new Array(sps);
+    for(let i=0;i<sps;i++){
+      const time=t + i*dt;
+      const a=Math.sin(2*Math.PI*f1n*time);
+      const b=Math.sin(2*Math.PI*f2n*time);
+      const s=a + b; // ไม่หาร 2
+      y1[i]=a; y2[i]=b; ys[i]=s;
+      const m=Math.max(Math.abs(a),Math.abs(b),Math.abs(s));
+      if(m>maxAbs) maxAbs=m;
+    }
+    const A = (h*0.5*0.85)/maxAbs;
+
+    function plot(color,arr,withDots){
+      ctx.strokeStyle=color; ctx.lineWidth=2; ctx.beginPath();
+      for(let i=0;i<sps;i++){
+        const x=i*(w/(sps-1));
+        const yy=mid - A*arr[i];
+        if(i===0) ctx.moveTo(x,yy); else ctx.lineTo(x,yy);
+      }
+      ctx.stroke();
+      if(withDots){
+        ctx.fillStyle=color;
+        for(let i=0;i<sps;i+=60){
+          const x=i*(w/(sps-1)), yy=mid - A*arr[i];
+          ctx.beginPath(); ctx.arc(x,yy,3,0,2*Math.PI); ctx.fill();
+        }
+      }
+    }
+    plot(blue, y1, true);
+    plot(red, y2, true);
+    plot(violet, ys, true);
+  }
+
+  // Initial draw
+  updateLabelsAndAudio();
+  draw();
+// มือถือ: ย้ายปุ่ม เล่น/สูตรสำคัญ/แบบฝึกหัด ลงมาใต้ช่องปรับแอมพลิจูด และให้ปุ่มเล่นอยู่ซ้ายสุด
+function applyMobileButtonPlacement(){
+  const isMobile = window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
+  const btnRow = document.getElementById('mainBtnRow');
+  const ampCtrl = document.getElementById('ampCtrl');
+  if(!btnRow || !ampCtrl) return;
+
+  // ย้ายตำแหน่งเฉพาะมือถือ
+  if(isMobile){
+    // จัดลำดับปุ่ม: เล่น (ซ้ายสุด) -> สูตรสำคัญ -> แบบฝึกหัด
+    const play = document.getElementById('playBtn');
+    const formula = document.getElementById('formulaBtn');
+    const quiz = document.getElementById('quizBtn');
+    if(play && formula && quiz){
+      btnRow.style.justifyContent = 'flex-start';
+      btnRow.style.gap = '10px';
+      btnRow.style.flexWrap = 'wrap';
+      btnRow.appendChild(play);
+      btnRow.appendChild(formula);
+      btnRow.appendChild(quiz);
+    }
+    // วางใต้ amp control
+    ampCtrl.insertAdjacentElement('afterend', btnRow);
+    // เพิ่มระยะห่างเล็กน้อย
+    btnRow.style.marginTop = '10px';
+  }else{
+    // ไม่แตะต้องเดสก์ท็อป: ปล่อยตำแหน่งเดิม (ถ้าเคยถูกย้าย ให้ย้ายกลับไปที่ที่เดิม)
+    const headerFlex = document.querySelector('div[style*="justify-content:flex-end"]');
+    if(headerFlex && btnRow.parentElement !== headerFlex){
+      headerFlex.appendChild(btnRow);
+      btnRow.style.marginTop = '';
+      btnRow.style.justifyContent = 'flex-end';
+    }
+  }
+}
+window.addEventListener('load', applyMobileButtonPlacement);
+window.addEventListener('resize', applyMobileButtonPlacement);
+})();
+
+  // ปรับค่าด้วยปุ่ม + -
+  function stepValue(id, delta){
+    const el = document.getElementById(id);
+    if(!el) return;
+    const step = parseFloat(el.step || 1);
+    const min = (el.min !== '') ? parseFloat(el.min) : -Infinity;
+    const max = (el.max !== '') ? parseFloat(el.max) : Infinity;
+    let v = parseFloat(el.value || 0) + delta;
+    v = Math.min(max, Math.max(min, v));
+    el.value = v.toFixed(step < 1 ? 2 : 1);
+    el.dispatchEvent(new Event('input', {bubbles:true}));
+  }
+
+</script>
+</body>
+</html>

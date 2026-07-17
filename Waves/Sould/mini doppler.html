@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mini Lab : ปรากฏการณ์ดอปเพลอร์</title>
+<style>
+  :root{
+    --blue:#2f6fd6;
+    --blue2:#204d7c;
+    --panel:#eef4fb;
+    --line:#cfdced;
+    --text:#18324a;
+    --soft:#f8fbff;
+    --danger:#c62828;
+    --good:#1b8f4d;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family: "Segoe UI", Tahoma, sans-serif;
+    color:var(--text);
+    background:#ffffff;
+  }
+  .wrap{
+    max-width:1100px;
+    margin:0 auto;
+    padding:18px 16px 120px;
+  }
+  .title{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    margin-bottom:10px;
+    flex-wrap:wrap;
+  }
+  .titleIcon{
+    font-size:40px;
+    line-height:1;
+  }
+  .titleText{
+    display:flex;
+    flex-direction:column;
+  }
+  .titleText .top{
+    font-size:clamp(22px,3vw,34px);
+    font-weight:900;
+    color:var(--blue);
+    line-height:1.05;
+  }
+  .titleText .bottom{
+    font-size:clamp(19px,2.6vw,29px);
+    font-weight:900;
+    color:var(--blue2);
+    line-height:1.08;
+  }
+
+  .layout{
+    display:grid;
+    grid-template-columns: minmax(0, 1.55fr) minmax(300px, .9fr);
+    gap:16px;
+    align-items:start;
+  }
+
+  .card{
+    background:var(--soft);
+    border:1px solid var(--line);
+    border-radius:24px;
+    box-shadow:0 10px 30px rgba(30,50,80,.08);
+  }
+
+  .labCard{
+    padding:10px;
+  }
+
+  canvas{
+    width:100%;
+    height:auto;
+    display:block;
+    background:linear-gradient(180deg,#f6fafe 0%,#eef5fd 100%);
+    border-radius:18px;
+    border:1px solid #d6e4f5;
+    touch-action:none;
+  }
+
+  .side{
+    padding:16px;
+  }
+
+  .infoBox{
+    background:#fff;
+    border:1px solid #dde8f6;
+    border-radius:18px;
+    padding:14px 14px;
+    margin-bottom:12px;
+  }
+
+  .infoHead{
+    font-weight:900;
+    color:#25598f;
+    margin-bottom:8px;
+    font-size:18px;
+  }
+
+  .eq{
+    font-size:18px;
+    line-height:1.7;
+  }
+  .eq .red{ color:var(--danger); font-weight:800;}
+  .eq .green{ color:var(--good); font-weight:800;}
+  .eq .blue{ color:var(--blue); font-weight:800;}
+
+  .controls{
+    display:grid;
+    gap:12px;
+  }
+  .btnRow{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  button{
+    border:none;
+    border-radius:16px;
+    padding:12px 16px;
+    font-size:16px;
+    font-weight:800;
+    cursor:pointer;
+    box-shadow:0 4px 12px rgba(30,70,110,.10);
+  }
+  .playBtn{ background:#7bb7ff; color:#fff; }
+  .resetBtn{ background:#e4e9ef; color:#35506d; }
+
+  .sliderWrap{
+    background:#fff;
+    border:1px solid #dde8f6;
+    border-radius:18px;
+    padding:12px 14px;
+  }
+  .sliderTop{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-bottom:10px;
+    font-weight:800;
+  }
+  .badge{
+    background:#edf3fb;
+    color:#2e5f93;
+    border-radius:999px;
+    padding:8px 12px;
+    font-size:15px;
+    font-weight:800;
+  }
+  input[type="range"]{
+    width:100%;
+  }
+
+  .note{
+    font-size:14px;
+    line-height:1.6;
+    color:#4b6987;
+  }
+  .legend{
+    display:grid;
+    gap:8px;
+    font-size:15px;
+    line-height:1.6;
+  }
+  .legend .mono{
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-weight:700;
+  }
+  .footerSpace{ height:40px; }
+
+  @media (max-width: 860px){
+    .layout{ grid-template-columns:1fr; }
+  }
+
+  @media (max-width: 640px){
+    .wrap{ padding:14px 10px 130px; }
+    .titleIcon{ font-size:34px; }
+    .side{ padding:12px; }
+    .infoBox{ padding:12px; border-radius:16px; }
+    button{ min-height:48px; }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="title">
+      <div class="titleIcon">🚗</div>
+      <div class="titleText">
+        <div class="top">Mini Lab</div>
+        <div class="bottom">ปรากฏการณ์ดอปเพลอร์ของเสียง</div>
+      </div>
+    </div>
+
+    <div class="layout">
+      <div class="card labCard">
+        <canvas id="lab" width="900" height="440" aria-label="Mini Lab Doppler"></canvas>
+      </div>
+
+      <div class="card side">
+        <div class="controls">
+          <div class="btnRow">
+            <button id="playBtn" class="playBtn">▶️ เล่น</button>
+            <button id="resetBtn" class="resetBtn">🔄 รีเซ็ต</button>
+          </div>
+
+          <div class="sliderWrap">
+            <div class="sliderTop">
+              <div>ความเร็วรถพยาบาล</div>
+              <div id="speedBadge" class="badge">0 m/s • รถหยุดนิ่ง</div>
+            </div>
+            <input id="speedSlider" type="range" min="-40" max="40" step="1" value="0" />
+            <div class="note" id="dirText" style="margin-top:8px;">
+              เลื่อนไปทางซ้าย = รถเคลื่อนไปทางซ้าย ←<br>เลื่อนไปทางขวา = รถเคลื่อนไปทางขวา →
+            </div>
+          </div>
+
+          <div class="infoBox">
+            <div class="infoHead">ความสัมพันธ์ของความถี่ที่คนฟังได้ยิน</div>
+            <div class="eq" id="relationText">
+              <span class="blue">รถหยุดนิ่ง</span> ⇒ <span class="red">f<sub>L</sub> = f<sub>s</sub></span>
+            </div>
+            <div class="note" style="margin-top:8px;">
+              โดยที่ <b>f<sub>L</sub></b> = ความถี่เสียงที่คนฟังได้ยิน<br><b>f<sub>s</sub></b> = ความถี่ของแหล่งกำเนิดเสียง
+            </div>
+          </div>
+
+          <div class="infoBox">
+            <div class="infoHead">สิ่งที่ควรสังเกต</div>
+            <div class="legend">
+              <div>• รถวิ่ง <b>เข้าหาคน</b> → หน้าคลื่นด้านหน้าจะถี่ขึ้น<br>→ f<sub>L</sub> &gt; f<sub>s</sub> </div>
+              <div>• รถวิ่ง <b>ออกห่างจากคน</b> → หน้าคลื่นที่มาถึงคนจะห่างขึ้น → <span class="mono">f<sub>L</sub> &lt; f<sub>s</sub></span></div>
+              <div>• ถ้ารถ <b>หยุดนิ่ง</b> → <span class="mono">f<sub>L</sub> = f<sub>s</sub></span></div>
+            </div>
+          </div>
+
+          <div class="infoBox">
+            <div class="infoHead">หมายเหตุ</div>
+            <div class="note">
+              กด <b>เล่น</b> ครั้งแรกเพื่อเปิดเสียงไซเรนของรถพยาบาล จากนั้นลองเลื่อนความเร็วไปทางซ้ายหรือขวา แล้วสังเกตทั้ง “ระยะหน้าคลื่น” และ “เสียงที่ได้ยิน”
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="footerSpace"></div>
+  </div>
+
+<script>
+(() => {
+  const canvas = document.getElementById('lab');
+  const ctx = canvas.getContext('2d');
+
+  const playBtn = document.getElementById('playBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const speedSlider = document.getElementById('speedSlider');
+  const speedBadge = document.getElementById('speedBadge');
+  const relationText = document.getElementById('relationText');
+
+  const W = canvas.width;
+  const H = canvas.height;
+
+  const observer = { x: W * 0.78, y: H * 0.60 };
+  const roadY = H * 0.68;
+
+  const state = {
+    running: false,
+    sourceX: W * 0.25,
+    baseY: roadY - 22,
+    speed: 0,     // px/s from slider mapping
+    waves: [],
+    emitTimer: 0,
+    lastT: 0,
+    sirenPhase: 0
+  };
+
+  const SOUND_SPEED_PX = 170;       // visual speed only
+  const BASE_FREQ = 550;            // source frequency
+  const EMIT_PERIOD = 0.18;         // seconds between wave emissions
+
+  let audioCtx = null;
+  let srcOsc = null;
+  let srcGain = null;
+  let masterGain = null;
+  let startedAudio = false;
+
+  function initAudio() {
+    if (startedAudio) return;
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    srcOsc = audioCtx.createOscillator();
+    srcGain = audioCtx.createGain();
+    masterGain = audioCtx.createGain();
+
+    srcOsc.type = 'sawtooth';
+    srcOsc.frequency.value = BASE_FREQ;
+
+    srcGain.gain.value = 0.10;
+    masterGain.gain.value = 0.0;
+
+    srcOsc.connect(srcGain);
+    srcGain.connect(masterGain);
+    masterGain.connect(audioCtx.destination);
+    srcOsc.start();
+
+    startedAudio = true;
+  }
+
+  function setAudio(dt) {
+    if (!startedAudio || !audioCtx) return;
+
+    // source pitch with a gentle siren wobble
+    state.sirenPhase += dt * 0.7;
+    const siren = 1 + 0.10 * Math.sin(state.sirenPhase * Math.PI * 2);
+    const sourceFreq = BASE_FREQ * siren;
+
+    const dx = observer.x - state.sourceX;
+    const sign = Math.sign(dx) || 1;                   // positive if observer is on the right
+    const radialVs = state.speed * sign;               // positive = source moving toward observer
+    const scale = 0.90;                               // tune visual speed to audible effect
+    const heardFreq = sourceFreq * (340 / (340 - radialVs * scale));
+
+    srcOsc.frequency.setTargetAtTime(Math.max(180, Math.min(1400, heardFreq)), audioCtx.currentTime, 0.04);
+    masterGain.gain.setTargetAtTime(state.running ? 0.22 : 0.0, audioCtx.currentTime, 0.03);
+  }
+
+  function emitWave() {
+    state.waves.push({
+      x: state.sourceX,
+      y: state.baseY,
+      r: 4
+    });
+  }
+
+  function sliderToSpeedPx() {
+    const raw = Number(speedSlider.value);
+    return raw * 3.0; // px/s
+  }
+
+  function updateLabels() {
+    const raw = Number(speedSlider.value);
+    if (raw === 0) {
+      speedBadge.textContent = "0 m/s • รถหยุดนิ่ง";
+      relationText.innerHTML = '<span class="blue">รถหยุดนิ่ง</span> ⇒ <span class="red">f<sub>L</sub> = f<sub>s</sub></span>';
+      return;
+    }
+
+    if (raw > 0) {
+      speedBadge.textContent = `${raw} m/s • รถไปทางขวา →`;
+      // Observer is on right, so toward observer
+      relationText.innerHTML = '<span class="green">รถกำลังวิ่งเข้าหาคนทางขวา</span> ⇒ <span class="red">f<sub>L</sub> &gt; f<sub>s</sub></span>';
+    } else {
+      speedBadge.textContent = `${Math.abs(raw)} m/s • รถไปทางซ้าย ←`;
+      relationText.innerHTML = '<span class="blue">รถกำลังวิ่งออกห่างจากคนทางขวา</span> ⇒ <span class="red">f<sub>L</sub> &lt; f<sub>s</sub></span>';
+    }
+  }
+
+  function resetLab() {
+    state.running = false;
+    state.sourceX = W * 0.25;
+    state.speed = sliderToSpeedPx();
+    state.waves = [];
+    state.emitTimer = 0;
+    state.lastT = 0;
+    if (startedAudio && audioCtx) {
+      masterGain.gain.setTargetAtTime(0.0, audioCtx.currentTime, 0.03);
+    }
+    playBtn.textContent = '▶️ เล่น';
+    updateLabels();
+    draw();
+  }
+
+  function update(t) {
+    if (!state.lastT) state.lastT = t;
+    const dt = Math.min(0.03, (t - state.lastT) / 1000 || 0);
+    state.lastT = t;
+
+    state.speed = sliderToSpeedPx();
+
+    if (state.running) {
+      state.sourceX += state.speed * dt;
+
+      // wrap source across screen for continuous demo
+      if (state.sourceX < -120) state.sourceX = W + 120;
+      if (state.sourceX > W + 120) state.sourceX = -120;
+
+      state.emitTimer += dt;
+      while (state.emitTimer >= EMIT_PERIOD) {
+        emitWave();
+        state.emitTimer -= EMIT_PERIOD;
+      }
+
+      for (const w of state.waves) {
+        w.r += SOUND_SPEED_PX * dt;
+      }
+      state.waves = state.waves.filter(w => w.r < 980);
+    }
+
+    setAudio(dt);
+    draw();
+    requestAnimationFrame(update);
+  }
+
+  function drawBackground() {
+    // sky
+    ctx.fillStyle = '#eef6ff';
+    ctx.fillRect(0, 0, W, H);
+
+    // subtle top title stripe inside canvas
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.fillRect(16, 14, W - 32, 46);
+    ctx.fillStyle = '#315f90';
+    ctx.font = '900 20px Segoe UI';
+    ctx.fillText('เห็นคลื่น • ได้ยินเสียง • สังเกตความถี่ที่คนได้ยิน', 30, 43);
+
+    // road
+    ctx.fillStyle = '#c8d2de';
+    ctx.fillRect(0, roadY, W, H - roadY);
+    ctx.fillStyle = '#6f7f8d';
+    ctx.fillRect(0, roadY + 28, W, 8);
+    ctx.setLineDash([20, 16]);
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(0, roadY + 32);
+    ctx.lineTo(W, roadY + 32);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  function drawArrow(x1, y1, x2, y2, color, label) {
+    const head = 10;
+    const ang = Math.atan2(y2 - y1, x2 - x1);
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(x2, y2);
+    ctx.lineTo(x2 - head * Math.cos(ang - Math.PI / 6), y2 - head * Math.sin(ang - Math.PI / 6));
+    ctx.lineTo(x2 - head * Math.cos(ang + Math.PI / 6), y2 - head * Math.sin(ang + Math.PI / 6));
+    ctx.closePath();
+    ctx.fill();
+
+    if (label) {
+      ctx.font = '800 18px Segoe UI';
+      ctx.fillStyle = color;
+      ctx.fillText(label, (x1 + x2) / 2 - 10, y1 - 10);
+    }
+  }
+
+  function drawStickPerson(x, y) {
+    // head
+    ctx.strokeStyle = '#222';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(x, y - 48, 22, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // eyes
+    ctx.fillStyle = '#222';
+    ctx.beginPath();
+    ctx.arc(x - 8, y - 52, 2.5, 0, Math.PI * 2);
+    ctx.arc(x + 8, y - 52, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // smile
+    ctx.beginPath();
+    ctx.arc(x, y - 44, 8, 0.2 * Math.PI, 0.8 * Math.PI);
+    ctx.stroke();
+
+    // body
+    ctx.beginPath();
+    ctx.moveTo(x, y - 26);
+    ctx.lineTo(x, y + 26);
+    ctx.stroke();
+
+    // arms
+    ctx.beginPath();
+    ctx.moveTo(x - 22, y - 4);
+    ctx.lineTo(x + 22, y - 10);
+    ctx.stroke();
+
+    // legs
+    ctx.beginPath();
+    ctx.moveTo(x, y + 26);
+    ctx.lineTo(x - 18, y + 56);
+    ctx.moveTo(x, y + 26);
+    ctx.lineTo(x + 18, y + 56);
+    ctx.stroke();
+
+    // ear
+    ctx.beginPath();
+    ctx.arc(x - 28, y - 48, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // label
+    ctx.fillStyle = '#1f4f85';
+    ctx.font = '900 18px Segoe UI';
+    ctx.fillText('คนฟัง', x - 24, y + 84);
+  }
+
+  function drawAmbulance(x, y) {
+    ctx.save();
+    ctx.translate(x, y);
+
+    // body
+    ctx.fillStyle = '#ffffff';
+    roundRect(-62, -34, 124, 44, 12, true, false);
+
+    ctx.fillStyle = '#e53935';
+    roundRect(-62, -34, 74, 44, 12, true, false);
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(-10, -34, 18, 44);
+
+    // cabin
+    ctx.fillStyle = '#ffffff';
+    roundRect(10, -34, 44, 36, 10, true, false);
+    ctx.fillStyle = '#bfe0ff';
+    roundRect(18, -28, 28, 16, 7, true, false);
+
+    // siren
+    ctx.fillStyle = '#2f6fd6';
+    roundRect(-8, -48, 18, 10, 4, true, false);
+
+    // cross
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(-41, -26, 10, 26);
+    ctx.fillRect(-49, -18, 26, 10);
+
+    // wheels
+    ctx.fillStyle = '#30363d';
+    ctx.beginPath(); ctx.arc(-30, 16, 12, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(30, 16, 12, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#9fb3c7';
+    ctx.beginPath(); ctx.arc(-30, 16, 5, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(30, 16, 5, 0, Math.PI*2); ctx.fill();
+
+    // label
+    ctx.fillStyle = '#244e7a';
+    ctx.font = '900 16px Segoe UI';
+    ctx.fillText('รถพยาบาล', -38, 44);
+
+    ctx.restore();
+  }
+
+  function roundRect(x, y, w, h, r, fill, stroke) {
+    const rr = Math.min(r, w/2, h/2);
+    ctx.beginPath();
+    ctx.moveTo(x+rr, y);
+    ctx.arcTo(x+w, y, x+w, y+h, rr);
+    ctx.arcTo(x+w, y+h, x, y+h, rr);
+    ctx.arcTo(x, y+h, x, y, rr);
+    ctx.arcTo(x, y, x+w, y, rr);
+    ctx.closePath();
+    if (fill) ctx.fill();
+    if (stroke) ctx.stroke();
+  }
+
+  function drawWaves() {
+    for (const w of state.waves) {
+      const alpha = Math.max(0, 1 - w.r / 980);
+      ctx.strokeStyle = `rgba(47,111,214,${0.28 * alpha})`;
+      ctx.lineWidth = 2.4;
+      ctx.beginPath();
+      ctx.arc(w.x, w.y, w.r, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+
+  function drawDirectionalHint() {
+    const y = 108;
+    ctx.font = '900 18px Segoe UI';
+    if (state.speed > 0) {
+      drawArrow(141, y, 215, y, '#1b8f4d', '');
+      ctx.fillStyle = '#1b8f4d';
+      ctx.fillText('รถไปทางขวา', 32, y + 6);
+    } else if (state.speed < 0) {
+      drawArrow(215, y, 141, y, '#2f6fd6', '');
+      ctx.fillStyle = '#2f6fd6';
+      ctx.fillText('รถไปทางซ้าย', 32, y + 6);
+    } else {
+      ctx.fillStyle = '#4b6987';
+      ctx.fillText('รถหยุดนิ่ง', 32, y + 6);
+    }
+  }
+
+  function drawRelationOnCanvas() {
+    ctx.fillStyle = 'rgba(255,255,255,0.86)';
+    roundRect(W - 260, 80, 220, 82, 18, true, false);
+    ctx.fillStyle = '#245283';
+    ctx.font = '900 18px Segoe UI';
+    ctx.fillText('ความถี่ที่คนได้ยิน', W - 230, 110);
+    ctx.font = '900 26px Segoe UI';
+    if (state.speed > 0) {
+      ctx.fillStyle = '#1b8f4d';
+      ctx.fillText('fL > fs', W - 190, 142);
+    } else if (state.speed < 0) {
+      ctx.fillStyle = '#2f6fd6';
+      ctx.fillText('fL < fs', W - 190, 142);
+    } else {
+      ctx.fillStyle = '#c62828';
+      ctx.fillText('fL = fs', W - 190, 142);
+    }
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    drawBackground();
+    drawDirectionalHint();
+    drawWaves();
+    drawStickPerson(observer.x, observer.y);
+    drawAmbulance(state.sourceX, state.baseY);
+    drawRelationOnCanvas();
+  }
+
+  playBtn.addEventListener('click', async () => {
+    initAudio();
+    if (audioCtx.state === 'suspended') {
+      await audioCtx.resume();
+    }
+    state.running = !state.running;
+    playBtn.textContent = state.running ? '⏸ หยุด' : '▶️ เล่น';
+  });
+
+  resetBtn.addEventListener('click', () => {
+    resetLab();
+  });
+
+  speedSlider.addEventListener('input', () => {
+    updateLabels();
+    if (!state.running) draw();
+  });
+
+  updateLabels();
+  draw();
+  requestAnimationFrame(update);
+})();
+</script>
+</body>
+</html>
