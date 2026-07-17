@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Mini Lab การเลี้ยวเบนและการแทรกสอดผ่านสลิตคู่</title>
+  <style>
+    :root{
+      --bg:#05070b;
+      --panel:#0d1a2d;
+      --panel2:#0a1322;
+      --line:#1f3d66;
+      --text:#eef4ff;
+      --muted:#aac1e7;
+      --blue:#2f6fd6;
+      --blue2:#5ea7ff;
+      --gray:#9098a7;
+      --orange:#ffd8a6;
+      --orangeText:#8b5500;
+      --safeTop: max(12px, env(safe-area-inset-top));
+      --safeBottom: max(18px, env(safe-area-inset-bottom));
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      color:var(--text);
+      background: radial-gradient(circle at center, #0b1323 0%, #05070b 55%, #020304 100%);
+      overflow-x:hidden;
+    }
+    .app{min-height:100dvh; display:flex; flex-direction:column;}
+    .hero{
+      position:relative; z-index:1;
+      background:linear-gradient(to bottom, rgba(4,7,11,.98), rgba(4,7,11,.93));
+      border-bottom:1px solid rgba(130,165,220,.12);
+      padding-top:var(--safeTop);
+    }
+    .headerWrap{
+      padding:16px 18px 10px;
+      background:linear-gradient(180deg, rgba(10,20,36,.95), rgba(8,16,29,.95));
+      border-bottom:1px solid rgba(141,173,226,.08);
+    }
+    .canvasWrap{
+      width:100%;
+      height:min(50vh, 470px);
+      min-height:300px;
+      position:relative;
+      overflow:hidden;
+    }
+    canvas{display:block; width:100%; height:100%;}
+    .titleBar{display:none}
+    .title1{
+      color:var(--blue);
+      font-weight:900;
+      font-size:clamp(24px, 5vw, 38px);
+      line-height:1.05;
+      margin:0 0 6px 0;
+    }
+    .title2{
+      color:#ffffff;
+      font-weight:900;
+      font-size:clamp(20px, 4.5vw, 32px);
+      line-height:1.15;
+      margin:0;
+    }
+    .content{
+      padding:14px 16px 28px;
+      background:linear-gradient(180deg, #0a1424 0%, #07101d 100%);
+      flex:1;
+    }
+    .card{
+      max-width:980px;
+      margin:18px auto 0;
+      background:linear-gradient(180deg, rgba(5,12,22,.94), rgba(2,8,15,.95));
+      border:1px solid rgba(108,145,205,.22);
+      border-radius:28px;
+      padding:18px 16px 18px;
+      box-shadow:0 20px 60px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.04);
+    }
+    .grid{
+      display:grid;
+      grid-template-columns: 1.2fr 0.9fr;
+      gap:18px;
+      align-items:start;
+    }
+    .controls{display:grid; gap:14px;}
+    .row{
+      display:grid;
+      grid-template-columns:minmax(160px, 1.1fr) minmax(130px, 1fr) 104px;
+      gap:12px;
+      align-items:center;
+    }
+    .label{
+      font-size:clamp(17px, 2vw, 22px);
+      font-weight:800;
+      color:#eef4ff;
+      line-height:1.25;
+    }
+    .value{
+      text-align:right;
+      color:#8fc3ff;
+      font-weight:900;
+      font-size:clamp(18px, 2.2vw, 24px);
+      white-space:nowrap;
+    }
+    input[type="range"]{
+      width:100%; height:8px;
+      appearance:none; border-radius:999px;
+      background:linear-gradient(90deg, #0e7cff, #1d8cff);
+      outline:none; box-shadow: inset 0 0 0 2px rgba(255,255,255,.08);
+    }
+    input[type="range"]::-webkit-slider-thumb{
+      appearance:none; width:24px; height:24px; border-radius:50%;
+      background:#1280ff; border:3px solid #4fa8ff;
+      box-shadow:0 6px 12px rgba(0,0,0,.3);
+      cursor:pointer;
+    }
+    input[type="range"]::-moz-range-thumb{
+      width:24px; height:24px; border-radius:50%;
+      background:#1280ff; border:3px solid #4fa8ff;
+      box-shadow:0 6px 12px rgba(0,0,0,.3);
+      cursor:pointer;
+    }
+    .infoBox{
+      background:linear-gradient(180deg, rgba(19,34,57,.85), rgba(11,22,38,.85));
+      border:1px solid rgba(126,162,220,.18);
+      border-radius:24px;
+      padding:14px;
+      display:grid; gap:12px;
+    }
+    .miniStat{
+      background:rgba(255,255,255,.03);
+      border:1px solid rgba(140,170,218,.14);
+      border-radius:18px;
+      padding:12px 14px;
+    }
+    .miniStat .k{color:#b9cdee; font-weight:700; font-size:15px; margin-bottom:4px}
+    .miniStat .v{color:#fff; font-weight:900; font-size:20px}
+    .note{
+      color:#c6d8f7;
+      font-size:15px;
+      line-height:1.6;
+    }
+    .linkNote{
+      color:#7db5ff;
+      font-weight:800;
+    }
+    .floatingBar{
+      position:sticky;
+      left:auto; transform:none;
+      bottom:calc(10px + var(--safeBottom));
+      width:min(940px, calc(100vw - 18px));
+      z-index:5;
+      display:grid;
+      grid-template-columns:1fr 1fr 1fr;
+      gap:10px;
+      padding:10px;
+      border-radius:28px;
+      background:rgba(218,229,243,.48);
+      backdrop-filter:blur(9px);
+      border:1px solid rgba(240,248,255,.32);
+      box-shadow:0 10px 24px rgba(0,0,0,.22);
+    }
+    .btn{
+      min-height:68px;
+      border:none;
+      border-radius:22px;
+      font-size:clamp(18px, 2.5vw, 24px);
+      font-weight:900;
+      cursor:pointer;
+      display:flex; align-items:center; justify-content:center; gap:10px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.22);
+    }
+    .btnPlay{background:#74aee0;color:#fff}
+    .btnReset{background:#9098a7;color:#f4f7fb}
+    .btnFormula{background:var(--orange);color:var(--orangeText)}
+    .formulaModal{
+      position:fixed; inset:0; z-index:40; display:none;
+      background:rgba(4,8,14,.6); backdrop-filter: blur(6px);
+      padding:calc(var(--safeTop) + 10px) 14px calc(var(--safeBottom) + 20px);
+    }
+    .formulaModal.open{display:block}
+    .formulaPanel{
+      max-width:900px; margin:18px auto 0; height:100%; overflow:auto;
+      background:#fff2df; color:#4e3512; border:1px solid #efc891;
+      border-radius:28px; padding:22px 18px 130px;
+      position:relative;
+    }
+    .closeX{
+      position:fixed; top:calc(var(--safeTop) + 10px); right:16px; z-index:45;
+      width:54px; height:54px; border:none; border-radius:18px;
+      background:#e7eef6; color:#38567c; font-size:28px; font-weight:900; cursor:pointer;
+      box-shadow:0 8px 18px rgba(0,0,0,.16);
+    }
+    .formulaTitle{font-size:30px; font-weight:900; color:#8b5500; margin:0 0 10px}
+    .formulaBlock{
+      background:#fff9ef; border:2px solid #efc891; border-radius:20px; padding:16px; margin-top:14px;
+    }
+    .formulaEq{font-size:clamp(22px, 3vw, 32px); font-weight:900; color:#204d7c; margin:8px 0}
+    .formulaText{font-size:17px; line-height:1.7}
+    @media (max-width: 860px){
+      .grid{grid-template-columns:1fr}
+      .row{grid-template-columns: 1fr; gap:8px}
+      .value{text-align:left}
+      .canvasWrap{height:42vh; min-height:260px}
+    }
+    @media (max-width: 600px){
+      .content{padding:12px 10px 22px}
+      .card{padding:16px 12px; border-radius:24px}
+      .floatingBar{grid-template-columns:1fr 1fr 1fr; gap:8px; padding:8px; border-radius:24px}
+      .btn{min-height:56px; border-radius:18px; font-size:16px}
+      input[type="range"]{height:7px}
+      input[type="range"]::-webkit-slider-thumb{width:22px;height:22px}
+      input[type="range"]::-moz-range-thumb{width:22px;height:22px}
+    }
+  
+    @media (min-width: 1024px){
+      .floatingBar{
+        grid-template-columns: 0.6fr 0.6fr;
+        width: min(620px, calc(100vw - 24px));
+        justify-content: start;
+      }
+      .btnReset, .btnFormula{
+        transform: scale(0.6);
+        transform-origin: center center;
+      }
+    }
+
+
+/* Compact floating bar for desktop */
+@media (min-width: 1024px){
+  .floatingBar{
+    width: fit-content !important;
+    padding: 6px 10px !important;
+    gap: 8px !important;
+    justify-content: flex-start !important;
+    grid-template-columns: auto auto !important;
+  }
+  .floatingBar .btnReset,
+  .floatingBar .btnFormula{
+    transform: scale(0.6);
+    transform-origin: left center;
+    margin: 0 !important;
+  }
+}
+
+
+@media (min-width:1024px){
+  .floatingBar{
+    width: fit-content !important;
+    padding: 6px 12px !important;
+    display: flex !important;
+    gap: 6px !important;
+    align-items: center;
+    justify-content: flex-start;
+  }
+  .floatingBar .btnReset,
+  .floatingBar .btnFormula{
+    transform: scale(0.6);
+    transform-origin: left center;
+    margin: 0 !important;
+  }
+}
+
+
+@media (min-width:1024px){
+  .floatingBar{
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    display: flex !important;
+    gap: 2px !important;
+    align-items: center;
+  }
+  .floatingBar .btnReset,
+  .floatingBar .btnFormula{
+    transform: scale(0.6);
+    transform-origin: left center;
+    margin: 0 !important;
+  }
+}
+
+
+@media (min-width:1024px){
+  .floatingBar{
+    background: rgba(255,255,255,0.08) !important;
+    border-radius: 20px !important;
+    padding: 6px 10px !important;
+    width: fit-content !important;
+    display:flex !important;
+    gap: 4px !important;
+    align-items:center;
+  }
+
+  .floatingBar .btnReset,
+  .floatingBar .btnFormula{
+    width: 140px !important;
+    height: 44px !important;
+    transform: scale(0.65);
+    transform-origin: center;
+    margin:0 !important;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+  }
+}
+
+
+@media (min-width:1024px){
+  .floatingBar{
+    transform: translateX(-50px) !important;
+  }
+}
+
+
+@media (max-width: 820px){
+  .floatingBar{
+    position: fixed !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 0px) !important;
+    width: 100% !important;
+    margin: 0 !important;
+    transform: none !important;
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px)) 12px !important;
+    border-radius: 0 !important;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+    box-sizing: border-box !important;
+    background: rgba(10,18,30,0.94) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+    z-index: 999 !important;
+  }
+  .floatingBar .btnReset,
+  .floatingBar .btnFormula{
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 52px !important;
+    margin: 0 !important;
+    transform: none !important;
+    border-radius: 16px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+  }
+  body{
+    padding-bottom: 110px !important;
+  }
+}
+
+
+@media (max-width: 820px){
+  .mainLayout, .layout, .container{
+    display: block !important;
+  }
+
+  .rightPanel, .infoPanel, .sidePanel{
+    width: 100% !important;
+    margin-top: 12px !important;
+  }
+
+  .leftPanel, .controlsPanel{
+    width: 100% !important;
+  }
+
+  .floatingBar{
+    position: fixed !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: calc(env(safe-area-inset-bottom, 0px)) !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px)) 12px !important;
+    border-radius: 0 !important;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+    background: rgba(10,18,30,0.94) !important;
+    z-index: 999 !important;
+  }
+
+  .floatingBar .btnReset,
+  .floatingBar .btnFormula{
+    width: 100% !important;
+    height: 56px !important;
+    margin: 0 !important;
+    transform: none !important;
+    border-radius: 16px !important;
+  }
+
+  body{
+    padding-bottom: 120px !important;
+  }
+}
+
+
+@media (max-width: 820px){
+  /* Slider safe margins */
+  .controls input[type="range"], .slider{
+    width: calc(100% - 48px) !important;
+    margin: 0 24px !important;
+  }
+
+  /* Bottom bar rounded container like reference */
+  .floatingBar{
+    border-radius: 28px !important;
+    margin: 0 10px !important;
+    width: calc(100% - 20px) !important;
+  }
+}
+
+
+    /* ===== Fixed desktop layout: buttons under left sliders ===== */
+    .floatingBarInline{
+      position: static !important;
+      left: auto !important;
+      right: auto !important;
+      bottom: auto !important;
+      transform: none !important;
+      margin: 8px 0 0 0 !important;
+      width: 100% !important;
+      max-width: 520px !important;
+      display: flex !important;
+      flex-wrap: wrap;
+      gap: 12px !important;
+      align-items: center !important;
+      justify-content: flex-start !important;
+      padding: 0 !important;
+      border: none !important;
+      background: transparent !important;
+      box-shadow: none !important;
+      backdrop-filter: none !important;
+      z-index: auto !important;
+    }
+    .floatingBarInline .btnReset,
+    .floatingBarInline .btnFormula{
+      transform: none !important;
+      transform-origin: center center !important;
+      width: 150px !important;
+      min-width: 150px !important;
+      height: 54px !important;
+      min-height: 54px !important;
+      margin: 0 !important;
+      border-radius: 18px !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      font-size: 16px !important;
+      line-height: 1.15 !important;
+      flex: 0 0 auto !important;
+    }
+
+    @media (min-width: 1024px){
+      .floatingBarInline{
+        margin-left: 0 !important;
+      }
+    }
+
+    @media (max-width: 820px){
+      .floatingBarInline{
+        max-width: 100% !important;
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 10px !important;
+        margin-top: 10px !important;
+      }
+      .floatingBarInline .btnReset,
+      .floatingBarInline .btnFormula{
+        width: 100% !important;
+        min-width: 0 !important;
+        height: 52px !important;
+      }
+    }
+
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="hero">
+    <div class="headerWrap">
+      <h1 class="title1">Mini Lab</h1>
+      <h2 class="title2">การแทรกสอดและการเลี้ยวเบนผ่านสลิตคู่</h2>
+    </div>
+    <div class="canvasWrap"><canvas id="labCanvas"></canvas></div>
+  </div>
+
+  <div class="content">
+    <div class="card">
+      <div class="grid">
+        <div class="controls">
+          <div class="row">
+            <div class="label">ระยะห่างระหว่างสลิต \(d\)</div>
+            <input id="dSlider" type="range" min="0.10" max="0.80" step="0.01" value="0.35" />
+            <div class="value" id="dValue">0.35 mm</div>
+          </div>
+          <div class="row">
+            <div class="label">ระยะถึงฉาก \(L\)</div>
+            <input id="lSlider" type="range" min="0.80" max="4.00" step="0.01" value="2.40" />
+            <div class="value" id="lValue">2.40 m</div>
+          </div>
+          <div class="row">
+            <div class="label">ความยาวคลื่น \(\lambda\)</div>
+            <input id="lambdaSlider" type="range" min="380" max="750" step="1" value="650" />
+            <div class="value" id="lambdaValue">650 nm</div>
+          </div>
+          <div class="floatingBar floatingBarInline">
+            <button id="resetBtn" class="btn btnReset">🔄 รีเซ็ต</button>
+            <button id="formulaBtn" class="btn btnFormula">📘 สูตรสำคัญ</button>
+          </div>
+        </div>
+
+        <div class="infoBox">
+          <div class="miniStat">
+            <div class="k">แถบสว่างกลาง</div>
+            <div class="v">อยู่กึ่งกลางฉากเสมอ</div>
+          </div>
+          <div class="miniStat">
+            <div class="k">ระยะระหว่างแถบสว่างใกล้ศูนย์กลาง</div>
+            <div class="v" id="fringeValue">4.46 mm</div>
+          </div>
+          <div class="miniStat">
+            <div class="k">สีของแสง</div>
+            <div class="v" id="colorValue">แดง</div>
+          </div>
+          <div class="note">
+            • ลด \(d\) → แถบห่างขึ้น<br>
+            • เพิ่ม \(L\) → ฉากขยับไปทางขวา และแถบห่างขึ้น<br>
+            • เพิ่ม \(\lambda\) → สีเปลี่ยนและแถบห่างขึ้น<br>
+            • สลิตมีความกว้างเล็กมาก จึงเห็นทั้ง <span class="linkNote">การแทรกสอด</span> และ <span class="linkNote">ซองการเลี้ยวเบน</span>
+          </div>
+        </div>
+      </div>
+    </div>
+      <div style="height:40px"></div>
+    </div>
+  </div>
+</div>
+
+<div id="formulaModal" class="formulaModal" aria-hidden="true">
+  <button id="closeFormula" class="closeX">❌</button>
+  <div class="formulaPanel">
+    <h3 class="formulaTitle">สูตรสำคัญ</h3>
+    <div class="formulaBlock">
+      <div class="formulaEq">\[ \Delta x \approx \frac{\lambda L}{d} \]</div>
+      <div class="formulaText">
+        \(\Delta x\) คือระยะระหว่างแถบสว่างที่อยู่ติดกันใกล้ศูนย์กลาง<br>
+        เมื่อเพิ่ม \(L\) หรือเพิ่ม \(\lambda\) แถบจะห่างขึ้น แต่ถ้าเพิ่ม \(d\) แถบจะถี่ขึ้น
+      </div>
+    </div>
+    
+    <div class="formulaBlock">
+      <div class="formulaEq">\[ d\sin\theta = n\lambda \qquad (n = 0, \pm1, \pm2, \dots) \]</div>
+      <div class="formulaText">
+        ใช้บอกตำแหน่งแถบสว่างลำดับต่าง ๆ โดยแถบสว่างกลางคือ \(n=0\)
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const canvas = document.getElementById('labCanvas');
+  const ctx = canvas.getContext('2d');
+
+  const dSlider = document.getElementById('dSlider');
+  const lSlider = document.getElementById('lSlider');
+  const lambdaSlider = document.getElementById('lambdaSlider');
+  const dValue = document.getElementById('dValue');
+  const lValue = document.getElementById('lValue');
+  const lambdaValue = document.getElementById('lambdaValue');
+  const fringeValue = document.getElementById('fringeValue');
+  const colorValue = document.getElementById('colorValue');
+    const resetBtn = document.getElementById('resetBtn');
+  const formulaBtn = document.getElementById('formulaBtn');
+  const formulaModal = document.getElementById('formulaModal');
+  const closeFormula = document.getElementById('closeFormula');
+
+  const defaults = { d:0.35, L:2.40, lambda:650 };
+  const showBeam = true;
+  let shimmer = 0;
+
+  function resize(){
+    const rect = canvas.getBoundingClientRect();
+    const ratio = Math.max(1, window.devicePixelRatio || 1);
+    canvas.width = Math.round(rect.width * ratio);
+    canvas.height = Math.round(rect.height * ratio);
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    draw();
+  }
+
+  function wavelengthToRGB(wavelength){
+    let R=0, G=0, B=0;
+    if (wavelength >= 380 && wavelength < 440) {R = -(wavelength - 440) / (440 - 380); G = 0; B = 1;}
+    else if (wavelength < 490) {R = 0; G = (wavelength - 440) / (490 - 440); B = 1;}
+    else if (wavelength < 510) {R = 0; G = 1; B = -(wavelength - 510) / (510 - 490);}
+    else if (wavelength < 580) {R = (wavelength - 510) / (580 - 510); G = 1; B = 0;}
+    else if (wavelength < 645) {R = 1; G = -(wavelength - 645) / (645 - 580); B = 0;}
+    else if (wavelength <= 750) {R = 1; G = 0; B = 0;}
+    let factor = 1;
+    if (wavelength < 420) factor = 0.3 + 0.7*(wavelength-380)/(420-380);
+    else if (wavelength > 700) factor = 0.3 + 0.7*(750-wavelength)/(750-700);
+    const gamma = 0.8;
+    const conv = c => Math.round(255*Math.pow(c*factor, gamma));
+    return {r:conv(R), g:conv(G), b:conv(B)};
+  }
+
+  function wavelengthName(nm){
+    if (nm < 450) return 'ม่วง–น้ำเงิน';
+    if (nm < 495) return 'น้ำเงิน–ฟ้า';
+    if (nm < 570) return 'เขียว';
+    if (nm < 590) return 'เหลือง';
+    if (nm < 620) return 'ส้ม';
+    return 'แดง';
+  }
+
+  function sinc(x){
+    if (Math.abs(x) < 1e-6) return 1;
+    return Math.sin(x) / x;
+  }
+
+  function getState(){
+    const d_mm = parseFloat(dSlider.value);
+    const L = parseFloat(lSlider.value);
+    const lambda_nm = parseFloat(lambdaSlider.value);
+    const a_um = 18; // fixed, narrow slit width
+    return { d_mm, L, lambda_nm, a_um };
+  }
+
+  function updateLabels(){
+    const { d_mm, L, lambda_nm } = getState();
+    dValue.textContent = `${d_mm.toFixed(2)} mm`;
+    lValue.textContent = `${L.toFixed(2)} m`;
+    lambdaValue.textContent = `${lambda_nm.toFixed(0)} nm`;
+    const fringe = (lambda_nm*1e-9 * L / (d_mm*1e-3))*1000;
+    fringeValue.textContent = `${fringe.toFixed(2)} mm`;
+    colorValue.textContent = wavelengthName(lambda_nm);
+  }
+
+  function drawPattern(screenX, centerY, screenH, color, params, W, H){
+    const { d_mm, L, lambda_nm, a_um } = params;
+    const lambda = lambda_nm * 1e-9;
+    const d = d_mm * 1e-3;
+    const a = a_um * 1e-6;
+    const patternHalf = screenH*0.44;
+    const bandW = Math.max(18, W*0.032);
+
+    const outerX = screenX - bandW*0.6;
+    const outerY = centerY - screenH/2;
+    const outerW = bandW*1.2;
+    const outerH = screenH;
+    const screenGrad = ctx.createLinearGradient(outerX, 0, outerX + outerW, 0);
+    screenGrad.addColorStop(0, '#eef4ff');
+    screenGrad.addColorStop(0.5, '#ffffff');
+    screenGrad.addColorStop(1, '#d9e4f5');
+    ctx.fillStyle = screenGrad;
+    ctx.fillRect(outerX, outerY, outerW, outerH);
+
+    const innerW = bandW*0.72;
+    const innerX = screenX - innerW/2;
+    const innerY = centerY - screenH/2 + 10;
+    const innerH = screenH - 20;
+
+    ctx.fillStyle = 'rgba(10,0,0,.96)';
+    ctx.fillRect(innerX, innerY, innerW, innerH);
+
+    for(let py = 0; py < innerH; py += 1){
+      const y = (py - innerH/2) * 0.00022; // meters per pixel scaling on screen
+      const beta = Math.PI * a * y / (lambda * L);
+      const delta = Math.PI * d * y / (lambda * L);
+      let I = Math.pow(Math.cos(delta), 2) * Math.pow(sinc(beta), 2);
+      I = Math.min(1, Math.max(0, I));
+      const envelope = Math.exp(-Math.pow((py-innerH/2)/(patternHalf*1.05), 6));
+      const shimmerGain = showBeam ? 0.93 + 0.07*Math.sin(shimmer + py*0.02) : 0;
+      const alpha = Math.pow(I, 0.55) * 0.95 * envelope * shimmerGain;
+      if(alpha < 0.015) continue;
+      const grad = ctx.createRadialGradient(screenX, innerY+py, 0, screenX, innerY+py, innerW*0.85);
+      grad.addColorStop(0, `rgba(${color.r},${color.g},${color.b},${Math.min(1, alpha*1.2)})`);
+      grad.addColorStop(0.55, `rgba(${color.r},${color.g},${color.b},${alpha*0.4})`);
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(innerX-10, innerY+py-0.5, innerW+20, 1.5);
+    }
+  }
+
+  function roundRect(x, y, w, h, r){
+    ctx.beginPath();
+    ctx.moveTo(x+r, y);
+    ctx.arcTo(x+w, y, x+w, y+h, r);
+    ctx.arcTo(x+w, y+h, x, y+h, r);
+    ctx.arcTo(x, y+h, x, y, r);
+    ctx.arcTo(x, y, x+w, y, r);
+    ctx.closePath();
+  }
+
+  function draw(){
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
+    ctx.clearRect(0,0,W,H);
+
+    const params = getState();
+    const color = wavelengthToRGB(params.lambda_nm);
+    const beamColor = `rgba(${color.r},${color.g},${color.b},`;
+
+    const leftPad = W*0.08;
+    const slitX = W*0.30;
+    const screenX = slitX + (params.L - 0.8) / (4.0 - 0.8) * (W*0.56 - W*0.22) + W*0.22;
+    const cy = H*0.53;
+    const slitGapPx = 20 + (params.d_mm - 0.10)/(0.80 - 0.10) * 34;
+    const slitH = Math.max(7, H*0.022);
+    const barrierW = Math.max(36, W*0.06);
+    const barrierTop = H*0.20;
+    const barrierBottom = H*0.85;
+    const beamH = Math.max(52, H*0.16);
+
+    const bg1 = ctx.createRadialGradient(W*0.55, H*0.55, 10, W*0.55, H*0.55, W*0.65);
+    bg1.addColorStop(0, 'rgba(22,28,38,.5)');
+    bg1.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = bg1;
+    ctx.fillRect(0,0,W,H);
+
+    if(showBeam){
+      const gradBeam = ctx.createLinearGradient(0, cy, slitX+10, cy);
+      gradBeam.addColorStop(0, `${beamColor}0.95)`);
+      gradBeam.addColorStop(0.75, `${beamColor}0.86)`);
+      gradBeam.addColorStop(1, `${beamColor}0.0)`);
+      ctx.fillStyle = gradBeam;
+      ctx.fillRect(0, cy-beamH/2, slitX+6, beamH);
+    }
+
+    const barrierX = slitX - barrierW/2;
+    const metal = ctx.createLinearGradient(barrierX, 0, barrierX + barrierW, 0);
+    metal.addColorStop(0, '#a79264');
+    metal.addColorStop(0.45, '#eadcbc');
+    metal.addColorStop(1, '#b6a071');
+    ctx.fillStyle = metal;
+    ctx.fillRect(barrierX, barrierTop, barrierW, barrierBottom-barrierTop);
+
+    const slit1Y = cy - slitGapPx/2 - slitH/2;
+    const slit2Y = cy + slitGapPx/2 - slitH/2;
+    ctx.fillStyle = '#000';
+    ctx.fillRect(barrierX-1, slit1Y, barrierW+2, slitH);
+    ctx.fillRect(barrierX-1, slit2Y, barrierW+2, slitH);
+
+    if(showBeam){
+      const spread = 0.10 + (params.lambda_nm-380)/(750-380)*0.03;
+      const coneGrad = ctx.createLinearGradient(slitX+barrierW/2, 0, screenX, 0);
+      coneGrad.addColorStop(0, `${beamColor}0.18)`);
+      coneGrad.addColorStop(0.4, `${beamColor}0.10)`);
+      coneGrad.addColorStop(1, `${beamColor}0.02)`);
+      ctx.fillStyle = coneGrad;
+      ctx.beginPath();
+      ctx.moveTo(slitX+barrierW/2, cy - slitGapPx/2 - slitH);
+      ctx.lineTo(screenX-18, cy - H*spread);
+      ctx.lineTo(screenX-18, cy + H*spread);
+      ctx.lineTo(slitX+barrierW/2, cy + slitGapPx/2 + slitH);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.strokeStyle = `${beamColor}0.45)`;
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(slitX+barrierW/2, cy);
+      ctx.lineTo(screenX+W*0.11, cy);
+      ctx.stroke();
+    }
+
+    drawPattern(screenX, cy, H*0.70, color, params, W, H);
+
+    ctx.fillStyle = '#eef4ff';
+    ctx.font = `900 ${Math.max(18, W*0.025)}px Segoe UI`;
+    ctx.textAlign = 'center';
+    ctx.fillText('สลิตคู่', slitX, H*0.12);
+    ctx.fillText('ฉาก', screenX, H*0.12);
+
+    ctx.fillStyle = 'rgba(180,205,240,.8)';
+    ctx.font = `700 ${Math.max(13, W*0.015)}px Segoe UI`;
+    ctx.textAlign = 'left';
+    ctx.fillText(`L = ${params.L.toFixed(2)} m`, (slitX + screenX)/2 - 34, cy - H*0.17);
+  }
+
+  function tick(){
+    shimmer += 0.05;
+    draw();
+    requestAnimationFrame(tick);
+  }
+
+  [dSlider, lSlider, lambdaSlider].forEach(el => el.addEventListener('input', () => {
+    updateLabels();
+    draw();
+  }));
+
+  resetBtn.addEventListener('click', () => {
+    dSlider.value = defaults.d;
+    lSlider.value = defaults.L;
+    lambdaSlider.value = defaults.lambda;
+    updateLabels();
+    draw();
+  });
+
+  formulaBtn.addEventListener('click', () => {
+    formulaModal.classList.add('open');
+    formulaModal.setAttribute('aria-hidden', 'false');
+    if(window.MathJax?.typesetPromise){ window.MathJax.typesetPromise(); }
+  });
+  closeFormula.addEventListener('click', () => {
+    formulaModal.classList.remove('open');
+    formulaModal.setAttribute('aria-hidden', 'true');
+  });
+  formulaModal.addEventListener('click', (e)=>{
+    if(e.target === formulaModal){
+      formulaModal.classList.remove('open');
+      formulaModal.setAttribute('aria-hidden', 'true');
+    }
+  });
+
+  window.addEventListener('resize', resize);
+  updateLabels();
+  resize();
+  tick();
+})();
+</script>
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)'], ['$', '$']], displayMath: [['\\[','\\]']] },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+</body>
+</html>

@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mini Lab: การเลี้ยวเบนผ่านสลิตเดี่ยว</title>
+  <style>
+    *{box-sizing:border-box}
+    html,body{margin:0;height:100%;background:#07090d;color:#eef4ff;font-family:Arial, Helvetica, sans-serif;overflow:hidden}
+    .page{height:100vh;display:flex;flex-direction:column;background:linear-gradient(180deg,#061325 0%,#07111c 16%,#07090d 34%,#07090d 100%)}
+    .topHeader{flex:0 0 auto;padding:10px 18px;border-bottom:1px solid rgba(120,160,220,.12);background:linear-gradient(180deg, rgba(8,28,58,.98), rgba(8,18,34,.96))}
+    .mini{font-size:clamp(12px, 2.8vw, 22px);line-height:1.05;font-weight:900;color:#2f6fd6;margin:0 0 4px 0}
+    .topic{font-size:clamp(14px, 2.2vw, 18px);line-height:1.15;font-weight:900;color:#f2f6ff;margin:0}
+    .labSection{position:relative;flex:0 0 43vh;min-height:260px;background:radial-gradient(circle at 35% 50%, rgba(255,255,255,.04), transparent 22%),linear-gradient(180deg, #050608 0%, #0a0a0a 100%);overflow:hidden}
+    #lab{width:100%;height:100%;display:block}
+    .mission{position:absolute;top:10px;left:12px;right:72px;z-index:6;background:rgba(255,247,235,.92);border:1px solid #f0cfaa;color:#9a6500;border-radius:18px;padding:10px 14px;font-size:13px;line-height:1.42;backdrop-filter: blur(6px)}
+    .missionClose{position:absolute;top:10px;right:12px;z-index:7;width:48px;height:48px;border:none;border-radius:16px;background:#e7eef6;color:#45688f;font-size:22px;cursor:pointer}
+    .bottomSheet{padding-bottom:calc(120px + env(safe-area-inset-bottom));flex:1 1 auto;min-height:0;overflow:auto;padding:14px 14px 120px;background:linear-gradient(180deg, #101926, #0e1621);border-top:1px solid rgba(120,160,220,.14)}
+    .desktopGrid{display:grid;grid-template-columns: 1.15fr 0.85fr;gap:16px;align-items:start}
+    .controlCard,.observeCard{background:#071321;border:1px solid #23354c;border-radius:28px;padding:18px 18px 16px;box-shadow: inset 0 0 0 1px rgba(255,255,255,.03)}
+    .observeCard{background:linear-gradient(180deg, rgba(31,47,73,.92), rgba(18,31,48,.92))}
+    .row{display:grid;grid-template-columns:230px 1fr 120px;gap:18px;align-items:center;margin:18px 0}
+    .row label{font-size:20px;font-weight:800;color:#eff5ff;line-height:1.2}
+    .sym{display:block;font-size:18px;font-style:italic;color:#dfe9ff;margin-top:4px}
+    .value{text-align:right;color:#89beff;font-weight:900;font-size:20px;font-variant-numeric:tabular-nums;white-space:nowrap}
+    input[type=range]{width:100%}
+    .observeTitle{font-size:18px;font-weight:900;color:#9fd0ff;margin-bottom:12px}
+    .infoBox{background:rgba(255,255,255,.03);border:1px solid rgba(159,208,255,.12);border-radius:24px;padding:16px 18px;margin-bottom:14px;min-height:96px}
+    .infoLabel{color:#dce9ff;font-weight:800;font-size:16px;margin-bottom:8px}
+    .infoValue{color:#ffffff;font-weight:900;font-size:18px;line-height:1.3}
+    .hintList{margin:6px 0 0 0;padding-left:20px;color:#f4f8ff;font-size:16px;line-height:1.6;font-weight:700}
+    .hintList .em{color:#79b7ff;font-weight:900}
+    .btnBar{width:100%;display:grid;grid-template-columns:repeat(2, 1fr);gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid rgba(216,227,239,.22);background:transparent}
+    .btn{min-height:54px;border:none;border-radius:18px;cursor:pointer;font-weight:800;font-size:16px;display:flex;align-items:center;justify-content:center;gap:8px}
+    .btn.reset{background:#868f9e;color:white}
+    .btn.formula{background:#ffd6a6;color:#8b4d00}
+    .formulaPage{position:fixed;inset:0;z-index:40;display:none;background:#fff4e7;color:#123d70;overflow:auto;padding:18px 16px 100px}
+    .formulaInner{max-width:980px;margin:0 auto}
+    .formulaCard{background:#fff8ef;border:2px solid #efc58f;border-radius:24px;padding:18px;margin-top:14px}
+    .formulaCard h3{margin:0 0 10px;font-size:22px;color:#b56600}
+    .formulaClose{position:fixed;top:12px;right:12px;width:52px;height:52px;border:none;border-radius:18px;background:#e7eef6;color:#45688f;font-size:22px;z-index:41;cursor:pointer}
+    .eq{font-size:20px;font-weight:800;margin:10px 0;color:#0f4d9f;overflow-wrap:anywhere}
+    .foot{margin-top:14px;color:#2f6fd6;font-weight:800}.foot a{color:#2f6fd6}
+  
+    @media (max-width: 860px){
+      .labSection{
+        flex:0 0 34vh;
+        min-height:220px;
+      }
+      .bottomSheet{padding-bottom:calc(120px + env(safe-area-inset-bottom));
+        padding:12px 12px 80px;
+        overflow:auto;
+      }
+      .desktopGrid{
+        grid-template-columns:1fr;
+        gap:12px;
+      }
+      .controlCard,.observeCard{
+        width:100%;
+        min-width:0;
+        padding:14px 14px 14px;
+        border-radius:22px;
+      }
+      .observeCard{
+        order:2;
+      }
+      .controlCard{
+        order:1;
+      }
+      .row{
+        grid-template-columns:1fr;
+        gap:8px;
+        margin:14px 0 18px;
+      }
+      .row label{
+        font-size:16px;
+      }
+      .sym{
+        display:inline;
+        margin-left:4px;
+        font-size:16px;
+      }
+      .value{
+        text-align:right;
+        font-size:16px;
+        margin-top:2px;
+      }
+      /* long slider but keep left-right safe touch margins */
+      input[type=range]{
+        width:calc(100% - 28px);
+        margin:0 14px;
+        display:block;
+      }
+      .observeTitle{
+        font-size:17px;
+      }
+      .infoBox{
+        min-height:auto;
+        padding:14px 14px;
+        border-radius:20px;
+        overflow-wrap:anywhere;
+      }
+      .infoLabel{
+        font-size:15px;
+      }
+      .infoValue{
+        font-size:17px;
+        overflow-wrap:anywhere;
+      }
+      .hintList{
+        font-size:15px;
+        line-height:1.5;
+        padding-left:18px;
+      }
+      .btnBar{
+        width:100%;
+        grid-template-columns:1fr 1fr;
+        margin-top:12px;
+        padding-top:10px;
+        border-radius:0;
+      }
+      .btn{
+        min-height:48px;
+        font-size:14px;
+        border-radius:16px;
+      }
+    }
+
+  
+    .mobile-bottom-spacer{
+      display:none;
+    }
+    @media (max-width: 860px){
+      .bottomSheet{
+        padding-bottom:calc(140px + env(safe-area-inset-bottom)) !important;
+      }
+      .mobile-bottom-spacer{
+        display:block;
+        width:100%;
+        height:60px;
+      }
+      .btnBar{
+        padding:10px 0 0 0 !important;
+      }
+    }
+
+  </style>
+</head>
+<body>
+<div class="page">
+  <header class="topHeader">
+    <div class="mini">Mini Lab</div>
+    <div class="topic">การเลี้ยวเบนผ่านสลิตเดี่ยว</div>
+  </header>
+
+  <section class="labSection">
+    <canvas id="lab"></canvas>
+    <div class="mission" id="missionBox">ภารกิจที่ 1: ลองปรับความกว้างสลิต a ระยะฉาก L และความยาวคลื่น λ แล้วสังเกตว่าแถบสว่างกลางเปลี่ยนอย่างไร</div>
+    <button class="missionClose" id="missionClose">❌</button>
+  </section>
+
+  <section class="bottomSheet">
+    <div class="desktopGrid">
+      <div class="controlCard">
+        <div class="row">
+          <label for="slit">ความกว้างสลิต<span class="sym">a</span></label>
+          <input id="slit" type="range" min="5" max="80" step="1" value="24">
+          <div class="value" id="slitVal">24 µm</div>
+        </div>
+        <div class="row">
+          <label for="distance">ระยะถึงฉาก<span class="sym">L</span></label>
+          <input id="distance" type="range" min="0.50" max="3.00" step="0.01" value="1.20">
+          <div class="value" id="distanceVal">1.20 m</div>
+        </div>
+        <div class="row">
+          <label for="lambda">ความยาวคลื่น<span class="sym">λ</span></label>
+          <input id="lambda" type="range" min="380" max="700" step="1" value="530">
+          <div class="value" id="lambdaVal">530 nm</div>
+        </div>
+        <div class="btnBar">
+          <button class="btn reset" id="resetBtn">🔄 รีเซ็ต</button>
+          <button class="btn formula" id="formulaBtn">📘 สูตรสำคัญ</button>
+        </div>
+      </div>
+
+      <div class="observeCard">
+        <div class="observeTitle">สิ่งที่สังเกตได้</div>
+        <div class="infoBox">
+          <div class="infoLabel">แถบสว่างกลาง</div>
+          <div class="infoValue">กว้างประมาณ <span id="centralWidth">53.0 mm</span></div>
+        </div>
+        <div class="infoBox">
+          <div class="infoLabel">สีของแสง</div>
+          <div class="infoValue" id="colorName">เขียว</div>
+        </div>
+        <div class="infoBox" style="min-height:auto;">
+          <ul class="hintList">
+            <li>ลด <span class="em">a</span> → แถบกว้างขึ้น</li>
+            <li>เพิ่ม <span class="em">L</span> → ฉากขยับไปทางขวา และแถบกว้างขึ้น</li>
+            <li>เพิ่ม <span class="em">λ</span> → สีเปลี่ยน และแถบกว้างขึ้น</li>
+            <li>สลิตเดี่ยวควรเห็นเป็นแถบเรียบ ไม่มีริ้วเส้นเล็กซ้อนในแถบ</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+
+<div class="formulaPage" id="formulaPage">
+  <button class="formulaClose" id="formulaClose">❌</button>
+  <div class="formulaInner">
+    <div style="font-size:clamp(18px,2vw,28px);font-weight:900;color:#2f6fd6;">สูตรสำคัญ</div>
+    <div style="font-size:clamp(16px,1.8vw,24px);font-weight:900;color:#204d7c;margin-top:4px;">สลิตเดี่ยว</div>
+    <div class="formulaCard">
+      <h3>สมการความเข้ม</h3>
+      <div class="eq">I = I₀ (sin β / β)²</div>
+      <div class="eq">β = π a sinθ / λ</div>
+    </div>
+    <div class="formulaCard">
+      <h3>ตำแหน่งมืดอันดับแรก</h3>
+      <div class="eq">a sinθ = λ</div>
+      <p>สำหรับมุมเล็ก ใช้ sinθ ≈ tanθ ≈ y / L</p>
+      <div class="eq">x₁ ≈ λL / a</div>
+      <div class="eq">ความกว้างแถบสว่างกลาง = 2x₁ ≈ 2λL / a</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('lab');
+const ctx = canvas.getContext('2d');
+const slit = document.getElementById('slit');
+const distance = document.getElementById('distance');
+const lambda = document.getElementById('lambda');
+const slitVal = document.getElementById('slitVal');
+const distanceVal = document.getElementById('distanceVal');
+const lambdaVal = document.getElementById('lambdaVal');
+const centralWidth = document.getElementById('centralWidth');
+const colorName = document.getElementById('colorName');
+const resetBtn = document.getElementById('resetBtn');
+const formulaBtn = document.getElementById('formulaBtn');
+const formulaPage = document.getElementById('formulaPage');
+const formulaClose = document.getElementById('formulaClose');
+const missionBox = document.getElementById('missionBox');
+const missionClose = document.getElementById('missionClose');
+missionClose.addEventListener('click', ()=>{ missionBox.style.display='none'; missionClose.style.display='none'; });
+
+function resize(){
+  const rect = canvas.getBoundingClientRect();
+  const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+  canvas.width = Math.floor(rect.width * dpr);
+  canvas.height = Math.floor(rect.height * dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+function wavelengthToHue(nm){
+  if (nm < 450) return 250;
+  if (nm < 495) return 200;
+  if (nm < 570) return 125;
+  if (nm < 590) return 60;
+  if (nm < 620) return 25;
+  return 0;
+}
+function wavelengthName(nm){
+  if (nm < 450) return 'ม่วง–น้ำเงิน';
+  if (nm < 495) return 'ฟ้า–เขียวอมฟ้า';
+  if (nm < 570) return 'เขียว';
+  if (nm < 590) return 'เหลือง';
+  if (nm < 620) return 'ส้ม';
+  return 'แดง';
+}
+function updateLabels(){
+  slitVal.textContent = `${Number(slit.value).toFixed(0)} µm`;
+  distanceVal.textContent = `${Number(distance.value).toFixed(2)} m`;
+  lambdaVal.textContent = `${Number(lambda.value).toFixed(0)} nm`;
+  const a = Number(slit.value) * 1e-6;
+  const L = Number(distance.value);
+  const lam = Number(lambda.value) * 1e-9;
+  const w = 2 * lam * L / a;
+  centralWidth.textContent = `${(w*1000).toFixed(1)} mm`;
+  colorName.textContent = wavelengthName(Number(lambda.value));
+}
+function roundedRect(x, y, w, h, r){
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.arcTo(x+w, y, x+w, y+h, r);
+  ctx.arcTo(x+w, y+h, x, y+h, r);
+  ctx.arcTo(x, y+h, x, y, r);
+  ctx.arcTo(x, y, x+w, y, r);
+  ctx.closePath();
+}
+function drawIncomingBeam(x1, y, x2, hueVal){
+  const beamThickness = 24;
+  const grad = ctx.createLinearGradient(x1, y-beamThickness, x2, y+beamThickness);
+  grad.addColorStop(0, `hsla(${hueVal},100%,36%,0.40)`);
+  grad.addColorStop(0.18, `hsla(${hueVal},100%,46%,0.80)`);
+  grad.addColorStop(0.52, `hsla(${hueVal},100%,58%,1.00)`);
+  grad.addColorStop(0.82, `hsla(${hueVal},100%,46%,0.80)`);
+  grad.addColorStop(1, `hsla(${hueVal},100%,36%,0.40)`);
+  ctx.fillStyle = grad;
+  ctx.fillRect(x1, y - beamThickness, x2 - x1, beamThickness * 2);
+}
+function drawDiffuseBeam(x1, y, x2, hueVal){
+  const spread = 68;
+  const grad = ctx.createLinearGradient(x1, y, x2, y);
+  grad.addColorStop(0.00, `hsla(${hueVal},100%,58%,0.42)`);
+  grad.addColorStop(0.18, `hsla(${hueVal},100%,52%,0.26)`);
+  grad.addColorStop(0.55, `hsla(${hueVal},100%,48%,0.12)`);
+  grad.addColorStop(1.00, `hsla(${hueVal},100%,44%,0.04)`);
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.moveTo(x1, y);
+  ctx.lineTo(x2, y - spread);
+  ctx.lineTo(x2, y + spread);
+  ctx.closePath();
+  ctx.fill();
+}
+function drawSlit(x, cy, h, gap){
+  const w = 28;
+  const g1 = ctx.createLinearGradient(x, 0, x+w, 0);
+  g1.addColorStop(0, '#b9a984');
+  g1.addColorStop(0.5, '#e3d6b8');
+  g1.addColorStop(1, '#907f5e');
+  ctx.fillStyle = g1;
+  ctx.fillRect(x, cy - h/2, w, h/2 - gap/2);
+  ctx.fillRect(x, cy + gap/2, w, h/2 - gap/2);
+  ctx.strokeStyle = 'rgba(255,255,255,.18)';
+  ctx.lineWidth = 0.8;
+  ctx.strokeRect(x, cy - h/2, w, h/2 - gap/2);
+  ctx.strokeRect(x, cy + gap/2, w, h/2 - gap/2);
+}
+
+// Draw smooth single-slit bands directly as soft lobes.
+// No per-pixel ripple, so no hidden tiny stripes.
+
+function drawPattern(screenX, screenY, screenW, screenH, hueVal){
+  const a = Number(slit.value) * 1e-6;
+  const L = Number(distance.value);
+  const lam = Number(lambda.value) * 1e-9;
+
+  const frameGrad = ctx.createLinearGradient(screenX, 0, screenX + screenW, 0);
+  frameGrad.addColorStop(0, '#f5f7fa');
+  frameGrad.addColorStop(0.22, '#ffffff');
+  frameGrad.addColorStop(0.78, '#f7f9fc');
+  frameGrad.addColorStop(1, '#c2cad4');
+  ctx.fillStyle = frameGrad;
+  roundedRect(screenX, screenY, screenW, screenH, 14);
+  ctx.fill();
+
+  ctx.strokeStyle = 'rgba(255,255,255,.16)';
+  ctx.lineWidth = 0.7;
+  roundedRect(screenX+0.5, screenY+0.5, screenW-1, screenH-1, 14);
+  ctx.stroke();
+
+  ctx.save();
+  roundedRect(screenX+7, screenY+9, screenW-14, screenH-18, 10);
+  ctx.clip();
+  ctx.fillStyle = '#000';
+  ctx.fillRect(screenX+7, screenY+9, screenW-14, screenH-18);
+
+  const innerX = screenX + 12;
+  const innerY = screenY + 10;
+  const innerW = screenW - 24;
+  const innerH = screenH - 20;
+  const cy = innerY + innerH/2;
+  const cx = innerX + innerW/2;
+
+  // scale main band height from physics, but render as smooth lobes only
+  const centralWidthM = 2 * lam * L / a;
+  const displaySpanM = 0.18;
+  const pxPerM = innerH / displaySpanM;
+  let centralH = Math.max(26, centralWidthM * pxPerM);
+  centralH = Math.min(innerH * 0.52, centralH);
+
+  function drawBand(centerY, bandH, alphaPeak){
+    const rx = innerW * 0.42;
+    const ry = bandH * 0.52;
+
+    ctx.save();
+    ctx.translate(cx, centerY);
+    ctx.scale(rx, ry);
+
+    const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
+    grad.addColorStop(0.00, `hsla(${hueVal},100%,60%,${alphaPeak})`);
+    grad.addColorStop(0.34, `hsla(${hueVal},100%,50%,${alphaPeak*0.70})`);
+    grad.addColorStop(0.72, `hsla(${hueVal},100%,34%,${alphaPeak*0.20})`);
+    grad.addColorStop(1.00, `hsla(${hueVal},100%,20%,0.00)`);
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(0, 0, 1, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // central bright band
+  drawBand(cy, centralH, 0.95);
+
+  // side bright bands: smooth patches, no thin lines inside
+  const offset1 = centralH * 0.98;
+  const offset2 = centralH * 1.95;
+  drawBand(cy - offset1, centralH * 0.42, 0.28);
+  drawBand(cy + offset1, centralH * 0.42, 0.28);
+  drawBand(cy - offset2, centralH * 0.24, 0.10);
+  drawBand(cy + offset2, centralH * 0.24, 0.10);
+
+  ctx.restore();
+}
+
+function render(){
+  const w = canvas.clientWidth;
+  const h = canvas.clientHeight;
+  ctx.clearRect(0,0,w,h);
+
+  const cy = h/2 + 8;
+  const slitX = Math.max(72, Math.min(150, w*0.18));
+  const slitHeight = Math.min(h*0.72, h-48);
+  const gapPx = 8 + (Number(slit.value)-5) / 75 * 34;
+
+  const screenW = Math.max(44, Math.min(66, w*0.09));
+  const screenH = Math.min(h*0.78, h-40);
+
+  const L = Number(distance.value);
+  const Lmin = Number(distance.min);
+  const Lmax = Number(distance.max);
+  const t = (L - Lmin) / (Lmax - Lmin);
+
+  const screenXNear = Math.max(w*0.50, slitX + 130);
+  const screenXFar = w - screenW - 20;
+  const screenX = screenXNear + t * (screenXFar - screenXNear);
+  const screenY = (h - screenH)/2 + 6;
+
+  const bg = ctx.createRadialGradient(w*0.35, h*0.5, 10, w*0.52, h*0.5, Math.max(w,h)*0.72);
+  bg.addColorStop(0, 'rgba(20,20,20,1)');
+  bg.addColorStop(1, 'rgba(0,0,0,1)');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0,0,w,h);
+
+  const hueVal = wavelengthToHue(Number(lambda.value));
+
+  drawIncomingBeam(0, cy, slitX, hueVal);
+  drawSlit(slitX, cy, slitHeight, gapPx);
+  drawDiffuseBeam(slitX + 28, cy, screenX, hueVal);
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.24)';
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(slitX-36, cy);
+  ctx.lineTo(screenX + screenW + 18, cy);
+  ctx.stroke();
+
+  drawPattern(screenX, screenY, screenW, screenH, hueVal);
+
+  ctx.fillStyle = 'rgba(255,255,255,0.88)';
+  ctx.font = '700 15px Arial';
+  ctx.fillText('สลิตเดี่ยว', slitX - 12, screenY - 10);
+  ctx.fillText('ฉาก', screenX + 6, screenY - 10);
+
+  requestAnimationFrame(render);
+}
+function resetAll(){
+  slit.value = 24;
+  distance.value = 1.20;
+  lambda.value = 530;
+  updateLabels();
+  missionBox.style.display='block';
+  missionClose.style.display='block';
+}
+[slit, distance, lambda].forEach(el => el.addEventListener('input', updateLabels));
+resetBtn.addEventListener('click', resetAll);
+formulaBtn.addEventListener('click', ()=> formulaPage.style.display='block');
+formulaClose.addEventListener('click', ()=> formulaPage.style.display='none');
+
+window.addEventListener('resize', resize);
+resize();
+resetAll();
+render();
+</script>
+</body>
+</html>
