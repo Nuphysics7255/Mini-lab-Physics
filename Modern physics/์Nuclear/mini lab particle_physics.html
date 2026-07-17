@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Mini Lab — Quark Builder</title>
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['\\(','\\)'], ['$', '$']], displayMath: [['\\[','\\]']] },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+  <style>
+    :root{
+      --blue:#2f6fd6; --deep:#204d7c; --soft:#edf3fb; --line:#d8e3ef;
+      --green:#e7f7e2; --greenLine:#9dcc92; --orange:#fff1dc; --orangeLine:#efc58f;
+      --red:#e85b5b; --dark:#17324d; --gray:#f4f6f8;
+      --shadow:0 12px 30px rgba(30,60,90,.14);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color:var(--dark); background:linear-gradient(180deg,#ffffff 0%,#f5f9ff 100%);
+      min-height:100vh; padding:18px 18px calc(120px + env(safe-area-inset-bottom));
+    }
+    header{max-width:1180px;margin:0 auto 14px;text-align:center;}
+    .title1{font-size:clamp(28px,4vw,46px);font-weight:950;color:var(--blue);line-height:1.05;}
+    .title2{font-size:clamp(22px,3vw,36px);font-weight:900;color:var(--deep);line-height:1.15;margin-top:4px;}
+    .subtitle{margin-top:8px;font-size:17px;font-weight:700;color:#56718d;}
+    .layout{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:310px 1fr 330px;gap:14px;align-items:stretch;}
+    .card{background:#fff;border:1.5px solid var(--line);border-radius:26px;box-shadow:var(--shadow);padding:16px;}
+    .card h2{margin:0 0 12px;font-size:21px;color:var(--deep);display:flex;align-items:center;gap:8px;}
+    .quark-bank{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+    .qchip{
+      border:2px solid rgba(40,80,120,.18);border-radius:20px;min-height:88px;padding:10px;cursor:grab;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;font-weight:900;
+      user-select:none;touch-action:none;transition:.15s transform,.15s box-shadow;
+    }
+    .qchip:active{cursor:grabbing;transform:scale(.98)}
+    .qsymbol{font-size:34px;line-height:1;font-weight:950;}
+    .qname{font-size:14px;margin-top:4px}.qcharge{font-size:13px;margin-top:2px;color:#31516f}
+    .u{background:#e9f7ff;border-color:#7ec8f0}.d{background:#eef2ff;border-color:#8fa6ff}.au{background:#fff0f6;border-color:#f19ac1}.ad{background:#fff5e6;border-color:#f0bd72}.s{background:#edf8ea;border-color:#9bd284}.as{background:#f6efff;border-color:#c6a2f2}
+    .challenge{margin-top:14px;padding:12px;border-radius:20px;background:var(--soft);border:1.5px solid var(--line);}
+    .challenge-title{font-weight:900;color:var(--deep);font-size:18px;margin-bottom:8px}.challenge-target{font-size:24px;font-weight:950;color:#14385e;margin:6px 0;}
+    .btnrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.top-tools{max-width:1180px;margin:0 auto 14px;display:flex;justify-content:center;gap:10px;flex-wrap:wrap}.btn{border:0;border-radius:16px;padding:10px 13px;font-weight:900;cursor:pointer;box-shadow:0 5px 12px rgba(0,0,0,.08);font-size:15px}.btn.blue{background:#dcecff;color:#21588c}.btn.gray{background:#e9eef4;color:#45627f}.btn.orange{background:#ffe4c4;color:#8b4d00}.btn.green{background:#dff2da;color:#1f6f35}
+    .labarea{position:relative;min-height:565px;overflow:hidden;background:radial-gradient(circle at center,#ffffff 0%,#f6fbff 55%,#edf6ff 100%);}
+    .assembly-title{text-align:center;font-weight:950;color:var(--deep);font-size:22px;margin-bottom:8px;}
+    .nucleus{position:relative;width:min(430px,100%);aspect-ratio:1/1;margin:12px auto 0;border-radius:50%;background:radial-gradient(circle,#ffffff 0%,#ecf7ff 62%,#d7edff 100%);border:3px dashed #8bbbe7;box-shadow:inset 0 0 40px rgba(47,111,214,.12);}
+    .slot{position:absolute;width:128px;height:128px;border-radius:50%;background:rgba(255,255,255,.84);border:2.5px dashed #bfd3e8;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:900;color:#7a93aa;transition:.15s;}
+    .slot.filled{border-style:solid;background:#fff;box-shadow:0 8px 18px rgba(30,80,130,.12);}
+    .slot.over{transform:scale(1.06);border-color:#2f6fd6;}
+    #slot0{left:50%;top:17%;transform:translate(-50%,-50%)} #slot1{left:30%;top:67%;transform:translate(-50%,-50%)} #slot2{left:70%;top:67%;transform:translate(-50%,-50%)}
+    .slot.meson{width:142px;height:142px} #slotM0{left:36%;top:50%;transform:translate(-50%,-50%)} #slotM1{left:64%;top:50%;transform:translate(-50%,-50%)}
+    .slot.hidden{display:none}.slot .qchip{width:108px;height:108px;min-height:108px;padding:8px;cursor:pointer}.slot.meson .qchip{width:112px;height:112px;min-height:112px}
+    .gluon{position:absolute;width:72px;height:20px;border-top:5px wavy #f3a534;opacity:.8;animation:wiggle 1.6s ease-in-out infinite}.g1{left:41%;top:42%;transform:rotate(30deg)}.g2{left:39%;top:55%;transform:rotate(-30deg)}.g3{left:52%;top:55%;transform:rotate(30deg)}@keyframes wiggle{50%{filter:brightness(1.2);opacity:1}}
+    .modebox{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:8px}.mode{padding:9px 12px;border-radius:999px;border:1.5px solid #b7cee4;background:#fff;font-weight:900;cursor:pointer}.mode.active{background:#dcecff;border-color:#75aee5;color:#1d5e9b}
+    .formula-card{margin-top:14px;background:#fff7ee;border:1.5px solid var(--orangeLine);border-radius:22px;padding:13px;font-weight:800;line-height:1.55;}
+    .result{min-height:232px;border-radius:22px;background:var(--soft);border:1.5px solid var(--line);padding:14px;}.result h3{margin:0 0 10px;color:var(--deep);font-size:21px}.row{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid #d7e3ef;font-weight:850}.row:last-child{border-bottom:0}.value{font-weight:950;color:#123d70;text-align:right}.particle{margin-top:12px;border-radius:20px;padding:14px;text-align:center;font-weight:950;font-size:25px;background:#fff;border:2px solid #d5e4f1;}.particle.ok{background:var(--green);border-color:var(--greenLine);color:#1f6f35}.particle.bad{background:#fff1f1;border-color:#f0aaaa;color:#b53d3d}.particle-desc{margin-top:12px;background:#fff;border:1.5px solid #dfe8f2;border-radius:18px;padding:12px;font-weight:800;line-height:1.55;color:#334f69}.particle-desc strong{color:#204d7c}.flash{position:absolute;inset:-10px;border-radius:28px;pointer-events:none;opacity:0;background:radial-gradient(circle at center,rgba(255,255,255,.98) 0%,rgba(255,236,150,.72) 32%,rgba(120,214,255,.35) 58%,rgba(255,255,255,0) 78%);z-index:20}.flash.on{animation:flashPop .75s ease-out}.nucleus.glow{animation:nucleusGlow .9s ease-out}.slot.pop{animation:slotPop .55s ease-out}@keyframes flashPop{0%{opacity:0;transform:scale(.7)}20%{opacity:1;transform:scale(1)}55%{opacity:.85}100%{opacity:0;transform:scale(1.18)}}@keyframes nucleusGlow{0%{box-shadow:0 0 0 rgba(255,205,70,0),inset 0 0 40px rgba(47,111,214,.12)}35%{box-shadow:0 0 46px rgba(255,204,65,.95),0 0 86px rgba(80,180,255,.45),inset 0 0 48px rgba(255,255,255,.95)}100%{box-shadow:inset 0 0 40px rgba(47,111,214,.12)}}@keyframes slotPop{0%{transform:translate(-50%,-50%) scale(1)}45%{transform:translate(-50%,-50%) scale(1.14)}100%{transform:translate(-50%,-50%) scale(1)}}.modal{position:fixed;inset:0;z-index:10000;background:rgba(20,40,65,.38);display:none;align-items:flex-start;justify-content:center;padding:calc(24px + env(safe-area-inset-top)) 12px calc(120px + env(safe-area-inset-bottom));overflow:auto}.modal.show{display:flex}.modal-card{width:min(860px,100%);background:#fff7ee;border:2px solid var(--orangeLine);border-radius:28px;box-shadow:0 24px 70px rgba(20,40,70,.28);padding:18px}.modal-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px}.modal-title{font-size:26px;font-weight:950;color:#8b4d00}.closebtn{border:0;border-radius:18px;background:#ffe4c4;color:#8b4d00;font-size:24px;font-weight:950;width:52px;height:52px;cursor:pointer}.formula-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.formula-box{background:#fff;border:1.5px solid #efc58f;border-radius:20px;padding:14px;line-height:1.6;font-weight:800}.formula-box h3{margin:0 0 6px;color:#204d7c;font-size:20px}.formula-box ul{margin:8px 0 0;padding-left:22px}.formula-note{margin-top:12px;background:#fff3df;border:1.5px dashed #d8a568;border-radius:18px;padding:12px;font-weight:850;line-height:1.6}@media(max-width:720px){.formula-grid{grid-template-columns:1fr}.modal-title{font-size:22px}}
+    .mission{margin-top:14px;background:#eef7ea;border:1.5px solid #bfdcaf;border-radius:22px;padding:14px}.mission h3{margin:0 0 8px;color:#246436}.mission p{margin:7px 0;font-weight:800;line-height:1.5}.hint{margin-top:12px;background:#fff;border:1.5px solid #e0e7ef;border-radius:18px;padding:12px;font-weight:800;line-height:1.55;color:#425d76}.footerlink{max-width:1180px;margin:18px auto 0;text-align:center;font-weight:900}.footerlink a{color:#2f6fd6;text-decoration:underline;}
+    .dragghost{position:fixed;z-index:9999;pointer-events:none;opacity:.92;transform:translate(-50%,-50%);width:110px;height:110px;min-height:110px;}
+    @media (max-width:980px){body{padding:12px 10px calc(130px + env(safe-area-inset-bottom));}.layout{grid-template-columns:1fr}.labarea{min-height:480px}.nucleus{width:min(360px,100%)}.slot{width:110px;height:110px}.slot .qchip{width:94px;height:94px;min-height:94px}.slot.meson{width:122px;height:122px}.quark-bank{grid-template-columns:repeat(3,1fr)}.qsymbol{font-size:28px}.subtitle{font-size:15px}}
+    @media (max-width:520px){.quark-bank{grid-template-columns:1fr 1fr}.card{border-radius:22px;padding:13px}.slot{width:96px;height:96px}.slot .qchip{width:82px;height:82px;min-height:82px}.qsymbol{font-size:25px}.qname,.qcharge{font-size:11px}.nucleus{width:320px}.labarea{min-height:430px}.particle{font-size:22px}}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="title1">Mini Lab</div>
+    <div class="title2">Quark Builder</div>
+    <div class="subtitle">ลาก quark มาประกอบเป็น proton, neutron และ meson แล้วดูผลรวมประจุ</div>
+  </header>
+
+  <div class="top-tools"><button class="btn orange" id="formulaBtn">🧠 Concept สำคัญ</button></div>
+
+  <main class="layout">
+    <section class="card">
+      <h2>🧩 คลัง Quark</h2>
+      <div class="quark-bank" id="bank"></div>
+      <div class="challenge">
+        <div class="challenge-title">🎯 Challenge</div>
+        <div>สร้างอนุภาค:</div>
+        <div class="challenge-target" id="targetText">Proton</div>
+        <div class="btnrow">
+          <button class="btn green" id="checkBtn">ตรวจคำตอบ</button>
+          <button class="btn gray" id="clearBtn">ล้างพื้นที่</button>
+          <button class="btn orange" id="nextBtn">สุ่มโจทย์</button>
+        </div>
+      </div>
+      <div class="formula-card">
+        <b>หลักคิด:</b><br>
+        quark แต่ละตัวมีประจุย่อย เมื่อนำมารวมกันจะได้ประจุของอนุภาค เช่น<br>
+        \(p = uud\), \(n = udd\)
+      </div>
+    </section>
+
+    <section class="card labarea" id="labCard">
+      <div class="flash" id="flashFx"></div>
+      <div class="assembly-title">พื้นที่ประกอบอนุภาค</div>
+      <div class="modebox">
+        <button class="mode active" data-mode="baryon">Baryon: 3 quarks</button>
+        <button class="mode" data-mode="meson">Meson: quark + antiquark</button>
+      </div>
+      <div class="nucleus" id="nucleus">
+        <div class="gluon g1"></div><div class="gluon g2"></div><div class="gluon g3"></div>
+        <div class="slot" id="slot0" data-i="0">วาง quark</div>
+        <div class="slot" id="slot1" data-i="1">วาง quark</div>
+        <div class="slot" id="slot2" data-i="2">วาง quark</div>
+        <div class="slot meson hidden" id="slotM0" data-i="0">วาง q</div>
+        <div class="slot meson hidden" id="slotM1" data-i="1">วาง q̄</div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>📊 ผลการประกอบ</h2>
+      <div class="result">
+        <h3>สรุป</h3>
+        <div class="row"><span>Quarks</span><span class="value" id="quarkList">-</span></div>
+        <div class="row"><span>Charge</span><span class="value" id="chargeText">0</span></div>
+        <div class="row"><span>ชนิดที่ตรวจพบ</span><span class="value" id="typeText">-</span></div>
+        <div class="particle" id="particleText">ยังไม่ครบ</div>
+        <div class="particle-desc" id="particleDesc">เมื่อประกอบครบ ระบบจะบอกว่าอนุภาคที่ได้คืออะไร และมีสมบัติสำคัญอย่างไร</div>
+      </div>
+      <div class="mission">
+        <h3>🧠 แนวคิดสำคัญ</h3>
+        <p><b>Proton</b> ใช้ \(uud\) รวมประจุได้ \(+1e\)</p>
+        <p><b>Anti-proton</b> ใช้ \(\bar u\bar u\bar d\) รวมประจุได้ \(-1e\)</p>
+        <p><b>Neutron</b> ใช้ \(udd\) รวมประจุได้ \(0\)</p>
+        <p><b>Meson</b> ใช้ quark 1 ตัว และ antiquark 1 ตัว เช่น \(\pi^+ = u\bar d\)</p>
+      </div>
+      <div class="hint" id="hintBox">ลากชิ้น quark จากซ้ายไปวางในวงกลมกลาง จากนั้นกดตรวจคำตอบ</div>
+    </section>
+  </main>
+
+  <div class="footerlink"><a href="https://www.facebook.com/resolvephysics" target="_blank">ศึกษาเพิ่มเติมที่เพจคลายปมฟิสิกส์</a></div>
+
+
+  <div class="modal" id="formulaModal" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head">
+        <div class="modal-title">🧠 Concept สำคัญ: Quark, Baryon, Meson</div>
+        <button class="closebtn" id="closeFormula">❌</button>
+      </div>
+      <div class="formula-grid">
+        <div class="formula-box">
+          <h3>Quark คืออะไร</h3>
+          <div>Quark เป็นอนุภาคพื้นฐานชนิดหนึ่ง เป็นส่วนประกอบของอนุภาคหนักหลายชนิด เช่น proton และ neutron</div>
+          <ul>
+            <li>up quark มีประจุ \(+\frac{2}{3}e\)</li>
+            <li>down quark มีประจุ \(-\frac{1}{3}e\)</li>
+            <li>antiquark มีประจุตรงข้ามกับ quark ชนิดนั้น</li>
+          </ul>
+        </div>
+        <div class="formula-box">
+          <h3>Baryon คืออะไร</h3>
+          <div>Baryon เป็นอนุภาคที่ประกอบด้วย quark 3 ตัว ส่วน anti-baryon ประกอบด้วย antiquark 3 ตัว</div>
+          <ul>
+            <li>Proton: \(p=uud\) มีประจุ \(+1e\)</li>
+            <li>Anti-proton: \(\bar p=\bar u\bar u\bar d\) มีประจุ \(-1e\)</li>
+            <li>Neutron: \(n=udd\) มีประจุ \(0\)</li>
+            <li>Anti-neutron: \(\bar n=\bar u\bar d\bar d\) มีประจุ \(0\)</li>
+          </ul>
+        </div>
+        <div class="formula-box">
+          <h3>Meson คืออะไร</h3>
+          <div>Meson เป็นอนุภาคที่ประกอบด้วย quark 1 ตัว และ antiquark 1 ตัว</div>
+          <ul>
+            <li>เช่น \(\pi^+ = u\bar d\)</li>
+            <li>เช่น \(\pi^- = d\bar u\)</li>
+          </ul>
+        </div>
+        <div class="formula-box">
+          <h3>หลักคำนวณประจุ</h3>
+          <div>นำประจุของ quark ทุกตัวมาบวกกัน ผลรวมคือประจุของอนุภาค</div>
+          <div style="margin-top:8px">ตัวอย่าง: \(uud = +\frac{2}{3}e + \frac{2}{3}e - \frac{1}{3}e = +1e\)</div>
+        </div>
+      </div>
+      <div class="formula-note">จำง่าย: <b>Baryon = 3 quarks</b> ส่วน <b>Meson = quark + antiquark</b></div>
+    </div>
+  </div>
+
+<script>
+const quarks = {
+  u:{label:'u', name:'up', charge: 2/3, cls:'u', latex:'u'},
+  d:{label:'d', name:'down', charge:-1/3, cls:'d', latex:'d'},
+  au:{label:'ū', name:'anti-up', charge:-2/3, cls:'au', latex:'\\bar u'},
+  ad:{label:'d̄', name:'anti-down', charge: 1/3, cls:'ad', latex:'\\bar d'},
+  s:{label:'s', name:'strange', charge:-1/3, cls:'s', latex:'s'},
+  as:{label:'s̄', name:'anti-strange', charge:1/3, cls:'as', latex:'\\bar s'}
+};
+const particles = [
+  {name:'Proton', mode:'baryon', keys:['u','u','d'], result:'PROTON', charge:'+1e', type:'Baryon'},
+  {name:'Anti-proton', mode:'baryon', keys:['au','au','ad'], result:'ANTI-PROTON', charge:'−1e', type:'Anti-baryon'},
+  {name:'Neutron', mode:'baryon', keys:['u','d','d'], result:'NEUTRON', charge:'0', type:'Baryon'},
+  {name:'Anti-neutron', mode:'baryon', keys:['au','ad','ad'], result:'ANTI-NEUTRON', charge:'0', type:'Anti-baryon'},
+  {name:'Delta++', mode:'baryon', keys:['u','u','u'], result:'Δ++', charge:'+2e', type:'Baryon'},
+  {name:'Omega−', mode:'baryon', keys:['s','s','s'], result:'Ω−', charge:'−1e', type:'Baryon'},
+  {name:'Pion plus', mode:'meson', keys:['u','ad'], result:'π+', charge:'+1e', type:'Meson'},
+  {name:'Pion minus', mode:'meson', keys:['d','au'], result:'π−', charge:'−1e', type:'Meson'},
+  {name:'Pion zero', mode:'meson', keys:['u','au'], result:'π0', charge:'0', type:'Meson'},
+  {name:'Kaon plus', mode:'meson', keys:['u','as'], result:'K+', charge:'+1e', type:'Meson'}
+];
+const particleDescriptions = {
+  'PROTON':'Proton คือ baryon ที่อยู่ในนิวเคลียส มีประจุ +1e เป็นองค์ประกอบสำคัญของอะตอม',
+  'ANTI-PROTON':'Anti-proton คือ anti-baryon ที่ประกอบจาก antiquark 3 ตัว มีประจุ −1e เป็นปฏิอนุภาคของ proton',
+  'NEUTRON':'Neutron คือ baryon ที่อยู่ในนิวเคลียส มีประจุรวมเป็น 0 ช่วยเพิ่มมวลและมีผลต่อเสถียรภาพของนิวเคลียส',
+  'ANTI-NEUTRON':'Anti-neutron คือ anti-baryon ที่ประกอบจาก antiquark 3 ตัว มีประจุรวม 0 เป็นปฏิอนุภาคของ neutron',
+  'Δ++':'Delta++ คือ baryon ที่ประกอบจาก up quark ทั้ง 3 ตัว จึงมีประจุรวม +2e และเป็นอนุภาคไม่เสถียร',
+  'Ω−':'Omega− คือ baryon ที่ประกอบจาก strange quark 3 ตัว มีประจุ −1e และเป็นตัวอย่างอนุภาค strange baryon',
+  'π+':'Pion plus คือ meson มีประจุ +1e ประกอบจาก quark กับ antiquark และเป็นอนุภาคไม่เสถียร',
+  'π−':'Pion minus คือ meson มีประจุ −1e ประกอบจาก quark กับ antiquark และเป็นอนุภาคไม่เสถียร',
+  'π0':'Pion zero คือ meson ที่มีประจุรวม 0 เป็นอนุภาคไม่เสถียร',
+  'K+':'Kaon plus คือ meson ที่มี strange antiquark มีประจุ +1e และเป็นอนุภาคไม่เสถียร'
+};
+let mode='baryon';
+let target = particles[0];
+let placed = { baryon:[null,null,null], meson:[null,null] };
+let dragKey=null, ghost=null;
+
+const bank=document.getElementById('bank');
+function makeChip(key, inSlot=false){
+  const q=quarks[key];
+  const el=document.createElement('div'); el.className=`qchip ${q.cls}`; el.dataset.key=key;
+  el.innerHTML=`<div class="qsymbol">${q.label}</div><div class="qname">${q.name}</div><div class="qcharge">${formatCharge(q.charge)}</div>`;
+  if(!inSlot) addDrag(el,key); else el.addEventListener('click',()=>removeSlotContaining(el));
+  return el;
+}
+function formatCharge(c){ if(c===2/3)return '+2/3 e'; if(c===-1/3)return '−1/3 e'; if(c===-2/3)return '−2/3 e'; if(c===1/3)return '+1/3 e'; return c+'e'; }
+Object.keys(quarks).forEach(k=>bank.appendChild(makeChip(k)));
+function addDrag(el,key){
+  el.addEventListener('pointerdown', e=>{ e.preventDefault(); dragKey=key; ghost=makeChip(key,true); ghost.classList.add('dragghost'); document.body.appendChild(ghost); moveGhost(e); el.setPointerCapture?.(e.pointerId); });
+  el.addEventListener('pointermove', e=>{ if(dragKey) moveGhost(e); highlightSlot(e); });
+  el.addEventListener('pointerup', e=>drop(e));
+  el.addEventListener('pointercancel', cleanupDrag);
+}
+function moveGhost(e){ if(ghost){ ghost.style.left=e.clientX+'px'; ghost.style.top=e.clientY+'px'; } }
+function activeSlots(){ return mode==='baryon' ? [...document.querySelectorAll('#slot0,#slot1,#slot2')] : [...document.querySelectorAll('#slotM0,#slotM1')]; }
+function highlightSlot(e){ document.querySelectorAll('.slot').forEach(s=>s.classList.remove('over')); const s=slotAt(e.clientX,e.clientY); if(s) s.classList.add('over'); }
+function slotAt(x,y){ return activeSlots().find(s=>{ const r=s.getBoundingClientRect(); return x>=r.left && x<=r.right && y>=r.top && y<=r.bottom; }); }
+function drop(e){ const s=slotAt(e.clientX,e.clientY); if(s && dragKey){ const i=+s.dataset.i; placed[mode][i]=dragKey; renderSlots(); updateResult(false); } cleanupDrag(); }
+function cleanupDrag(){ dragKey=null; if(ghost) ghost.remove(); ghost=null; document.querySelectorAll('.slot').forEach(s=>s.classList.remove('over')); }
+function removeSlotContaining(el){ const parent=el.closest('.slot'); if(parent){ placed[mode][+parent.dataset.i]=null; renderSlots(); updateResult(false); } }
+function renderSlots(){
+  document.querySelectorAll('.slot').forEach(s=>{ s.innerHTML = s.classList.contains('meson') ? (s.dataset.i==0?'วาง q':'วาง q̄') : 'วาง quark'; s.classList.remove('filled'); });
+  activeSlots().forEach((s,i)=>{ const key=placed[mode][i]; if(key){ s.innerHTML=''; s.appendChild(makeChip(key,true)); s.classList.add('filled'); } });
+}
+function setMode(m){ mode=m; document.querySelectorAll('.mode').forEach(b=>b.classList.toggle('active',b.dataset.mode===m));
+  document.querySelectorAll('#slot0,#slot1,#slot2').forEach(s=>s.classList.toggle('hidden',m!=='baryon'));
+  document.querySelectorAll('#slotM0,#slotM1').forEach(s=>s.classList.toggle('hidden',m!=='meson'));
+  document.querySelectorAll('.gluon').forEach(g=>g.style.display=m==='baryon'?'block':'none');
+  renderSlots(); updateResult(false);
+}
+document.querySelectorAll('.mode').forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.mode)));
+function sorted(arr){ return arr.filter(Boolean).sort().join(','); }
+function findParticle(arr){ if(arr.some(x=>!x)) return null; return particles.find(p=>p.mode===mode && sorted(p.keys)===sorted(arr)); }
+function chargeSum(arr){ return arr.filter(Boolean).reduce((sum,k)=>sum+quarks[k].charge,0); }
+function chargeLabel(c){ const n=Math.round(c*3); if(n===0)return '0'; if(n===3)return '+1e'; if(n===-3)return '−1e'; if(n===6)return '+2e'; if(n===-6)return '−2e'; if(n>0)return `+${n}/3 e`; return `−${Math.abs(n)}/3 e`; }
+
+function playDing(){
+  try{
+    const AC=window.AudioContext||window.webkitAudioContext;
+    const ctx=new AC();
+    const now=ctx.currentTime;
+    const gain=ctx.createGain();
+    gain.connect(ctx.destination);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.22, now+0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now+0.55);
+    [880,1320].forEach((f,i)=>{
+      const osc=ctx.createOscillator();
+      osc.type='sine'; osc.frequency.setValueAtTime(f, now+i*0.07);
+      osc.connect(gain); osc.start(now+i*0.07); osc.stop(now+0.52+i*0.05);
+    });
+    setTimeout(()=>ctx.close(),800);
+  }catch(e){}
+}
+function successFlash(){
+  const flash=document.getElementById('flashFx');
+  const nuc=document.getElementById('nucleus');
+  flash.classList.remove('on'); nuc.classList.remove('glow');
+  activeSlots().forEach(s=>s.classList.remove('pop'));
+  void flash.offsetWidth;
+  flash.classList.add('on'); nuc.classList.add('glow');
+  activeSlots().forEach(s=>s.classList.add('pop'));
+  playDing();
+}
+function updateParticleDesc(p, complete){
+  const desc=document.getElementById('particleDesc');
+  if(!complete){ desc.textContent='เมื่อประกอบครบ ระบบจะบอกว่าอนุภาคที่ได้คืออะไร และมีสมบัติสำคัญอย่างไร'; return; }
+  if(p){ desc.innerHTML=`<strong>${p.result}</strong>: ${particleDescriptions[p.result]||'เป็นอนุภาคที่ประกอบจาก quark ตามชุดที่เลือก'}<br><strong>สมบัติ:</strong> ${p.type}, ประจุ ${p.charge}`; }
+  else{ desc.innerHTML='<strong>ยังไม่พบอนุภาคในชุดนี้:</strong> ลองจัด quark ใหม่ให้ตรงกับ baryon หรือ meson ที่รู้จัก'; }
+}
+
+function updateResult(checked){
+  const arr=placed[mode]; const keys=arr.filter(Boolean); const p=findParticle(arr); const c=chargeSum(arr);
+  document.getElementById('quarkList').textContent=keys.length?keys.map(k=>quarks[k].label).join('  '):'-';
+  document.getElementById('chargeText').textContent=chargeLabel(c);
+  document.getElementById('typeText').textContent=keys.length===arr.length?(p?p.type:'ไม่ตรงอนุภาคพื้นฐานในชุดนี้'):'-';
+  const box=document.getElementById('particleText'); box.className='particle';
+  if(keys.length<arr.length){ box.textContent='ยังไม่ครบ'; document.getElementById('hintBox').textContent=''; updateParticleDesc(null,false); return; }
+  if(p){ box.textContent=p.result; box.classList.add('ok'); updateParticleDesc(p,true); successFlash(); }
+  else{ box.textContent='ยังไม่ใช่อนุภาคเป้าหมาย'; box.classList.add('bad'); updateParticleDesc(null,true); }
+  if(checked){
+    const ok=p && p.result===target.result;
+    document.getElementById('hintBox').innerHTML= ok ? `✅ ถูกต้อง: ${target.result} ประกอบจาก ${target.keys.map(k=>quarks[k].label).join(' ')} และมีประจุ ${target.charge}` : `ยังไม่ตรงโจทย์ ลองสร้าง ${target.result} จาก ${target.keys.map(k=>quarks[k].label).join(' ')} อีกครั้ง`;
+  }
+}
+function setTarget(p){ target=p; document.getElementById('targetText').textContent=`${p.name} (${p.result})`; setMode(p.mode); placed[mode]=new Array(p.mode==='baryon'?3:2).fill(null); renderSlots(); updateResult(false); }
+document.getElementById('checkBtn').addEventListener('click',()=>updateResult(true));
+document.getElementById('clearBtn').addEventListener('click',()=>{ placed[mode]=new Array(mode==='baryon'?3:2).fill(null); renderSlots(); updateResult(false); });
+document.getElementById('nextBtn').addEventListener('click',()=>setTarget(particles[Math.floor(Math.random()*particles.length)]));
+document.getElementById('formulaBtn').addEventListener('click',()=>{ document.getElementById('formulaModal').classList.add('show'); document.getElementById('formulaModal').setAttribute('aria-hidden','false'); if(window.MathJax) MathJax.typesetPromise(); });
+document.getElementById('closeFormula').addEventListener('click',()=>{ document.getElementById('formulaModal').classList.remove('show'); document.getElementById('formulaModal').setAttribute('aria-hidden','true'); });
+document.getElementById('formulaModal').addEventListener('click',(e)=>{ if(e.target.id==='formulaModal') document.getElementById('closeFormula').click(); });
+setTarget(particles[0]);
+setTimeout(()=>{ if(window.MathJax) MathJax.typesetPromise(); },700);
+</script>
+</body>
+</html>
