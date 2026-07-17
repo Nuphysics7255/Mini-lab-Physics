@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mini Lab: กระแสไฟฟ้าเหนี่ยวนำ (ฟาราเดย์–เลนซ์)</title>
+<style>
+  :root{
+    --ink:#0f172a;--muted:#64748b;--accent:#2563eb;--accent2:#22c55e;--warn:#ef4444;
+    --bg:#ffffff;--panel:#ffffff;--line:#e5e7eb;--glow:rgba(37,99,235,.5);
+    --switchBlue:#dbeafe;--switchBlueBorder:#93c5fd;--switchBlueText:#1d4ed8;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial,sans-serif}
+  header{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--line);padding:10px 14px;z-index:5}
+  .wrap{display:grid;grid-template-columns:1fr;gap:12px;padding:12px;max-width:1200px;margin:0 auto}
+  @media(min-width:980px){ .wrap{grid-template-columns:2fr 1fr} }
+  .board{position:relative;background:#fff;border:1px solid var(--line);border-radius:16px;min-height:560px;overflow:hidden}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;font-size:.95rem}
+  .kv div:nth-child(odd){color:var(--muted)}
+  button, input[type="range"]{accent-color:var(--accent)}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--line);border-radius:999px;background:#fff}
+  .note{font-size:.9rem;color:var(--muted)}
+  .brand{font-size:.95rem;text-align:center;padding:12px 16px 140px;color:var(--accent)}
+  .brand a{color:var(--accent);text-decoration:underline;font-weight:700}
+  .brand a:hover{text-decoration:underline}
+  .legend{position:absolute;left:10px;top:10px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px 10px;font-size:.9rem;box-shadow:0 2px 8px rgba(15,23,42,.06)}
+  .legend .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#0ea5e9;box-shadow:0 0 10px rgba(14,165,233,.9)}
+  .legend .x{font-weight:700}
+  .battery{position:absolute;right:18px;top:18px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px 10px;font-size:.9rem}
+  .badge{display:inline-block;padding:2px 6px;border-radius:8px;background:#f1f5f9;color:#0f172a;border:1px solid #e2e8f0}
+  .warn{color:var(--warn);font-weight:600}
+  .dim{opacity:.6}
+
+  .headerTitle{font-size:1.2rem;font-weight:800;color:var(--accent)}
+  .switchWrap{background:var(--switchBlue);border-color:var(--switchBlueBorder);color:var(--switchBlueText);font-weight:700}
+  .switchWrap input{transform:scale(1.15)}
+  @media(max-width:979px){
+    html,body{
+      overflow-x:hidden;
+      height:auto;
+      min-height:100%;
+    }
+    body{
+      min-height:100svh;
+      overflow-x:hidden;
+      overflow-y:auto;
+      padding-bottom:0;
+      overscroll-behavior-y:auto;
+      -webkit-overflow-scrolling:touch;
+    }
+    header{
+      padding:10px 12px;
+      position:sticky;
+      top:0;
+      z-index:30;
+      background:#fff;
+    }
+    .headerRow{justify-content:center!important}
+    .headerTitle{font-size:1.02rem;line-height:1.35;text-align:center}
+    .wrap{
+      display:block;
+      padding:10px;
+      max-width:100%;
+      overflow:visible;
+    }
+    .board{
+      position:relative;
+      top:auto;
+      z-index:1;
+      min-height:300px;
+      height:46svh;
+      max-height:420px;
+      margin-bottom:12px;
+      background:#fff;
+    }
+    .panel{
+      display:block!important;
+      position:relative;
+      min-height:0;
+      max-height:none;
+      overflow:visible;
+      -webkit-overflow-scrolling:touch;
+      padding:10px 10px calc(180px + env(safe-area-inset-bottom));
+      margin-top:0;
+      touch-action:auto;
+    }
+    .panel .row{display:flex;flex-wrap:wrap;gap:8px}
+    .panel .row > *{flex:1 1 100%}
+    .panel button,.panel .pill,.panel label{font-size:.92rem}
+    .legend{left:8px;top:8px;padding:6px 8px;font-size:.70rem;max-width:calc(100% - 16px);line-height:1.3}
+    .legend .dot{width:7px;height:7px}
+    .legend .x{font-size:.9rem}
+    .battery{right:10px;top:10px;font-size:.76rem;padding:6px 8px}
+    .kv{font-size:.88rem}
+    .brand{padding:20px 16px calc(180px + env(safe-area-inset-bottom));}
+  }
+
+</style>
+</head>
+<body>
+<header>
+  <div class="row headerRow" style="justify-content:space-between">
+    <div class="headerTitle"><strong>Mini Lab: กระแสไฟฟ้าเหนี่ยวนำ (ฟาราเดย์–เลนซ์)</strong></div>
+  </div>
+</header>
+
+<div class="wrap">
+  <!-- BOARD -->
+  <div class="board" id="board">
+    <canvas id="cv"></canvas>
+    <div class="legend">
+      <div>เม็ดกระแสหลัก: <span class="dot"></span></div>
+      <div>เม็ดกระแสเหนี่ยวนำ: <span class="dot" style="background:#22c55e;box-shadow:0 0 10px rgba(34,197,94,.9)"></span></div>
+      <div><span class="x">×</span> = B เข้าจอ, • = B ออกจากจอ</div>
+    </div>
+    <div class="battery"><span id="batPol" class="badge">− | +</span></div>
+  </div>
+
+  <!-- CONTROL PANEL -->
+  <div class="panel">
+    <div class="row" style="justify-content:space-between">
+      <div class="pill"><strong>สวิตช์</strong>
+        <label class="pill switchWrap"><input type="checkbox" id="sw"> ปิด/เปิด วงหลัก</label>
+      </div>
+      <button id="flip" class="pill" style="background:#fff;border-color:#cbd5e1">กลับทิศกระแสไฟฟ้าหลัก</button>
+    </div>
+
+    <div class="row" style="gap:12px;align-items:center;margin-top:8px">
+      <button id="indToggle" class="pill" style="background:#fff;border-color:#cbd5e1">วงลวดเหนี่ยวนำ: ขาด (ไม่ครบวงจร)</button>
+      <span class="note">กดปุ่มเพื่อสลับสถานะวงลวดเหนี่ยวนำ: ขาด ↔ สมบูรณ์ (วงขาดจะไม่เกิดกระแสเหนี่ยวนำ)</span>
+    </div>
+
+    <div style="height:8px"></div>
+
+    <label>กระแสไฟฟ้า (I): <span id="Iv">0.0</span> A</label>
+    <input id="Islider" type="range" min="0" max="3" step="0.01" value="1" style="width:100%" />
+    <div class="note">เมื่อ <em>I มากขึ้น</em> จำนวนสัญลักษณ์ ×/• จะมากขึ้น สนามแม่เหล็กแรงขึ้น</div>
+    <div class="note">หมายเหตุ: สนามแม่เหล็กที่เกิดขึ้นมีขนาดไม่สม่ำเสมอ</div>
+
+    <div style="height:10px"></div>
+
+    <div class="kv">
+      <div>I (วงหลัก)</div><div><span id="Iv2">0.00</span> A</div>
+      <div>ทิศกระแสหลัก</div><div id="Idir">ตามเข็มนาฬิกา</div>
+      <div>Φ (ที่ศูนย์กลาง)</div><div><span id="Phiv">0.000</span> Wb (สัดส่วน)</div>
+      <div>dΦ/dt</div><div><span id="dPhidt">0.000</span> Wb/s (สัดส่วน)</div>
+      <div>I<sub>ind</sub> (วงลวดเคลื่อนที่)</div><div><span id="Iind">0.000</span> A (ทิศ: <span id="IindDir" class="dim">—</span>)</div>
+    </div>
+  </div>
+</div>
+
+<div class="brand">ศึกษาเพิ่มเติมได้ที่เพจ <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">คลายปมฟิสิกส์</a></div>
+
+<script>
+(function(){
+  // --- DOM refs ---
+  const cv = document.getElementById('cv');
+  const board = document.getElementById('board');
+  const sw = document.getElementById('sw');
+  const flipBtn = document.getElementById('flip');
+  const Islider = document.getElementById('Islider');
+  const Iv = document.getElementById('Iv');
+  const Iv2 = document.getElementById('Iv2');
+  const Idir = document.getElementById('Idir');
+  const Phiv = document.getElementById('Phiv');
+  const dPhidt = document.getElementById('dPhidt');
+  const Iind = document.getElementById('Iind');
+  const IindDir = document.getElementById('IindDir');
+  const batPol = document.getElementById('batPol');
+  const indToggle = document.getElementById('indToggle');
+
+  // --- State ---
+  let closed = false;        // switch on/off
+  let polarity = 1;         // sign of current (− | + shown initially)
+  let Iset = 1;              // set current from slider (A)
+  let pickupOpen = false;    // induced coil open-circuit
+
+  // Canvas sizing
+  function fit(){
+    const rect = board.getBoundingClientRect();
+    cv.width = Math.floor(rect.width);
+    cv.height = Math.floor(window.innerWidth <= 979 ? Math.max(320, board.clientHeight || rect.height) : Math.max(420, rect.height));
+  }
+  fit();
+  addEventListener('resize', fit);
+
+  const ctx = cv.getContext('2d');
+  const W = ()=>cv.width, H = ()=>cv.height;
+
+  // Geometry
+  const loop = { x: ()=>W()*0.45, y: ()=>H()*0.55, R: ()=>Math.min(W(),H())*0.22 };
+  const pickup = { x: W()*0.73, y: H()*0.42, r: 55, dragging:false };
+
+  function applyResponsiveState(){
+    if(window.innerWidth <= 979){
+      pickup.r = 42;
+      pickup.x = Math.min(W()*0.80, pickup.x || W()*0.80);
+      pickup.y = Math.max(H()*0.36, pickup.y || H()*0.40);
+    }else{
+      pickup.r = 55;
+    }
+  }
+  applyResponsiveState();
+  addEventListener('resize', applyResponsiveState);
+
+  // Drag pickup coil
+  cv.addEventListener('mousedown', e=>startDrag(e));
+  cv.addEventListener('touchstart', e=>startDrag(e.touches[0]), {passive:true});
+  addEventListener('mousemove', e=>moveDrag(e));
+  addEventListener('touchmove', e=>{
+    if(!pickup.dragging) return;
+    moveDrag(e.touches[0]);
+    e.preventDefault();
+  },{passive:false});
+  addEventListener('mouseup', endDrag);
+  addEventListener('touchend', endDrag);
+  addEventListener('touchcancel', endDrag);
+  function ptFromEvent(ev){ const r=cv.getBoundingClientRect(); return {x:(ev.clientX-r.left)*cv.width/r.width, y:(ev.clientY-r.top)*cv.height/r.height}; }
+  function startDrag(ev){ const p=ptFromEvent(ev); const extra = window.innerWidth <= 979 ? 34 : 16; if(Math.hypot(p.x-pickup.x, p.y-pickup.y) < pickup.r+extra) pickup.dragging=true; }
+  function moveDrag(ev){ if(!pickup.dragging) return; const p=ptFromEvent(ev); pickup.x=p.x; pickup.y=p.y; }
+  function endDrag(){ pickup.dragging=false; }
+
+  // Controls
+  sw.addEventListener('change', ()=>{ closed = sw.checked; });
+  flipBtn.addEventListener('click', ()=>{ polarity *= -1; batPol.textContent = (polarity>0?'− | +':'+ | −'); });
+  Islider.addEventListener('input', ()=>{ Iset = parseFloat(Islider.value); Iv.textContent = Iset.toFixed(1); });
+  Iset = parseFloat(Islider.value);
+  Iv.textContent = Iset.toFixed(1);
+  function updateIndBtn(){ indToggle.textContent = pickupOpen ? 'วงลวดเหนี่ยวนำ: สมบูรณ์' : 'วงลวดเหนี่ยวนำ: ขาด (ไม่ครบวงจร)'; }
+  indToggle.addEventListener('click', ()=>{ pickupOpen = !pickupOpen; updateIndBtn(); });
+  updateIndBtn();
+
+  // Animation state
+  let lastPhi = 0, lastT = performance.now();
+  let lastIindVal = 0;
+  let phaseMain = 0, phaseInd = 0;   // angular phases for uniform dot spacing
+  let Nmain = 0, Nind = 0;           // number of carriers on each loop
+
+  // --- Physics helpers ---
+  function currentMain(){ return closed ? polarity * Iset : 0; } // signed current
+
+  // Magnetic field (scaled, returns signed Bz)
+  function BzAt(x,y){
+    const dx = x - loop.x();
+    const dy = y - loop.y();
+    const r = Math.hypot(dx,dy);
+    const I = currentMain();
+    const k = 1200;                       // visual scale
+    const fall = 1/(1 + Math.pow(r/loop.R(), 3));
+    // ให้ทิศของสนาม B "กลับด้าน" ภายในวงหลัก และเหมือนทิศกระแสนอกวงหลัก
+    // เพื่อให้เมื่อ I เพิ่มขึ้น: ถ้าวงเล็กอยู่ "ภายใน" → กระแสเหนี่ยวนำสวนทาง; ถ้า I ลดลง → ทิศเดียวกัน (เลนซ์)
+    const sign = (r <= loop.R()) ? -Math.sign(I||1) : Math.sign(I||1);
+    return k * Math.abs(I) * fall * sign;  // signed Bz
+  }
+
+  function phiPickup(){
+    const Bc = BzAt(pickup.x, pickup.y);
+    return Bc * Math.PI * pickup.r * pickup.r; // flux (scaled)
+  }
+
+  // --- Update step ---
+  function update(dt){
+    const I = currentMain();
+
+    // Main loop: keep few dots for clarity; speed grows with |I|
+    Nmain = (Math.abs(I) > 1e-6) ? 12 : 0; // fixed small count
+    const omegaMain = Math.sign(I||1) * (0.03 + Math.abs(I)*0.10); // slow; speed ∝ |I|
+    phaseMain += omegaMain * dt;
+
+    // Induced in pickup coil (Faraday-Lenz)
+    const phi = phiPickup();
+    const dphi = (phi - lastPhi) / Math.max(1e-3, dt);
+    lastPhi = phi;
+    const Rind = 5.0;                 // Ω (demo)
+    const eps = - dphi * 0.00002;     // scaled EMF
+    const IindRaw = eps / Rind;
+    const IindVal = pickupOpen ? 0 : IindRaw;
+    lastIindVal = IindVal;
+
+    // Few clear dots on small loop; hide if nearly zero; reverse direction to correct physics
+    const epsVis = 2e-4;
+    if (Math.abs(IindVal) < epsVis) { Nind = 0; }
+    else { Nind = Math.max(6, Math.min(12, Math.floor(6 + Math.abs(IindVal)*20))); }
+    const omegaInd = -Math.sign(IindVal||1) * (0.018 + Math.abs(IindVal)*0.05); // slow + reversed
+    phaseInd += omegaInd * dt;
+
+    // UI readouts
+    Iv2.textContent = Math.abs(I).toFixed(2);
+    Idir.textContent = (I>=0)? 'ตามเข็มนาฬิกา' : 'ทวนเข็มนาฬิกา';
+    Phiv.textContent = (phi*1e-6).toFixed(3);
+    dPhidt.textContent = (dphi*1e-6).toFixed(3);
+    Iind.textContent = Math.abs(IindVal).toFixed(3);
+    const dirCWInd = (omegaInd >= 0);
+    IindDir.textContent = (pickupOpen || Math.abs(IindVal)<1e-4)? '—' : (dirCWInd? 'ตามเข็มนาฬิกา' : 'ทวนเข็มนาฬิกา');
+  }
+
+  // --- Draw step ---
+  function draw(){
+    ctx.clearRect(0,0,W(),H());
+
+    const I = currentMain();
+    drawBField(I); // background crosses/dots with density ∝ |I|
+
+    // Main loop (black)
+    ctx.save(); ctx.lineWidth = 10; ctx.strokeStyle = '#000000';
+    ctx.beginPath(); ctx.arc(loop.x(), loop.y(), loop.R(), 0, Math.PI*2); ctx.stroke();
+    ctx.restore();
+
+    // Battery overlay on the big loop (thick + / −)
+    (function(){
+      const ang = -Math.PI/2; // place at the top of the loop
+      const bx = loop.x() + loop.R()*Math.cos(ang);
+      const by = loop.y() + loop.R()*Math.sin(ang);
+      drawBattery(bx, by, polarity);
+    })();
+
+    // Carriers on main loop
+    if(Nmain>0){
+      for(let i=0;i<Nmain;i++){
+        const a = phaseMain + i*(Math.PI*2/Nmain);
+        const x = loop.x() + loop.R()*Math.cos(a);
+        const y = loop.y() + loop.R()*Math.sin(a);
+        drawCarrier(x,y,'main');
+      }
+    }
+
+    // Pickup coil (brown)
+    ctx.save(); ctx.lineWidth = 7; ctx.strokeStyle = '#8b5e3c';
+    if(pickupOpen){
+      const gap = 0.5; // rad ~ 30° gap to show open circuit
+      ctx.beginPath(); ctx.arc(pickup.x, pickup.y, pickup.r, gap, Math.PI*2-gap); ctx.stroke();
+      // small end caps to emphasize break
+      ctx.fillStyle = '#8b5e3c';
+      ctx.beginPath(); ctx.arc(pickup.x + pickup.r*Math.cos(gap), pickup.y + pickup.r*Math.sin(gap), 3, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(pickup.x + pickup.r*Math.cos(Math.PI*2-gap), pickup.y + pickup.r*Math.sin(Math.PI*2-gap), 3, 0, Math.PI*2); ctx.fill();
+      ctx.font = (window.innerWidth <= 979 ? '10px system-ui' : '12px system-ui'); ctx.fillStyle = '#ef4444';
+      ctx.fillText('ขาด (ไม่ครบวงจร)', pickup.x-48, pickup.y + pickup.r + 16);
+    } else {
+      ctx.beginPath(); ctx.arc(pickup.x, pickup.y, pickup.r, 0, Math.PI*2); ctx.stroke();
+    }
+    ctx.font = (window.innerWidth <= 979 ? '10px system-ui' : '12px system-ui'); ctx.fillStyle = '#0f172a';
+    ctx.fillText('วงลวดเคลื่อนที่ (ลากได้)', pickup.x-62, pickup.y - pickup.r - 10);
+    ctx.restore();
+
+    // Carriers on pickup coil
+    if(Nind>0){
+      for(let i=0;i<Nind;i++){
+        const a = phaseInd + i*(Math.PI*2/Nind);
+        const x = pickup.x + pickup.r*Math.cos(a);
+        const y = pickup.y + pickup.r*Math.sin(a);
+        drawCarrier(x,y,'ind');
+      }
+    }
+  }
+
+  // --- Drawing helpers ---
+  function drawCarrier(x,y,type='main'){
+    const isInd = (type==='ind');
+    const color = isInd? 'rgba(34,197,94,1)' : 'rgba(14,165,233,1)';
+    const glow = isInd? 'rgba(34,197,94,.6)' : 'rgba(14,165,233,.7)';
+    const r = isInd? 4.2 : 3.2;
+    ctx.save();
+    ctx.shadowColor = glow; ctx.shadowBlur = isInd? 5 : 12;
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+
+  function drawBField(I){
+    // ถ้า I = 0 (เช่นยังไม่กดสวิตช์) ไม่ต้องแสดงกากบาท/จุดเลย
+    if (Math.abs(I) < 1e-6) return;
+
+    // ความหนาแน่นเพิ่มแบบแทรกแถว/คอลัมน์ตาม |I|
+    const base = 64;                                        // ระยะกริดพื้นฐาน
+    const level = Math.min(3, Math.floor(Math.abs(I)*1.5)); // 0..3 ชั้น
+    const signOut = Math.sign(I||1);
+
+    const drawGrid = (ox, oy)=>{
+      for(let y=20+oy; y<H(); y+=base){
+        for(let x=20+ox; x<W(); x+=base){
+          const r = Math.hypot(x - loop.x(), y - loop.y());
+          const inside = r <= loop.R();
+          const sign = inside ? -signOut : signOut;          // ในวงตรงข้ามนอกวง
+          const alpha = inside ? 0.90 : 0.85;
+          ctx.save(); ctx.globalAlpha = alpha; ctx.translate(x,y);
+          // สีเทาเข้มและขนาดเล็กลง
+          ctx.fillStyle = '#1f2937'; ctx.strokeStyle = '#1f2937'; ctx.lineWidth = 1.5;
+          if(sign < 0){
+            // กากบาทเล็กลง
+            ctx.beginPath(); ctx.moveTo(-4,-4); ctx.lineTo(4,4); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(-4,4); ctx.lineTo(4,-4); ctx.stroke();
+          } else {
+            // จุดเล็กลง
+            ctx.beginPath(); ctx.arc(0,0,2,0,Math.PI*2); ctx.fill();
+          }
+          ctx.restore();
+        }
+      }
+    };
+
+    // วาดแบบเพิ่มจุดแทรกระหว่างแถว/คอลัมน์ตามระดับกระแส
+    drawGrid(0,0);                         // ชั้นพื้นฐาน
+    if(level>=1) drawGrid(base/2, 0);      // แทรกระหว่างคอลัมน์
+    if(level>=2) drawGrid(0, base/2);      // แทรกระหว่างแถว
+    if(level>=3) drawGrid(base/2, base/2); // แทรกทั้งแถวและคอลัมน์
+  }
+
+  // Battery drawing (not essential for logic)
+  function drawBattery(x,y,pol){
+    const w=48, h=24; // battery body scale
+    ctx.save(); ctx.translate(x,y);
+
+    // short leads to visually connect to the loop
+    ctx.strokeStyle='#111827'; ctx.lineWidth=3; ctx.lineCap='round';
+    ctx.beginPath();
+    ctx.moveTo(-w/2-12,0); ctx.lineTo(-w/2,0);
+    ctx.moveTo(w/2,0);    ctx.lineTo(w/2+12,0);
+    ctx.stroke();
+
+    // plates (short = negative, long = positive by convention of drawing)
+    ctx.beginPath();
+    ctx.moveTo(-6,-10); ctx.lineTo(-6,10);   // short plate
+    ctx.moveTo(6,-14);  ctx.lineTo(6,14);    // long plate
+    ctx.stroke();
+
+    // thick + / − marks
+    function drawPlus(cx,cy){
+      ctx.save(); ctx.strokeStyle='#ef4444'; ctx.lineWidth=4; ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(cx-6,cy); ctx.lineTo(cx+6,cy); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx,cy-6); ctx.lineTo(cx,cy+6); ctx.stroke();
+      ctx.restore();
+    }
+    function drawMinus(cx,cy){
+      ctx.save(); ctx.strokeStyle='#ef4444'; ctx.lineWidth=4; ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(cx-7,cy); ctx.lineTo(cx+7,cy); ctx.stroke();
+      ctx.restore();
+    }
+
+    // place signs on left/right according to polarity toggle
+    if(pol>0){ drawMinus(-18,-8); drawPlus(18,-8); } else { drawPlus(-18,-8); drawMinus(18,-8); }
+
+    ctx.restore();
+  }
+
+  // Main loop
+  function tick(t){
+    const now = t || performance.now();
+    const dt = Math.min(0.05, (now - lastT)/1000);
+    lastT = now;
+    update(dt);
+    draw();
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>

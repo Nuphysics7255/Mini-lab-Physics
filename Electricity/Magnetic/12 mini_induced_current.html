@@ -1,0 +1,481 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mini Lab : กระแสไฟฟ้าเหนี่ยวนำ</title>
+<style>
+  :root{
+    --ink:#0f2a44; --cyl:#e9e9e9;
+    --bulb:#fffdf3; --bulb-on:#ffd24a; --base:#071425;
+    --red:#e23a2e; --blue:#3d62ad; --arrow:#e63946;
+    --batBlue:#3b82f6; --switch:#f97316;
+    --fade-dur: .35s;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;display:grid;place-items:center;min-height:100svh;background:#fff;
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial;
+    user-select:none; -webkit-user-select:none; touch-action:manipulation;
+  }
+  .frame{width:min(980px,98vw);position:relative;padding:env(safe-area-inset-top) env(safe-area-inset-right) calc(120px + env(safe-area-inset-bottom)) env(safe-area-inset-left)}
+  svg{width:100%;height:auto;display:block;touch-action:none}
+  .bulbGlow{filter:drop-shadow(0 0 36px rgba(255,210,74,.98))}
+  .arrowGlow{filter:drop-shadow(0 0 4px rgba(230,57,70,.65))}
+  .polText{ paint-order: stroke; stroke: #ffffff; stroke-width: 2px; }
+
+  .title{
+    text-align:center;
+    font-weight:900;
+    color:#2f6fd6;
+    font-size:clamp(22px, 3vw, 36px);
+    margin-bottom:10px;
+    line-height:1.2;
+  }
+
+  .ui{
+    position:static;
+    display:flex;
+    flex-wrap:wrap;
+    gap:.5rem;
+    align-items:center;
+    justify-content:center;
+    margin-top:12px;
+    z-index:5;
+  }
+  .btn{
+    padding:.6rem .8rem;border-radius:.7rem;border:1px solid #d0d5dd;background:#fff;
+    box-shadow:0 1px 2px rgba(16,24,40,.06);cursor:pointer;font-size:clamp(12px,2.8vw,14px);
+  }
+  .btn:active{transform:translateY(1px)}
+  .btn-switch{background:#3b82f6;color:#fff;border:1px solid #3b82f6}
+  .btn-reset{background:#9ca3af;color:#fff;border:1px solid #9ca3af}
+  .seg{display:inline-flex;border:1px solid #d0d5dd;border-radius:.7rem;overflow:hidden}
+  .seg button{border:0;border-right:1px solid #e5e7eb;background:#fff}
+  .seg button:last-child{border-right:0}
+  .seg .active{background:#0f172a;color:#fff;border-color:#0f172a}
+
+  .credit{
+    position:static;
+    display:inline-block;
+    margin-top:12px;
+    font-size:clamp(12px,2.8vw,14px); color:#334155; background:rgba(255,255,255,.92);
+    padding:.4rem .6rem; border:1px solid #e5e7eb; border-radius:.6rem; z-index:6; line-height:1.25;
+    pointer-events:auto;
+  }
+  .credit a{color:#0ea5e9; text-decoration:underline; font-weight:700}
+
+  #switch, #switchHit { cursor:pointer }
+  .kbd-focus:focus{ outline:3px solid #0ea5e9; outline-offset:2px; border-radius:6px }
+
+  /* เฟดอิน/เอาต์ (เคารพ prefers-reduced-motion) */
+  #rightMagnet, #rightFieldLines { opacity:0; }
+  @media (prefers-reduced-motion: no-preference){
+    #rightMagnet, #rightFieldLines { transition: opacity var(--fade-dur) ease-in-out; }
+  }
+
+  @media (max-width: 768px){
+    .frame{padding-bottom:140px;}
+    .ui{margin-top:14px;}
+    .credit{position:static;display:inline-block;margin-top:12px;}
+  }
+</style>
+</head>
+<body>
+  <div class="frame">
+    <div class="title">Mini Lab : กระแสไฟฟ้าเหนี่ยวนำ</div>
+    <svg viewBox="0 0 960 420" aria-label="คอยล์ซ้าย (รับ) + คอยล์ขวา (แบตฯ สีฟ้า + สวิตช์แตะได้)">
+      <defs>
+        <marker id="arrowHeadRed" viewBox="0 0 10 7" refX="8" refY="3.5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,3.5 L0,7 Z" fill="var(--arrow)"/>
+        </marker>
+      </defs>
+
+      <!-- ========= กลุ่มซ้าย (ตัวรับ) ========= -->
+      <g id="leftCircuit" stroke-linecap="round" stroke-linejoin="round" transform="translate(0,0)">
+        <rect x="145" y="110" width="265" height="90" rx="10" fill="var(--cyl)"/>
+        <ellipse cx="145" cy="155" rx="16" ry="45" fill="var(--cyl)"/>
+        <ellipse cx="410" cy="155" rx="16" ry="45" fill="var(--cyl)"/>
+        <rect x="360" y="112" width="50" height="86" fill="var(--cyl)"/>
+
+        <g id="leftCoil" stroke="var(--ink)" stroke-width="2" fill="none">
+          <line x1="170" y1="200" x2="200" y2="110" />
+          <line x1="180" y1="200" x2="210" y2="110" />
+          <line x1="190" y1="200" x2="220" y2="110" />
+          <line x1="200" y1="200" x2="230" y2="110" />
+          <line x1="210" y1="200" x2="240" y2="110" />
+          <line x1="220" y1="200" x2="250" y2="110" />
+          <line x1="230" y1="200" x2="260" y2="110" />
+          <line x1="240" y1="200" x2="270" y2="110" />
+          <line x1="250" y1="200" x2="280" y2="110" />
+          <line x1="260" y1="200" x2="290" y2="110" />
+          <line x1="270" y1="200" x2="300" y2="110" />
+          <line x1="280" y1="200" x2="310" y2="110" />
+          <line x1="290" y1="200" x2="320" y2="110" />
+          <line x1="300" y1="200" x2="330" y2="110" />
+          <line x1="310" y1="200" x2="340" y2="110" />
+          <line x1="320" y1="200" x2="350" y2="110" />
+          <line x1="330" y1="200" x2="360" y2="110" />
+          <line x1="340" y1="200" x2="370" y2="110" />
+        </g>
+
+        <g id="leftCoilDirArrows" opacity="0"></g>
+
+        <path d="M170 200 V310 H218" stroke="var(--ink)" stroke-width="3" fill="none"/>
+        <path d="M298 311 H368 V200" stroke="var(--ink)" stroke-width="3" fill="none"/>
+        <rect id="bulbBaseRect" x="218" y="297" width="80" height="28" fill="var(--base)"/>
+        <circle id="leftBulb" cx="258" cy="282" r="34" fill="var(--bulb)" stroke="darkgray" stroke-width="1.5"/>
+
+        <g id="leftWireArrows" opacity="0">
+          <line id="L_leftWireArrow"  x1="170" y1="300" x2="170" y2="210" stroke="var(--arrow)" stroke-width="2" class="arrowGlow" marker-end="url(#arrowHeadRed)"/>
+          <line id="L_rightWireArrow" x1="368" y1="210" x2="368" y2="300" stroke="var(--arrow)" stroke-width="2" class="arrowGlow" marker-end="url(#arrowHeadRed)"/>
+          <line id="L_bulbBaseArrow" x1="298" y1="311" x2="218" y2="311" stroke="var(--arrow)" stroke-width="2" class="arrowGlow" marker-end="url(#arrowHeadRed)"/>
+        </g>
+
+        <g id="leftPolarity" font-family="Arial, sans-serif" font-size="18" font-weight="700" pointer-events="none" opacity="0">
+          <text id="leftCoilLeftPol"  x="170" y="173" text-anchor="middle" class="polText" fill="var(--red)">N</text>
+          <text id="leftCoilRightPol" x="370" y="173" text-anchor="middle" class="polText" fill="var(--blue)">S</text>
+        </g>
+      </g>
+
+      <!-- ========= กลุ่มขวา (ขยับเข้า 80px) ========= -->
+      <g id="rightCircuit" stroke-linecap="round" stroke-linejoin="round" transform="translate(400,0)">
+        <!-- แกนกระบอก -->
+        <rect x="145" y="110" width="265" height="90" rx="10" fill="var(--cyl)"/>
+        <ellipse cx="145" cy="155" rx="16" ry="45" fill="var(--cyl)"/>
+        <ellipse cx="410" cy="155" rx="16" ry="45" fill="var(--cyl)"/>
+        <rect x="360" y="112" width="50" height="86" fill="var(--cyl)"/>
+
+        <!-- ✨ แท่งแม่เหล็กจางภายในขดลวดขวา -->
+        <g id="rightMagnet" pointer-events="none">
+          <rect x="200" y="125" width="140" height="60" rx="8" fill="#000" fill-opacity="0.06"/>
+          <rect id="magLeftHalf"  x="200" y="125" width="70" height="60" rx="8" fill="var(--red)"  fill-opacity="0.18"/>
+          <rect id="magRightHalf" x="270" y="125" width="70" height="60" rx="8" fill="var(--blue)" fill-opacity="0.18"/>
+          <text id="magLeftLabel"  x="235" y="158" text-anchor="middle" font-size="22" font-weight="900" fill="#e11d48" class="polText">N</text>
+          <text id="magRightLabel" x="305" y="158" text-anchor="middle" font-size="22" font-weight="900" fill="#0284c7" class="polText">S</text>
+        </g>
+
+        <!-- 🌊 เส้นสนามแม่เหล็ก -->
+        <g id="rightFieldLines" pointer-events="none">
+          <path id="fTop1" d="M195,122 C235,78 305,78 345,122" fill="none" stroke="#ef4444" stroke-opacity=".18" stroke-width="2"/>
+          <path id="fTop2" d="M190,116 C235,65 305,65 350,116" fill="none" stroke="#ef4444" stroke-opacity=".12" stroke-width="2"/>
+          <path id="fTop3" d="M185,110 C235,54 305,54 355,110" fill="none" stroke="#ef4444" stroke-opacity=".08" stroke-width="2"/>
+          <path id="fBot1" d="M195,188 C235,232 305,232 345,188" fill="none" stroke="#3b82f6" stroke-opacity=".18" stroke-width="2"/>
+          <path id="fBot2" d="M190,194 C235,245 305,245 350,194" fill="none" stroke="#3b82f6" stroke-opacity=".12" stroke-width="2"/>
+          <path id="fBot3" d="M185,200 C235,256 305,256 355,200" fill="none" stroke="#3b82f6" stroke-opacity=".08" stroke-width="2"/>
+        </g>
+
+        <!-- ขดลวดขวา -->
+        <g id="rightCoil" stroke="var(--ink)" stroke-width="2" fill="none">
+          <line x1="170" y1="200" x2="200" y2="110" />
+          <line x1="180" y1="200" x2="210" y2="110" />
+          <line x1="190" y1="200" x2="220" y2="110" />
+          <line x1="200" y1="200" x2="230" y2="110" />
+          <line x1="210" y1="200" x2="240" y2="110" />
+          <line x1="220" y1="200" x2="250" y2="110" />
+          <line x1="230" y1="200" x2="260" y2="110" />
+          <line x1="240" y1="200" x2="270" y2="110" />
+          <line x1="250" y1="200" x2="280" y2="110" />
+          <line x1="260" y1="200" x2="290" y2="110" />
+          <line x1="270" y1="200" x2="300" y2="110" />
+          <line x1="280" y1="200" x2="310" y2="110" />
+          <line x1="290" y1="200" x2="320" y2="110" />
+          <line x1="300" y1="200" x2="330" y2="110" />
+          <line x1="310" y1="200" x2="340" y2="110" />
+          <line x1="320" y1="200" x2="350" y2="110" />
+          <line x1="330" y1="200" x2="360" y2="110" />
+          <line x1="340" y1="200" x2="370" y2="110" />
+        </g>
+
+        <g id="rightCoilDirArrows" opacity="0"></g>
+
+        <path id="R_leftWire"  d="M170 200 V310 H200" stroke="var(--ink)" stroke-width="3" fill="none"/>
+        <path id="R_rightWire" d="M310 311 H368 V200" stroke="var(--ink)" stroke-width="3" fill="none"/>
+
+        <!-- แบตเตอรี่ -->
+        <g id="battery" transform="translate(205,292)">
+          <rect id="batteryRect" x="0" y="0" width="52" height="28" rx="4" fill="var(--batBlue)"/>
+          <line x1="-5" y1="19" x2="0" y2="19" stroke="var(--ink)" stroke-width="3"/>
+          <line x1="52" y1="19" x2="75" y2="19" stroke="var(--ink)" stroke-width="3"/>
+          <text id="batPolL" x="-14" y="10" text-anchor="end"  fill="#dc2626" font-size="22" font-weight="900">+</text>
+          <text id="batPolR" x="64"  y="10" text-anchor="start" fill="#dc2626" font-size="22" font-weight="900">−</text>
+        </g>
+
+        <!-- สวิตช์: กดด้วยนิ้วได้ -->
+        <g id="switch" transform="translate(280,311)" class="kbd-focus" tabindex="0" role="button" aria-label="สวิตช์วงจรขวา (แตะ/กด Space หรือ Enter)">
+          <rect id="switchHit" x="-10" y="-22" width="50" height="44" fill="transparent"></rect>
+          <circle cx="0"  cy="0" r="5" fill="var(--switch)"/>
+          <circle cx="30" cy="0" r="5" fill="var(--switch)"/>
+          <line id="blade" x1="0" y1="0" x2="30" y2="-10" stroke="var(--switch)" stroke-width="4" stroke-linecap="round" />
+          <text x="15" y="-16" text-anchor="middle" font-size="11" fill="#475569">SW</text>
+        </g>
+
+        <g id="rightWireArrows" opacity="0">
+          <line id="R_leftWireArrow"  x1="170" y1="300" x2="170" y2="210" stroke="var(--arrow)" stroke-width="2" class="arrowGlow" marker-end="url(#arrowHeadRed)"/>
+          <line id="R_rightWireArrow" x1="368" y1="210" x2="368" y2="300" stroke="var(--arrow)" stroke-width="2" class="arrowGlow" marker-end="url(#arrowHeadRed)"/>
+          <line id="R_bottomArrow" x1="310" y1="311" x2="200" y2="311" stroke="var(--arrow)" stroke-width="2" class="arrowGlow" marker-end="url(#arrowHeadRed)"/>
+        </g>
+      </g>
+    </svg>
+
+    <!-- ปุ่มควบคุม -->
+    <div class="ui">
+      <div class="seg" id="polSeg" title="สลับขั้วแบตเตอรี่">
+        <button class="btn" id="polPlusLeft"  aria-pressed="false">ซ้ายเป็น +</button>
+        <button class="btn" id="polMinusLeft" aria-pressed="false">ซ้ายเป็น −</button>
+      </div>
+      <button class="btn btn-switch" id="toggleSW" title="เปิด/ปิดสวิตช์วงจรขวา">สวิตช์: OFF</button>
+      <button class="btn" id="pulse" title="พัลส์สั้น (เปิด-ปิดเร็ว)">พัลส์</button>
+      <button class="btn btn-reset" id="reset">รีเซ็ต</button>
+    </div>
+
+    <div class="credit">
+      ศึกษาเพิ่มเติมที่
+      <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener noreferrer">เพจคลายปมฟิสิกส์</a>
+    </div>
+  </div>
+
+<script>
+let swOn = false;
+let polLeftPlus = true;
+const HOLD_MS = 1400;
+
+// ===== DOM refs (ซ้าย) =====
+const leftBulb = document.getElementById('leftBulb');
+const leftCoilDirArrows = document.getElementById('leftCoilDirArrows');
+const leftWireArrows    = document.getElementById('leftWireArrows');
+const L_leftWireArrow   = document.getElementById('L_leftWireArrow');
+const L_rightWireArrow  = document.getElementById('L_rightWireArrow');
+const L_bulbBaseArrow   = document.getElementById('L_bulbBaseArrow');
+const leftPolarity      = document.getElementById('leftPolarity');
+const leftCoilLeftPol   = document.getElementById('leftCoilLeftPol');
+const leftCoilRightPol  = document.getElementById('leftCoilRightPol');
+
+// ===== DOM refs (ขวา) =====
+const rightCoilDirArrows= document.getElementById('rightCoilDirArrows');
+const rightWireArrows   = document.getElementById('rightWireArrows');
+const R_leftWireArrow   = document.getElementById('R_leftWireArrow');
+const R_rightWireArrow  = document.getElementById('R_rightWireArrow');
+const R_bottomArrow     = document.getElementById('R_bottomArrow');
+
+const batPolL = document.getElementById('batPolL');
+const batPolR = document.getElementById('batPolR');
+
+// ✨ แม่เหล็ก & เส้นสนาม
+const rightMagnet   = document.getElementById('rightMagnet');
+const magLeftHalf   = document.getElementById('magLeftHalf');
+const magRightHalf  = document.getElementById('magRightHalf');
+const magLeftLabel  = document.getElementById('magLeftLabel');
+const magRightLabel = document.getElementById('magRightLabel');
+const rightFieldLines = document.getElementById('rightFieldLines');
+
+const btnPlusLeft  = document.getElementById('polPlusLeft');
+const btnMinusLeft = document.getElementById('polMinusLeft');
+const btnSW        = document.getElementById('toggleSW');
+const btnPulse     = document.getElementById('pulse');
+const btnReset     = document.getElementById('reset');
+
+// ===== arrows on coils =====
+function buildStaticArrows(layer, startX, count=18){
+  layer.innerHTML='';
+  for(let i=0;i<count;i++){
+    const x = startX + i*10;
+    const a=document.createElementNS('http://www.w3.org/2000/svg','line');
+    a.setAttribute('stroke','var(--arrow)');
+    a.setAttribute('stroke-width','1.2');
+    a.setAttribute('class','arrowGlow');
+    a.setAttribute('marker-end','url(#arrowHeadRed)');
+    a.dataset.base=JSON.stringify({x1:x,y1:200,x2:x+30,y2:110});
+    layer.appendChild(a);
+  }
+}
+buildStaticArrows(leftCoilDirArrows,170);
+buildStaticArrows(rightCoilDirArrows,170);
+
+function setBulb(on){
+  if(on){ leftBulb.setAttribute('fill','var(--bulb-on)'); leftBulb.classList.add('bulbGlow'); }
+  else  { leftBulb.setAttribute('fill','var(--bulb)');    leftBulb.classList.remove('bulbGlow'); }
+}
+function setLayerOpacity(layer,op){ layer.setAttribute('opacity', String(op)); }
+function setCoilArrowsDirection(layer, sign){
+  const kids=[...layer.children];
+  for(const el of kids){
+    const b=JSON.parse(el.dataset.base);
+    if(sign>=0){ el.setAttribute('x1',b.x1);el.setAttribute('y1',b.y1);el.setAttribute('x2',b.x2);el.setAttribute('y2',b.y2); }
+    else{        el.setAttribute('x1',b.x2);el.setAttribute('y1',b.y2);el.setAttribute('x2',b.x1);el.setAttribute('y2',b.y1); }
+  }
+}
+
+function updateBatteryDrawing(){
+  if(polLeftPlus){ batPolL.textContent='+'; batPolR.textContent='−'; }
+  else{            batPolL.textContent='−'; batPolR.textContent='+'; }
+  [btnPlusLeft,btnMinusLeft].forEach(b=>{b.classList.remove('active'); b.setAttribute('aria-pressed','false');});
+  const act = polLeftPlus?btnPlusLeft:btnMinusLeft;
+  act.classList.add('active'); act.setAttribute('aria-pressed','true');
+}
+
+// เฟดอิน 250ms / เอาต์ 450ms ให้แม่เหล็ก+เส้นสนาม
+function updateRightMagnetAndFields(){
+  if(!swOn){
+    rightMagnet.style.setProperty('--fade-dur','450ms');
+    rightFieldLines.style.setProperty('--fade-dur','450ms');
+    rightMagnet.style.opacity = '0';
+    rightFieldLines.style.opacity = '0';
+    return;
+  }
+  if(polLeftPlus){
+    magLeftHalf.setAttribute('fill','var(--red)');
+    magRightHalf.setAttribute('fill','var(--blue)');
+    magLeftLabel.textContent='N'; magLeftLabel.setAttribute('fill','#e11d48');
+    magRightLabel.textContent='S'; magRightLabel.setAttribute('fill','#0284c7');
+    tintFieldLines('red-top-blue-bottom');
+  }else{
+    magLeftHalf.setAttribute('fill','var(--blue)');
+    magRightHalf.setAttribute('fill','var(--red)');
+    magLeftLabel.textContent='S'; magLeftLabel.setAttribute('fill','#0284c7');
+    magRightLabel.textContent='N'; magRightLabel.setAttribute('fill','#e11d48');
+    tintFieldLines('blue-top-red-bottom');
+  }
+  rightMagnet.style.setProperty('--fade-dur','250ms');
+  rightFieldLines.style.setProperty('--fade-dur','250ms');
+  rightMagnet.style.opacity = '1';
+  rightFieldLines.style.opacity = '1';
+}
+
+function tintFieldLines(mode){
+  const topIds=['fTop1','fTop2','fTop3'];
+  const botIds=['fBot1','fBot2','fBot3'];
+  const red = '#ef4444', blue = '#3b82f6';
+  const topColor = (mode==='blue-top-red-bottom') ? blue : red;
+  const botColor = (mode==='blue-top-red-bottom') ? red : blue;
+  for(const id of topIds){ const p=document.getElementById(id); if(p) p.setAttribute('stroke', topColor); }
+  for(const id of botIds){ const p=document.getElementById(id); if(p) p.setAttribute('stroke', botColor); }
+}
+
+function updateSwitchDrawing(){
+  btnSW.textContent = 'สวิตช์: ' + (swOn?'ON':'OFF');
+  const blade = document.getElementById('blade');
+  blade.setAttribute('x2','30');
+  blade.setAttribute('y2', swOn ? '0' : '-10');
+
+  if(swOn){
+    setLayerOpacity(rightWireArrows,1);
+    setLayerOpacity(rightCoilDirArrows,1);
+    if(polLeftPlus){
+      R_leftWireArrow.setAttribute('x1','170'); R_leftWireArrow.setAttribute('y1','300');
+      R_leftWireArrow.setAttribute('x2','170'); R_leftWireArrow.setAttribute('y2','210');
+      R_rightWireArrow.setAttribute('x1','368'); R_rightWireArrow.setAttribute('y1','210');
+      R_rightWireArrow.setAttribute('x2','368'); R_rightWireArrow.setAttribute('y2','300');
+      R_bottomArrow.setAttribute('x1','310'); R_bottomArrow.setAttribute('y1','311');
+      R_bottomArrow.setAttribute('x2','200'); R_bottomArrow.setAttribute('y2','311');
+      setCoilArrowsDirection(rightCoilDirArrows, +1);
+    }else{
+      R_leftWireArrow.setAttribute('x1','170'); R_leftWireArrow.setAttribute('y1','210');
+      R_leftWireArrow.setAttribute('x2','170'); R_leftWireArrow.setAttribute('y2','300');
+      R_rightWireArrow.setAttribute('x1','368'); R_rightWireArrow.setAttribute('y1','300');
+      R_rightWireArrow.setAttribute('x2','368'); R_rightWireArrow.setAttribute('y2','210');
+      R_bottomArrow.setAttribute('x1','200'); R_bottomArrow.setAttribute('y1','311');
+      R_bottomArrow.setAttribute('x2','310'); R_bottomArrow.setAttribute('y2','311');
+      setCoilArrowsDirection(rightCoilDirArrows, -1);
+    }
+  }else{
+    setLayerOpacity(rightWireArrows,0);
+    setLayerOpacity(rightCoilDirArrows,0);
+  }
+  updateRightMagnetAndFields();
+}
+
+let sticky = { until: 0, arrowSign:+1, leftPol:'N', rightPol:'S' };
+function triggerInduction(nearPole, kind){
+  const pole = (kind==='approach') ? nearPole : (nearPole==='N'?'S':'N');
+  let leftPolChar, rightPolChar;
+  if(pole==='N'){ rightPolChar = 'N'; leftPolChar = 'S'; }
+  else          { rightPolChar = 'S'; leftPolChar = 'N'; }
+  const arrowSign = (pole==='N') ? -1 : +1;
+  sticky.leftPol  = leftPolChar;
+  sticky.rightPol = rightPolChar;
+  sticky.arrowSign= arrowSign;
+  sticky.until    = performance.now() + HOLD_MS;
+  renderLeftInduction(true);
+}
+function renderLeftInduction(force=false){
+  const show = force || (performance.now() < sticky.until);
+  if(!show){
+    setBulb(false);
+    setLayerOpacity(leftCoilDirArrows,0);
+    setLayerOpacity(leftWireArrows,0);
+    setLayerOpacity(leftPolarity,0);
+    return;
+  }
+  setBulb(true);
+  setLayerOpacity(leftPolarity,1);
+  leftCoilLeftPol.textContent  = sticky.leftPol;
+  leftCoilRightPol.textContent = sticky.rightPol;
+  leftCoilLeftPol.setAttribute('fill',  sticky.leftPol==='N'?'var(--red)':'var(--blue)');
+  leftCoilRightPol.setAttribute('fill', sticky.rightPol==='N'?'var(--red)':'var(--blue)');
+  setCoilArrowsDirection(leftCoilDirArrows, sticky.arrowSign);
+  setLayerOpacity(leftCoilDirArrows,1);
+  if(sticky.arrowSign>=0){
+    L_leftWireArrow.setAttribute('x1','170'); L_leftWireArrow.setAttribute('y1','300');
+    L_leftWireArrow.setAttribute('x2','170'); L_leftWireArrow.setAttribute('y2','210');
+    L_rightWireArrow.setAttribute('x1','368'); L_rightWireArrow.setAttribute('y1','210');
+    L_rightWireArrow.setAttribute('x2','368'); L_rightWireArrow.setAttribute('y2','300');
+    L_bulbBaseArrow.setAttribute('x1','298'); L_bulbBaseArrow.setAttribute('y1','311');
+    L_bulbBaseArrow.setAttribute('x2','218'); L_bulbBaseArrow.setAttribute('y2','311');
+  }else{
+    L_leftWireArrow.setAttribute('x1','170'); L_leftWireArrow.setAttribute('y1','210');
+    L_leftWireArrow.setAttribute('x2','170'); L_leftWireArrow.setAttribute('y2','300');
+    L_rightWireArrow.setAttribute('x1','368'); L_rightWireArrow.setAttribute('y1','300');
+    L_rightWireArrow.setAttribute('x2','368'); L_rightWireArrow.setAttribute('y2','210');
+    L_bulbBaseArrow.setAttribute('x1','218'); L_bulbBaseArrow.setAttribute('y1','311');
+    L_bulbBaseArrow.setAttribute('x2','298'); L_bulbBaseArrow.setAttribute('y2','311');
+  }
+  setLayerOpacity(leftWireArrows,1);
+}
+
+function doApproachPulse(){ const leftPole = polLeftPlus ? 'N' : 'S'; triggerInduction(leftPole,'approach'); }
+function doRecedePulse(){ const leftPole = polLeftPlus ? 'N' : 'S'; triggerInduction(leftPole,'recede'); }
+
+// ====== ปุ่ม UI ======
+btnPlusLeft.onclick  = ()=>{ const prev = polLeftPlus; polLeftPlus = true;  updateBatteryDrawing(); if(swOn && prev!==polLeftPlus){ doApproachPulse(); } updateSwitchDrawing(); };
+btnMinusLeft.onclick = ()=>{ const prev = polLeftPlus; polLeftPlus = false; updateBatteryDrawing(); if(swOn && prev!==polLeftPlus){ doApproachPulse(); } updateSwitchDrawing(); };
+btnSW.onclick = ()=>{ swOn = !swOn; updateSwitchDrawing(); if(swOn){ doApproachPulse(); } else { doRecedePulse(); } };
+btnPulse.onclick = ()=>{
+  if(!swOn){
+    swOn=true; updateSwitchDrawing(); doApproachPulse();
+    setTimeout(()=>{ swOn=false; updateSwitchDrawing(); doRecedePulse(); }, 250);
+  } else {
+    swOn=false; updateSwitchDrawing(); doRecedePulse();
+    setTimeout(()=>{ swOn=true; updateSwitchDrawing(); doApproachPulse(); }, 250);
+  }
+};
+btnReset.onclick = ()=>{
+  swOn=false; polLeftPlus=true; sticky.until=0;
+  updateBatteryDrawing(); updateSwitchDrawing(); renderLeftInduction(false);
+  rightMagnet.style.setProperty('--fade-dur','450ms');
+  rightFieldLines.style.setProperty('--fade-dur','450ms');
+  rightMagnet.style.opacity='0'; rightFieldLines.style.opacity='0';
+};
+
+// ====== สวิตช์สีส้ม: ใช้นิ้วกดเปิด/ปิดได้ ======
+const switchGroup = document.getElementById('switch');
+const switchHit   = document.getElementById('switchHit');
+function toggleSwitch(){
+  swOn = !swOn;
+  updateSwitchDrawing();
+  if(swOn){ doApproachPulse(); } else { doRecedePulse(); }
+}
+switchGroup.addEventListener('click', toggleSwitch);
+switchHit.addEventListener('pointerdown', (e)=>{ e.preventDefault(); toggleSwitch(); });
+switchGroup.addEventListener('keydown', (e)=>{
+  if(e.key === ' ' || e.key === 'Enter'){ e.preventDefault(); toggleSwitch(); }
+});
+
+// ====== loop ======
+function loop(){ renderLeftInduction(false); requestAnimationFrame(loop); }
+updateBatteryDrawing(); updateSwitchDrawing(); renderLeftInduction(false);
+updateRightMagnetAndFields(); requestAnimationFrame(loop);
+</script>
+</body>
+</html>

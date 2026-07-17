@@ -1,0 +1,616 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SVG Transformer — Stable + Calc + Key Formulas</title>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0f2a44; --panel:#eef1f5; --bg:#ffffff; --bulb:#f9e8a4; --muted:#5a6b81;
+    --bat:#3b82f6; --switch:#f97316; --bright:#fff3b0; --verybright:#ffe066;
+    --flux:#e79d5e; --accent:#0ea5e9; --loss:#f97316; --ok:#16a34a; --bad:#dc2626;
+  }
+  body{margin:0;background:var(--bg);font-family:Inter,system-ui,Segoe UI,Arial,sans-serif;color:var(--ink);padding-bottom:calc(140px + env(safe-area-inset-bottom, 0px))}
+  .wrap{max-width:1100px;margin:0 auto;padding:16px 16px calc(150px + env(safe-area-inset-bottom, 0px))}
+  .toolbar{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;align-items:end;background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;padding:10px 12px;margin-bottom:12px}
+  .toolbar label{font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:6px}
+  .toolbar input,.toolbar select{width:100%;padding:6px 8px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px}
+  .btn{padding:8px 10px;border:1px solid var(--accent);background:#e6f6fe;border-radius:10px;color:#0b668b;font-weight:700;cursor:pointer}
+  .btn:active{transform:translateY(1px)}
+  .btn.secondary{border-color:#94a3b8;background:#f8fafc;color:#334155}
+  .btn.success{border-color:var(--ok);background:#ecfdf5;color:#065f46}
+  .card{background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;box-shadow:0 8px 22px rgba(2,6,23,.06);padding:10px;position:relative}
+  .controls-inline{position:absolute;right:12px;top:12px;display:flex;gap:8px;flex-wrap:wrap}
+  .mini-title{margin:0 0 12px 0;color:#2563eb;font-size:clamp(26px,3vw,34px);font-weight:800}
+  .btn.orange{border-color:#fdba74;background:#ffedd5;color:#9a3412}
+  svg{width:100%;height:auto;display:block}
+  .stroke{stroke:var(--ink);stroke-width:3;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .core{fill:var(--panel);stroke:var(--ink);stroke-width:3}
+  .window{fill:#ffffff;stroke:var(--ink);stroke-width:3}
+  .coil{stroke:var(--ink);stroke-width:4}
+  .glow{filter:url(#bulbGlow)}
+  .battery-body{fill:var(--bat);stroke:var(--ink);stroke-width:3}
+  .battery-symbol{font-size:26px;font-weight:700;fill:var(--ink)}
+  .knife-switch{stroke:var(--switch);stroke-width:6;stroke-linecap:round}
+  .value-board{margin-top:10px;font-size:14px;color:var(--ink);font-weight:600;display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+  .kv{background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;padding:6px 8px}
+  .fluxCircle{stroke:var(--flux);stroke-width:2;fill:none;opacity:.0}
+  .fluxCircle.show{opacity:.7}
+  .fluxArrow{fill:var(--flux);opacity:0}
+  .fluxArrow.show{opacity:.95}
+  @keyframes fluxPulse{ 0%{opacity:.25} 50%{opacity:.9} 100%{opacity:.25} }
+  .acPulse{ animation: fluxPulse 1.2s ease-in-out infinite; }
+
+  /* PLoss label (no frame) */
+  .ploss-text{font-family:"Chakra Petch",system-ui,Arial,sans-serif;font-weight:800;fill:var(--loss)}
+
+  /* Modal */
+  .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;z-index:60}
+  .modal{background:#fff;border-radius:16px;box-shadow:0 20px 60px rgba(2,6,23,.35);width:min(920px,94vw);max-height:88vh;overflow:auto;border:1px solid #e5e7eb}
+  .modal header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #e5e7eb;background:#f8fafc;border-top-left-radius:16px;border-top-right-radius:16px}
+  .modal header h3{margin:0;font-size:18px}
+  .modal .content{padding:16px 18px;font-size:16px;line-height:1.6}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+  .callout{border:1px solid #fecaca;background:#fff7ed;border-radius:14px;padding:12px 14px}
+  .panel{border:1px solid #bfdbfe;background:#eff6ff;border-radius:14px;padding:12px 14px}
+  .panel h4{margin:0 0 6px 0;font-size:16px;color:#1d4ed8}
+  .note{color:#ef4444;font-weight:800}
+  .brand-footer{position:fixed;left:0;right:0;bottom:0;background:#ffffffd9;border-top:1px solid #e5e7eb;backdrop-filter:saturate(1.2) blur(4px);font-size:14px;padding:8px 12px;text-align:center;z-index:50}
+  .brand-footer a{color:#0ea5e9;text-decoration:underline}
+
+  /* Quiz styles */
+  .quiz-q{border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin-bottom:12px;background:#fbfdff}
+  .quiz-q h4{margin:0 0 8px 0;font-size:16px;color:#0f2a44}
+  .quiz-options{display:grid;gap:8px}
+  .quiz-options label{display:flex;gap:8px;align-items:flex-start;padding:8px;border:1px solid #e5e7eb;border-radius:10px;cursor:pointer}
+  .quiz-options input{margin-top:2px}
+  .quiz-explain{border-left:4px solid #c7f9cc;background:#f0fff4;border-radius:10px;padding:10px;margin-top:8px;display:none}
+  .quiz-q.correct .quiz-options label.correct{border-color:var(--ok);background:#f0fff4}
+  .quiz-q.wrong .quiz-options label.selected{border-color:var(--bad);background:#fff5f5}
+  .score-banner{border:1px solid #e5e7eb;background:#f8fafc;border-radius:12px;padding:10px 12px;margin-bottom:12px;font-weight:700}
+
+  @media (max-width: 768px){
+    .card{padding-top:78px}
+    .controls-inline{
+      position:absolute;
+      left:10px;
+      right:10px;
+      top:10px;
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:8px;
+      flex-wrap:nowrap;
+    }
+    .controls-inline .btn{
+      min-width:0;
+      width:100%;
+      padding:10px 6px;
+      font-size:13px;
+      line-height:1.2;
+      text-align:center;
+      white-space:nowrap;
+    }
+  }
+
+</style>
+<script>window.MathJax={tex:{inlineMath:[['\\(','\\)'],['$','$']]}};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+</head>
+<body>
+  <div class="wrap">
+    <h1 class="mini-title">Mini Lab : หม้อแปลง(Transformer)</h1>
+    <div class="toolbar" aria-label="Controls">
+      <label>โหมดแหล่งจ่าย
+        <select id="mode"><option value="ac">AC (สลับ)</option><option value="dc">Battery (DC)</option></select>
+      </label>
+      <label>N1 — รอบปฐมภูมิ <input type="number" id="N1" value="100" min="1" step="1"></label>
+      <label>N2 — รอบทุติยภูมิ <input type="number" id="N2" value="200" min="1" step="1"></label>
+      <label>V1 — ความต่างศักย์(แรงดัน)ขาเข้า (V) <input type="number" id="V1" value="10" min="0" step="0.1"></label>
+      <label>R หลอดไฟ — ความต้านทาน (Ω) <input type="number" id="Rload" value="20" min="0.1" step="0.1"></label>
+      <label>ประสิทธิภาพหม้อแปลง (η, %) <input type="number" id="eta" value="100" min="1" max="100" step="1"></label>
+    </div>
+
+    <div class="card">
+      <div class="controls-inline">
+        <button id="btnCalc" class="btn">วิธีคิด</button>
+        <button id="btnTheory" class="btn orange">สูตรสำคัญ</button>
+        <button id="btnQuiz" class="btn success">แบบฝึกหัด</button>
+      </div>
+
+      <svg viewBox="0 0 940 520" id="schem" role="img" aria-label="หม้อแปลงพร้อมสวิตช์และฟลักซ์">
+        <defs>
+          <filter id="bulbGlow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur" />
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+
+        <!-- แกน -->
+        <rect class="core" x="360" y="140" width="300" height="240" rx="4"/>
+        <rect class="window" x="450" y="210" width="120" height="100" rx="3"/>
+
+        <!-- ฟลักซ์ -->
+        <g id="flux-group"></g>
+
+        <!-- ขดลวด -->
+        <g id="primary-coil" class="coil"></g>
+        <g id="secondary-coil" class="coil"></g>
+
+        <!-- AC -->
+        <g id="ac-source" transform="translate(50,-1)">
+          <circle class="stroke" cx="185" cy="270" r="30" />
+          <path class="stroke" d="M170 270c6-12 12-12 18 0s12 12 18 0" />
+          <line class="stroke" x1="185" y1="243" x2="185" y2="220" />
+          <line class="stroke" x1="185" y1="303" x2="185" y2="312" />
+        </g>
+
+        <!-- Battery -->
+        <g id="battery-source" visibility="hidden" transform="translate(40,0) rotate(90,175,263)">
+          <rect x="136" y="236" width="78" height="54" rx="6" class="battery-body" />
+          <text x="150" y="265" class="battery-symbol">+</text>
+          <text x="190" y="265" class="battery-symbol">-</text>
+        </g>
+
+        <!-- Leads -->
+        <g id="bat-leads" visibility="hidden">
+          <line class="stroke" x1="235" y1="217" x2="235" y2="240" />
+          <line class="stroke" x1="235" y1="309" x2="235" y2="286" />
+        </g>
+
+        <!-- Primary wiring -->
+        <path class="stroke" d="M235 217 L360 217" />
+        <path class="stroke" d="M235 309 v20 H270 V309 H280" />
+        <path class="stroke" d="M340 309 H360" />
+        <path id="switch-bridge" class="stroke" d="M280 309 H340" visibility="hidden" />
+
+        <!-- Secondary & lamp -->
+        <path id="wire-sec-top" class="stroke" d="M660 220 H740 V269" />
+        <path id="wire-sec-bottom" class="stroke" d="M660 305 H740" />
+        <g id="lamp-group" transform="translate(10,-20) rotate(90,775,305)">
+          <circle id="bulb" cx="775" cy="305" r="36" stroke="var(--ink)" stroke-width="3" fill="#fff" />
+          <rect x="755" y="337" width="40" height="22" rx="3" fill="#0f2a44" />
+        </g>
+
+        <!-- Labels near core -->
+        <text id="labelV1" x="260" y="200" font-size="15" fill="var(--ink)">V₁</text>
+        <text id="labelI1" x="260" y="382" font-size="15" fill="var(--ink)">I₁</text>
+        <text id="labelP1" x="260" y="400" font-size="15" fill="var(--ink)">P₁</text>
+
+        <text id="labelV2" x="690" y="200" font-size="15" fill="var(--ink)">V₂</text>
+        <text id="labelI2" x="690" y="332" font-size="15" fill="var(--ink)">I₂</text>
+        <text id="labelP2" x="690" y="350" font-size="15" fill="var(--ink)">P₂</text>
+
+        <!-- PLoss label (no frame, below core) -->
+        <text id="labelPLoss" x="510" y="410" text-anchor="middle" font-size="16"
+              class="ploss-text" visibility="hidden">
+          P<tspan baseline-shift="sub" font-size="11">Loss</tspan> = 0.00 W
+        </text>
+
+        <!-- Switch -->
+        <g id="switchGroup" role="button" tabindex="0" style="pointer-events:all; touch-action:manipulation; cursor:pointer">
+          <rect id="switchHit" x="225" y="245" width="190" height="140" rx="18" fill="rgba(0,0,0,0.001)" pointer-events="all" />
+          <line id="switchBlade" x1="280" y1="309" x2="340" y2="289" class="knife-switch" />
+        </g>
+      </svg>
+
+      <div class="value-board" id="board">
+        <div class="kv">V₁: <span id="valV1">-</span> V</div>
+        <div class="kv">I₁: <span id="valI1">-</span> A</div>
+        <div class="kv">P₁: <span id="valP1">-</span> W</div>
+        <div class="kv">V₂: <span id="valV2">-</span> V</div>
+        <div class="kv">I₂: <span id="valI2">-</span> A</div>
+        <div class="kv">P₂: <span id="valP2">-</span> W</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Detailed Calc -->
+  <div id="calcModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="calcTitle">
+    <div class="modal">
+      <header>
+        <h3 id="calcTitle">วิธีคิด (โหมด AC เท่านั้น)</h3>
+        <button id="btnCloseCalc" class="btn secondary">ปิด</button>
+      </header>
+      <div class="content" id="calcContent"></div>
+    </div>
+  </div>
+
+  <!-- Modal: Key Formulas / Theory -->
+  <div id="theoryModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="theoryTitle">
+    <div class="modal">
+      <header>
+        <h3 id="theoryTitle">สูตรสำคัญ & การทำงานของ AC และ DC ในหม้อแปลง</h3>
+        <button id="btnCloseTheory" class="btn secondary">กลับสู่หน้าแรก</button>
+      </header>
+      <div class="content">
+        <div class="grid">
+          <div class="callout">
+            <h4>หม้อแปลงคืออะไร?</h4>
+            <p>อุปกรณ์ที่ <strong>แปลงความต่างศักย์ไฟฟ้า(ช่างมักเรียกว่าแรงดันไฟฟ้า) AC</strong> ให้สูงขึ้น/ต่ำลง ด้วยการ <em>เหนี่ยวนำแม่เหล็กไฟฟ้า</em> ระหว่างขดลวดสองฝั่งบนแกนเดียวกัน</p>
+          </div>
+          <div class="panel">
+            <h4>กฎของฟาราเดย์</h4>
+            <p>แรงเคลื่อนไฟฟ้าเหนี่ยวนำ: \( \mathcal{E} = -\,N\,\dfrac{d\Phi}{dt} \)</p>
+            <p>หม้อแปลงต้องอาศัย \( \frac{d\Phi}{dt} \neq 0 \) จึงจะมีความต่างศักย์ที่ขดลวดทุติยภูมิ</p>
+          </div>
+        </div>
+        <div class="panel" style="margin-top:12px">
+          <h4>การทำงานของ AC และ DC ในหม้อแปลง</h4>
+          <ul>
+            <li><strong>AC:</strong> \(\Phi(t)\) เปลี่ยนแปลงตลอด ⇒ \(\tfrac{d\Phi}{dt}\neq 0\) ⇒ ขดทุติยภูมิมีความต่างศักย์ต่อเนื่อง</li>
+            <li><strong>DC คงที่:</strong> กระแสคงที่แล้ว \(\Phi\) คงที่ ⇒ \(\tfrac{d\Phi}{dt}=0\) ⇒ ขดทุติยภูมิไม่เกิดความต่างศักย์(ยกเว้นช่วงสวิตช์เปลี่ยนสถานะ)</li>
+          </ul>
+        </div>
+        <div class="panel" style="margin-top:12px">
+          <h4>สูตรสำคัญ</h4>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div>
+              <div>อัตราทดแรงดัน: \( \dfrac{V_2}{V_1} = \dfrac{N_2}{N_1} \)</div>
+              <div>อัตราทดกระแส (อุดมคติ): \( \dfrac{I_1}{I_2} = \dfrac{N_2}{N_1} \)</div>
+              <div>กำลัง (อุดมคติ): \( P_1 \approx P_2 \)</div>
+            </div>
+            <div>
+              <div>ประสิทธิภาพ: \( \eta = \dfrac{P_2}{P_1} \)</div>
+              <div>กำลังสูญเสีย: \( P_{\text{Loss}} = P_1 - P_2 \)</div>
+              <div>โหลดตัวต้านทาน: \( I_2 = \dfrac{V_2}{R} \)</div>
+            </div>
+          </div>
+        </div>
+        <div class="callout" style="margin-top:12px">
+          <h4>หมายเหตุ</h4>
+          <p>จริง ๆ จะมีคอร์ลอสส์/คอปเปอร์ลอสส์/ฟลักซ์รั่ว จึงมักได้ \(P_1>P_2\) และ \(\eta<100\%\)</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Quiz -->
+  <div id="quizModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="quizTitle">
+    <div class="modal">
+      <header>
+        <h3 id="quizTitle">แบบฝึกหัด — ตรวจความเข้าใจหม้อแปลง</h3>
+        <div style="display:flex;gap:8px">
+          <button id="btnCloseQuiz" class="btn secondary">กลับสู่หน้าแรก</button>
+          <button id="btnCheck" class="btn success">ตรวจคำตอบ</button>
+        </div>
+      </header>
+      <div class="content">
+        <div id="quizScore" class="score-banner" style="display:none"></div>
+        <div id="quizContent"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="brand-footer">
+    ศึกษาเพิ่มเติมได้ที่เพจ <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">คลายปมฟิสิกส์</a>
+  </div>
+
+  <script>
+    const modeSel=document.getElementById('mode');
+    const acIcon=document.getElementById('ac-source');
+    const batIcon=document.getElementById('battery-source');
+    const batLeads=document.getElementById('bat-leads');
+    const bulb=document.getElementById('bulb');
+    const switchBlade=document.getElementById('switchBlade');
+    const bridge=document.getElementById('switch-bridge');
+
+    const inputN1=document.getElementById('N1');
+    const inputN2=document.getElementById('N2');
+    const inputV1=document.getElementById('V1');
+    const inputR=document.getElementById('Rload');
+    const inputEta=document.getElementById('eta');
+
+    const valV1=document.getElementById('valV1');
+    const valV2=document.getElementById('valV2');
+    const valI1=document.getElementById('valI1');
+    const valI2=document.getElementById('valI2');
+    const valP1=document.getElementById('valP1');
+    const valP2=document.getElementById('valP2');
+
+    const labelV1=document.getElementById('labelV1');
+    const labelI1=document.getElementById('labelI1');
+    const labelP1=document.getElementById('labelP1');
+    const labelV2=document.getElementById('labelV2');
+    const labelI2=document.getElementById('labelI2');
+    const labelP2=document.getElementById('labelP2');
+
+    const labelPLoss=document.getElementById('labelPLoss');
+
+    const gPri=document.getElementById('primary-coil');
+    const gSec=document.getElementById('secondary-coil');
+    const gFlux=document.getElementById('flux-group');
+
+    const calcModal=document.getElementById('calcModal');
+    const calcContent=document.getElementById('calcContent');
+    const btnCalc=document.getElementById('btnCalc');
+    const btnCloseCalc=document.getElementById('btnCloseCalc');
+
+    const theoryModal=document.getElementById('theoryModal');
+    const btnTheory=document.getElementById('btnTheory');
+    const btnCloseTheory=document.getElementById('btnCloseTheory');
+
+    const quizModal=document.getElementById('quizModal');
+    const btnQuiz=document.getElementById('btnQuiz');
+    const btnCloseQuiz=document.getElementById('btnCloseQuiz');
+    const quizContent=document.getElementById('quizContent');
+    const quizScore=document.getElementById('quizScore');
+    const btnCheck=document.getElementById('btnCheck');
+
+    let switchClosed=false, lastToggleTime=0, togglingLock=false;
+    let acDir=1, acTimer=null;
+    const fmt=(x)=>Number.isFinite(x)?x.toFixed(2):'-'; // 2 ตำแหน่งทุกค่า
+
+    // ✅ ฟังก์ชันใหม่: ควบคุมการแสดง "ป้าย" ในผัง (SVG labels) ตามโหมด
+    function setSVGLabelsVisible(show){
+      const vis = show ? 'visible' : 'hidden';
+      [labelV1,labelI1,labelP1,labelV2,labelI2,labelP2].forEach(el=>el.setAttribute('visibility',vis));
+      if(!show){ labelPLoss.setAttribute('visibility','hidden'); }
+    }
+
+    // ขดลวด
+    function rebuildCoil(group,x1,x2,yStart,yEnd,lines,isPrimary=false){
+      group.innerHTML='';
+      if(lines<1) return;
+      const dy=(yEnd-yStart)/lines;
+      for(let i=0;i<lines;i++){
+        let y = isPrimary && i===0 ? 217 : (yStart+dy*(i+0.5));
+        let y1=y, y2=y+5;
+        if(!isPrimary){
+          if(i===0){ y2 = y+5+3; }
+          if(i===lines-1){ y1 = y-2; y2 = y1+5; }
+        }
+        const ln=document.createElementNS('http://www.w3.org/2000/svg','line');
+        const leftX=(isPrimary && i===0)?235:x1;
+        ln.setAttribute('x1',leftX); ln.setAttribute('x2',x2);
+        ln.setAttribute('y1',y1);    ln.setAttribute('y2',y2);
+        ln.setAttribute('class','coil');
+        group.appendChild(ln);
+      }
+    }
+    function updateCoilDensity(N1,N2){
+      const minL=4, maxL=12, maxN=Math.max(N1,N2), minN=Math.min(N1,N2);
+      const span=Math.max(1,maxN-minN);
+      const scale=(n)=>Math.round(minL+((n-minN)/span)*(maxL-minL));
+      const linesPri=(N1===N2)?8:scale(N1);
+      const linesSec=(N1===N2)?8:scale(N2);
+      rebuildCoil(gPri,360,450,218,307,linesPri,true);
+      rebuildCoil(gSec,570,660,220,305,linesSec,false);
+    }
+
+    function calcValues(){
+      const N1=Math.max(1,parseFloat(inputN1.value)||1);
+      const N2=Math.max(1,parseFloat(inputN2.value)||1);
+      const V1=Math.max(0,parseFloat(inputV1.value)||0);
+      const R =Math.max(0.001,parseFloat(inputR.value)||1);
+      const etaPct=Math.min(100,Math.max(1,parseFloat(inputEta.value)||100));
+      const eta=etaPct/100;
+      const V2=V1*(N2/N1);
+      const I2=V2/R;
+      const P2=V2*I2;
+      const P1=P2/eta;
+      const I1=(V1>0)?(P1/V1):0;
+      const PLoss=P1-P2;
+      return {N1,N2,V1,V2,I1,I2,P1,P2,eta,etaPct,PLoss};
+    }
+
+    function setBulbByPower(P){
+      if(P<=0.01){ bulb.setAttribute('fill','#fff'); bulb.classList.remove('glow'); }
+      else if(P<2){ bulb.setAttribute('fill','var(--bulb)'); bulb.classList.add('glow'); }
+      else if(P<8){ bulb.setAttribute('fill','var(--bright)'); bulb.classList.add('glow'); }
+      else { bulb.setAttribute('fill','var(--verybright)'); bulb.classList.add('glow'); }
+    }
+    function pulseBulbOnce(P,duration=220){ setBulbByPower(P); setTimeout(()=>setBulbByPower(0),duration); }
+
+    function updateLabels(vals){
+      labelV1.textContent=`V₁ = ${fmt(vals.V1)} V`;
+      labelI1.textContent=`I₁ = ${fmt(vals.I1)} A`;
+      labelP1.textContent=`P₁ = ${fmt(vals.P1)} W`;
+      labelV2.textContent=`V₂ = ${fmt(vals.V2)} V`;
+      labelI2.textContent=`I₂ = ${fmt(vals.I2)} A`;
+      labelP2.textContent=`P₂ = ${fmt(vals.P2)} W`;
+      valV1.textContent=fmt(vals.V1); valV2.textContent=fmt(vals.V2);
+      valI1.textContent=fmt(vals.I1); valI2.textContent=fmt(vals.I2);
+      valP1.textContent=fmt(vals.P1); valP2.textContent=fmt(vals.P2);
+    }
+
+    // ฟลักซ์
+    const fluxCfg={cx:510,cy:260,radii:[70,100,130]};
+    function clearFlux(){ gFlux.innerHTML=''; if(acTimer){clearInterval(acTimer); acTimer=null;} }
+    function makeCircle(r){ const c=document.createElementNS('http://www.w3.org/2000/svg','circle'); c.setAttribute('cx',fluxCfg.cx); c.setAttribute('cy',fluxCfg.cy); c.setAttribute('r',r); c.setAttribute('class','fluxCircle'); return c; }
+    function placeArrow(theta,dir){
+      const r=fluxCfg.radii[1], cx=fluxCfg.cx, cy=fluxCfg.cy;
+      const px=cx+r*Math.cos(theta), py=cy+r*Math.sin(theta);
+      const tangent=theta+(dir>0?-Math.PI/2:Math.PI/2);
+      const size=10, left=tangent+Math.PI*0.75, right=tangent-Math.PI*0.75;
+      const p1x=px+size*Math.cos(tangent), p1y=py+size*Math.sin(tangent);
+      const p2x=px+7*Math.cos(left), p2y=py+7*Math.sin(left);
+      const p3x=px+7*Math.cos(right),p3y=py+7*Math.sin(right);
+      const poly=document.createElementNS('http://www.w3.org/2000/svg','polygon');
+      poly.setAttribute('points',`${p1x},${p1y} ${p2x},${p2y} ${p3x},${p3y}`);
+      poly.setAttribute('class','fluxArrow'); return poly;
+    }
+    function showFluxDC(){
+      clearFlux();
+      fluxCfg.radii.forEach(r=>{const c=makeCircle(r); c.classList.add('show'); gFlux.appendChild(c);});
+      [-Math.PI/6,Math.PI/2,Math.PI*5/6].forEach(th=>{const a=placeArrow(th,-1); a.classList.add('show'); gFlux.appendChild(a);});
+    }
+    function showFluxAC(){
+      clearFlux();
+      fluxCfg.radii.forEach((r,i)=>{const c=makeCircle(r); c.classList.add('show','acPulse'); c.style.animationDelay=`${i*0.15}s`; gFlux.appendChild(c);});
+      const arrows=[-Math.PI/6,Math.PI/2,Math.PI*5/6].map(th=>{const a=placeArrow(th,acDir); a.classList.add('show'); gFlux.appendChild(a); return a;});
+      acTimer=setInterval(()=>{
+        acDir*=-1; arrows.forEach(a=>a.remove());
+        const anew=[-Math.PI/6,Math.PI/2,Math.PI*5/6].map(th=>{const b=placeArrow(th,acDir); b.classList.add('show'); gFlux.appendChild(b); return b;});
+        while(arrows.length) arrows.pop(); anew.forEach(x=>arrows.push(x));
+      },700);
+    }
+    function updateFlux(mode){ if(!switchClosed){clearFlux(); return;} if(mode==='dc'){showFluxDC();} else {showFluxAC();} }
+
+    function updateCircuit(){
+      const mode=modeSel.value;
+      const vals=calcValues();
+      updateCoilDensity(vals.N1,vals.N2);
+      bridge.setAttribute('visibility',switchClosed?'visible':'hidden');
+
+      // ✅ โหมดแสดงป้ายใน SVG (AC แสดง / DC ซ่อน)
+      setSVGLabelsVisible(mode==='ac');
+
+      if(mode==='ac'){
+        setBulbByPower(switchClosed?vals.P2:0);
+        batLeads.setAttribute('visibility','hidden');
+      } else {
+        batLeads.setAttribute('visibility','visible');
+        const now=Date.now();
+        if(now-lastToggleTime<350){ pulseBulbOnce(vals.P2,220); }
+        else { setBulbByPower(0); }
+      }
+
+      updateLabels(vals); 
+      updateFlux(mode);
+
+      // ✅ ปรับเงื่อนไขป้าย P_Loss — แสดงเฉพาะตอนสับสวิตช์ปิด "และ" อยู่โหมด AC
+      if(switchClosed && mode==='ac'){
+        labelPLoss.setAttribute('visibility','visible');
+        labelPLoss.innerHTML = `P<tspan baseline-shift="sub" font-size="11">Loss</tspan> = ${fmt(vals.PLoss)} W`;
+      }else{
+        labelPLoss.setAttribute('visibility','hidden');
+      }
+    }
+
+    function toggleSwitch(){
+      if(togglingLock) return;
+      togglingLock=true;
+      switchClosed=!switchClosed;
+      lastToggleTime=Date.now();
+      if(switchClosed){ switchBlade.setAttribute('x2','340'); switchBlade.setAttribute('y2','309'); }
+      else { switchBlade.setAttribute('x2','340'); switchBlade.setAttribute('y2','289'); }
+      updateCircuit();
+      setTimeout(()=>{togglingLock=false;},250);
+    }
+    const switchGroup=document.getElementById('switchGroup');
+    switchGroup.addEventListener('pointerdown',(e)=>{e.preventDefault();e.stopPropagation();toggleSwitch();},{passive:false});
+    switchGroup.addEventListener('keydown',(e)=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggleSwitch();}});
+
+    modeSel.addEventListener('change',()=>{
+      const isAC=modeSel.value==='ac';
+      acIcon.setAttribute('visibility',isAC?'visible':'hidden');
+      batIcon.setAttribute('visibility',isAC?'hidden':'visible');
+      updateCircuit();
+    });
+    [inputN1,inputN2,inputV1,inputR,inputEta].forEach(el=>el.addEventListener('input',updateCircuit));
+
+    // Modals show/hide
+    const showM=(m)=>m.style.display='flex';
+    const hideM=(m)=>m.style.display='none';
+
+    function buildCalcLatex(vals){
+      if(modeSel.value!=='ac'){ return `<p class="note">แสดงการคำนวณได้เฉพาะโหมด AC เท่านั้น</p>`; }
+      const etaStr=vals.eta.toFixed(2);
+      const lines=[
+        `\\( V_2 = V_1\\,\\dfrac{N_2}{N_1} = ${fmt(vals.V1)}\\times\\dfrac{${vals.N2.toFixed(0)}}{${vals.N1.toFixed(0)}} = ${fmt(vals.V2)}\\,\\text{V} \\)`,
+        `\\( I_2 = \\dfrac{V_2}{R} = \\dfrac{${fmt(vals.V2)}}{${parseFloat(inputR.value).toFixed(2)}} = ${fmt(vals.I2)}\\,\\text{A} \\)`,
+        `\\( P_2 = V_2 I_2 = ${fmt(vals.V2)}\\times${fmt(vals.I2)} = ${fmt(vals.P2)}\\,\\text{W} \\)`,
+        `\\( \\eta = ${vals.etaPct.toFixed(2)}\\% \\Rightarrow P_1 = \\dfrac{P_2}{\\eta} = \\dfrac{${fmt(vals.P2)}}{${etaStr}} = ${fmt(vals.P1)}\\,\\text{W} \\)`,
+        `\\( P_{\\text{Loss}} = P_1 - P_2 = ${fmt(vals.P1)} - ${fmt(vals.P2)} = ${fmt(vals.PLoss)}\\,\\text{W} \\)`,
+        `\\( I_1 = \\dfrac{P_1}{V_1} = \\dfrac{${fmt(vals.P1)}}{${fmt(vals.V1)}} = ${fmt(vals.I1)}\\,\\text{A} \\)`
+      ];
+      return `<div>${lines.map(s=>`<div style="margin:6px 0">${s}</div>`).join('')}</div>`;
+    }
+    btnCalc.addEventListener('click',()=>{
+      const vals=calcValues();
+      calcContent.innerHTML=buildCalcLatex(vals);
+      if(window.MathJax?.typeset){window.MathJax.typesetPromise?.();}
+      showM(calcModal);
+    });
+    btnCloseCalc.addEventListener('click',()=>hideM(calcModal));
+    calcModal.addEventListener('click',(e)=>{if(e.target===calcModal)hideM(calcModal);});
+
+    btnTheory.addEventListener('click',()=>{showM(theoryModal); if(window.MathJax?.typeset){window.MathJax.typesetPromise?.();}});
+    btnCloseTheory.addEventListener('click',()=>hideM(theoryModal));
+    theoryModal.addEventListener('click',(e)=>{if(e.target===theoryModal)hideM(theoryModal);});
+
+    // ===== Quiz =====
+    const questions=[
+      {
+        q: 'หม้อแปลงอุดมคติที่มี N₁=100, N₂=200 และ V₁=10 V จะได้ V₂ เท่าไร?',
+        options: ['5 V','10 V','20 V','200 V'],
+        answer: 2,
+        explain: 'ใช้สัดส่วน \\( \\dfrac{V_2}{V_1} = \\dfrac{N_2}{N_1} \\Rightarrow V_2 = 10\\times\\dfrac{200}{100}=20\\,\\text{V} \\)'
+      },
+      {
+        q: 'หาก V₂=20 V ต่อโหลดตัวต้านทาน R=20 Ω จะได้ I₂ เท่าไร?',
+        options: ['0.5 A','1.0 A','2.0 A','20 A'],
+        answer: 1,
+        explain: 'กฎโอห์ม \\( I_2=\\dfrac{V_2}{R}=\\dfrac{20}{20}=1\\,\\text{A} \\)'
+      },
+      {
+        q: 'ในโหมด DC คงที่ (ต่อแบตเตอรี่คงที่) ขดลวดทุติยภูมิจะเกิดความต่างศักย์ต่อเนื่องหรือไม่?',
+        options: ['เกิดความต่างศักย์เท่ากับ AC','ไม่เกิด ยกเว้นช่วงสับสวิตช์','เกิดเฉพาะเมื่อ R เป็นศูนย์','ขึ้นกับขนาดแกนเท่านั้น'],
+        answer: 1,
+        explain: 'กฎของฟาราเดย์ต้องการ \\(\\tfrac{d\\Phi}{dt}\\neq0\\). DC คงที่จะได้ \\(\\tfrac{d\\Phi}{dt}=0\\) จึงไม่เกิดความต่างศักย์ ยกเว้นช่วงเปลี่ยนสถานะสวิตช์'
+      },
+      {
+        q: 'ให้ประสิทธิภาพ \\(\\eta=90\\%\\) ถ้า \\(P_2=20\\,\\text{W}\\) จะได้ \\(P_1\\) เท่าไร?',
+        options: ['18 W','20 W','22.22 W','200 W'],
+        answer: 2,
+        explain: 'นิยาม \\(\\eta=\\dfrac{P_2}{P_1}\\Rightarrow P_1=\\dfrac{P_2}{\\eta}=\\dfrac{20}{0.9}=22.22\\,\\text{W}\\)'
+      }
+    ];
+
+    function renderQuiz(){
+      quizContent.innerHTML = questions.map((qq,i)=>{
+        const opts = qq.options.map((op,idx)=>
+          `<label><input type="radio" name="q${i}" value="${idx}"><span>${op}</span></label>`
+        ).join('');
+        return `<div class="quiz-q" data-i="${i}">
+          <h4>ข้อ ${i+1}. ${qq.q}</h4>
+          <div class="quiz-options">${opts}</div>
+          <div class="quiz-explain" id="exp${i}"></div>
+        </div>`;
+      }).join('');
+      if(window.MathJax?.typeset){window.MathJax.typesetPromise?.();}
+    }
+
+    function gradeQuiz(){
+      let correct=0;
+      const blocks=[...quizContent.querySelectorAll('.quiz-q')];
+      blocks.forEach((blk,i)=>{
+        const sel=blk.querySelector('input[type="radio"]:checked');
+        const radios=blk.querySelectorAll('input[type="radio"]');
+        radios.forEach((r,idx)=>{
+          const label=r.parentElement;
+          label.classList.remove('selected','correct');
+          if(r.checked) label.classList.add('selected');
+          if(idx===questions[i].answer) label.classList.add('correct');
+        });
+        const exp=blk.querySelector('.quiz-explain');
+        exp.style.display='block';
+        exp.innerHTML = `เฉลย: ข้อ ${questions[i].answer+1} — ${questions[i].options[questions[i].answer]}<br>${questions[i].explain}`;
+        if(sel && Number(sel.value)===questions[i].answer){
+          correct++; blk.classList.add('correct'); blk.classList.remove('wrong');
+        }else{
+          blk.classList.add('wrong'); blk.classList.remove('correct');
+        }
+      });
+      quizScore.style.display='block';
+      quizScore.textContent = `ได้คะแนน ${correct} / ${questions.length}`;
+      if(window.MathJax?.typeset){window.MathJax.typesetPromise?.();}
+    }
+
+    btnQuiz.addEventListener('click',()=>{ renderQuiz(); quizScore.style.display='none'; showM(quizModal); });
+    btnCloseQuiz.addEventListener('click',()=>hideM(quizModal));
+    quizModal.addEventListener('click',(e)=>{ if(e.target===quizModal) hideM(quizModal); });
+    btnCheck.addEventListener('click',gradeQuiz);
+
+    // ===== end Quiz =====
+
+    (function init(){
+      const isAC=modeSel.value==='ac';
+      acIcon.setAttribute('visibility',isAC?'visible':'hidden');
+      batIcon.setAttribute('visibility',isAC?'hidden':'visible');
+      updateCircuit();
+    })();
+  </script>
+</body>
+</html>

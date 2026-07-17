@@ -1,0 +1,666 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>การทดลองมอเตอร์ไฟฟ้าอย่างง่าย — 3D</title>
+<style>
+/* ซ่อนบล็อกควบคุม NABI ทั้งหมดในแผงกราฟ */
+#graphPanel .controls { display: none !important; }
+
+  :root{
+    --bg:#0b1220; --ink:#e2e8f0; --panel:#111827; --accent:#38bdf8; --border:rgba(148,163,184,.35);
+    --cardBlue:#e6f3ff; --cardYellow:#fff7d6; --cardInk:#0f172a; --chip:#60a5fa;
+  }
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif;overflow:hidden}
+  #stage{position:fixed;inset:0}
+
+  .ui{
+    position:fixed;left:12px;top:12px;z-index:20;display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+    background:rgba(17,24,39,.7);backdrop-filter:blur(6px);padding:10px 12px;border:1px solid var(--border);border-radius:12px
+  }
+  .btn{appearance:none;border:1px solid var(--border);background:#0f172a;color:var(--ink);
+       padding:6px 10px;border-radius:10px;cursor:pointer}
+  .btn:hover{border-color:#64748b}
+  .row{display:flex;align-items:center;gap:8px}
+  .slider{width:180px}
+  .label{font-size:12px;opacity:.9}
+  input[type="range"]{accent-color:#38bdf8}
+
+  .hint{position:fixed;right:12px;bottom:52px;opacity:.85;font-size:12px;
+        background:rgba(17,24,39,.7);padding:6px 8px;border:1px solid var(--border);border-radius:8px;z-index:20}
+
+  .brandbar{
+    position:fixed;left:12px;bottom:12px;z-index:21;
+    background:rgba(17,24,39,.85);border:1px solid var(--border);border-radius:10px;
+    padding:8px 12px;font-size:13px;display:flex;gap:8px;align-items:center
+  }
+  .brandbar a{color:#60a5fa;text-decoration:none}
+  .brandbar a:hover{text-decoration:underline}
+
+  /* Overlays (สูตร/กราฟ) */
+  .overlay{position:fixed;inset:0;background:rgba(2,6,23,0.55);backdrop-filter:blur(4px);display:none;z-index:30}
+  .sheet{
+    position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    width:min(920px,94vw);max-height:88vh;overflow:auto;
+    background:linear-gradient(135deg,var(--cardBlue),var(--cardYellow));
+    color:var(--cardInk);
+    border-radius:16px;border:1px solid #cbd5e1;box-shadow:0 20px 60px rgba(2,6,23,.35);
+  }
+  .sheet header{display:flex;justify-content:space-between;align-items:center;padding:14px 16px 8px}
+  .sheet h2{margin:0;font-size:20px}
+  .chip{background:#dbeafe;color:#0c4a6e;border:1px solid #bfdbfe;border-radius:999px;padding:2px 8px;font-size:12px}
+  .sheet main{padding:8px 18px 16px}
+  .formula{
+    background:#ffffffcc;border:1px dashed #94a3b8;border-radius:12px;padding:12px 14px;margin:10px 0
+  }
+  .sheet .btnbar{display:flex;justify-content:flex-end;gap:8px;padding:10px 16px 14px}
+  .btn-close{background:#0ea5e9;color:white;border:none;border-radius:10px;padding:8px 12px;cursor:pointer}
+  .btn-close:hover{filter:brightness(1.05)}
+
+  .controls{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:8px 0 12px}
+  .ctl{display:flex;align-items:center;gap:8px}
+  .graphWrap{background:#ffffffcc;border:1px solid #cbd5e1;border-radius:12px;padding:12px}
+  canvas{display:block;max-width:100%}
+
+@media (max-width: 768px){
+  #stage{
+    top:50px !important;
+  }
+  .ui.hidden-mobile{
+    display:none !important;
+  }
+}
+
+
+@media (max-width: 768px){
+  #showUIBtn{
+    position:fixed;
+    right:12px;
+    top:12px;
+    z-index:25;
+    display:none;
+    appearance:none;
+    border:1px solid var(--border);
+    background:rgba(15,23,42,.92);
+    color:var(--ink);
+    padding:8px 12px;
+    border-radius:10px;
+    cursor:pointer;
+  }
+  #showUIBtn.visible-mobile{
+    display:block !important;
+  }
+}
+
+</style>
+</head>
+<body>
+  <div id="stage" aria-label="3D motor"></div>
+
+  <div class="ui">
+    <button id="resetCam" class="btn">รีเซ็ตมุมมอง</button>
+    <button id="toggleField" class="btn">แสดง/ซ่อนสนามแม่เหล็ก</button>
+    <button id="toggleSwitch" class="btn">เปิด/ปิด สวิตช์ไฟ</button>
+    <button id="toggleForce" class="btn">แสดง/ซ่อนเวกเตอร์แรง F</button>
+    <button id="togglePolarity" class="btn">สลับทิศกระแส</button>
+    <button id="showFormula" class="btn">สูตรสำคัญ</button>
+    <button id="showGraph" class="btn">กราฟ M–θ</button>
+    <button id="togglePlay" class="btn">หยุดภาพ</button>
+    <button id="toggleUI" class="btn">ซ่อน/แสดงปุ่ม</button>
+    <div class="row">
+      <span class="label">ความเร็วรอบ</span>
+      <input id="speed" class="slider" type="range" min="0" max="200" step="1" value="100" />
+      <span id="speedVal" class="label">100%</span>
+    </div>
+  </div>
+
+  <button id="showUIBtn" class="btn">แสดงปุ่ม</button>
+
+  <div class="hint">Space = หยุด/เล่น • ซ่อนสนามแม่เหล็ก = ซ่อนภาพเท่านั้น (ฟิสิกส์ยังอยู่) • ทวนเข็มนิยามเป็นบวก</div>
+
+  <div class="brandbar">
+    ศึกษาเพิ่มเติมที่เพจ
+    <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">คลายปมฟิสิกส์</a>
+  </div>
+
+  <!-- แผงสูตรสำคัญ -->
+  <div id="formulaPanel" class="overlay" aria-hidden="true">
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="formulaTitle">
+      <header>
+        <h2 id="formulaTitle">สูตรสำคัญ — มอเตอร์กระแสตรง</h2>
+        <span class="chip">MathJax</span>
+      </header>
+      <main>
+        <p><strong>สัญลักษณ์</strong>:
+          <span class="chip">\(N\)</span> จำนวนรอบของขดลวด,
+          <span class="chip">\(A\)</span> พื้นที่ของขด,
+          <span class="chip">\(B\)</span> สนามแม่เหล็ก,
+          <span class="chip">\(I\)</span> กระแสไฟฟ้า,
+          <span class="chip">\(\theta\)</span> มุมระหว่าง B กับ <u>ระนาบของขด</u>
+        </p>
+
+        <div class="formula">
+          <h3 style="margin:4px 0 8px">แรงที่กระทำบนลวดด้านยาว(ตั้งฉากกับ B ตลอดเวลา)</h3>
+          <div>\[ F = N\,I\,L\,B \]</div>
+        </div>
+
+        <div class="formula" style="background:#fffcebcc">
+          <h3 style="margin:4px 0 8px">ขนาดของโมเมนต์แรงคู่ควบ</h3>
+          <div style="font-size:19px">\[
+            \boxed{\,|M| \;=\; NABI\,|\cos\theta|\,}
+          \]</div>
+          <small>
+            *เครื่องหมายของ \(M\) (จะเป็น \(+\) หรือ \(-\)) ขึ้นอยู่กับ “การกำหนดทิศหมุนว่าอะไรเป็นบวก”  
+            เช่น นิยามให้ <u>ทวนเข็ม</u> เป็นบวก → \(M=+|M|\) ตลอด (คอมมิวเตเตอร์ทำให้หมุนทางเดียว)
+          </small>
+        </div>
+      </main>
+      <div class="btnbar">
+        <button id="closeFormula" class="btn-close">ปิด (กลับสู่หน้าแรก)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- แผงกราฟ M–θ -->
+  <div id="graphPanel" class="overlay" aria-hidden="true">
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="graphTitle">
+      <header>
+        <h2 id="graphTitle">กราฟ \(M\) กับ \(\theta\) — ขนาดของโมเมนต์</h2>
+        <span class="chip">ทวนเข็ม = บวก</span>
+      </header>
+      <main>
+        <div class="controls">
+          <div class="ctl">
+            <span class="label">ค่าคงที่(ค่าMax) \(NABI\)</span>
+            <input id="kSlider" type="range" min="0" max="200" step="1" value="100" class="slider" />
+            <span id="kVal" class="label">1.00</span>
+          </div>
+        </div>
+        <div class="graphWrap">
+          <canvas id="mGraph" width="880" height="420" aria-label="กราฟ |M|-เทียบ-θ"></canvas>
+        </div>
+        <div class="formula" style="margin-top:12px">
+          \[
+            |M(\theta)|= \underbrace{NABI}_{\text{คงที่}}\;|\cos\theta|,\qquad \theta\in[0,2\pi]
+          \]
+        <div class="note" style="white-space:normal">
+  <b>กราฟอยู่ฝั่งบวกด้านเดียวและแตะศูนย์ทุกครึ่งรอบ</b> (ผลจากคอมมิวเตเตอร์)<br><br>
+  <b>หมายเหตุ:</b> M เป็นค่า + หรือ - ขึ้นกับว่าโจทย์กำหนดให้หมุนทวนหรือหมุนตามเป็นบวก
+  และขึ้นกับ “มุมมอง” ว่าให้มองจากทางไหน<br>
+  &emsp;(ในกราฟตัวอย่างนี้ มองเข้าหาแบตเตอรี่ และขดลวดหมุนทวนเข็มนาฬิกา → ค่า M เป็น +)
+</div>
+
+        </div>
+      </main>
+      <div class="btnbar">
+        <button id="closeGraph" class="btn-close">ปิด (กลับสู่หน้าแรก)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MathJax -->
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+  <script type="importmap">
+    {"imports": {"three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                 "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
+  </script>
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    /* ========== Renderer / Scene / Camera ========== */
+    const renderer = new THREE.WebGLRenderer({antialias:true});
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(innerWidth, innerHeight);
+    document.getElementById('stage').appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color('#0b1220');
+
+    const camera = new THREE.PerspectiveCamera(55, innerWidth/innerHeight, 0.1, 100);
+    camera.position.set(5, 4, 6);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true; controls.target.set(0,0.5,0);
+
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x223344, 0.6));
+    const dir = new THREE.DirectionalLight(0xffffff, 0.9); dir.position.set(3,4,2); scene.add(dir);
+
+    /* ========== Materials ========== */
+    const MAT_RED = new THREE.MeshStandardMaterial({color:'#ef4444'});
+    const MAT_BLUE = new THREE.MeshStandardMaterial({color:'#3b82f6'});
+    const MAT_COPPER = new THREE.MeshStandardMaterial({color:'#dd6b20', metalness:.4, roughness:.45});
+    const MAT_BRUSH = new THREE.MeshStandardMaterial({color:'#9ca3af'});
+    const MAT_BAT = new THREE.MeshStandardMaterial({color:'#1d4ed8'});
+    const MAT_WIRE_RED = new THREE.MeshStandardMaterial({color:'#ef4444'});
+    const MAT_WIRE_GRAY = new THREE.MeshStandardMaterial({color:'#9ca3af'});
+    const MAT_YELLOW_ON = new THREE.MeshStandardMaterial({emissive:0xffff00, emissiveIntensity:1, color:'#facc15'});
+    const MAT_YELLOW_OFF = new THREE.MeshStandardMaterial({color:'#a1a1aa'});
+
+    /* ========== Text sprite ========== */
+    function makeTextSprite(text, color='#ffffff', scale=0.5){
+      const c=document.createElement('canvas'); c.width=256; c.height=256;
+      const g=c.getContext('2d'); g.clearRect(0,0,256,256);
+      g.fillStyle=color; g.font='bold 160px sans-serif';
+      g.textAlign='center'; g.textBaseline='middle';
+      g.fillText(text,128,138);
+      const t=new THREE.CanvasTexture(c);
+      const s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true}));
+      s.scale.set(scale,scale,scale);
+      return s;
+    }
+
+    /* ========== Magnets ========== */
+    function makeMagnet(x,y,z){
+      const group=new THREE.Group();
+      const red = new THREE.Mesh(new THREE.BoxGeometry(0.6,2,2),MAT_RED);
+      const blue= new THREE.Mesh(new THREE.BoxGeometry(0.6,2,2),MAT_BLUE);
+      red.position.x=0.3; blue.position.x=-0.3;
+      group.add(red,blue);
+      const nSprite=makeTextSprite('N','#ff4d4d',0.6); nSprite.position.set(red.position.x,1.3,0);
+      const sSprite=makeTextSprite('S','#66ccff',0.6); sSprite.position.set(blue.position.x,1.3,0);
+      group.add(nSprite,sSprite);
+      group.position.set(x,y,z); scene.add(group); return group;
+    }
+    const leftMag = makeMagnet(-3,0.5,0);
+    const rightMag= makeMagnet( 3,0.5,0);
+
+    /* ========== Coil parts ========== */
+    const offsetY = 0.5;
+    function makeTube(points){
+      const curve=new THREE.CatmullRomCurve3(points,false);
+      return new THREE.Mesh(new THREE.TubeGeometry(curve,200,0.06,16,false),MAT_COPPER);
+    }
+    const leftWire  = makeTube([ new THREE.Vector3(-1.2,offsetY,-1.2),
+                                 new THREE.Vector3(-0.6,offsetY,-1.2),
+                                 new THREE.Vector3(-0.6,offsetY,-1.7) ]);
+    const rightWire = makeTube([ new THREE.Vector3(0.6,offsetY,-1.7),
+                                 new THREE.Vector3(0.6,offsetY,-1.2),
+                                 new THREE.Vector3(1.2,offsetY,-1.2),
+                                 new THREE.Vector3(1.2,offsetY, 1.2),
+                                 new THREE.Vector3(-1.2,offsetY, 1.2),
+                                 new THREE.Vector3(-1.2,offsetY,-1.2) ]);
+    const ringGeom = new THREE.TorusGeometry(0.55,0.1,24,100,Math.PI);
+    const ringLeft  = new THREE.Mesh(ringGeom,         MAT_COPPER);
+    const ringRight = new THREE.Mesh(ringGeom.clone(), MAT_COPPER);
+    ringLeft.position.set(-0.07,offsetY,-1.7);
+    ringRight.position.set( 0.07,offsetY,-1.7);
+    ringLeft.rotation.z  =  Math.PI/2;
+    ringRight.rotation.z = -Math.PI/2;
+
+    // Brushes
+    const brushLeft  = new THREE.Mesh(new THREE.BoxGeometry(0.1,0.2,0.4), MAT_BRUSH);
+    brushLeft.position.set(ringLeft.position.x - 0.7, offsetY, -1.7);
+    const brushRight = new THREE.Mesh(new THREE.BoxGeometry(0.1,0.2,0.4), MAT_BRUSH);
+    brushRight.position.set(ringRight.position.x + 0.7, offsetY, -1.7);
+    scene.add(brushLeft, brushRight);
+    const tipLeft  = new THREE.Mesh(new THREE.CylinderGeometry(0.015,0.015,0.3,12), MAT_COPPER);
+    tipLeft.rotation.z = Math.PI/2; tipLeft.position.set(brushLeft.position.x-0.05, offsetY, -1.7);
+    const tipRight = new THREE.Mesh(new THREE.CylinderGeometry(0.015,0.015,0.3,12), MAT_COPPER);
+    tipRight.rotation.z = Math.PI/2; tipRight.position.set(brushRight.position.x+0.05, offsetY, -1.7);
+    scene.add(tipLeft, tipRight);
+
+    /* ========== Battery + Switch ========== */
+    const batteryGroup=new THREE.Group();
+    const batBox=new THREE.Mesh(new THREE.BoxGeometry(1.2,0.8,0.8),MAT_BAT);
+    batteryGroup.add(batBox);
+    const plus = new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.08,0.2,16),MAT_RED);  plus.position.set( 0.4,0.5,0);
+    const minus= new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.08,0.2,16),MAT_BLUE); minus.position.set(-0.4,0.5,0);
+    batteryGroup.add(plus,minus);
+    const labelCanvas=document.createElement('canvas');labelCanvas.width=256;labelCanvas.height=128;
+    const lctx=labelCanvas.getContext('2d');lctx.fillStyle='#1d4ed8';lctx.fillRect(0,0,256,128);
+    lctx.fillStyle='#fff';lctx.font='bold 40px sans-serif';lctx.textAlign='center';lctx.textBaseline='middle';lctx.fillText('แบตเตอรี่',128,64);
+    const ltex=new THREE.CanvasTexture(labelCanvas);
+    const label=new THREE.Mesh(new THREE.PlaneGeometry(1,0.5),new THREE.MeshBasicMaterial({map:ltex,transparent:true}));
+    label.position.set(0,0.01,0.41); batteryGroup.add(label);
+    const switchButton=new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.1,0.1,32),MAT_YELLOW_OFF);
+    switchButton.position.set(0,0.5,0); switchButton.name='switch3D';
+    batteryGroup.add(switchButton);
+    batteryGroup.position.set(0,0.5,-3);
+    scene.add(batteryGroup);
+
+    /* ========== Wires ========== */
+    function makeWire(points,mat){
+      const curve=new THREE.CatmullRomCurve3(points,false,'catmullrom',0.0);
+      return new THREE.Mesh(new THREE.TubeGeometry(curve,64,0.03,8,false),mat);
+    }
+    const wirePlus  = makeWire([
+      new THREE.Vector3(batteryGroup.position.x+0.4,0.5,-3),
+      new THREE.Vector3(0.6,0.5,-2),
+      new THREE.Vector3(brushRight.position.x+0.05, offsetY, -1.7)
+    ], MAT_WIRE_RED);
+    const wireMinus = makeWire([
+      new THREE.Vector3(batteryGroup.position.x-0.4,0.5,-3),
+      new THREE.Vector3(-0.6,0.5,-2),
+      new THREE.Vector3(brushLeft.position.x-0.05,  offsetY, -1.7)
+    ], MAT_WIRE_GRAY);
+    scene.add(wirePlus, wireMinus);
+
+    /* ========== Field (DISPLAY ONLY) ========== */
+    let fieldVisible=false;           // ประกาศครั้งเดียว
+    const fieldArrows=[]; let bLabel=null;
+    function createField(){
+      const startX = leftMag.position.x+0.6;
+      const endX   = rightMag.position.x-0.6;
+      for(let z=-1; z<=1; z+=0.5){
+        for(let y=0; y<=1.4; y+=0.35){
+          const start=new THREE.Vector3(startX,y,z);
+          const end  =new THREE.Vector3(endX,y,z);
+          const dirVec=new THREE.Vector3().subVectors(end,start).normalize();
+          const length=start.distanceTo(end);
+          const arrow=new THREE.ArrowHelper(dirVec,start,length,0xffffff,0.3,0.2);
+          scene.add(arrow); fieldArrows.push(arrow);
+        }
+      }
+      bLabel = makeTextSprite('B','#ffffff',0.6); bLabel.position.set(0,1.8,0); scene.add(bLabel);
+    }
+    function clearField(){
+      fieldArrows.forEach(a=>scene.remove(a)); fieldArrows.length=0;
+      if(bLabel){scene.remove(bLabel); bLabel=null;}
+    }
+    document.getElementById('toggleField').onclick=()=>{
+      fieldVisible=!fieldVisible;
+      if(fieldVisible){createField();}else{clearField();}
+    };
+
+    /* ========== Current I (green) ========== */
+    const currentGroup = new THREE.Group();
+    const GREEN = 0x22c55e;
+    const I_LIFT = 0.06, Z_SPAN=2.4, I_GUARD=0.12, I_LEN=Z_SPAN-2*I_GUARD;
+    const I_HEAD_L=0.26, I_HEAD_W=0.18;
+    let I_rightArrow=null, I_leftArrow=null;
+    function buildCurrentArrows(){
+      currentGroup.clear();
+      const xR=1.2, y=I_LIFT;
+      I_rightArrow = new THREE.ArrowHelper(new THREE.Vector3(0,0, 1), new THREE.Vector3(xR,y, -I_LEN/2), I_LEN, GREEN, I_HEAD_L, I_HEAD_W);
+      currentGroup.add(I_rightArrow);
+      const I_R_Label=makeTextSprite('I','#22c55e',0.44); I_R_Label.position.set(xR+0.20,y+0.14,0.0); currentGroup.add(I_R_Label);
+      const xL=-1.2;
+      I_leftArrow  = new THREE.ArrowHelper(new THREE.Vector3(0,0,-1), new THREE.Vector3(xL,y,  I_LEN/2), I_LEN, GREEN, I_HEAD_L, I_HEAD_W);
+      currentGroup.add(I_leftArrow);
+      const I_L_Label=makeTextSprite('I','#22c55e',0.44); I_L_Label.position.set(xL-0.20,y+0.14,0.0); currentGroup.add(I_L_Label);
+    }
+    function updateCurrentDirections(eff){
+      I_rightArrow.setDirection(new THREE.Vector3(0,0, eff>0 ?  1 : -1));
+      I_leftArrow .setDirection(new THREE.Vector3(0,0, eff>0 ? -1 :  1));
+    }
+
+    /* ========== Force F (world y only) ========== */
+    const forceGroupWorld = new THREE.Group(); scene.add(forceGroupWorld);
+    let forceToggleOn=false;
+    let F_rightArrow=null, F_leftArrow=null, F_rightText=null, F_leftText=null;
+    const F_BASE_LEN=0.9, EPS_HIDE=0.02;
+    function buildForceVectorsWorld(){
+      forceGroupWorld.clear();
+      F_rightArrow=new THREE.ArrowHelper(new THREE.Vector3(0, 1, 0), new THREE.Vector3(), F_BASE_LEN, 0xff3b30, 0.32, 0.2);
+      F_leftArrow =new THREE.ArrowHelper(new THREE.Vector3(0,-1, 0), new THREE.Vector3(), F_BASE_LEN, 0xff3b30, 0.32, 0.2);
+      forceGroupWorld.add(F_rightArrow,F_leftArrow);
+      F_rightText=makeTextSprite('F','#ff3b30',0.52);
+      F_leftText =makeTextSprite('F','#ff3b30',0.52);
+      forceGroupWorld.add(F_rightText,F_leftText);
+    }
+    function updateForceWorld(theta, eff, switchOn){
+      if(!F_rightArrow || !F_leftArrow) return;
+      const m=Math.abs(Math.cos(theta));
+      const len=F_BASE_LEN*m;
+      const headL=0.32*Math.max(m,0.0001);
+      const headW=0.20*Math.max(m,0.0001);
+      const visibleBase=(forceToggleOn && switchOn && m>EPS_HIDE);
+
+      F_rightArrow.setDirection(new THREE.Vector3(0, eff>0? 1:-1, 0));
+      F_leftArrow .setDirection(new THREE.Vector3(0, eff>0?-1: 1, 0));
+      F_rightArrow.setLength(len,headL,headW);
+      F_leftArrow .setLength(len,headL,headW);
+
+      const rightLocal=new THREE.Vector3( 1.2,0.15,0.0);
+      const leftLocal =new THREE.Vector3(-1.2,0.15,0.0);
+      const rightWorld=rightLocal.clone(), leftWorld=leftLocal.clone();
+      coilGroup.localToWorld(rightWorld); coilGroup.localToWorld(leftWorld);
+
+      F_rightArrow.position.copy(rightWorld);
+      F_leftArrow .position.copy(leftWorld);
+      F_rightText.position.set(rightWorld.x+0.22, rightWorld.y+(eff>0?0.55:-0.55), rightWorld.z);
+      F_leftText .position.set (leftWorld.x -0.22, leftWorld.y +(eff>0?-0.55:0.55), leftWorld.z);
+
+      F_rightArrow.visible=F_leftArrow.visible=visibleBase;
+      F_rightText.visible =F_leftText.visible =visibleBase;
+    }
+
+    document.getElementById('toggleForce').onclick=()=>{
+      forceToggleOn=!forceToggleOn;
+      if(forceToggleOn && forceGroupWorld.children.length===0){ buildForceVectorsWorld(); }
+    };
+
+    /* ========== Coil group ========== */
+    const coilGroup=new THREE.Group();
+    leftWire.position.y  -= offsetY;
+    rightWire.position.y -= offsetY;
+    ringLeft.position.y  -= offsetY;
+    ringRight.position.y -= offsetY;
+    coilGroup.add(leftWire,rightWire,ringLeft,ringRight,currentGroup);
+    coilGroup.position.set(0,offsetY,0);
+    scene.add(coilGroup);
+
+    /* ========== Switch ========== */
+    let switchOn=false;
+    function setSwitch(on){
+      switchOn=on;
+      switchButton.material = switchOn? MAT_YELLOW_ON: MAT_YELLOW_OFF;
+      currentGroup.visible = switchOn;
+    }
+    document.getElementById('toggleSwitch').onclick=()=> setSwitch(!switchOn);
+
+    // click/touch switch
+    const raycaster=new THREE.Raycaster(); const pointer=new THREE.Vector2();
+    function onPointer(e){
+      const x=('touches' in e)? e.touches[0].clientX : e.clientX;
+      const y=('touches' in e)? e.touches[0].clientY : e.clientY;
+      pointer.x=(x/innerWidth)*2-1; pointer.y=-(y/innerHeight)*2+1;
+      raycaster.setFromCamera(pointer,camera);
+      const hits=raycaster.intersectObject(switchButton,true);
+      if(hits.length>0){ setSwitch(!switchOn); }
+    }
+    renderer.domElement.addEventListener('click', onPointer, {passive:true});
+    renderer.domElement.addEventListener('touchstart', onPointer, {passive:true});
+
+    // reset cam
+    document.getElementById('resetCam').onclick=()=>{ camera.position.set(5,4,6); controls.target.set(0,0.5,0); controls.update(); };
+
+    // visuals
+    buildCurrentArrows();
+
+    // แสดงภาพสนาม (ไม่กระทบฟิสิกส์) + เปิดสวิตช์เริ่มต้น
+    fieldVisible = true; createField();
+    setSwitch(true);
+
+    /* ========== Physics + Controls ========== */
+    const clock=new THREE.Clock();
+    let theta=0.20, omega=0.0;
+    const Irot=0.02, tau0Base=0.12, damp=0.02, maxOmegaBase=8.0;
+
+    // speed control
+    const speedEl=document.getElementById('speed');
+    const speedValEl=document.getElementById('speedVal');
+    let speedScale=Number(speedEl.value)/100;
+    speedEl.addEventListener('input', ()=>{ speedScale=Number(speedEl.value)/100; speedValEl.textContent=Math.round(speedScale*100)+'%'; });
+
+    // polarity
+    let polarity=+1;
+    function applyPolarityVisuals(){
+      wirePlus.material  = (polarity>0)? MAT_WIRE_RED : MAT_WIRE_GRAY;
+      wireMinus.material = (polarity>0)? MAT_WIRE_GRAY : MAT_WIRE_RED;
+      plus.material  = (polarity>0)? MAT_RED  : MAT_BLUE;
+      minus.material = (polarity>0)? MAT_BLUE : MAT_RED;
+    }
+    applyPolarityVisuals();
+    document.getElementById('togglePolarity').onclick=()=>{
+      polarity*=-1; omega*=-1; applyPolarityVisuals();
+    };
+
+    // play/pause
+    let paused=false;
+    const togglePlayBtn=document.getElementById('togglePlay');
+    function setPaused(p){ paused=p; togglePlayBtn.textContent = paused? 'เล่นต่อ':'หยุดภาพ'; }
+    togglePlayBtn.onclick=()=> setPaused(!paused);
+    addEventListener('keydown', e=>{ if(e.code==='Space'){ e.preventDefault(); setPaused(!paused); } });
+
+    // ฟิสิกส์ (คงทิศด้วยคอมมิวเตเตอร์ → ใช้ |cos θ|; เครื่องหมายมาจาก polarity)
+    function motorTorque(th){
+      if(!switchOn) return 0; // สนามยังถือว่ามีแม้ซ่อนภาพ
+      return polarity * (tau0Base*speedScale) * Math.abs(Math.cos(th));
+    }
+
+    function tick(){
+      const dt=Math.min(clock.getDelta(),0.05);
+      if(!paused){
+        const tau=motorTorque(theta);
+        const alpha=(tau/Irot) - (damp*omega);
+        omega += alpha*dt;
+        const maxOmega=maxOmegaBase*Math.max(speedScale,0.2);
+        omega = Math.max(Math.min(omega,maxOmega),-maxOmega);
+        theta += omega*dt;
+      }
+      coilGroup.rotation.z = theta;
+
+      // ลูกศร I/F: กลับทิศทุกครึ่งรอบตาม sign(cosθ), คูณ polarity
+      const effSign = polarity * (Math.sign(Math.cos(theta)) || 1);
+      updateCurrentDirections(effSign);
+      if(forceGroupWorld.children.length>0){ updateForceWorld(theta,effSign,switchOn); }
+
+      controls.update();
+      renderer.render(scene,camera);
+      requestAnimationFrame(tick);
+    }
+    tick();
+
+    addEventListener('resize',()=>{
+      camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth,innerHeight);
+    });
+
+    /* ========== สูตร panel ========== */
+    const formulaPanel = document.getElementById('formulaPanel');
+    document.getElementById('showFormula').onclick=()=>{
+      formulaPanel.style.display='block';
+      if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise();
+    };
+    document.getElementById('closeFormula').onclick=()=>{ formulaPanel.style.display='none'; };
+    formulaPanel.addEventListener('click',(e)=>{ if(e.target===formulaPanel) formulaPanel.style.display='none'; });
+
+    /* ========== กราฟ |M|–θ panel ========== */
+    const graphPanel = document.getElementById('graphPanel');
+    const kSlider = document.getElementById('kSlider');
+    const kVal = document.getElementById('kVal');
+    const cvs = document.getElementById('mGraph');
+    const ctx = cvs.getContext('2d');
+
+    function pxRatioCanvas(canvas){
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const rect = canvas.getBoundingClientRect();
+      const w = rect.width  || canvas.width;
+      const h = rect.height || canvas.height;
+      canvas.width = Math.round(w * dpr);
+      canvas.height= Math.round(h * dpr);
+      return dpr;
+    }
+
+    function drawGraph(){
+      const dpr = pxRatioCanvas(cvs);
+      const W = cvs.width, H = cvs.height;
+      const padL = 60*dpr, padR = 20*dpr, padT = 28*dpr, padB = 48*dpr;
+
+      ctx.clearRect(0,0,W,H);
+
+      const K = Number(kSlider.value)/100; // NABI (สเกล)
+      kVal.textContent = K.toFixed(2);
+
+      // ช่วงแกน
+      const xMin = 0, xMax = 2*Math.PI;
+      const yMin = 0, yMax = K;
+
+      const plotW = W - padL - padR, plotH = H - padT - padB;
+      const x2px = x => padL + ( (x - xMin)/(xMax - xMin) ) * plotW;
+      const y2px = y => padT + ( (yMax - y)/(yMax - yMin) ) * plotH;
+
+      // พื้นหลังกรอบ
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      ctx.fillRect(padL, padT, plotW, plotH);
+      ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 1*dpr;
+      ctx.strokeRect(padL, padT, plotW, plotH);
+
+      // แกน x (ที่ y=0) และแกน y
+      ctx.strokeStyle = '#94a3b8';
+      const y0 = y2px(0);
+      ctx.beginPath(); ctx.moveTo(padL, y0); ctx.lineTo(padL+plotW, y0); ctx.stroke();
+      const x0 = x2px(0);
+      ctx.beginPath(); ctx.moveTo(x0, padT); ctx.lineTo(x0, padT+plotH); ctx.stroke();
+
+      // ติ๊ก 0, π/2, π, 3π/2, 2π
+      ctx.fillStyle = '#334155'; ctx.font = `${12*dpr}px system-ui, sans-serif`;
+      const degTicks = [0, 90, 180, 270, 360];
+      const tickLabel = (d)=>{
+        if (d===0) return '0';
+        if (d===90) return 'π/2';
+        if (d===180) return 'π';
+        if (d===270) return '3π/2';
+        if (d===360) return '2π';
+        return d+'°';
+      };
+      degTicks.forEach(d=>{
+        const x = x2px(d*Math.PI/180);
+        ctx.strokeStyle = '#e2e8f0';
+        ctx.beginPath(); ctx.moveTo(x, padT); ctx.lineTo(x, padT+plotH); ctx.stroke();
+        ctx.fillText(tickLabel(d), x-14*dpr, padT+plotH+18*dpr);
+      });
+
+      // เส้นโค้ง |M| = K |cos θ|
+      ctx.strokeStyle = '#0ea5e9'; ctx.lineWidth = 2*dpr;
+      ctx.beginPath();
+      for(let i=0;i<=720;i++){
+        const th = xMin + (i/720)*(xMax-xMin);
+        const M = K * Math.abs(Math.cos(th));
+        const px = x2px(th), py = y2px(M);
+        if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+      }
+      ctx.stroke();
+
+      // ป้าย
+      ctx.fillStyle = '#0c4a6e';
+      ctx.fillText('|M| (ขนาด, ทวนเข็ม=บวก)', padL+8*dpr, padT+18*dpr);
+    }
+
+    function openGraph(){
+      graphPanel.style.display='block';
+      requestAnimationFrame(()=>{ drawGraph(); if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise(); });
+    }
+    function closeGraph(){ graphPanel.style.display='none'; }
+
+    document.getElementById('showGraph').onclick = openGraph;
+    document.getElementById('closeGraph').onclick = closeGraph;
+    graphPanel.addEventListener('click', (e)=>{ if(e.target === graphPanel) closeGraph(); });
+
+    kSlider.addEventListener('input', drawGraph);
+    addEventListener('resize', ()=>{ if(graphPanel.style.display==='block') drawGraph(); });
+
+    // เริ่ม typeset เมื่อโหลด
+    
+// toggle UI panel (mobile use)
+const uiPanel = document.querySelector('.ui');
+const showUIBtn = document.getElementById('showUIBtn');
+document.getElementById('toggleUI').onclick = (e) => {
+  e.stopPropagation();
+  uiPanel.classList.add('hidden-mobile');
+  showUIBtn.classList.add('visible-mobile');
+};
+showUIBtn.onclick = () => {
+  uiPanel.classList.remove('hidden-mobile');
+  showUIBtn.classList.remove('visible-mobile');
+};
+
+addEventListener('load', ()=>{ if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise(); });
+  </script>
+</body>
+</html>

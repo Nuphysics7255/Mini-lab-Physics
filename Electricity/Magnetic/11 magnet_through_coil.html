@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mini Lab : เคลื่อนแท่งแม่เหล็กตัดขดลวด</title>
+<style>
+  :root{
+    --ink:#0f2a44; --cyl:#e9e9e9;
+    --bulb:#fffdf3; --bulb-on:#ffd24a; --base:#071425;
+    --red:#e23a2e; --blue:#3d62ad; --arrow:#e63946;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;display:grid;place-items:center;min-height:100svh;background:#fff;
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial;
+  }
+  .frame{width:min(820px,98vw);position:relative;padding:env(safe-area-inset-top) env(safe-area-inset-right) calc(env(safe-area-inset-bottom) + 8px) env(safe-area-inset-left)}
+  .labTitle{
+    margin:0 0 .8rem 0;text-align:center;font-weight:900;line-height:1.25;
+    color:#2f6fd6;font-size:clamp(22px,3.2vw,34px);
+  }
+  svg{width:100%;height:auto;display:block;touch-action:none}
+  #magnet,#circuit{cursor:grab;touch-action:none}
+
+  /* ปุ่ม UI — ไม่ทับกับป้ายด้านล่างซ้าย */
+  .ui{
+    position:absolute;inset:auto max(1rem,env(safe-area-inset-right)) max(1rem,env(safe-area-inset-bottom)) auto;
+    display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;z-index:5;
+  }
+  .btn{
+    padding:.6rem .8rem;border-radius:.7rem;border:1px solid #d0d5dd;background:#fff;
+    box-shadow:0 1px 2px rgba(16,24,40,.06);cursor:pointer;font-size:clamp(12px,2.8vw,14px);
+  }
+  #reset{background:#e5e7eb;color:#334155;border-color:#cbd5e1}
+  .btn:active{transform:translateY(1px)}
+  .seg{display:inline-flex;border:1px solid #d0d5dd;border-radius:.7rem;overflow:hidden}
+  .seg button{border:0;border-right:1px solid #e5e7eb;background:#fff}
+  .seg button:last-child{border-right:0}
+  .seg .active{background:#0f172a;color:#fff;border-color:#0f172a}
+
+  .bulbGlow{filter:drop-shadow(0 0 28px rgba(255,210,74,.98))}
+  .arrowGlow{filter:drop-shadow(0 0 4px rgba(230,57,70,.65))}
+  .polText{ paint-order: stroke; stroke: #ffffff; stroke-width: 2px; }
+
+  /* ป้ายลิงก์ — มุมซ้ายล่าง ไม่ทับปุ่ม */
+  .credit{
+    position:absolute; left:max(1rem,env(safe-area-inset-left)); bottom:max(.7rem,env(safe-area-inset-bottom));
+    font-size:clamp(12px,2.8vw,14px); color:#334155; background:rgba(255,255,255,.92);
+    padding:.4rem .6rem; border:1px solid #e5e7eb; border-radius:.6rem; z-index:6; line-height:1.25;
+    pointer-events:auto;
+  }
+  .credit a{color:#2f6fd6;text-decoration:underline}
+  .credit a:active{opacity:.8}
+
+  .modeLabel{font-size:12px;color:#475569;margin-right:.4rem}
+
+  /* มือถือ: วางปุ่มไว้ใต้รูปทดลอง */
+  @media (max-width: 700px){
+    .frame{padding-bottom:calc(env(safe-area-inset-bottom) + 20px)}
+    .ui{
+      position:static;
+      margin-top:.9rem;
+      justify-content:center;
+      gap:.55rem;
+    }
+    .credit{
+      position:static;
+      display:inline-block;
+      margin-top:.8rem;
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="frame">
+    <h1 class="labTitle">Mini Lab : เคลื่อนแท่งแม่เหล็กตัดขดลวด</h1>
+    <svg viewBox="0 0 720 420" aria-label="วงจร + แท่งแม่เหล็กสาธิตฟาราเดย์" id="scene">
+      <defs>
+        <marker id="arrowHeadRed" viewBox="0 0 10 7" refX="8" refY="3.5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,3.5 L0,7 Z" fill="var(--arrow)"/>
+        </marker>
+      </defs>
+
+      <!-- วงจร -->
+      <g id="circuit" stroke-linecap="round" stroke-linejoin="round" transform="translate(0,0)">
+        <rect id="coilArea" x="165" y="105" width="260" height="100" fill="transparent" stroke="#0000"/>
+
+        <!-- กระบอก -->
+        <rect x="145" y="110" width="265" height="90" rx="10" fill="var(--cyl)"/>
+        <ellipse cx="145" cy="155" rx="16" ry="45" fill="var(--cyl)"/>
+        <ellipse cx="410" cy="155" rx="16" ry="45" fill="var(--cyl)"/>
+        <rect x="360" y="112" width="50" height="86" fill="var(--cyl)"/>
+
+        <!-- หลอดไฟ + ฐาน -->
+        <g id="bulb-base">
+          <rect id="bulbBaseRect" x="218" y="297" width="80" height="28" fill="var(--base)"/>
+          <circle id="bulb" cx="258" cy="282" r="34" fill="var(--bulb)" stroke="darkgray" stroke-width="1.5"/>
+        </g>
+
+        <!-- ขดลวด -->
+        <g id="coil" stroke="var(--ink)" stroke-width="2" fill="none">
+          <line x1="170" y1="200" x2="200" y2="110" />
+          <line x1="180" y1="200" x2="210" y2="110" />
+          <line x1="190" y1="200" x2="220" y2="110" />
+          <line x1="200" y1="200" x2="230" y2="110" />
+          <line x1="210" y1="200" x2="240" y2="110" />
+          <line x1="220" y1="200" x2="250" y2="110" />
+          <line x1="230" y1="200" x2="260" y2="110" />
+          <line x1="240" y1="200" x2="270" y2="110" />
+          <line x1="250" y1="200" x2="280" y2="110" />
+          <line x1="260" y1="200" x2="290" y2="110" />
+          <line x1="270" y1="200" x2="300" y2="110" />
+          <line x1="280" y1="200" x2="310" y2="110" />
+          <line x1="290" y1="200" x2="320" y2="110" />
+          <line x1="300" y1="200" x2="330" y2="110" />
+          <line x1="310" y1="200" x2="340" y2="110" />
+          <line x1="320" y1="200" x2="350" y2="110" />
+          <line x1="330" y1="200" x2="360" y2="110" />
+          <line x1="340" y1="200" x2="370" y2="110" />
+        </g>
+
+        <!-- ลูกศรคงที่ “เส้นละ 1” บนขดลวด -->
+        <g id="coilDirArrows" opacity="0"></g>
+
+        <!-- สายไฟ -->
+        <path id="leftWire"  d="M170 200 V310 H218" stroke="var(--ink)" stroke-width="3" fill="none"/>
+        <path id="rightWire" d="M298 311 H368 V200" stroke="var(--ink)" stroke-width="3" fill="none"/>
+
+        <!-- ลูกศรบนสายไฟ: ซ้าย(ตั้ง), ขวา(ตั้ง), ฐานหลอดไฟ(แนวนอน) -->
+        <g id="wireDirArrows" opacity="0">
+          <line id="leftWireArrow"  x1="0" y1="0" x2="0" y2="0" stroke="var(--arrow)" stroke-width="2" class="arrowGlow" marker-end="url(#arrowHeadRed)"/>
+          <line id="rightWireArrow" x1="0" y1="0" x2="0" y2="0" stroke="var(--arrow)" stroke-width="2" class="arrowGlow" marker-end="url(#arrowHeadRed)"/>
+          <line id="bulbBaseArrow" x1="0" y1="0" x2="0" y2="0" stroke="var(--arrow)" stroke-width="2" class="arrowGlow" marker-end="url(#arrowHeadRed)"/>
+        </g>
+      </g>
+
+      <!-- แท่งแม่เหล็ก -->
+      <g id="magnet" transform="translate(520,160) rotate(0,20,120)">
+        <rect x="0" y="0"   width="40" height="120" fill="var(--red)" />
+        <rect x="0" y="120" width="40" height="120" fill="var(--blue)" />
+        <text x="20" y="60"  text-anchor="middle" fill="#fff" font-size="20" font-family="Arial">N</text>
+        <text x="20" y="180" text-anchor="middle" fill="#fff" font-size="20" font-family="Arial">S</text>
+        <circle id="knobHit" cx="20" cy="-18" r="28" fill="transparent" stroke="none"/>
+        <circle id="knob" cx="20" cy="-18" r="10" fill="#eaeaea" stroke="#b7b7b7"/>
+      </g>
+
+      <!-- ชั้นป้ายบนสุด: ป้ายโพลาริตี -->
+      <g id="labelsTop">
+        <g id="coilPolarity" font-family="Arial, sans-serif" font-size="18" font-weight="700" pointer-events="none" opacity="0">
+          <text id="coilLeftPol"  x="170" y="173" text-anchor="middle" class="polText" fill="var(--red)">N</text>
+          <text id="coilRightPol" x="370" y="173" text-anchor="middle" class="polText" fill="var(--blue)">S</text>
+        </g>
+      </g>
+    </svg>
+
+    <!-- ปุ่ม -->
+    <div class="ui">
+      <span class="modeLabel">โหมด:</span>
+      <div class="seg" id="modeSeg">
+        <button class="btn" id="modeNormal" aria-pressed="false">ปกติ</button>
+        <button class="btn" id="modeChill" aria-pressed="false">ชิลล์ (B)</button>
+      </div>
+      <button class="btn" id="rotL">↺ หมุนซ้าย</button>
+      <button class="btn" id="rotR">หมุนขวา ↻</button>
+      <button class="btn" id="reset">รีเซ็ต</button>
+    </div>
+
+    <!-- ป้ายลิงก์ (กดเพื่อไปเพจ) -->
+    <div class="credit">
+      ศึกษาเพิ่มเติมที่
+      <a id="pageLink" href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener noreferrer">
+        เพจคลายปมฟิสิกส์
+      </a>
+    </div>
+  </div>
+
+<script>
+/* ===== อ้างอิง DOM ===== */
+const magnet = document.getElementById('magnet');
+const knob = document.getElementById('knob');
+const knobHit = document.getElementById('knobHit');
+const circuit= document.getElementById('circuit');
+const bulb   = document.getElementById('bulb');
+const btnL   = document.getElementById('rotL');
+const btnR   = document.getElementById('rotR');
+const btnReset=document.getElementById('reset');
+const btnModeNormal = document.getElementById('modeNormal');
+const btnModeChill  = document.getElementById('modeChill');
+const modeSeg = document.getElementById('modeSeg');
+
+const coilPol = document.getElementById('coilPolarity');
+const coilLeftPol  = document.getElementById('coilLeftPol');
+const coilRightPol = document.getElementById('coilRightPol');
+
+const coilDirLayer = document.getElementById('coilDirArrows');
+const wireDirArrows= document.getElementById('wireDirArrows');
+const leftWireArrow = document.getElementById('leftWireArrow');
+const rightWireArrow= document.getElementById('rightWireArrow');
+const bulbBaseArrow = document.getElementById('bulbBaseArrow');
+
+/* ===== โหมด (จำโหมดล่าสุดไว้ในเครื่อง) ===== */
+let mode = localStorage.getItem('faradayMode') || 'normal'; // 'normal' | 'chill'
+function params(){
+  if(mode==='chill'){
+    return { NEAR_WINDOW: 360, EPS_APPROACH: 4, HOLD_MS: 1600, DIRECTION_LOCK_MS: 1000 };
+  }
+  return { NEAR_WINDOW: 300, EPS_APPROACH: 6, HOLD_MS: 0, DIRECTION_LOCK_MS: 0 };
+}
+function updateModeButtons(){
+  [...modeSeg.querySelectorAll('button')].forEach(b=>{b.classList.remove('active'); b.setAttribute('aria-pressed','false');});
+  const el = (mode==='chill'?btnModeChill:btnModeNormal);
+  el.classList.add('active'); el.setAttribute('aria-pressed','true');
+}
+
+/* ===== สถานะลาก/หมุน ===== */
+let stateMag = {tx:520, ty:160, rot:0};
+let stateCoil= {tx:0, ty:0};
+let dragMag={active:false,dx:0,dy:0,mode:'move'}, dragCoil={active:false,dx:0,dy:0};
+
+function applyMag(){ magnet.setAttribute('transform', `translate(${stateMag.tx},${stateMag.ty}) rotate(${stateMag.rot},20,120)`); }
+function applyCoil(){ circuit.setAttribute('transform', `translate(${stateCoil.tx},${stateCoil.ty})`); }
+applyMag(); applyCoil();
+
+/* ===== ลาก/หมุน ===== */
+function pointerToLocalAngle(clientX, clientY){
+  const cx = stateMag.tx + 20;
+  const cy = stateMag.ty + 120;
+  return Math.atan2(clientY - cy, clientX - cx) * 180 / Math.PI;
+}
+magnet.addEventListener('pointerdown',(e)=>{
+  dragMag.active=true;
+  dragMag.mode=(e.target.id==='knob' || e.target.id==='knobHit')?'rotate':'move';
+  magnet.setPointerCapture(e.pointerId);
+  dragMag.dx=e.clientX-stateMag.tx;
+  dragMag.dy=e.clientY-stateMag.ty;
+  dragMag.startAngle = pointerToLocalAngle(e.clientX, e.clientY);
+  dragMag.startRot = stateMag.rot;
+});
+magnet.addEventListener('pointermove',(e)=>{
+  if(!dragMag.active)return;
+  if(dragMag.mode==='move'){
+    stateMag.tx=e.clientX-dragMag.dx;
+    stateMag.ty=e.clientY-dragMag.dy;
+  }else{
+    const currentAngle = pointerToLocalAngle(e.clientX, e.clientY);
+    stateMag.rot = dragMag.startRot + (currentAngle - dragMag.startAngle);
+  }
+  applyMag();
+});
+['pointerup','pointercancel'].forEach(ev=>magnet.addEventListener(ev,()=>{dragMag.active=false;}));
+magnet.addEventListener('wheel',(e)=>{e.preventDefault();stateMag.rot+=(e.deltaY>0?10:-10);applyMag();},{passive:false});
+
+circuit.addEventListener('pointerdown',(e)=>{dragCoil.active=true;circuit.setPointerCapture(e.pointerId);dragCoil.dx=e.clientX-stateCoil.tx;dragCoil.dy=e.clientY-stateCoil.ty;});
+circuit.addEventListener('pointermove',(e)=>{if(!dragCoil.active)return;stateCoil.tx=e.clientX-dragCoil.dx;stateCoil.ty=e.clientY-dragCoil.dy;applyCoil();});
+['pointerup','pointercancel'].forEach(ev=>circuit.addEventListener(ev,()=>{dragCoil.active=false;}));
+
+/* ===== ลูกศรคงที่บนขดลวด (เส้นละ 1, บาง, ไม่วิ่ง) ===== */
+const coilLines=[]; for(let x=170;x<=340;x+=10){ coilLines.push({x1:x,y1:200,x2:x+30,y2:110}); }
+function buildStaticArrows(){
+  coilDirLayer.innerHTML='';
+  for(const L of coilLines){
+    const a=document.createElementNS('http://www.w3.org/2000/svg','line');
+    a.setAttribute('stroke','var(--arrow)');
+    a.setAttribute('stroke-width','1.2');
+    a.setAttribute('class','arrowGlow');
+    a.setAttribute('marker-end','url(#arrowHeadRed)');
+    a.dataset.base=JSON.stringify(L);
+    coilDirLayer.appendChild(a);
+  }
+}
+buildStaticArrows();
+
+/* ===== Utils ===== */
+function setBulb(on){ if(on){bulb.setAttribute('fill','var(--bulb-on)');bulb.classList.add('bulbGlow');}else{bulb.setAttribute('fill','var(--bulb)');bulb.classList.remove('bulbGlow');} }
+function coilCenter(){ return { x: stateCoil.tx + (170+370)/2, y: stateCoil.ty + (110+200)/2 }; }
+function midX(){ return stateCoil.tx + (170+370)/2; }
+function setArrowsBySign(sign){
+  const kids=[...coilDirLayer.children];
+  for(const el of kids){
+    const b=JSON.parse(el.dataset.base);
+    const x1=b.x1+stateCoil.tx, y1=b.y1+stateCoil.ty;
+    const x2=b.x2+stateCoil.tx, y2=b.y2+stateCoil.ty;
+    if(sign>=0){ el.setAttribute('x1',x1);el.setAttribute('y1',y1);el.setAttribute('x2',x2);el.setAttribute('y2',y2); }
+    else{        el.setAttribute('x1',x2);el.setAttribute('y1',y2);el.setAttribute('x2',x1);el.setAttribute('y2',y1); }
+  }
+  coilDirLayer.setAttribute('opacity','1');
+}
+
+/* ===== ลูกศร “ทาบบนสายไฟ” (ตามโพลฝั่งซ้าย) ===== */
+function updateWireArrowsByLeftPol(leftPol){
+  const TX = stateCoil.tx, TY = stateCoil.ty;
+  const xL = 170 + TX, yTopL = 210 + TY, yBotL = 300 + TY;
+  const xR = 368 + TX, yTopR = 210 + TY, yBotR = 300 + TY;
+  const yB = 311 + TY, xLeftB = 218 + TX, xRightB = 298 + TX;
+
+  if(leftPol === 'N'){
+    // ซ้ายขึ้น
+    leftWireArrow.setAttribute('x1', xL); leftWireArrow.setAttribute('y1', yBotL);
+    leftWireArrow.setAttribute('x2', xL); leftWireArrow.setAttribute('y2', yTopL);
+    // ขวาลง
+    rightWireArrow.setAttribute('x1', xR); rightWireArrow.setAttribute('y1', yTopR);
+    rightWireArrow.setAttribute('x2', xR); rightWireArrow.setAttribute('y2', yBotR);
+    // ฐานไปซ้าย
+    bulbBaseArrow.setAttribute('x1', xRightB); bulbBaseArrow.setAttribute('y1', yB);
+    bulbBaseArrow.setAttribute('x2', xLeftB ); bulbBaseArrow.setAttribute('y2', yB);
+  }else{ // leftPol === 'S'
+    // ซ้ายลง
+    leftWireArrow.setAttribute('x1', xL); leftWireArrow.setAttribute('y1', yTopL);
+    leftWireArrow.setAttribute('x2', xL); leftWireArrow.setAttribute('y2', yBotL);
+    // ขวาขึ้น
+    rightWireArrow.setAttribute('x1', xR); rightWireArrow.setAttribute('y1', yBotR);
+    rightWireArrow.setAttribute('x2', xR); rightWireArrow.setAttribute('y2', yTopR);
+    // ฐานไปขวา
+    bulbBaseArrow.setAttribute('x1', xLeftB ); bulbBaseArrow.setAttribute('y1', yB);
+    bulbBaseArrow.setAttribute('x2', xRightB); bulbBaseArrow.setAttribute('y2', yB);
+  }
+  wireDirArrows.setAttribute('opacity','1');
+}
+
+/* ===== ตรรกะ N/S + ลูกศร (รองรับ 2 โหมด) ===== */
+let prev = { t: performance.now(), dN: Infinity, dS: Infinity, rot: stateMag.rot };
+let sticky = { until: 0, leftPol: 'N', rightPol: 'S', arrowSign: +1, lastUpdate: 0 };
+
+function tick(){
+  const now = performance.now();
+  const dt  = Math.max((now - prev.t)/1000, 0.0001);
+  const P   = params();
+
+  // เวคเตอร์ขั้วแม่เหล็ก
+  const theta = stateMag.rot * Math.PI/180;
+  const cx = stateMag.tx + 20, cy = stateMag.ty + 120;
+  const nx = Math.sin(theta), ny = -Math.cos(theta);
+  const Npos = {x: cx + 60*nx, y: cy + 60*ny};
+  const Spos = {x: cx - 60*nx, y: cy - 60*ny};
+
+  const C = coilCenter();
+  const dN = Math.hypot(Npos.x - C.x, Npos.y - C.y);
+  const dS = Math.hypot(Spos.x - C.x, Spos.y - C.y);
+  const dNdot = (isFinite(prev.dN)? (dN - prev.dN)/dt : 0);
+  const dSdot = (isFinite(prev.dS)? (dS - prev.dS)/dt : 0);
+
+  // ขั้วที่ใกล้กว่า + ฝั่งซ้าย/ขวา
+  const nearPole = (dN <= dS) ? 'N' : 'S';
+  const nearPos  = (nearPole==='N') ? Npos : Spos;
+  const nearD    = (nearPole==='N') ? dN   : dS;
+  const nearDdot = (nearPole==='N') ? dNdot: dSdot;
+  const side = (nearPos.x < midX()) ? 'left' : 'right';
+
+  const influenced   = (nearD < P.NEAR_WINDOW);
+  const approaching  = (nearDdot < -P.EPS_APPROACH);
+  const receding     = (nearDdot >  P.EPS_APPROACH);
+  const isActiveNow  = influenced && (approaching || receding);
+
+  if(isActiveNow){
+    // โพลฝั่งที่ใกล้คอยล์: เข้า=เหมือนแม่เหล็ก, ออก=ตรงข้าม
+    let nearSidePol = approaching ? nearPole : (receding ? (nearPole==='N'?'S':'N') : nearPole);
+
+    // กระจายไปซ้าย-ขวา
+    let leftPolChar, rightPolChar;
+    if(side === 'left'){
+      leftPolChar  = nearSidePol;
+      rightPolChar = (nearSidePol==='N'?'S':'N');
+    }else{
+      rightPolChar = nearSidePol;
+      leftPolChar  = (nearSidePol==='N'?'S':'N');
+    }
+
+    // ทิศลูกศรบนคอยล์
+    let arrowSign;
+    if(side==='left'){ arrowSign = (nearSidePol==='N') ? +1 : -1; }
+    else             { arrowSign = (nearSidePol==='N') ? -1 : +1; }
+
+    // ล็อกค่า (ตามโหมด)
+    if (now - sticky.lastUpdate > P.DIRECTION_LOCK_MS) {
+      sticky.arrowSign = arrowSign;
+      sticky.leftPol   = leftPolChar;
+      sticky.rightPol  = rightPolChar;
+      sticky.lastUpdate = now;
+    }
+    // ยืดเวลาค้างภาพ
+    sticky.until = now + P.HOLD_MS;
+  }
+
+  const displayActive = isActiveNow || (now < sticky.until);
+
+  if(!displayActive){
+    setBulb(false);
+    coilPol.setAttribute('opacity','0');
+    coilDirLayer.setAttribute('opacity','0');
+    wireDirArrows.setAttribute('opacity','0');
+    prev = {t:now, dN, dS, rot: stateMag.rot};
+    requestAnimationFrame(tick); return;
+  }
+
+  // ----- แสดงผล -----
+  setBulb(true);
+
+  // ป้าย N/S
+  coilPol.setAttribute('opacity','1');
+  coilLeftPol.setAttribute('x', 170 + stateCoil.tx);
+  coilRightPol.setAttribute('x',370 + stateCoil.tx);
+  coilLeftPol.setAttribute('y', 173 + stateCoil.ty);
+  coilRightPol.setAttribute('y',173 + stateCoil.ty);
+
+  coilLeftPol.textContent  = sticky.leftPol;
+  coilRightPol.textContent = sticky.rightPol;
+  coilLeftPol.setAttribute('fill',  sticky.leftPol==='N'  ? 'var(--red)' : 'var(--blue)');
+  coilRightPol.setAttribute('fill', sticky.rightPol==='N' ? 'var(--red)' : 'var(--blue)');
+
+  // ลูกศรบนขดลวด + ลูกศรบนสายไฟ
+  setArrowsBySign(sticky.arrowSign);
+  updateWireArrowsByLeftPol(sticky.leftPol);
+
+  prev = {t:now, dN, dS, rot: stateMag.rot};
+  requestAnimationFrame(tick);
+}
+
+/* เริ่ม */
+updateModeButtons();
+requestAnimationFrame(tick);
+
+/* ปุ่มสาธารณะ */
+btnL.onclick=()=>{stateMag.rot-=10;applyMag();};
+btnR.onclick=()=>{stateMag.rot+=10;applyMag();};
+btnReset.onclick=()=>{
+  stateMag={tx:520,ty:160,rot:0}; stateCoil={tx:0,ty:0};
+  applyMag(); applyCoil();
+  setBulb(false);
+  coilPol.setAttribute('opacity','0'); coilDirLayer.setAttribute('opacity','0'); wireDirArrows.setAttribute('opacity','0');
+  sticky.until = 0; sticky.lastUpdate = 0;
+};
+
+/* ปุ่มโหมด (จำค่าไว้) */
+btnModeNormal.onclick = ()=>{ mode='normal'; localStorage.setItem('faradayMode', mode); updateModeButtons(); };
+btnModeChill.onclick  = ()=>{ mode='chill';  localStorage.setItem('faradayMode', mode); updateModeButtons(); };
+</script>
+</body>
+</html>

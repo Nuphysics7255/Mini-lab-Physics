@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+
+<html lang="th">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1, viewport-fit=cover" name="viewport"/>
+<title>Parallel Metal Wires + Magnetic Field &amp; Force (Interactive)</title>
+<style>
+  :root{
+    --ink:#0f2a44; --bg:#ffffff; --accent:#0ea5e9; --curr:#ef4444;
+    --field:#3b82f6; --fieldLight:#93c5fd;           /* blue for wire1 */
+    --field2:#a78bfa; --field2Light:#ddd6fe;         /* light purple for wire2 */
+    --force:#16a34a;
+  }
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);font-family:Inter,system-ui,Segoe UI,Arial,sans-serif;color:var(--ink)}
+  .wrap{max-width:100%;margin:0 auto;padding:16px}
+  .mini-title{margin:0 0 10px;text-align:center;font-size:clamp(22px,2.6vw,34px);font-weight:900;color:#2563eb}
+  .learnline{font-size:13px;color:#334155;margin:6px 0 0;text-align:center}
+  .learnline a{color:#2563eb;text-decoration:underline}
+  .learnline-bottom{padding-top:8px}
+  .action-buttons{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:8px}
+  .btn-play{background:#e0f2fe;border-color:#7dd3fc}
+  .btn-reset{background:#f1f5f9;border-color:#cbd5e1}
+  .btn-formula{background:#ffedd5;border-color:#fdba74}
+  .btn-quiz{background:#dcfce7;border-color:#86efac}
+  .bshow-group{display:flex;align-items:center;gap:6px}
+ .learnline a:hover{text-decoration:underline} 
+  .card{border:1px solid #e5e7eb;border-radius:16px;padding:8px 10px;box-shadow:0 4px 20px rgba(2,6,23,.05);height:calc(100vh - 32px);display:flex;flex-direction:column;overflow:hidden}
+  .toolbar{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:6px;margin:0 0 4px 0;align-items:center}
+  .toolbar > *{grid-column:auto / span 12}
+  .toolbar .right{display:flex;justify-content:flex-end;align-items:center;gap:8px;flex-wrap:wrap}
+  @media(min-width:980px){
+    .toolbar .left{grid-column:1 / span 7}
+    .toolbar .right{grid-column:8 / span 5}
+  }
+  .toolbar label{font-size:17px;color:#334155}
+  .btn{padding:6px 9px;border-radius:10px;border:1px solid #cbd5e1;background:#f8fafc;cursor:pointer;font-size:13px}
+  .btn.active{background:#e0f2fe;border-color:#bae6fd}
+  .pill{display:inline-flex;align-items:center;gap:6px;border:1px solid #e2e8f0;padding:4px 8px;border-radius:999px;background:#f8fafc}
+  .pill input,.pill select{border:none;outline:none;background:transparent;font-size:14px}
+  .pill input{width:50px}
+  .pill select{width:46px}
+  #dval{width:50px}
+  #dunit{width:46px}
+  .pill .unit{width:auto}
+  .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:6px;align-items:center;margin-top:4px} 
+  .kpi{background:#f0f9ff;border:1px solid #dbeafe;border-radius:12px;padding:10px 12px;color:#0f172a}
+  .kpi b{font-size:18px;color:#0ea5e9}
+  svg{width:100%;max-width:none;display:block;margin:0 auto} .stage{flex:1;min-height:0;display:flex;flex-direction:column;padding-bottom:0} .stage #scene{flex:1;height:100%} .stage .draghint{margin-top:6px}
+  text{font-size:18px;font-weight:600;fill:var(--ink)}
+  .label-I{font-family:'Georgia',serif;font-size:30px;font-weight:900;fill:var(--curr)}
+  .label-B1{font-family:'Georgia',serif;font-size:28px;font-weight:900;fill:var(--field)}
+  .label-B2{font-family:'Georgia',serif;font-size:28px;font-weight:900;fill:var(--field2)}
+  .label-F{font-family:'Georgia',serif;font-size:20px;font-weight:900;fill:var(--force)}
+  .draghint{font-size:12px; fill:#64748b}
+  /* Global layout helpers */
+  *,*::before,*::after{box-sizing:border-box}
+  /* Modal (responsive) */
+  .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:16px;z-index:1000;background:rgba(15,23,42,.55)}
+  .modal.open{display:flex}
+  .modal .panel{width:min(900px,96vw);max-height:92vh;background:#ffffff;border-radius:16px;border:1px solid #e2e8f0;box-shadow:0 12px 36px rgba(2,6,23,.35);display:flex;flex-direction:column;overflow:hidden}
+  .panel header{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;background:#f8fafc;border-bottom:1px solid #e2e8f0}
+  .panel header h3{margin:0;font-size:18px;color:#0f172a}
+  .panel .content{padding:16px 18px;color:#0f172a;overflow:auto}
+  .panel .content h4{margin:14px 0 6px;font-size:16px;color:#0f172a}
+  .panel .content p{margin:6px 0;color:#334155}
+  .panel .formula{background:#f1f5f9;border:1px solid #e2e8f0;padding:10px;border-radius:12px;overflow:auto}
+  .panel footer{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:12px 18px;background:#f8fafc;border-top:1px solid #e2e8f0}
+  .close-btn{background:#0ea5e9;color:white;border:none;border-radius:10px;padding:10px 14px;cursor:pointer}
+  .learnmore{font-size:7px;color:#334155}
+  /* Quiz styles */
+  .qcard{border:1px solid #e2e8f0;background:#f8fafc;border-radius:12px;padding:10px 12px;margin:10px 0}
+  .qtitle{font-weight:700;margin-bottom:6px}
+  .choices{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .choices label{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:8px 10px;display:flex;gap:8px;align-items:center;cursor:pointer}
+  .choices input{margin:0}
+  .exp{display:none;margin-top:8px;border-left:3px solid #0ea5e9;padding:8px 10px;background:#eff6ff;border-radius:8px}
+  .score{font-weight:700;color:#0ea5e9}
+  @media(max-width:520px){ .choices{grid-template-columns:1fr} }
+
+  /* Mobile tweaks */
+  @media (max-width:640px){
+    .wrap{padding:10px}
+    .card{height:auto;min-height:calc(100vh - 20px)}
+    .toolbar{order:2}
+    .stage{order:1}
+    .action-buttons{order:3;grid-template-columns:1fr 1fr}
+    .learnline-bottom{order:4}
+    .btn{padding:10px 12px}
+    .pill input{width:4.5rem}
+    svg{max-width:100vw}
+    .toolbar .right{justify-content:flex-start}
+    .bshow-group{flex-direction:column;align-items:flex-start}
+    .bshow-label{display:block}
+    #w1a,#w1b,#w2c,#w2d,#wire1name,#wire2name{font-size:23px}
+    #hintSvg text{font-size:17px}
+    #F1 text,#F2 text{font-size:25px}
+    .label-I{font-size:35px}
+    .label-F{font-size:25px}
+    .draghint{font-size:17px}
+  }
+
+
+/* Button colors */
+.btn-play { background:#4da6ff !important; }
+.btn-reset { background:#9e9e9e !important; }
+.btn-formula { background:#ffd8a8 !important; }
+.btn-exercise { background:#c8f7c5 !important; }
+
+/* Desktop: move controls to top right */
+@media (min-width: 768px){
+  .control-panel{
+    position:absolute;
+    top:10px;
+    right:10px;
+    display:flex;
+    gap:10px;
+  }
+}
+
+/* Mobile: enlarge hint text */
+@media (max-width: 767px){
+  .hint-text{
+    font-size: calc(100% + 3px) !important;
+  }
+}
+
+
+/* Final overrides */
+.btn-play{background:#4da6ff !important;border-color:#60a5fa !important;color:#fff !important}
+.btn-reset{background:#9e9e9e !important;border-color:#9ca3af !important;color:#fff !important}
+.btn-formula{background:#ffd8a8 !important;border-color:#fdba74 !important;color:#7c2d12 !important}
+.btn-quiz{background:#c8f7c5 !important;border-color:#86efac !important;color:#166534 !important}
+
+.stage{position:relative}
+@media (min-width:641px){
+  .action-buttons{
+    position:absolute;
+    top:10px;
+    right:10px;
+    width:min(420px,42%);
+    margin-top:0;
+    z-index:5;
+    background:rgba(255,255,255,.88);
+    backdrop-filter:blur(4px);
+    padding:6px;
+    border:1px solid #e5e7eb;
+    border-radius:14px;
+    box-shadow:0 6px 18px rgba(2,6,23,.08);
+  }
+}
+@media (max-width:640px){
+  #hintSvg text,.draghint{font-size:23px !important}
+}
+
+
+/* v4 overrides */
+@media (min-width:641px){
+  .stage{position:relative}
+  .action-buttons{
+    position:absolute;
+    top:10px;
+    right:10px;
+    width:min(420px,42%);
+    margin-top:0;
+    z-index:6;
+  }
+}
+
+
+/* v5 mobile safe-area fix for modal pages */
+@media (max-width: 640px){
+  .modal{
+    padding-top: max(12px, env(safe-area-inset-top));
+    padding-right: 10px;
+    padding-left: 10px;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+    align-items: stretch;
+  }
+  .modal .panel{
+    width: 100%;
+    max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 12px);
+    margin-top: 0;
+    border-radius: 16px;
+  }
+  .panel header{
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    padding-top: calc(12px + env(safe-area-inset-top));
+  }
+  .panel .content{
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: calc(120px + env(safe-area-inset-bottom));
+  }
+  .panel footer{
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  }
+}
+
+
+
+@media (max-width:767px){
+  #hintSvg{margin-top:16px !important; display:block !important;}
+  #hintSvg .draghint{dominant-baseline:hanging;}
+}
+
+
+@media (max-width:640px){
+  #hintSvg{display:block !important; margin-top:8px !important; margin-bottom:8px !important;}
+  #actionButtons{margin-top:10px !important;}
+}
+
+
+@media (max-width:640px){
+  .stage{flex:none !important; min-height:auto !important; padding-bottom:0 !important;}
+  .stage #scene{flex:none !important; height:auto !important;}
+  #hintSvg{display:block !important; margin-top:6px !important; margin-bottom:10px !important;}
+}
+
+
+/* Make control panel transparent to avoid covering hint text */
+.control-panel, #actionButtons{
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* If there is any wrapper for buttons, clear its bg too */
+.buttons-wrap, .controls-wrap, .btn-wrap{
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Keep button colors but remove any white base */
+button{
+  background-clip: padding-box;
+}
+
+/* Mobile safety: keep spacing but no overlay feel */
+@media (max-width:640px){
+  .control-panel, #actionButtons{
+    background: transparent !important;
+    backdrop-filter: none !important;
+  }
+}
+
+
+/* Mobile fix: the hint text was being clipped by the stage/card layout, not by the button color */
+@media (max-width:640px){
+  .card{
+    height:auto !important;
+    min-height:calc(100vh - 32px) !important;
+    overflow:visible !important;
+  }
+  .stage{
+    flex:none !important;
+    min-height:auto !important;
+    overflow:visible !important;
+  }
+  .stage #scene{
+    order:1;
+    flex:none !important;
+    height:auto !important;
+  }
+  #hintSvg{
+    order:2;
+    display:block !important;
+    flex:none !important;
+    margin-top:6px !important;
+    margin-bottom:10px !important;
+  }
+  .action-buttons, #actionButtons{
+    order:3;
+    margin-top:0 !important;
+    background:transparent !important;
+    box-shadow:none !important;
+  }
+}
+
+
+/* Real mobile fix: use a normal text block for the drag hint instead of the tiny SVG hint */
+#mobileDragHint{
+  display:none;
+}
+@media (max-width:640px){
+  #hintSvg{
+    display:none !important;
+  }
+  #mobileDragHint{
+    display:block !important;
+    order:2;
+    text-align:center;
+    color:#64748b;
+    font-size:7px;
+    line-height:1.35;
+    margin:8px 0 10px 0;
+    padding:0 8px;
+  }
+  .stage #scene{
+    order:1;
+  }
+  .stage .action-buttons,
+  .stage #actionButtons{
+    order:3;
+  }
+}
+
+
+
+/* Explicitly enlarge the two "เปิดกระแส..." labels */
+.toolbar .left > label{
+  font-size:17px !important;
+  line-height:1.25 !important;
+}
+
+@media (max-width:640px){
+  .toolbar .left > label{
+    font-size:17px !important;
+    line-height:1.25 !important;
+  }
+}
+
+</style>
+<!-- MathJax for equations in modal -->
+<script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+<script async="" id="MathJax-script" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<div class="wrap">
+<div class="card">
+<h1 class="mini-title">Mini Lab : แรงที่กระทำต่อเส้นลวดที่มีกระแสไหลผ่าน</h1>
+<div class="toolbar" id="controls">
+<div class="left" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+<label><input checked="" id="p1" type="checkbox"/> เปิดกระแสเส้นที่ 1 (ab)</label>
+<div style="display:flex;gap:6px">
+<button class="btn" id="dir1Up" title="1: a ➜ b">1: a ➜ b</button>
+<button class="btn" id="dir1Down" title="1: b ➜ a">1: b ➜ a</button>
+</div>
+<label style="margin-left:12px"><input checked="" id="p2" type="checkbox"/> เปิดกระแสเส้นที่ 2 (cd)</label>
+<div style="display:flex;gap:6px">
+<button class="btn" id="dir2Up" title="2: c ➜ d">2: c ➜ d</button>
+<button class="btn" id="dir2Down" title="2: d ➜ c">2: d ➜ c</button>
+</div>
+</div>
+<div class="right">
+<div class="pill"><span>I₁=</span><input id="I1" min="0" step="0.1" type="number" value="1"/><span class="unit">A</span></div>
+<div class="pill"><span>I₂=</span><input id="I2" min="0" step="0.1" type="number" value="1"/><span class="unit">A</span></div>
+<div class="pill"><span>d=</span><input id="dval" min="0.001" step="0.001" type="number" value="0.20"/><select class="unit" id="dunit"><option selected="" value="m">m</option><option value="cm">cm</option><option value="mm">mm</option></select></div>
+<div class="kpi" style="padding:6px 8px"><span>แรงต่อความยาว: </span><b id="FperL">—</b></div>
+<div class="bshow-group"><span class="bshow-label">แสดง B ของ :</span>
+<select id="Bshow">
+<option value="none">—</option>
+<option selected="" value="1">เส้น 1</option>
+<option value="2">เส้น 2</option>
+<option value="both">ทั้งสอง</option>
+</select></div>
+<label><input checked="" id="screenBToggle" type="checkbox"/> กากบาท/จุด</label>
+</div>
+</div>
+<div class="stage"><div class="action-buttons" id="actionButtons">
+<button class="btn btn-play" id="playBtn" title="แสดงการเคลื่อนที่ตามแรง">▶ เล่น</button>
+<button class="btn btn-reset" id="resetBtn" title="รีเซ็ตกลับค่าเริ่มต้น">⟲ รีเซ็ต</button>
+<button class="btn btn-formula" id="showFormula">📘 สูตรสำคัญ</button>
+<button class="btn btn-quiz" id="showQuiz">🧩 แบบฝึกหัด</button>
+</div>
+<svg aria-label="เส้นลวดสองเส้นขนาน พร้อมสนามแม่เหล็กและแรง" id="scene" role="img" viewbox="0 0 1100 600">
+<defs>
+<marker fill="var(--field)" id="arrowhead-blue" markerheight="8" markerwidth="8" orient="auto-start-reverse" refx="9" refy="5" viewbox="0 0 10 10"><path d="M 0 0 L 10 5 L 0 10 z"></path></marker>
+<marker fill="var(--field2)" id="arrowhead-purple" markerheight="8" markerwidth="8" orient="auto-start-reverse" refx="9" refy="5" viewbox="0 0 10 10"><path d="M 0 0 L 10 5 L 0 10 z"></path></marker>
+<marker fill="var(--curr)" id="arrowhead-red" markerheight="9" markerwidth="9" orient="auto-start-reverse" refx="9" refy="5" viewbox="0 0 10 10"><path d="M 0 0 L 10 5 L 0 10 z"></path></marker>
+<marker fill="var(--force)" id="arrowhead-green" markerheight="7" markerwidth="7" orient="auto-start-reverse" refx="9" refy="5" viewbox="0 0 10 10"><path d="M 0 0 L 10 5 L 0 10 z"></path></marker>
+</defs>
+<!-- B TOP (behind wires) -->
+<g id="B1top"></g>
+<g id="B2top"></g>
+<!-- WIRES (draggable) -->
+<g id="wire1">
+<rect cursor="ew-resize" fill="var(--fieldLight)" height="500" id="w1rect" stroke="var(--ink)" stroke-width="3" width="32" x="324" y="50"></rect>
+<text id="w1a" x="360" y="555">a</text>
+<text id="w1b" x="360" y="65">b</text>
+<text id="wire1name" x="300" y="585">แท่งตัวนำ 1</text>
+</g>
+<g id="wire2">
+<rect cursor="ew-resize" fill="var(--field2Light)" height="500" id="w2rect" stroke="var(--ink)" stroke-width="3" width="32" x="744" y="50"></rect>
+<text id="w2c" x="780" y="555">c</text>
+<text id="w2d" x="780" y="65">d</text>
+<text id="wire2name" x="720" y="585">แท่งตัวนำ 2</text>
+</g>
+<!-- I line (red) under B bottom so B overlays the line) -->
+<g id="I1line"></g>
+<g id="I2line"></g>
+<!-- B BOTTOM (front of wires) -->
+<g id="B1bot"></g>
+<g id="B2bot"></g>
+<!-- Screen symbols -->
+<g id="B1screen"></g>
+<g id="B2screen"></g>
+<!-- I text (red) ABOVE crosses/dots -->
+<g id="I1txt"></g>
+<g id="I2txt"></g>
+<!-- Forces -->
+<g id="F1"></g>
+<g id="F2"></g>
+</svg>
+<div id="mobileDragHint">(ลากเส้นลวดซ้าย/ขวาเพื่อปรับระยะ d — จะคำนวณแรงใหม่อัตโนมัติ)</div>
+<svg aria-hidden="true" id="hintSvg" viewbox="0 0 1100 28"><text class="draghint" text-anchor="middle" x="550" y="20">(ลากเส้นลวดซ้าย/ขวาเพื่อปรับระยะ d — จะคำนวณแรงใหม่อัตโนมัติ)</text></svg>
+</div>
+<div class="learnline learnline-bottom">ศึกษาเพิ่มเติมที่เพจ <a href="https://www.facebook.com/resolvephysics" rel="noopener" target="_blank">คลายปมฟิสิกส์</a></div>
+</div>
+<!-- QUIZ MODAL -->
+<div class="modal" id="quizModal">
+<div class="panel">
+<header>
+<h3>🧩 แบบฝึกหัด — กระแสขนาน &amp; แรงระหว่างเส้นลวด</h3>
+<button class="close-btn" id="closeQuiz">ปิด</button>
+</header>
+<div class="content">
+<div class="qcard" data-q="1">
+<div class="qtitle">ข้อ 1) ถ้ากระแสในเส้นลวดทั้งสอง <b>ไปทางเดียวกัน</b> ทิศของแรงระหว่างเส้นลวดเป็นอย่างไร?</div>
+<div class="choices">
+<label><input name="q1" type="radio" value="A"/> ผลักออกจากกัน</label>
+<label><input name="q1" type="radio" value="B"/> ดูดเข้าหากัน</label>
+<label><input name="q1" type="radio" value="C"/> ไม่มีแรง</label>
+<label><input name="q1" type="radio" value="D"/> แรงขนานกับเส้นลวดขึ้นด้านบน</label>
+</div>
+<div class="exp">เฉลย: <b>ดูดเข้าหากัน</b> — เทคนิคจำ <b>“ตามดูด สวนผลัก”</b> และกฎมือขวา สนามที่เส้นหนึ่งสร้างจะดึงอีกเส้นเมื่อทิศกระแสไปทางเดียวกัน</div>
+</div>
+<div class="qcard" data-q="2">
+<div class="qtitle">ข้อ 2) คำนวณ F/L เมื่อ I₁=3 A, I₂=5 A, d=0.10 m</div>
+<div class="choices">
+<label><input name="q2" type="radio" value="A"/> 3.0 µN/m</label>
+<label><input name="q2" type="radio" value="B"/> 30 µN/m</label>
+<label><input name="q2" type="radio" value="C"/> 300 µN/m</label>
+<label><input name="q2" type="radio" value="D"/> 3.0×10⁻⁶ N/m</label>
+</div>
+<div class="exp">เฉลย: ใช้สูตร 
+          $$ \frac{F}{L} = \frac{\mu_0 I_1 I_2}{2\pi d} $$
+          โดย \( \mu_0 = 4\pi\times10^{-7} \) แทนค่าได้ผลลัพธ์เป็น <b>30 µN/m</b>
+</div>
+</div>
+<div class="qcard" data-q="3">
+<div class="qtitle">ข้อ 3) ถ้าเส้น 1 กระแส <b>ขึ้น</b> และเส้น 2 กระแส <b>ลง</b> (สวนทางกัน) ทิศของแรง F₂,₁ และ F₁,₂ เป็นอย่างไร?</div>
+<div class="choices">
+<label><input name="q3" type="radio" value="A"/> ทั้งคู่ชี้เข้าหากัน</label>
+<label><input name="q3" type="radio" value="B"/> ทั้งคู่ชี้ออกจากกัน (ซ้าย←, ขวา→)</label>
+<label><input name="q3" type="radio" value="C"/> ซ้าย→, ขวา←</label>
+<label><input name="q3" type="radio" value="D"/> ไม่มีแรง</label>
+</div>
+<div class="exp">เฉลย: <b>ผลักออกจากกัน</b> ตาม “สวนผลัก” ดังนั้น F₂,₁ บนแท่งซ้ายชี้ไปทางซ้าย และ F₁,₂ บนแท่งขวาชี้ไปทางขวา</div>
+</div>
+<div class="qcard" data-q="4">
+<div class="qtitle">ข้อ 4) ถ้าเพิ่มระยะห่างจาก d เป็น 2d ค่า F/L เปลี่ยนอย่างไร?</div>
+<div class="choices">
+<label><input name="q4" type="radio" value="A"/> เพิ่มเป็นสองเท่า</label>
+<label><input name="q4" type="radio" value="B"/> ลดเหลือครึ่งหนึ่ง</label>
+<label><input name="q4" type="radio" value="C"/> ลดเหลือหนึ่งในสี่</label>
+<label><input name="q4" type="radio" value="D"/> เท่าเดิม</label>
+</div>
+<div class="exp">เฉลย: จากความสัมพันธ์ $$ \dfrac{F}{L} \propto \frac{1}{d} $$ เมื่อ d → 2d จึงได้ $$ \dfrac{F}{L} \to \dfrac{1}{2} \dfrac{F}{L} $$ คือ <b>ครึ่งหนึ่ง</b></div>
+</div>
+</div>
+<footer>
+<span class="score" id="quizScore">ยังไม่ได้ตรวจ</span>
+<div>
+<button class="close-btn" id="checkQuiz" style="background:#16a34a">ตรวจคำตอบ</button>
+<button class="close-btn" id="closeQuiz2" style="display:none !important">ปิด กลับสู่หน้าแรก</button>
+</div>
+</footer>
+</div>
+</div>
+<div class="modal" id="formulaModal">
+<div class="panel">
+<header>
+<h3>สูตรสำคัญ: แรงระหว่างเส้นลวดขนาน</h3>
+<button class="close-btn" id="closeFormula">ปิด</button>
+</header>
+<div class="content">
+<h4>แนวคิด</h4>
+<p>กระแสไฟฟ้าในเส้นลวดหนึ่งสร้างสนามแม่เหล็กที่มีผลต่ออีกเส้น ทำให้เกิดแรงกระทำระหว่างกัน ตามหลัก <b>กฎมือขวา</b>.</p>
+<h4>เทคนิคจำ!</h4>
+<div class="formula"><b>“ตามดูด สวนผลัก”</b> — กระแส <b>ไปทางเดียวกัน</b> แรง <b>ดูดเข้าหากัน</b>; กระแส <b>สวนทาง</b> แรง <b>ผลักออกจากกัน</b>.</div>
+<h4>สมการแรงต่อความยาว</h4>
+<div class="formula">
+          $$ \frac{F}{L} = \frac{\mu_0 I_1 I_2}{2\pi d} \qquad \mu_0 = 4\pi\times10^{-7}\;\text{T·m/A} $$
+        </div>
+</div>
+<footer>
+<span class="learnmore">ศึกษาเพิ่มเติมที่เพจ <b>คลายปมฟิสิกส์</b></span>
+<button class="close-btn" id="closeFormula2" style="display:none !important">ปิด</button>
+</footer>
+</div>
+</div>
+<script>
+(() => {
+  // ==== Fit to viewport (no vertical overflow) ====
+  const controlsEl = document.getElementById('controls');
+  const sceneEl = document.getElementById('scene');
+  function fitStage(){
+    if(!sceneEl) return;
+    const cardEl = document.querySelector('.card');
+    const cardH = cardEl ? Math.ceil(cardEl.clientHeight) : (window.visualViewport?.height || window.innerHeight);
+    const ctrlH = controlsEl ? Math.ceil(controlsEl.getBoundingClientRect().height) : 0;
+    const hintEl = document.getElementById('hintSvg');
+    const hintH = hintEl ? Math.ceil(hintEl.getBoundingClientRect().height) : 0;
+    const margin = 4;
+    const available = Math.max(240, cardH - ctrlH - hintH - margin);
+    sceneEl.style.height = available + 'px';
+  }
+  // recalc on common events
+  window.addEventListener('load', ()=>{ fitStage(); setTimeout(fitStage, 50); setTimeout(fitStage, 200); });
+  window.addEventListener('resize', fitStage);
+  window.addEventListener('orientationchange', fitStage);
+  // observe controls/hint size changes (wrap/relayout)
+  if (window.ResizeObserver){
+    const ro = new ResizeObserver(fitStage);
+    if (controlsEl) ro.observe(controlsEl);
+    const hintEl = document.getElementById('hintSvg');
+    if (hintEl) ro.observe(hintEl);
+  }
+
+  // elements
+  const B1top = document.getElementById('B1top');
+  const B2top = document.getElementById('B2top');
+  const B1bot = document.getElementById('B1bot');
+  const B2bot = document.getElementById('B2bot');
+  const B1s = document.getElementById('B1screen');
+  const B2s = document.getElementById('B2screen');
+  const I1line = document.getElementById('I1line');
+  const I2line = document.getElementById('I2line');
+  const I1txt = document.getElementById('I1txt');
+  const I2txt = document.getElementById('I2txt');
+  const F1  = document.getElementById('F1');
+  const F2  = document.getElementById('F2');
+
+  const p1 = document.getElementById('p1');
+  const p2 = document.getElementById('p2');
+  const dir1Up = document.getElementById('dir1Up');
+  const dir1Down = document.getElementById('dir1Down');
+  const dir2Up = document.getElementById('dir2Up');
+  const dir2Down = document.getElementById('dir2Down');
+
+  const I1 = document.getElementById('I1');
+  const I2 = document.getElementById('I2');
+  const dval = document.getElementById('dval');
+  const dunit = document.getElementById('dunit');
+  const FperL = document.getElementById('FperL');
+  const Bshow = document.getElementById('Bshow');
+  const screenB = document.getElementById('screenBToggle');
+
+  const w1rect = document.getElementById('w1rect');
+  const w2rect = document.getElementById('w2rect');
+  const w1a = document.getElementById('w1a');
+  const w1b = document.getElementById('w1b');
+  const w2c = document.getElementById('w2c');
+  const w2d = document.getElementById('w2d');
+
+  // geometry
+  let w1x = 324; let w2x = 744; // rect x's (draggable)
+  const yTop=120, yBot=400; // moved up another 20px // moved up another 20px // move red arrows up by 20px compared to before
+  let dir1='up', dir2='up';
+
+  // scale between px and meters for d (initialize from current d)
+  function metersFromInput(){ let d=parseFloat(dval.value||'0'); const u=dunit.value; if(u==='cm') d/=100; else if(u==='mm') d/=1000; return d; }
+  function setInputFromMeters(m){ const u=dunit.value; let v=m; if(u==='cm') v*=100; else if(u==='mm') v*=1000; dval.value = +v.toFixed(3); }
+  function currentCenters(){ return {cx1:w1x+16, cx2:w2x+16}; }
+  let metersPerPx = metersFromInput() / (currentCenters().cx2 - currentCenters().cx1);
+
+  function positionWires(){
+    // apply positions & label 4px right
+    w1rect.setAttribute('x', w1x); w2rect.setAttribute('x', w2x);
+    const ax = w1x + 36; const bx = w1x + 36; // +4 px from original (32+4)
+    const cx = w2x + 36; const dx = w2x + 36;
+    w1a.setAttribute('x', ax); w1b.setAttribute('x', bx);
+    w2c.setAttribute('x', cx); w2d.setAttribute('x', dx);
+  }
+
+  // utils
+  function clear(g){ while(g.firstChild) g.removeChild(g.firstChild); }
+
+  function calcFperL(){
+    const I_1=Math.max(0, parseFloat(I1.value||'0'));
+    const I_2=Math.max(0, parseFloat(I2.value||'0'));
+    const {cx1,cx2}=currentCenters();
+    const d_m = Math.max(1e-9, Math.abs(cx2-cx1) * metersPerPx);
+    setInputFromMeters(d_m);
+    if(!(p1.checked && p2.checked) || I_1<=0 || I_2<=0){ FperL.textContent='—'; return 0; }
+    const mu0=4*Math.PI*1e-7;
+    const F_over_L = mu0*I_1*I_2/(2*Math.PI*d_m);
+    if (F_over_L >= 1e-3) FperL.textContent=(F_over_L*1e3).toFixed(3)+' mN/m';
+    else if (F_over_L >= 1e-6) FperL.textContent=(F_over_L*1e6).toFixed(1)+' µN/m';
+    else FperL.textContent=F_over_L.toExponential(2)+' N/m';
+    return F_over_L;
+  }
+
+  // paths
+  function halfEllipsePath(cx, cy, rx, ry, top=true){
+    const x1 = cx - rx, x2 = cx + rx; const y = cy;
+    const sweep = top? 0: 1;
+    return `M ${x1} ${y} A ${rx} ${ry} 0 0 ${sweep} ${x2} ${y}`;
+  }
+
+  // B (loop) for each wire (split top/bottom). color set per-wire.
+  function drawBPair(gTop, gBot, cx, sign, color, labelClass, markerId){
+    const makeHalf = (g, top)=>{
+      const p=document.createElementNS('http://www.w3.org/2000/svg','path');
+      p.setAttribute('d', halfEllipsePath(cx, 300, 210, 70, top));
+      p.setAttribute('fill','none');
+      p.setAttribute('stroke', color);
+      p.setAttribute('stroke-width','3');
+      p.setAttribute('stroke-dasharray','9 7');
+      p.setAttribute('stroke-linecap','round');
+      g.appendChild(p);
+    };
+    clear(gTop); clear(gBot);
+    makeHalf(gTop, true); makeHalf(gBot, false);
+
+    const N=8, len=16, w=2;
+    for(let k=0;k<N;k++){
+      const t=(k/N)*Math.PI*2; const cy=300, rx=210, ry=70;
+      const x=cx+rx*Math.cos(t), y=cy+ry*Math.sin(t);
+      let tx=-rx*Math.sin(t)*sign, ty=ry*Math.cos(t)*sign; const m=Math.hypot(tx,ty)||1; tx/=m; ty/=m;
+      const x1=x-tx*(len*0.55), y1=y-ty*(len*0.55); const x2=x+tx*(len*0.45), y2=y+ty*(len*0.45);
+      const L=document.createElementNS('http://www.w3.org/2000/svg','line');
+      L.setAttribute('x1',x1); L.setAttribute('y1',y1); L.setAttribute('x2',x2); L.setAttribute('y2',y2);
+      L.setAttribute('stroke', color); L.setAttribute('stroke-width',w); L.setAttribute('marker-end',`url(#${markerId})`);
+      const target = (y < cy) ? gTop : gBot; target.appendChild(L);
+      if(k%4===0){ const label=document.createElementNS('http://www.w3.org/2000/svg','text'); label.textContent='B'; label.setAttribute('x',x+6); label.setAttribute('y',y); label.setAttribute('class',labelClass); target.appendChild(label); }
+    }
+  }
+
+  function drawI(lineGroup, textGroup, x, up){
+    // draw red current arrow (line) and the red "I" label
+    clear(lineGroup); clear(textGroup);
+    const line=document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1', x+16);
+    line.setAttribute('x2', x+16);
+    if (up){
+      line.setAttribute('y1', yBot);
+      line.setAttribute('y2', yTop);
+    } else {
+      line.setAttribute('y1', yTop);
+      line.setAttribute('y2', yBot);
+    }
+    line.setAttribute('stroke','var(--curr)');
+    line.setAttribute('stroke-width','5');
+    line.setAttribute('marker-end','url(#arrowhead-red)');
+    lineGroup.appendChild(line);
+
+    const T=document.createElementNS('http://www.w3.org/2000/svg','text');
+    T.textContent='I';
+    T.setAttribute('x', x+40); // +5px from previous (x+35)
+    T.setAttribute('y', (yTop+yBot)/2);
+    T.setAttribute('class','label-I');
+    textGroup.appendChild(T);
+  }
+
+  function drawForces(attract){
+    clear(F1); clear(F2);
+    // base positions (inner faces of wires)
+    let y = 300; let xL = w1x + 32; let xR = w2x; 
+    // requested offsets
+    const globalDX = 5, globalDY = -80; // up 80px, right 5px
+    const leftDX = -20;  // move left arrow/label 20px to the left
+    const rightDX = 10;  // move right arrow/label 10px to the right
+    xL += globalDX + leftDX; xR += globalDX + rightDX; y += globalDY;
+
+    const thick=3, L=100; // arrow length
+    function arrow(g, x1, x2){
+      const l=document.createElementNS('http://www.w3.org/2000/svg','line');
+      l.setAttribute('y1',y); l.setAttribute('y2',y); l.setAttribute('x1',x1); l.setAttribute('x2',x2);
+      l.setAttribute('stroke','var(--force)'); l.setAttribute('stroke-width',thick);
+      l.setAttribute('marker-end','url(#arrowhead-green)'); g.appendChild(l);
+    }
+    if (attract){
+      arrow(F1, xL - L, xL - 6); // left →
+      arrow(F2, xR + L, xR + 6); // right ←
+    } else {
+      arrow(F1, xL - 6, xL - 6 - L); // left ←
+      arrow(F2, xR + 6, xR + 6 + L); // right →
+    }
+    const t1=document.createElementNS('http://www.w3.org/2000/svg','text'); t1.textContent='F₂,₁'; t1.setAttribute('x', xL - 70); t1.setAttribute('y', y-12); t1.setAttribute('class','label-F'); F1.appendChild(t1);
+    const t2=document.createElementNS('http://www.w3.org/2000/svg','text'); t2.textContent='F₁,₂'; t2.setAttribute('x', xR + 18); t2.setAttribute('y', y-12); t2.setAttribute('class','label-F'); F2.appendChild(t2);
+  }
+
+  function drawScreenDots(g, cx, dirUp, colorLight){
+    clear(g);
+    const radii=[24,48,80,120,170,220,270];
+    const steps=[20,28,36,44,54,64,74];
+    const yMin=80, yMax=520; const rightInto=dirUp;
+    function dot(x,y,i){ const c=document.createElementNS('http://www.w3.org/2000/svg','circle'); c.setAttribute('cx',x); c.setAttribute('cy',y); c.setAttribute('r', i>=5? 2:3); c.setAttribute('fill', colorLight); c.setAttribute('fill-opacity', i>=5? 0.22: 0.55); g.appendChild(c); }
+    function cross(x,y,i){ const a=6; ['-1,-1,1,1','-1,1,1,-1'].forEach(s=>{ const [n1,n2,n3,n4]=s.split(',').map(Number); const l=document.createElementNS('http://www.w3.org/2000/svg','line'); l.setAttribute('x1',x+a*n1); l.setAttribute('y1',y+a*n2); l.setAttribute('x2',x+a*n3); l.setAttribute('y2',y+a*n4); l.setAttribute('stroke', colorLight); l.setAttribute('stroke-width', i>=5? '1.3':'2'); l.setAttribute('stroke-opacity', i>=5? '0.25':'0.6'); g.appendChild(l); }); }
+    radii.forEach((r,i)=>{ const step=steps[i]; for(let y=yMin;y<=yMax;y+=step){ (rightInto?cross:dot)(cx+r,y,i); (!rightInto?cross:dot)(cx-r,y,i); } });
+  }
+
+  function redraw(){
+    positionWires();
+    const I_1=Math.max(0, parseFloat(I1.value||'0'));
+    const I_2=Math.max(0, parseFloat(I2.value||'0'));
+    const bothOn = p1.checked && p2.checked && I_1>0 && I_2>0;
+
+    [B1top,B2top,B1bot,B2bot,B1s,B2s,I1line,I2line,I1txt,I2txt,F1,F2].forEach(clear);
+
+    if (p1.checked && I_1>0) drawI(I1line, I1txt, w1x, (dir1==='up'));
+    if (p2.checked && I_2>0) drawI(I2line, I2txt, w2x, (dir2==='up'));
+
+    // B (loops)
+    const {cx1,cx2}=currentCenters();
+    if (Bshow.value==='1' && p1.checked && I_1>0) drawBPair(B1top, B1bot, cx1, (dir1==='up')? -1: 1, getComputedStyle(document.documentElement).getPropertyValue('--field').trim(), 'label-B1', 'arrowhead-blue');
+    if (Bshow.value==='2' && p2.checked && I_2>0) drawBPair(B2top, B2bot, cx2, (dir2==='up')? -1: 1, getComputedStyle(document.documentElement).getPropertyValue('--field2').trim(), 'label-B2', 'arrowhead-purple');
+    if (Bshow.value==='both'){
+      if (p1.checked && I_1>0) drawBPair(B1top, B1bot, cx1, (dir1==='up')? -1: 1, getComputedStyle(document.documentElement).getPropertyValue('--field').trim(), 'label-B1', 'arrowhead-blue');
+      if (p2.checked && I_2>0) drawBPair(B2top, B2bot, cx2, (dir2==='up')? -1: 1, getComputedStyle(document.documentElement).getPropertyValue('--field2').trim(), 'label-B2', 'arrowhead-purple');
+    }
+
+    // Cross/Dot
+    if (screenB && screenB.checked){
+      if ((Bshow.value==='1' || Bshow.value==='both') && p1.checked && I_1>0) drawScreenDots(B1s, cx1, (dir1==='up'), getComputedStyle(document.documentElement).getPropertyValue('--fieldLight').trim());
+      if ((Bshow.value==='2' || Bshow.value==='both') && p2.checked && I_2>0) drawScreenDots(B2s, cx2, (dir2==='up'), getComputedStyle(document.documentElement).getPropertyValue('--field2Light').trim());
+    }
+
+    // Forces + F/L
+    if (bothOn){ drawForces(dir1===dir2); calcFperL(); } else { FperL.textContent='—'; }
+
+    dir1Up.classList.toggle('active', dir1==='up');
+    dir1Down.classList.toggle('active', dir1==='down');
+    dir2Up.classList.toggle('active', dir2==='up');
+    dir2Down.classList.toggle('active', dir2==='down');
+  }
+
+  // play animation (attract: move together, repel: move apart)
+  const playBtn = document.getElementById('playBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  let isPlaying = false;
+  function playMotion(){
+    const I_1=parseFloat(I1.value||'0'), I_2=parseFloat(I2.value||'0');
+    if(!(p1.checked && p2.checked && I_1>0 && I_2>0)) return; // need both currents
+    const attract = (dir1===dir2);
+    const start1 = w1x, start2 = w2x;
+    let target1 = start1, target2 = start2;
+    if(attract){
+      // move until inner faces touch: w2x_target = w1x_target + 32
+      const gap = (start2) - (start1 + 32);
+      if(gap <= 0){ return; }
+      target1 = start1 + gap/2;
+      target2 = start2 - gap/2;
+    } else {
+      // repel: move outward by 60px each side or until hitting bounds
+      const L = 60;
+      target1 = Math.max(60, start1 - L);
+      target2 = Math.min(1000-60, start2 + L);
+    }
+    const duration = 1500; // ms
+    const start = performance.now();
+    isPlaying = true; playBtn.disabled = true;
+    function step(now){
+      const t = Math.min(1, (now - start)/duration);
+      const e = t<0.5 ? 2*t*t : -1+(4-2*t)*t; // ease in-out
+      w1x = start1 + (target1 - start1)*e;
+      w2x = start2 + (target2 - start2)*e;
+      redraw();
+      if(t<1 && isPlaying) requestAnimationFrame(step); else { isPlaying=false; playBtn.disabled=false; w1x=target1; w2x=target2; redraw(); }
+    }
+    requestAnimationFrame(step);
+  }
+  playBtn.addEventListener('click', playMotion);
+
+  // reset to defaults
+  function resetAll(){
+    isPlaying=false; playBtn.disabled=false;
+    w1x=324; w2x=744; dir1='up'; dir2='up';
+    p1.checked=true; p2.checked=true;
+    I1.value=1; I2.value=1; Bshow.value='1'; screenB.checked=true;
+    // recompute metersPerPx from current input based on new spacing
+    const pxDist = Math.max(1,(currentCenters().cx2-currentCenters().cx1));
+    const d_m = metersFromInput();
+    metersPerPx = d_m/pxDist; // keep current units, distance field will be updated by calcFperL
+    redraw();
+  }
+  resetBtn.addEventListener('click', resetAll);
+
+  // dragging
+  let dragging=null, startMouseX=0, startX=0;
+  function onDown(which, e){ if(isPlaying) return; dragging=which; startMouseX=(e.touches? e.touches[0].clientX: e.clientX); startX = (which===1? w1x: w2x); e.preventDefault(); }
+  function onMove(e){ if(dragging==null) return; const mx=(e.touches? e.touches[0].clientX: e.clientX); const dx=mx-startMouseX; if(dragging===1){ w1x = Math.max(60, Math.min(1000-60, startX+dx)); } else { w2x = Math.max(60, Math.min(1000-60, startX+dx)); }
+    redraw(); }
+  function onUp(){ dragging=null; }
+  w1rect.addEventListener('mousedown', e=>onDown(1,e));
+  w2rect.addEventListener('mousedown', e=>onDown(2,e));
+  w1rect.addEventListener('touchstart', e=>onDown(1,e), {passive:false});
+  w2rect.addEventListener('touchstart', e=>onDown(2,e), {passive:false});
+  window.addEventListener('mousemove', onMove);
+  window.addEventListener('touchmove', onMove, {passive:false});
+  window.addEventListener('mouseup', onUp);
+  window.addEventListener('touchend', onUp);
+
+  // sync d input changes -> reposition wires keeping w1 fixed
+  dval.addEventListener('input', ()=>{ const d_m=metersFromInput(); metersPerPx = d_m/Math.max(1,(currentCenters().cx2-currentCenters().cx1)); w2x = (w1x + 16) + (d_m/metersPerPx) - 16; redraw(); });
+  dunit.addEventListener('change', ()=>{ const d_m=metersFromInput(); metersPerPx = d_m/Math.max(1,(currentCenters().cx2-currentCenters().cx1)); w2x = (w1x + 16) + (d_m/metersPerPx) - 16; redraw(); });
+
+  // current direction buttons
+  dir1Up.addEventListener('click', ()=>{ dir1='up'; redraw(); });
+  dir1Down.addEventListener('click', ()=>{ dir1='down'; redraw(); });
+  dir2Up.addEventListener('click', ()=>{ dir2='up'; redraw(); });
+  dir2Down.addEventListener('click', ()=>{ dir2='down'; redraw(); });
+
+  // other inputs
+  p1.addEventListener('change', redraw);
+  p2.addEventListener('change', redraw);
+  I1.addEventListener('input', redraw);
+  I2.addEventListener('input', redraw);
+  Bshow.addEventListener('change', redraw);
+  screenB.addEventListener('change', redraw);
+
+  // init
+  p1.checked=true; p2.checked=true; dir1='up'; dir2='up'; Bshow.value='1'; screenB.checked=true;
+  positionWires(); redraw(); fitStage();
+
+  // modal events
+  const showFormula = document.getElementById('showFormula');
+  const modal = document.getElementById('formulaModal');
+  const closeFormula = document.getElementById('closeFormula');
+  const closeFormula2 = document.getElementById('closeFormula2');
+  function openModal(){
+    modal.classList.add('open');
+    document.body.style.overflow='hidden';
+    if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise();
+  }
+  function closeModal(){
+    modal.classList.remove('open');
+    document.body.style.overflow='';
+  }
+  // duplicate closeModal removed
+  showFormula.addEventListener('click', openModal);
+  closeFormula.addEventListener('click', closeModal);
+  closeFormula2.addEventListener('click', closeModal);
+  // click outside panel closes
+  modal.addEventListener('click', (e)=>{ if(e.target===modal) closeModal(); });
+  // ESC closes
+  window.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && modal.classList.contains('open')) closeModal(); });
+})();
+</script>
+<script>
+// === QUIZ modal logic ===
+(function(){
+  const quizModal = document.getElementById('quizModal');
+  const showQuiz  = document.getElementById('showQuiz');
+  if(!quizModal || !showQuiz) return;
+  const closeQuiz = document.getElementById('closeQuiz');
+  const closeQuiz2= document.getElementById('closeQuiz2');
+  const checkQuiz = document.getElementById('checkQuiz');
+  const quizScore = document.getElementById('quizScore');
+
+  function openQuiz(){
+    quizModal.classList.add('open');
+    document.body.style.overflow='hidden';
+    if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise();
+  }
+  function closeQuizFn(){
+    quizModal.classList.remove('open');
+    document.body.style.overflow='';
+    quizScore.textContent='ยังไม่ได้ตรวจ';
+    document.querySelectorAll('#quizModal .exp').forEach(x=>x.style.display='none');
+    document.querySelectorAll('#quizModal input[type="radio"]').forEach(r=>r.checked=false);
+  }
+  function grade(){
+    const key={q1:'B',q2:'B',q3:'B',q4:'B'}; let score=0, total=4;
+    for(const k in key){ const sel=document.querySelector(`#quizModal input[name="${k}"]:checked`); if(sel && sel.value===key[k]) score++; }
+    quizScore.textContent=`ได้ ${score}/${total} คะแนน`;
+    document.querySelectorAll('#quizModal .exp').forEach(x=>x.style.display='block');
+    if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise();
+  }
+  showQuiz.addEventListener('click', openQuiz);
+  closeQuiz.addEventListener('click', closeQuizFn);
+  closeQuiz2.addEventListener('click', closeQuizFn);
+  quizModal.addEventListener('click', (e)=>{ if(e.target===quizModal) closeQuizFn(); });
+  window.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && quizModal.classList.contains('open')) closeQuizFn(); });
+  checkQuiz.addEventListener('click', grade);
+})();
+</script>
+</div></body>
+</html>

@@ -1,0 +1,630 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>3D สนามแม่เหล็ก (B) + โครงลวดตัวนำ (หมุนได้)</title>
+  <style>
+    html,body{height:100%}
+    body{margin:0;background:#ffffff;overflow:hidden;font-family:Inter,system-ui,Segoe UI,Arial,sans-serif}
+    #app{position:fixed;inset:0}
+    .page-title{position:fixed;top:max(12px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:21;background:rgba(255,255,255,.88);backdrop-filter:blur(6px);padding:10px 18px;border:1px solid #dbeafe;border-radius:16px;color:#2563eb;font-size:28px;font-weight:800;line-height:1.2;text-align:center;box-shadow:0 6px 18px rgba(0,0,0,.08);max-width:min(92vw,760px)}
+    .footer-link{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(10px + env(safe-area-inset-bottom));z-index:19;background:rgba(255,255,255,.92);border:1px solid #e5e7eb;border-radius:14px;padding:8px 14px;font-size:14px;color:#334155;max-width:min(94vw,760px);text-align:center;box-shadow:0 6px 18px rgba(0,0,0,.06)}
+    .footer-link a{color:#2563eb;text-decoration:underline;font-weight:700}
+
+    .panel{position:fixed;top:12px;left:12px;display:flex;flex-direction:column;gap:8px;background:#ffffffcc;padding:10px 12px;border:1px solid #e5e7eb;border-radius:12px;backdrop-filter:blur(6px);max-width:460px;transition:transform .25s ease}
+    .panel.hidden{display:none}
+    .panel header{display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .row{display:grid;grid-template-columns:auto 1fr;gap:8px 10px;margin-top:8px}
+    .btn{padding:8px 12px;border:1px solid #cbd5e1;background:#f8fafc;border-radius:12px;cursor:pointer;font-size:13px}
+    .panel > button[data-toggle]{width:50%;align-self:flex-start;text-align:left}
+    #hidePanelBtn{width:50%;align-self:flex-start;margin-top:4px;border:2px solid #ef4444;color:#991b1b;background:#fff5f5;font-weight:700}
+    .section{border:1px dashed #e5e7eb;border-radius:10px;padding:8px;margin-top:4px;background:#ffffff}
+    .panel label{font-size:12px;color:#334155;align-self:center}
+    .panel input{width:140px;padding:4px 6px;border:1px solid #cbd5e1;border-radius:8px}
+    .panel input[readonly]{background:#f8fafc}
+    .mini{display:flex;gap:8px;flex-wrap:wrap}
+    .tag{font-size:11px;background:#e2e8f0;color:#334155;border-radius:999px;padding:2px 8px;border:1px solid #cbd5e1}
+    .hint{position:fixed;right:12px;top:12px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;padding:8px 10px;font-size:12px;color:#334155;z-index:19}
+
+    /* ปุ่มลอย */
+    .floating-left{display:none}
+    .showPanel{position:fixed;left:12px;top:calc(88px + env(safe-area-inset-top));z-index:17;display:none}
+    .floating-right-top{position:fixed;right:12px;top:calc(88px + env(safe-area-inset-top));display:flex;gap:8px;z-index:20;flex-wrap:wrap;align-items:center}
+
+    /* Overlays */
+    .overlay{position:fixed;inset:0;display:none;place-items:center;background:#0f172acc;z-index:30}
+    .card{max-width:900px;width:min(94vw,900px);max-height:min(86vh,1000px);overflow:auto;background:#ffffff;border-radius:16px;border:1px solid #e5e7eb;box-shadow:0 10px 30px rgba(0,0,0,.15);padding-bottom:120px}
+    .card header{position:sticky;top:0;background:linear-gradient(90deg,#e0f2fe,#fff);border-bottom:1px solid #e5e7eb;padding:12px 16px;border-radius:16px 16px 0 0;display:flex;align-items:center;justify-content:space-between}
+    .card header h3{margin:0;font-size:16px;color:#0f2a44}
+    .close{border:1px solid #cbd5e1;background:#fff;border-radius:10px;padding:8px 12px;cursor:pointer}
+    .content{padding:14px 18px}
+    .content h4{margin:.5rem 0;color:#0f2a44}
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .box{border:1px solid #e5e7eb;border-radius:12px;padding:12px;background:#f9fafb;overflow-wrap:anywhere;word-break:break-word}
+    .note{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;padding:10px 12px;border-radius:10px}
+    .muted{color:#64748b}
+    .pill{display:inline-block;padding:2px 8px;border-radius:999px;border:1px solid #cbd5e1;background:#eef2ff;color:#3730a3;font-size:12px}
+    a.link{color:#0ea5e9;text-decoration:none}
+
+    /* แบบฝึกหัด */
+    .quiz .q{border:1px solid #e5e7eb;border-radius:10px;padding:10px;background:#fff;margin-top:10px}
+    .quiz .q h5{margin:0 0 8px 0;color:#0f2a44;font-size:14px;line-height:1.55;overflow-wrap:anywhere}
+    .choices{display:grid;gap:6px;margin-top:6px}
+    .choices label{display:flex;gap:8px;align-items:flex-start;border:1px dashed #e5e7eb;border-radius:8px;padding:6px 8px;background:#f8fafc;cursor:pointer;overflow-wrap:anywhere;word-break:break-word}
+    .quiz-actions{display:flex;gap:8px;margin-top:12px}
+    .score{margin-top:10px;font-weight:600}
+    .solution{margin-top:8px;border-left:3px solid #22c55e;padding-left:10px;background:#f0fdf4;border-radius:8px}
+    .wrong .solution{border-left-color:#ef4444;background:#fef2f2}
+
+    /* ทำให้สูตรชัดขึ้น */
+    mjx-container[jax="SVG"]{font-size:108%;max-width:100%;overflow-x:auto;overflow-y:hidden}
+  
+    #openFormulaBtn{background:#ffedd5;border-color:#fdba74;color:#9a3412;font-weight:700}
+    #openQuizBtn{background:#dcfce7;border-color:#86efac;color:#166534;font-weight:700}
+    #resetAll{background:#f1f5f9;color:#334155;padding:6px 10px;font-size:12px;min-height:38px}
+    #resetRot,#resetQuiz{font-size:12px;padding:6px 10px}
+    canvas{touch-action:none}
+    #closeFormula,#closeQuiz{position:sticky;top:0}
+    @media (max-width: 900px){
+      .grid-2{grid-template-columns:1fr}
+    }
+    @media (max-width: 768px){
+      body{overflow:auto;padding-bottom:130px}
+      #app{inset:0 0 170px 0}
+      .page-title{font-size:21px;top:calc(8px + env(safe-area-inset-top));left:10px;right:10px;transform:none;width:calc(100vw - 20px);max-width:none;box-sizing:border-box;padding:8px 12px}
+      .panel{top:calc(58px + env(safe-area-inset-top));left:10px;right:10px;max-width:none;width:auto;max-height:calc(44vh - env(safe-area-inset-top));overflow:auto;padding-bottom:16px;z-index:18}
+      .panel.hidden{display:none}
+      .panel header{align-items:flex-start;gap:6px;flex-direction:column}
+      .row{grid-template-columns:minmax(88px,auto) minmax(0,1fr);gap:6px 8px}
+      .panel input{width:100%;min-width:0;box-sizing:border-box}
+      .hint{display:none}
+      .showPanel{top:auto;bottom:calc(116px + env(safe-area-inset-bottom));left:10px;z-index:24}
+      .floating-left,.floating-right-top{position:fixed;left:10px;right:10px;top:auto;bottom:calc(62px + env(safe-area-inset-bottom));display:grid;grid-template-columns:.8fr 1fr 1fr;gap:8px;z-index:23}
+      .floating-left{display:none}
+      #resetAll,#openFormulaBtn,#openQuizBtn{width:100%;min-height:44px;font-size:14px}
+      .panel > button[data-toggle],#hidePanelBtn{width:50%;min-width:150px}
+      .footer-link{font-size:13px;bottom:calc(8px + env(safe-area-inset-bottom));padding:8px 12px;width:calc(100vw - 20px);box-sizing:border-box}
+      .overlay{align-items:flex-start;padding-top:calc(10px + env(safe-area-inset-top));padding-bottom:calc(10px + env(safe-area-inset-bottom))}
+      .card{width:min(96vw,900px);max-height:calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 20px);padding-bottom:130px}
+      .card header{padding:10px 12px;align-items:flex-start;gap:8px}
+      .card header h3{font-size:15px;line-height:1.4;padding-right:6px}
+      .content{padding:12px}
+      .content h4{font-size:15px}
+      .content,.content li,.content p,.quiz .q h5,.choices label,.solution,.score{font-size:13px}
+      .box,.quiz .q{padding:10px}
+      .pill{font-size:11px}
+      .note{font-size:12.5px}
+      mjx-container[jax="SVG"]{font-size:84% !important}
+    }
+
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <div class="page-title">Mini Lab : ฟลักซ์แม่เหล็ก</div>
+
+  <button id="showPanelBtn" class="btn showPanel">เปิดแผงควบคุม</button>
+
+  <div class="panel" id="panel">
+    <header>
+      <div class="mini">
+        <span class="tag">ลากที่ว่าง = หมุนกล้อง</span>
+        <span class="tag">ล้อเมาส์ = ซูม</span>
+        <span class="tag">แตะ/ลากขดลวด = โชว์วงแหวนหมุน</span>
+      </div>
+    </header>
+
+    <!-- ค่าฟิสิกส์ (แสดงเสมอ) -->
+    <div class="section">
+      <strong style="font-size:12px;color:#0f2a44;">ค่าฟิสิกส์ (อัปเดตเรียลไทม์)</strong>
+      <div class="row" style="margin-top:6px">
+        <label>A พื้นที่ (m²)</label><input id="areaOut" type="text" value="0" readonly />
+        <label>cosθ (B•n)</label><input id="cosOut" type="text" value="0" readonly />
+        <label>θ (B กับ normal)</label><input id="thetaOut" type="text" value="0" readonly />
+        <label>มุม B กับ “ระนาบ”</label><input id="planeAngleOut" type="text" value="0" readonly />
+        <label>ความยาวลวด (cm)</label><input id="wireLenOut" type="text" value="0" readonly />
+        <label>|Φ| (Wb)</label><input id="fluxOut" type="text" value="0" readonly />
+      </div>
+    </div>
+
+    <button class="btn" data-toggle="#secBox">ตั้งค่ากล่อง (X,Y,Z)</button>
+    <div id="secBox" class="section" style="display:none">
+      <div class="row">
+        <label>X (m)</label><input id="bx" type="number" value="7" step="0.1" />
+        <label>Y (m)</label><input id="by" type="number" value="6" step="0.1" />
+        <label>Z (m)</label><input id="bz" type="number" value="5" step="0.1" />
+      </div>
+    </div>
+
+    <button class="btn" data-toggle="#secCoil">ตั้งค่าขดลวด (H,W เป็นเมตร)</button>
+    <div id="secCoil" class="section" style="display:none">
+      <div class="row">
+        <label>สูง H (m)</label><input id="ch_m" type="number" value="4.00" step="0.01" />
+        <label>กว้าง W (m)</label><input id="cw_m" type="number" value="3.00" step="0.01" />
+      </div>
+      <div class="mini" style="margin-top:6px">
+        <button id="toggleN" class="btn">แสดง/ซ่อน n</button>
+      </div>
+    </div>
+
+    <button class="btn" data-toggle="#secB">ตั้งค่าสนามแม่เหล็ก B</button>
+    <div id="secB" class="section" style="display:none">
+      <div class="row">
+        <label>B (Wb/m²)</label><input id="bmag" type="number" value="0.50" step="0.01" />
+        <label class="muted">จำนวนลูกศร: ผูกกับ B อัตโนมัติ</label>
+      </div>
+    </div>
+
+    <button class="btn" data-toggle="#secRot">หมุนลวดด้วยตัวเลข</button>
+    <div id="secRot" class="section" style="display:none">
+      <div class="row">
+        <label>หมุน X (°)</label><input id="rx" type="number" value="0" step="1" />
+        <label>หมุน Y (°)</label><input id="ry" type="number" value="0" step="1" />
+        <label>หมุน Z (°)</label><input id="rz" type="number" value="0" step="1" />
+      </div>
+      <div style="margin-top:8px" class="mini">
+        <button id="resetRot" class="btn">รีเซ็ต</button>
+      </div>
+    </div>
+
+    <button id="hidePanelBtn" class="btn">ซ่อนแผงควบคุม</button>
+  </div>
+
+  <!-- ปุ่มลอย -->
+  <div class="floating-left"></div>
+  <div class="floating-right-top">
+    <button id="resetAll" class="btn">รีเซ็ต</button>
+    <button id="openFormulaBtn" class="btn">สรุปสูตร</button>
+    <button id="openQuizBtn" class="btn">แบบฝึกหัด</button>
+  </div>
+
+  <div class="hint">B เป็นลูกศรเทา (จาง/เส้นบาง) → ทิศ −x (ท้ายมี “×”)</div>
+
+  <div class="footer-link">ศึกษาเพิ่มเติมที่<a class="link" href="https://www.facebook.com/resolvephysics" target="_blank">เพจ คลายปมฟิสิกส์</a></div>
+
+  <!-- Overlay: สรุปสูตร -->
+  <div id="formulaOverlay" class="overlay">
+    <div class="card">
+      <header>
+        <h3>สรุปสูตร — ฟลักซ์แม่เหล็กของขดลวด</h3>
+        <button id="closeFormula" class="close">ปิด</button>
+      </header>
+      <div class="content">
+        <div class="grid-2">
+          <div class="box">
+            <h4><span class="pill">สูตรหลัก</span></h4>
+            <p>\[
+              \boxed{\Phi = B\,A\,\cos\theta}
+            \]</p>
+            <ul>
+              <li>\(\Phi\): ฟลักซ์แม่เหล็ก (เวเบอร์; Wb)</li>
+              <li>\(B\): ความหนาแน่นฟลักซ์แม่เหล็ก (เทสลา = Wb/m²)</li>
+              <li>\(A\): พื้นที่ของวงลวด (m²)</li>
+              <li>\(\theta\): มุมระหว่าง \(\vec B\) กับเวกเตอร์ตั้งฉาก \(\hat n\)</li>
+            </ul>
+          </div>
+          <div class="box">
+            <h4><span class="pill">ความสัมพันธ์ของมุม</span></h4>
+            <p>\[
+              \text{มุมระหว่าง } \vec B \text{ กับระนาบ} = 90^\circ - \theta
+            \]</p>
+            <p class="muted">ในซิมนี้กำหนด \(\vec B\) เป็น \(-\hat x\) และหมุนระนาบของขดลวดได้</p>
+          </div>
+        </div>
+
+        <div class="grid-2" style="margin-top:12px">
+          <div class="box">
+            <h4><span class="pill">ขั้นตอนการใช้สูตร</span></h4>
+            <ol>
+              <li>คำนวณ \(A = H \times W\) (m²)</li>
+              <li>อ่าน \(\theta\) = มุมระหว่าง \(\vec B\) กับ \(\hat n\)</li>
+              <li>คำนวณ \(\cos\theta\) แล้วแทนใน \(\Phi = B\,A\,\cos\theta\)</li>
+              <li>ถ้าต้องการเฉพาะขนาด ใช้ \(|\Phi| = |B\,A\,\cos\theta|\)</li>
+            </ol>
+          </div>
+          <div class="box">
+            <h4><span class="pill">ตัวอย่างย่อ</span></h4>
+            <p class="muted">สมมติ \(B=0.50\ \text{Wb/m}^2,\ H=4.00\ \text{m},\ W=3.00\ \text{m},\ \theta=30^\circ\)</p>
+            <p>\[
+              A = 12.00\ \text{m}^2,\quad \cos30^\circ \approx 0.866
+            \]</p>
+            <p>\[
+              \Phi \approx 0.50 \times 12.00 \times 0.866 \approx 5.196\ \text{Wb}
+            \]</p>
+          </div>
+        </div>
+
+        <div class="note" style="margin-top:12px">
+          <strong>ข้อควรระวัง:</strong> หน่วยต้องสอดคล้อง ( \(B\): Wb/m², \(A\): m² ) และ \(\theta\) คือ “ระหว่าง \(\vec B\) กับ \(\hat n\)” ไม่ใช่มุมกับระนาบ
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Overlay: แบบฝึกหัด -->
+  <div id="quizOverlay" class="overlay">
+    <div class="card">
+      <header>
+        <h3>แบบฝึกหัด — ฟลักซ์แม่เหล็กของขดลวด</h3>
+        <button id="closeQuiz" class="close">ปิด</button>
+      </header>
+      <div class="content">
+        <div class="box quiz">
+          <!-- Q1 -->
+          <div class="q" data-key="q1" data-ans="a">
+            <h5>1) \(B=0.80\ \text{Wb/m}^2,\ A=0.50\ \text{m}^2,\ \theta=60^\circ\). \(|\Phi|\) เท่าใด?</h5>
+            <div class="choices">
+              <label><input type="radio" name="q1" value="a"> (A) \(0.20\ \text{Wb}\)</label>
+              <label><input type="radio" name="q1" value="b"> (B) \(0.20\sqrt{3}\ \text{Wb}\)</label>
+              <label><input type="radio" name="q1" value="c"> (C) \(0.40\ \text{Wb}\)</label>
+              <label><input type="radio" name="q1" value="d"> (D) \(0.80\ \text{Wb}\)</label>
+            </div>
+            <div class="solution" style="display:none">
+              \(|\Phi| = 0.80\times0.50\times\cos60^\circ = 0.20\ \text{Wb}\). ตอบ **(A)**.
+            </div>
+          </div>
+
+          <!-- Q2 -->
+          <div class="q" data-key="q2" data-ans="c">
+            <h5>2) แผ่นลวดตั้งฉากกับ \(\vec B\) (\(\theta=0^\circ\)) ถ้า \(B=0.30,\ A=2.0\). \(\Phi\) เท่าไร?</h5>
+            <div class="choices">
+              <label><input type="radio" name="q2" value="a"> (A) \(0\ \text{Wb}\)</label>
+              <label><input type="radio" name="q2" value="b"> (B) \(0.30\ \text{Wb}\)</label>
+              <label><input type="radio" name="q2" value="c"> (C) \(0.60\ \text{Wb}\)</label>
+              <label><input type="radio" name="q2" value="d"> (D) \(2.30\ \text{Wb}\)</label>
+            </div>
+            <div class="solution" style="display:none">
+              \(\Phi = 0.30\times2.0\times\cos0^\circ = 0.60\ \text{Wb}\) ⇒ **(C)**.
+            </div>
+          </div>
+
+          <!-- Q3 -->
+          <div class="q" data-key="q3" data-ans="d">
+            <h5>3) \(\vec B\) ขนานกับระนาบ (\(\theta=90^\circ\)), \(B=1.2,\ A=0.8\). \(\Phi\) เป็นเท่าไร?</h5>
+            <div class="choices">
+              <label><input type="radio" name="q3" value="a"> (A) \(0.96\ \text{Wb}\)</label>
+              <label><input type="radio" name="q3" value="b"> (B) \(1.2\ \text{Wb}\)</label>
+              <label><input type="radio" name="q3" value="c"> (C) \(0.8\ \text{Wb}\)</label>
+              <label><input type="radio" name="q3" value="d"> (D) \(0\ \text{Wb}\)</label>
+            </div>
+            <div class="solution" style="display:none">
+              \(\cos90^\circ=0 \Rightarrow \Phi=0\). ตอบ **(D)**.
+            </div>
+          </div>
+
+          <!-- Q4 -->
+          <div class="q" data-key="q4" data-ans="b">
+            <h5>4) \(H=4\ \text{m},\ W=3\ \text{m},\ B=0.50,\ \theta=30^\circ\). หา \(|\Phi|\).</h5>
+            <div class="choices">
+              <label><input type="radio" name="q4" value="a"> (A) \(3.00\ \text{Wb}\)</label>
+              <label><input type="radio" name="q4" value="b"> (B) \(5.196\ \text{Wb}\)</label>
+              <label><input type="radio" name="q4" value="c"> (C) \(6.00\ \text{Wb}\)</label>
+              <label><input type="radio" name="q4" value="d"> (D) \(10.392\ \text{Wb}\)</label>
+            </div>
+            <div class="solution" style="display:none">
+              \(A=12,\ \cos30^\circ\approx0.866 \Rightarrow |\Phi|=0.50\times12\times0.866\approx5.196\ \text{Wb}\). ตอบ **(B)**.
+            </div>
+          </div>
+
+          <div class="quiz-actions">
+            <button id="checkQuiz" class="btn">ตรวจคำตอบ</button>
+            <button id="resetQuiz" class="btn">รีเซ็ต</button>
+          </div>
+          <div id="quizScore" class="score"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <!-- MathJax -->
+  <script>
+    window.MathJax = { tex: { inlineMath: [["$","$"],["\\(","\\)"]], displayMath: [["$$","$$"],["\\[","\\]"]] }, svg: {fontCache:'global'} };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+  <script>
+    // toggle sections
+    document.addEventListener('click', (e)=>{
+      const t=e.target.closest('[data-toggle]'); if(!t) return;
+      const sec=document.querySelector(t.getAttribute('data-toggle')); if(!sec) return;
+      sec.style.display=(sec.style.display==='block')?'none':'block';
+    });
+
+    // แผงควบคุม
+    const panel=document.getElementById('panel');
+    document.getElementById('hidePanelBtn').addEventListener('click',()=>{
+      panel.classList.add('hidden');
+      panel.style.display='none';
+      document.getElementById('showPanelBtn').style.display='block';
+    });
+    document.getElementById('showPanelBtn').addEventListener('click',()=>{
+      panel.classList.remove('hidden');
+      panel.style.display='';
+      document.getElementById('showPanelBtn').style.display='none';
+    });
+
+    // Overlay
+    const formulaOverlay=document.getElementById('formulaOverlay');
+    const quizOverlay=document.getElementById('quizOverlay');
+    document.getElementById('openFormulaBtn').addEventListener('click',()=>{
+      formulaOverlay.style.display='grid'; if(window.MathJax?.typeset) MathJax.typeset();
+    });
+    document.getElementById('openQuizBtn').addEventListener('click',()=>{
+      quizOverlay.style.display='grid'; if(window.MathJax?.typeset) MathJax.typeset();
+    });
+    document.getElementById('closeFormula').addEventListener('click',()=>{ formulaOverlay.style.display='none'; });
+    document.getElementById('closeQuiz').addEventListener('click',()=>{ quizOverlay.style.display='none'; });
+
+    // ===== Three.js =====
+    const app=document.getElementById('app');
+    const renderer=new THREE.WebGLRenderer({antialias:true});
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+    app.appendChild(renderer.domElement);
+
+    const scene=new THREE.Scene(); scene.background=new THREE.Color(0xffffff);
+    const camera=new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, .1, 400);
+    camera.position.set(10,8,12);
+    const root=new THREE.Group(); scene.add(root);
+    const isMobile = window.matchMedia("(max-width: 768px)").matches;
+    let mobileSceneScale = isMobile ? 0.70 : 1;
+    root.scale.setScalar(mobileSceneScale);
+
+    scene.add(new THREE.AmbientLight(0xffffff,.95));
+    const dir=new THREE.DirectionalLight(0xffffff,.6); dir.position.set(3,5,2); scene.add(dir);
+
+    const defaults={ box:{x:7,y:6,z:5}, B:.50, coil:{h_m:4.00,w_m:3.00} };
+    const state=JSON.parse(JSON.stringify(defaults));
+
+    const axes=new THREE.AxesHelper(5); axes.material.transparent=true; axes.material.opacity=.5; root.add(axes);
+    let boxLines=null,Blabel=null,fluxTag=null,axisLabelGroup=null;
+
+    function makeCanvasSprite(text,{size=96,fill='#111',bg=null}={}){
+      const c=document.createElement('canvas'); c.width=c.height=512; const ctx=c.getContext('2d');
+      if(bg){ctx.fillStyle=bg;ctx.fillRect(0,0,512,512);}
+      ctx.fillStyle=fill; ctx.font=`bold ${size}px Arial`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(text,256,280);
+      const tex=new THREE.CanvasTexture(c);
+      return new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true}));
+    }
+
+    function buildAxisLabels(){
+      if(axisLabelGroup){ root.remove(axisLabelGroup); axisLabelGroup=null; }
+      axisLabelGroup=new THREE.Group();
+      const items=[
+        {text:'x', color:'#ef4444', pos:[5.65,0,0]},
+        {text:'y', color:'#22c55e', pos:[0,4.95,0]},
+        {text:'z', color:'#3b82f6', pos:[0,0,5.65]},
+      ];
+      items.forEach(({text,color,pos})=>{
+        const label=makeCanvasSprite(text,{size:150,fill:color});
+        label.scale.set(.72,.72,.72);
+        label.position.set(...pos);
+        axisLabelGroup.add(label);
+      });
+      root.add(axisLabelGroup);
+    }
+    function rebuildBox(){
+      if(boxLines){root.remove(boxLines); boxLines.geometry.dispose();}
+      const edges=new THREE.EdgesGeometry(new THREE.BoxGeometry(state.box.x,state.box.y,state.box.z));
+      boxLines=new THREE.LineSegments(edges,new THREE.LineBasicMaterial({color:0xcbd5e1}));
+      root.add(boxLines);
+      if(!Blabel){Blabel=makeCanvasSprite('B',{size:110,fill:'#0f172a'}); root.add(Blabel);}
+      Blabel.position.set(0,state.box.y/2+0.7,0);
+    }
+
+    const fieldGroup=new THREE.Group(); root.add(fieldGroup);
+    function makeCrossYZ(s=.12){
+      const g=new THREE.BufferGeometry();
+      g.setAttribute('position',new THREE.BufferAttribute(new Float32Array([0,-s,-s,0,s,s,0,-s,s,0,s,-s]),3));
+      return new THREE.LineSegments(g,new THREE.LineBasicMaterial({color:0x9ca3af,transparent:true,opacity:.5}));
+    }
+    function makeArrowWithX(len){
+      const g=new THREE.Group(), AR=0x9ca3af;
+      const headH=.22, headR=.06, shaftLen=Math.max(.18,len-headH);
+      const shaft=new THREE.Mesh(new THREE.CylinderGeometry(.02,.02,shaftLen,16,1,true), new THREE.MeshBasicMaterial({color:AR,transparent:true,opacity:.55}));
+      shaft.rotation.z=-Math.PI/2; shaft.position.x=-shaftLen/2; g.add(shaft);
+      const head=new THREE.Mesh(new THREE.ConeGeometry(headR,headH,18), new THREE.MeshBasicMaterial({color:AR,transparent:true,opacity:.55}));
+      head.rotation.z=Math.PI/2; head.position.x=-shaftLen-headH/2; g.add(head);
+      g.add(makeCrossYZ(.12)); return g;
+    }
+    function arrowsCountFromB(){ const B=Math.max(0,state.B); return Math.max(2,Math.min(16,Math.round(2+Math.min(14,B*12)))); }
+    function buildFieldArrows(){
+      while(fieldGroup.children.length) fieldGroup.remove(fieldGroup.children[0]);
+      const len=state.box.x, startX=len/2, n=arrowsCountFromB();
+      for(let iy=0; iy<n; iy++) for(let iz=0; iz<n; iz++){
+        const y=THREE.MathUtils.mapLinear(iy+.5,0,n,-state.box.y/2,state.box.y/2);
+        const z=THREE.MathUtils.mapLinear(iz+.5,0,n,-state.box.z/2,state.box.z/2);
+        const a=makeArrowWithX(len); a.position.set(startX,y,z); fieldGroup.add(a);
+      }
+    }
+
+    const coilGroup=new THREE.Group(); root.add(coilGroup);
+    let coilFrame=null,paper=null,paperHit=null,thickEdges=[],nArrow=null; let nVisible=false;
+
+    function clearCoil(){
+      if(coilFrame){coilGroup.remove(coilFrame); coilFrame.geometry.dispose(); coilFrame=null;}
+      if(paper){coilGroup.remove(paper); paper.geometry.dispose(); paper=null;}
+      if(paperHit){coilGroup.remove(paperHit); paperHit.geometry.dispose(); paperHit.material.dispose(); paperHit=null;}
+      if(nArrow){coilGroup.remove(nArrow); nArrow=null;}
+      thickEdges.forEach(m=>{coilGroup.remove(m); m.geometry?.dispose?.();}); thickEdges=[];
+    }
+    function makeNormalArrow(len=1){
+      const g=new THREE.Group();
+      const shaft=new THREE.Mesh(new THREE.CylinderGeometry(.04,.04,len*.72,18), new THREE.MeshPhongMaterial({color:0xb91c1c}));
+      shaft.rotation.z=-Math.PI/2; shaft.position.x=len*.36; g.add(shaft);
+      const head=new THREE.Mesh(new THREE.ConeGeometry(.10,len*.28,24), new THREE.MeshPhongMaterial({color:0xdc2626}));
+      head.rotation.z=-Math.PI/2; head.position.x=len*.72+(len*.28)/2; g.add(head);
+      const nTag=makeCanvasSprite('n',{size:90,fill:'#7f1d1d'}); nTag.scale.set(.6,.6,.6); nTag.position.set(len*.72+.36,0,0); g.add(nTag);
+      return g;
+    }
+    function rebuildCoil(){
+      clearCoil();
+      const hh=state.coil.h_m/2, hw=state.coil.w_m/2;
+      paper=new THREE.Mesh(new THREE.PlaneGeometry(hw*2,hh*2), new THREE.MeshBasicMaterial({color:0xffffff,side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-1}));
+      paper.rotation.y=Math.PI/2; coilGroup.add(paper);
+      const hitPad = isMobile ? 1.55 : 1.25;
+      paperHit=new THREE.Mesh(new THREE.PlaneGeometry(hw*2*hitPad,hh*2*hitPad), new THREE.MeshBasicMaterial({transparent:true,opacity:0,side:THREE.DoubleSide,depthWrite:false}));
+      paperHit.rotation.y=Math.PI/2;
+      paperHit.userData.isPaperHit=true;
+      coilGroup.add(paperHit);
+
+      const pts=[new THREE.Vector3(0,-hh,-hw),new THREE.Vector3(0,hh,-hw),new THREE.Vector3(0,hh,hw),new THREE.Vector3(0,-hh,hw),new THREE.Vector3(0,-hh,-hw)];
+      coilFrame=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({color:0xef4444})); coilGroup.add(coilFrame);
+
+      const R=.035, mat=new THREE.MeshPhongMaterial({color:0xdc2626});
+      const cy1=new THREE.Mesh(new THREE.CylinderGeometry(R,R,state.coil.h_m,18),mat); cy1.position.set(0,0,-hw); coilGroup.add(cy1);
+      const cy2=cy1.clone(); cy2.position.set(0,0, hw); coilGroup.add(cy2);
+      const cz1=new THREE.Mesh(new THREE.CylinderGeometry(R,R,state.coil.w_m,18),mat); cz1.position.set(0,hh,0); cz1.rotation.x=Math.PI/2; coilGroup.add(cz1);
+      const cz2=cz1.clone(); cz2.position.set(0,-hh,0); coilGroup.add(cz2);
+      thickEdges.push(cy1,cy2,cz1,cz2);
+
+      const nLen=Math.max(state.coil.h_m,state.coil.w_m)*.45;
+      nArrow=makeNormalArrow(nLen); nArrow.visible=nVisible; coilGroup.add(nArrow);
+    }
+
+    const gizmo=new THREE.Group(); coilGroup.add(gizmo);
+    let ringX,ringY,ringZ,hideTimer=null;
+    function buildGizmo(){
+      gizmo.clear();
+      const R=Math.max(state.coil.h_m,state.coil.w_m)/2+.25;
+      const mk=(color)=>new THREE.Mesh(new THREE.TorusGeometry(R,.22,14,64), new THREE.MeshBasicMaterial({color,transparent:true,opacity:.65}));
+      ringX=mk(0xef4444); ringX.rotation.y=Math.PI/2; ringX.userData.axis='x'; gizmo.add(ringX);
+      ringY=mk(0x22c55e); ringY.rotation.x=Math.PI/2; ringY.userData.axis='y'; gizmo.add(ringY);
+      ringZ=mk(0x3b82f6);                ringZ.userData.axis='z'; gizmo.add(ringZ);
+      gizmo.visible=false;
+    }
+    function showGizmo(){ gizmo.visible=true; if(hideTimer) clearTimeout(hideTimer); hideTimer=setTimeout(()=>{gizmo.visible=false;},1200); }
+
+    function updateFluxTag(value){
+      if(fluxTag){root.remove(fluxTag); fluxTag=null;}
+      const txt=`|Φ| = ${Math.abs(value).toFixed(6)} Wb`;
+      fluxTag=makeCanvasSprite(txt,{size:52,fill:'#0f2a44'}); fluxTag.scale.set(2.6,2.6,2.6);
+      fluxTag.position.set(0,-state.box.y/2-0.9,0); root.add(fluxTag);
+    }
+
+    const sph=new THREE.Spherical(); const center=new THREE.Vector3(0,0,0);
+    sph.setFromVector3(camera.position.clone().sub(center));
+    function updateCamera(){ const pos=new THREE.Vector3().setFromSpherical(sph).add(center); camera.position.copy(pos); camera.lookAt(center); }
+
+    const raycaster=new THREE.Raycaster(); const mouse=new THREE.Vector2();
+    function setMouse(e){ const r=renderer.domElement.getBoundingClientRect(); mouse.set(((e.clientX-r.left)/r.width)*2-1, -((e.clientY-r.top)/r.height)*2+1); }
+    function pick(objects,e){ setMouse(e); raycaster.setFromCamera(mouse,camera); const hit=raycaster.intersectObjects(objects,true)[0]; return hit?hit.object:null; }
+
+    // inputs
+    const bx=document.getElementById('bx'), by=document.getElementById('by'), bz=document.getElementById('bz');
+    const ch_m=document.getElementById('ch_m'), cw_m=document.getElementById('cw_m');
+    const bmag=document.getElementById('bmag');
+    const areaOut=document.getElementById('areaOut'), cosOut=document.getElementById('cosOut'), thetaOut=document.getElementById('thetaOut'), planeAngleOut=document.getElementById('planeAngleOut'), wireLenOut=document.getElementById('wireLenOut'), fluxOut=document.getElementById('fluxOut');
+    const rx=document.getElementById('rx'), ry=document.getElementById('ry'), rz=document.getElementById('rz');
+    const resetRot=document.getElementById('resetRot'), resetAll=document.getElementById('resetAll');
+    const toggleN=document.getElementById('toggleN');
+
+    function bindImmediate(el,fn){ ['input','change'].forEach(ev=>el.addEventListener(ev,fn)); }
+    bindImmediate(bx, ()=>{ state.box.x=Math.max(.5, parseFloat(bx.value)||defaults.box.x); rebuildBox(); buildFieldArrows(); updateFlux(); });
+    bindImmediate(by, ()=>{ state.box.y=Math.max(.5, parseFloat(by.value)||defaults.box.y); rebuildBox(); buildFieldArrows(); updateFlux(); });
+    bindImmediate(bz, ()=>{ state.box.z=Math.max(.5, parseFloat(bz.value)||defaults.box.z); rebuildBox(); buildFieldArrows(); updateFlux(); });
+
+    bindImmediate(ch_m, ()=>{ state.coil.h_m=Math.max(.05, parseFloat(ch_m.value)||defaults.coil.h_m); rebuildCoil(); buildGizmo(); updateFlux(); });
+    bindImmediate(cw_m, ()=>{ state.coil.w_m=Math.max(.05, parseFloat(cw_m.value)||defaults.coil.w_m); rebuildCoil(); buildGizmo(); updateFlux(); });
+
+    bindImmediate(bmag, ()=>{ state.B=Math.max(0, parseFloat(bmag.value)||defaults.B); buildFieldArrows(); updateFlux(); });
+
+    function syncInputs(){
+      rx.value=Math.round(THREE.MathUtils.radToDeg(coilGroup.rotation.x));
+      ry.value=Math.round(THREE.MathUtils.radToDeg(coilGroup.rotation.y));
+      rz.value=Math.round(THREE.MathUtils.radToDeg(coilGroup.rotation.z));
+      updateFlux();
+    }
+    bindImmediate(rx, ()=>{ coilGroup.rotation.x=THREE.MathUtils.degToRad(parseFloat(rx.value)||0); showGizmo(); updateFlux(); });
+    bindImmediate(ry, ()=>{ coilGroup.rotation.y=THREE.MathUtils.degToRad(parseFloat(ry.value)||0); showGizmo(); updateFlux(); });
+    bindImmediate(rz, ()=>{ coilGroup.rotation.z=THREE.MathUtils.degToRad(parseFloat(rz.value)||0); showGizmo(); updateFlux(); });
+
+    toggleN.addEventListener('click', ()=>{
+      nVisible=!nVisible; if(nArrow) nArrow.visible=nVisible;
+      toggleN.textContent = nVisible ? 'ซ่อน n' : 'แสดง n';
+    });
+
+    resetRot.addEventListener('click', ()=>{ coilGroup.rotation.set(0,0,0); syncInputs(); });
+    resetAll.addEventListener('click', ()=>{
+      Object.assign(state.box,defaults.box); Object.assign(state.coil,defaults.coil); state.B=defaults.B;
+      bx.value=state.box.x; by.value=state.box.y; bz.value=state.box.z; ch_m.value=state.coil.h_m; cw_m.value=state.coil.w_m; bmag.value=state.B;
+      nVisible=false; coilGroup.rotation.set(0,0,0);
+      rebuildBox(); rebuildCoil(); buildGizmo(); buildFieldArrows(); syncInputs(); toggleN.textContent='แสดง n';
+    });
+
+    let dragging=false, mode='orbit', px=0, py=0, activeAxis=null;
+    app.addEventListener('pointerdown', e=>{
+      dragging=true; px=e.clientX; py=e.clientY; mode='orbit'; activeAxis=null;
+      const onRing=pick([ringX,ringY,ringZ],e); if(onRing){ activeAxis=onRing.userData.axis; mode='ring'; showGizmo(); return; }
+      const onPaper=(paperHit||paper) && pick([paperHit||paper],e); if(onPaper){ mode='rotateFree'; showGizmo(); return; }
+    });
+    window.addEventListener('pointerup', ()=>{ dragging=false; mode='orbit'; activeAxis=null; syncInputs(); showGizmo(); });
+    window.addEventListener('pointermove', e=>{
+      if(!dragging) return;
+      const dx=e.clientX-px, dy=e.clientY-py; px=e.clientX; py=e.clientY;
+      if(mode==='ring' && activeAxis){
+        const k=isMobile ? .018 : .01;
+        if(activeAxis==='x') coilGroup.rotation.x += (Math.abs(dy)>Math.abs(dx)?dy:dx)*k;
+        if(activeAxis==='y') coilGroup.rotation.y += (Math.abs(dx)>Math.abs(dy)?dx:dy)*k;
+        if(activeAxis==='z') coilGroup.rotation.z += (Math.abs(dx)>Math.abs(dy)?dx:dy)*k;
+        updateFlux(); showGizmo(); return;
+      }
+      if(mode==='rotateFree'){
+        const k=isMobile ? .018 : .01;
+        if(e.shiftKey){ coilGroup.rotation.z += dx*k; }
+        else if(Math.abs(dx)>Math.abs(dy)){ coilGroup.rotation.y += dx*k; }
+        else{ coilGroup.rotation.x += dy*k; }
+        updateFlux(); showGizmo(); return;
+      }
+      sph.theta -= dx*.005; sph.phi -= dy*.005; sph.phi=Math.max(.1,Math.min(Math.PI-.1,sph.phi)); updateCamera();
+    });
+    window.addEventListener('wheel', e=>{ sph.radius=THREE.MathUtils.clamp(sph.radius + e.deltaY*.01,6,80); updateCamera(); }, {passive:true});
+
+    function updateFlux(){
+      const A=state.coil.h_m*state.coil.w_m;
+      const n=new THREE.Vector3(1,0,0).applyQuaternion(coilGroup.quaternion).normalize();
+      const Bdir=new THREE.Vector3(-1,0,0);
+      const cosTheta=THREE.MathUtils.clamp(n.dot(Bdir),-1,1);
+      const theta=Math.acos(cosTheta)*180/Math.PI;
+      const planeAngle=90-theta;
+      const phi=state.B*A*cosTheta;
+
+      areaOut.value=A.toFixed(6);
+      cosOut.value=cosTheta.toFixed(6);
+      thetaOut.value=theta.toFixed(2);
+      planeAngleOut.value=planeAngle.toFixed(2);
+      wireLenOut.value=(2*(state.coil.h_m+state.coil.w_m)*100).toFixed(2);
+      fluxOut.value=Math.abs(phi).toFixed(6);
+
+      updateFluxTag(phi);
+    }
+
+    const quizScore=document.getElementById('quizScore');
+    function checkQuiz(){
+      let correct=0,total=0;
+      document.querySelectorAll('#quizOverlay .quiz .q').forEach(q=>{
+        total++;
+        const key=q.getAttribute('data-key'), ans=q.getAttribute('data-ans');
+        const marked=(q.querySelector(`input[name="${key}"]:checked`)||{}).value;
+        const sol=q.querySelector('.solution'); q.classList.remove('wrong');
+        if(marked===ans){ correct++; sol.style.display='block'; } else { sol.style.display='block'; q.classList.add('wrong'); }
+      });
+      quizScore.textContent=`คะแนน: ${correct} / ${total}`;
+      if(window.MathJax?.typeset) MathJax.typeset();
+    }
+    function resetQuiz(){
+      document.querySelectorAll('#quizOverlay .quiz input[type="radio"]').forEach(r=>r.checked=false);
+      document.querySelectorAll('#quizOverlay .quiz .solution').forEach(s=>s.style.display='none');
+      document.querySelectorAll('#quizOverlay .quiz .q').forEach(q=>q.classList.remove('wrong'));
+      quizScore.textContent='';
+    }
+    document.getElementById('checkQuiz')?.addEventListener('click', checkQuiz);
+    document.getElementById('resetQuiz')?.addEventListener('click', resetQuiz);
+
+    rebuildBox(); buildAxisLabels(); rebuildCoil(); buildGizmo(); buildFieldArrows(); updateCamera(); updateFlux();
+    (function render(){ renderer.render(scene,camera); requestAnimationFrame(render); })();
+    window.addEventListener('resize',()=>{ renderer.setSize(window.innerWidth,window.innerHeight); camera.aspect=window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); const mobileNow=window.matchMedia('(max-width: 768px)').matches; root.scale.setScalar(mobileNow ? 0.70 : 1); });
+  </script>
+</body>
+</html>

@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+
+<html lang="th">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>Mini Lab : แม่เหล็กเหนี่ยวนำจากขดลวดที่มี I ไหลผ่าน</title>
+<style>
+  :root{ --ink:#0f2a44; --cyl:#e9e9e9; --arrow:#e63946; --batBlue:#3b82f6; --switch:#60a5fa; --reset:#9ca3af; --red:#ef4444; --blue:#2563eb; }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{ margin:0;display:grid;place-items:center;min-height:100svh;background:#fff;
+        font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial; user-select:none; -webkit-user-select:none; touch-action:manipulation; }
+  .title{margin:0 0 12px 0;text-align:center;color:var(--blue);font-size:clamp(22px,3vw,34px);font-weight:900;line-height:1.25;}
+  .frame{width:min(980px,98vw);position:relative;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+  svg{width:100%;height:auto;display:block;touch-action:none}
+  .arrowGlow{filter:drop-shadow(0 0 4px rgba(230,57,70,.65))}
+  .polText{ paint-order: stroke; stroke: #ffffff; stroke-width: 2px; }
+  .ui{ display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;justify-content:center;margin-top:14px;z-index:5; }
+  .btn{ padding:.7rem .95rem;border-radius:.9rem;border:1px solid #d0d5dd;background:#fff; box-shadow:0 1px 2px rgba(16,24,40,.06);cursor:pointer;font-size:clamp(12px,2.4vw,14px); }
+  .btn:active{transform:translateY(1px)}
+  .seg{display:inline-flex;border:1px solid #d0d5dd;border-radius:.9rem;overflow:hidden;background:#fff}
+  .seg button{border:0;border-right:1px solid #e5e7eb;background:#fff}
+  .seg button:last-child{border-right:0}
+  .seg .active{background:#0f172a;color:#fff;border-color:#0f172a}
+  #toggleSW{background:var(--switch);color:#fff;border-color:#93c5fd;font-weight:700}
+  #reset{background:var(--reset);color:#fff;border-color:#9ca3af;font-weight:700}
+  .credit{ margin:14px auto 0 auto; width:fit-content; font-size:clamp(12px,2.8vw,14px); color:#334155; background:rgba(255,255,255,.92); padding:.45rem .7rem; border:1px solid #e5e7eb; border-radius:.6rem; z-index:6; line-height:1.25; pointer-events:auto; text-align:center; }
+  .credit a{color:var(--blue);text-decoration:underline;font-weight:700}
+  @media (max-width: 768px){
+    body{display:block;min-height:auto;}
+    .frame{
+      width:min(980px,100vw);
+      margin:0 auto;
+      padding:max(18px, env(safe-area-inset-top)) 10px calc(120px + env(safe-area-inset-bottom)) 10px;
+    }
+    .title{
+      margin:0 0 10px 0;
+      font-size:clamp(18px, 6vw, 28px);
+      line-height:1.22;
+    }
+    .ui{margin-top:12px;justify-content:center;}
+    .ui .seg, .ui .btn{width:calc(50% - .25rem);}
+    .ui .seg{display:flex;}
+    .ui .seg .btn{width:50%;}
+    .credit{margin-top:12px;}
+  }
+
+
+  @media (max-width: 768px){
+    .frame{overflow-x:hidden;}
+    svg{
+      width:180%;
+      max-width:none;
+      margin-left:-40%;
+      margin-right:-40%;
+      display:block;
+    }
+  }
+
+</style>
+</head>
+<body>
+<div class="frame">
+<h1 class="title">Mini Lab : แม่เหล็กเหนี่ยวนำจากขดลวดที่มี I ไหลผ่าน</h1>
+<svg aria-label="คอยล์เดียวมีกระแส" viewbox="0 0 960 420">
+<!-- defs ก่อน เพื่อความเข้ากันได้ทุกเบราเซอร์ -->
+<defs>
+<marker id="arrowHeadRed" markerheight="7" markerwidth="7" orient="auto-start-reverse" refx="8" refy="3.5" viewbox="0 0 10 7">
+<path d="M0,0 L10,3.5 L0,7 Z" fill="var(--arrow)"></path>
+</marker>
+<lineargradient id="coreGrad" x1="0" x2="1" y1="0" y2="0">
+<stop id="coreStopL" offset="0%" stop-color="var(--red)"></stop>
+<stop id="coreStopR" offset="100%" stop-color="var(--blue)"></stop>
+</lineargradient>
+<!-- ใช้คลิปเพื่อให้เข็มทิศด้านในถูกตัดให้เหมือนอยู่ในคอยล์ แต่ยังอยู่ชั้นบนสุดให้มองเห็นได้ -->
+<clippath id="coreClip">
+<rect height="90" rx="10" width="265" x="385" y="110"></rect>
+</clippath>
+</defs>
+<!-- เลเยอร์เข็มทิศด้านใน (จะถูก clip ให้เหมือนอยู่ในคอยล์) -->
+<!-- ย้ายไปไว้หลังคอยล์เพื่อให้เห็นชัด แล้วค่อย clip -->
+<!-- ========= คอยล์ + แบต + สวิตช์ ========= -->
+<g id="rightCircuit" pointer-events="none" transform="translate(240,0)">
+<rect fill="var(--cyl)" height="90" rx="10" width="265" x="145" y="110"></rect>
+<ellipse cx="145" cy="155" fill="var(--cyl)" rx="16" ry="45"></ellipse>
+<ellipse cx="410" cy="155" fill="var(--cyl)" rx="16" ry="45"></ellipse>
+<rect fill="var(--cyl)" height="86" width="50" x="360" y="112"></rect>
+<rect fill="url(#coreGrad)" height="40" id="coreBar" opacity="0" rx="8" width="200" x="170" y="135"></rect>
+<g fill="none" id="rightCoil" stroke="var(--ink)" stroke-width="2">
+<line x1="170" x2="200" y1="200" y2="110"></line>
+<line x1="180" x2="210" y1="200" y2="110"></line>
+<line x1="190" x2="220" y1="200" y2="110"></line>
+<line x1="200" x2="230" y1="200" y2="110"></line>
+<line x1="210" x2="240" y1="200" y2="110"></line>
+<line x1="220" x2="250" y1="200" y2="110"></line>
+<line x1="230" x2="260" y1="200" y2="110"></line>
+<line x1="240" x2="270" y1="200" y2="110"></line>
+<line x1="250" x2="280" y1="200" y2="110"></line>
+<line x1="260" x2="290" y1="200" y2="110"></line>
+<line x1="270" x2="300" y1="200" y2="110"></line>
+<line x1="280" x2="310" y1="200" y2="110"></line>
+<line x1="290" x2="320" y1="200" y2="110"></line>
+<line x1="300" x2="330" y1="200" y2="110"></line>
+<line x1="310" x2="340" y1="200" y2="110"></line>
+<line x1="320" x2="350" y1="200" y2="110"></line>
+<line x1="330" x2="360" y1="200" y2="110"></line>
+<line x1="340" x2="370" y1="200" y2="110"></line>
+</g>
+<g id="rightCoilDirArrows" opacity="0"></g>
+<path d="M170 200 V310 H200" fill="none" id="R_leftWire" stroke="var(--ink)" stroke-width="3"></path>
+<path d="M310 311 H368 V200" fill="none" id="R_rightWire" stroke="var(--ink)" stroke-width="3"></path>
+<g id="battery" transform="translate(205,292)">
+<rect fill="var(--batBlue)" height="28" id="batteryRect" rx="4" width="52" x="0" y="0"></rect>
+<line stroke="var(--ink)" stroke-width="3" x1="-5" x2="0" y1="19" y2="19"></line>
+<line stroke="var(--ink)" stroke-width="3" x1="52" x2="75" y1="19" y2="19"></line>
+<text fill="#dc2626" font-size="22" font-weight="900" id="batPolL" text-anchor="end" x="-14" y="10">+</text>
+<text fill="#dc2626" font-size="22" font-weight="900" id="batPolR" text-anchor="start" x="64" y="10">−</text>
+</g>
+<g id="switch" transform="translate(280,311)">
+<circle cx="0" cy="0" fill="var(--switch)" r="5"></circle>
+<circle cx="30" cy="0" fill="var(--switch)" r="5"></circle>
+<line id="blade" stroke="var(--switch)" stroke-linecap="round" stroke-width="4" x1="0" x2="30" y1="0" y2="-10"></line>
+<text fill="#475569" font-size="11" text-anchor="middle" x="15" y="-16">SW</text>
+</g>
+<g id="rightWireArrows" opacity="0">
+<line class="arrowGlow" id="R_leftWireArrow" marker-end="url(#arrowHeadRed)" stroke="var(--arrow)" stroke-width="2" x1="170" x2="170" y1="300" y2="210"></line>
+<line class="arrowGlow" id="R_rightWireArrow" marker-end="url(#arrowHeadRed)" stroke="var(--arrow)" stroke-width="2" x1="368" x2="368" y1="210" y2="300"></line>
+<line class="arrowGlow" id="R_bottomArrow" marker-end="url(#arrowHeadRed)" stroke="var(--arrow)" stroke-width="2" x1="310" x2="200" y1="311" y2="311"></line>
+</g>
+<g font-family="Arial, sans-serif" font-size="18" font-weight="700" id="rightPolarity" opacity="0" pointer-events="none">
+<text class="polText" fill="var(--red)" id="rightCoilLeftPol" text-anchor="middle" x="170" y="173">N</text>
+<text class="polText" fill="var(--blue)" id="rightCoilRightPol" text-anchor="middle" x="370" y="173">S</text>
+</g>
+</g>
+<!-- พื้นที่กดสับสวิตช์ด้วยนิ้ว (overlay โปร่งใสเหนือใบมีดสีส้ม) -->
+<rect fill="#000" height="44" id="switchHit" opacity="0.001" style="cursor:pointer" width="70" x="510" y="291"></rect>
+<!-- เลเยอร์เข็มทิศด้านใน (clip-path ให้เหมือนอยู่ข้างในคอยล์ แต่ยังมองเห็นได้) -->
+<g clip-path="url(#coreClip)" id="compassInsideLayer" style="pointer-events:all"></g>
+<!-- เลเยอร์เข็มทิศด้านนอก (อยู่เหนือคอยล์) -->
+<g id="compassOutsideLayer"></g>
+</svg>
+<div class="ui">
+<div class="seg" id="polSeg" title="สลับขั้วแบตเตอรี่">
+<button aria-pressed="false" class="btn" id="polPlusLeft">ซ้ายเป็น +</button>
+<button aria-pressed="false" class="btn" id="polMinusLeft">ซ้ายเป็น −</button>
+</div>
+<button class="btn" id="toggleSW" title="เปิด/ปิดสวิตช์">สวิตช์: OFF</button>
+<button class="btn" id="pulse" title="พัลส์สั้น">พัลส์</button>
+<button class="btn" id="reset">รีเซ็ต</button>
+<div class="seg" id="compModeSeg" title="โหมดการวางเข็มทิศ">
+<button aria-pressed="true" class="btn active" id="modeOutside">นอกขดลวด</button>
+<button aria-pressed="false" class="btn" id="modeInside">ในขดลวด</button>
+</div>
+<button class="btn" id="addCompass">เพิ่มเข็มทิศ</button>
+</div>
+<div class="credit">ศึกษาเพิ่มเติมที่ <a href="https://www.facebook.com/resolvephysics" rel="noopener noreferrer" target="_blank">เพจคลายปมฟิสิกส์</a></div>
+</div>
+<script>
+let swOn = false;
+let polLeftPlus = true;
+
+const rightCoilDirArrows= document.getElementById('rightCoilDirArrows');
+const rightWireArrows   = document.getElementById('rightWireArrows');
+const R_leftWireArrow   = document.getElementById('R_leftWireArrow');
+const R_rightWireArrow  = document.getElementById('R_rightWireArrow');
+const R_bottomArrow     = document.getElementById('R_bottomArrow');
+const rightPolarity     = document.getElementById('rightPolarity');
+const rightCoilLeftPol  = document.getElementById('rightCoilLeftPol');
+const rightCoilRightPol = document.getElementById('rightCoilRightPol');
+const batPolL = document.getElementById('batPolL');
+const batPolR = document.getElementById('batPolR');
+const coreBar  = document.getElementById('coreBar');
+const coreStopL= document.getElementById('coreStopL');
+const coreStopR= document.getElementById('coreStopR');
+
+const btnPlusLeft  = document.getElementById('polPlusLeft');
+const btnMinusLeft = document.getElementById('polMinusLeft');
+const btnSW        = document.getElementById('toggleSW');
+const btnPulse     = document.getElementById('pulse');
+const btnReset     = document.getElementById('reset');
+const btnAddComp   = document.getElementById('addCompass');
+const compassInsideLayer = document.getElementById('compassInsideLayer');
+const compassOutsideLayer= document.getElementById('compassOutsideLayer');
+const modeOutsideBtn = document.getElementById('modeOutside');
+const modeInsideBtn  = document.getElementById('modeInside');
+const switchHit = document.getElementById('switchHit');
+const bladeEl   = document.getElementById('blade');
+
+function buildStaticArrows(layer, startX, count=18){
+  layer.innerHTML='';
+  for(let i=0;i<count;i++){
+    const x = startX + i*10;
+    const a=document.createElementNS('http://www.w3.org/2000/svg','line');
+    a.setAttribute('stroke','var(--arrow)');
+    a.setAttribute('stroke-width','1.2');
+    a.setAttribute('class','arrowGlow');
+    a.setAttribute('marker-end','url(#arrowHeadRed)');
+    a.dataset.base=JSON.stringify({x1:x,y1:200,x2:x+30,y2:110});
+    layer.appendChild(a);
+  }
+}
+buildStaticArrows(rightCoilDirArrows,170);
+function setLayerOpacity(layer,op){ layer.setAttribute('opacity', String(op)); }
+function setCoilArrowsDirection(layer, sign){
+  const kids=[...layer.children];
+  for(const el of kids){
+    const b=JSON.parse(el.dataset.base);
+    if(sign>=0){ el.setAttribute('x1',b.x1);el.setAttribute('y1',b.y1);el.setAttribute('x2',b.x2);el.setAttribute('y2',b.y2); }
+    else{        el.setAttribute('x1',b.x2);el.setAttribute('y1',b.y2);el.setAttribute('x2',b.x1);el.setAttribute('y2',b.y1); }
+  }
+}
+
+function updateBatteryDrawing(){
+  if(polLeftPlus){ batPolL.textContent='+'; batPolR.textContent='−'; }
+  else{ batPolL.textContent='−'; batPolR.textContent='+'; }
+  [btnPlusLeft,btnMinusLeft].forEach(b=>{b.classList.remove('active'); b.setAttribute('aria-pressed','false');});
+  const act = polLeftPlus?btnPlusLeft:btnMinusLeft; act.classList.add('active'); act.setAttribute('aria-pressed','true');
+}
+
+function updateCoreBar(){
+  if(!swOn){ coreBar.setAttribute('opacity','0'); return; }
+  coreBar.setAttribute('opacity','0.9');
+  const leftIsN = polLeftPlus;
+  if(leftIsN){ coreStopL.setAttribute('stop-color','var(--red)'); coreStopR.setAttribute('stop-color','var(--blue)'); }
+  else{        coreStopL.setAttribute('stop-color','var(--blue)'); coreStopR.setAttribute('stop-color','var(--red)'); }
+}
+
+function updateSwitchDrawing(){
+  btnSW.textContent = 'สวิตช์: ' + (swOn?'ON':'OFF');
+  const blade = document.getElementById('blade');
+  blade.setAttribute('x2','30');
+  blade.setAttribute('y2', swOn ? '0' : '-10');
+
+  if(swOn){
+    setLayerOpacity(rightWireArrows,1);
+    setLayerOpacity(rightCoilDirArrows,1);
+    if(polLeftPlus){
+      R_leftWireArrow.setAttribute('x1','170'); R_leftWireArrow.setAttribute('y1','300');
+      R_leftWireArrow.setAttribute('x2','170'); R_leftWireArrow.setAttribute('y2','210');
+      R_rightWireArrow.setAttribute('x1','368'); R_rightWireArrow.setAttribute('y1','210');
+      R_rightWireArrow.setAttribute('x2','368'); R_rightWireArrow.setAttribute('y2','300');
+      R_bottomArrow.setAttribute('x1','310'); R_bottomArrow.setAttribute('y1','311');
+      R_bottomArrow.setAttribute('x2','200'); R_bottomArrow.setAttribute('y2','311');
+      setCoilArrowsDirection(rightCoilDirArrows, +1);
+    }else{
+      R_leftWireArrow.setAttribute('x1','170'); R_leftWireArrow.setAttribute('y1','210');
+      R_leftWireArrow.setAttribute('x2','170'); R_leftWireArrow.setAttribute('y2','300');
+      R_rightWireArrow.setAttribute('x1','368'); R_rightWireArrow.setAttribute('y1','300');
+      R_rightWireArrow.setAttribute('x2','368'); R_rightWireArrow.setAttribute('y2','210');
+      R_bottomArrow.setAttribute('x1','200'); R_bottomArrow.setAttribute('y1','311');
+      R_bottomArrow.setAttribute('x2','310'); R_bottomArrow.setAttribute('y2','311');
+      setCoilArrowsDirection(rightCoilDirArrows, -1);
+    }
+    // ป้ายขั้ว N/S
+    rightPolarity.setAttribute('opacity','1');
+    const leftPole = polLeftPlus ? 'N' : 'S';
+    rightCoilLeftPol.textContent  = leftPole;
+    rightCoilRightPol.textContent = (leftPole==='N')?'S':'N';
+    rightCoilLeftPol.setAttribute('fill',  leftPole==='N'?'var(--red)':'var(--blue)');
+    rightCoilRightPol.setAttribute('fill', leftPole==='N'?'var(--blue)':'var(--red)');
+  }else{
+    setLayerOpacity(rightWireArrows,0);
+    setLayerOpacity(rightCoilDirArrows,0);
+    rightPolarity.setAttribute('opacity','0');
+  }
+  updateCoreBar();
+}
+
+// ====== แบบจำลองสนาม B (ไดโพลตามป้าย N/S) ======
+function getPoleCenters(){
+  // ป้ายอยู่ในกลุ่มที่ translate(240,0)
+  const gx = 240; // offset x ของกลุ่มคอยล์
+  const Ny = Number(rightCoilLeftPol.getAttribute('y')) - 6;
+  const Sy = Number(rightCoilRightPol.getAttribute('y')) - 6;
+  const L = {x: gx + Number(rightCoilLeftPol.getAttribute('x')),  y: Ny};
+  const R = {x: gx + Number(rightCoilRightPol.getAttribute('x')), y: Sy};
+  const leftIsN = (rightCoilLeftPol.textContent==='N');
+  return leftIsN ? {N:L,S:R} : {N:R,S:L};
+}
+function vec(a,b){ return {x:a.x-b.x, y:a.y-b.y}; }
+function invCube(v){ const r2=v.x*v.x+v.y*v.y; const r=Math.sqrt(r2)+1e-6; const k=1/(r2*r); return {x:v.x*k,y:v.y*k}; }
+function BfieldAt(x,y){
+  if(!swOn) return {bx:0,by:0,mag:0};
+  const {N,S}=getPoleCenters();
+  const bN = invCube(vec({x,y},N));
+  const bS = invCube(vec({x,y},S));
+  const bx = bN.x - bS.x; const by = bN.y - bS.y; // เส้นสนามออกจาก N เข้าหา S
+  return {bx,by,mag:Math.hypot(bx,by)};
+}
+
+// ====== เข็มทิศ: เพิ่ม/ลากได้ และชี้ตาม B ======
+let compassCount=0; const compasses=new Map();
+let currentCompassMode = 'outside'; // 'outside' | 'inside'
+function setCompassMode(mode){
+  currentCompassMode = mode;
+  // ปรับปุ่ม UI
+  modeOutsideBtn.classList.toggle('active', mode==='outside');
+  modeInsideBtn.classList.toggle('active',  mode==='inside');
+  modeOutsideBtn.setAttribute('aria-pressed', String(mode==='outside'));
+  modeInsideBtn.setAttribute('aria-pressed',  String(mode==='inside'));
+  // ย้ายเข็มทิศที่มีอยู่ให้เข้าสู่โหมดใหม่ด้วย (พี่จะไม่งงเวลาเปลี่ยนโหมดแล้วลากต่อ)
+  for(const comp of compasses.values()){
+    if(comp.mode === mode) continue; // ไม่ต้องย้ายถ้าอยู่โหมดเดียวกันอยู่แล้ว
+    comp.mode = mode;
+    // ย้ายเลเยอร์
+    const parent = (mode==='inside'? compassInsideLayer : compassOutsideLayer);
+    parent.appendChild(comp.g);
+    // ถ้าเป็นโหมดในขดลวด: บังคับให้อยู่ในกรอบและเลื่อนเข้าไปกลางแกนถ้าอยู่นอก
+    if(mode==='inside'){
+      comp.x = Math.min(Math.max(comp.x, CORE_BOUNDS.x1+10), CORE_BOUNDS.x2-10);
+      comp.y = Math.min(Math.max(comp.y, CORE_BOUNDS.y1+6),  CORE_BOUNDS.y2-6);
+      comp.g.setAttribute('transform',`translate(${comp.x},${comp.y})`);
+    }
+  }
+}
+function makeCompass(x=520,y=320){
+  const id=`comp${++compassCount}`;
+  const g=document.createElementNS('http://www.w3.org/2000/svg','g');
+  g.setAttribute('id',id); g.style.cursor='grab';
+  // วางตำแหน่งเริ่มต้นตามโหมด
+  if(currentCompassMode==='inside'){
+    const ix = Math.min(Math.max(x, CORE_BOUNDS.x1+10), CORE_BOUNDS.x2-10);
+    const iy = Math.min(Math.max(y, CORE_BOUNDS.y1+6),  CORE_BOUNDS.y2-6);
+    x=ix; y=iy;
+  }
+  g.setAttribute('transform',`translate(${x},${y})`);
+  if(currentCompassMode==='inside'){ g.style.opacity='0.6'; }
+
+  // แผ่นจับลาก (เพิ่ม hit-area ให้ลากง่าย/ทุกเบราเซอร์)
+  const hit=document.createElementNS('http://www.w3.org/2000/svg','circle');
+  hit.setAttribute('r','26'); hit.setAttribute('fill','#000'); hit.setAttribute('opacity','0.001');
+  hit.style.pointerEvents='all';
+
+  // วงแหวนฐาน
+  const c=document.createElementNS('http://www.w3.org/2000/svg','circle');
+  c.setAttribute('r','22'); c.setAttribute('fill','#fff'); c.setAttribute('stroke','#334155'); c.setAttribute('stroke-width','1.5');
+
+  // กลุ่มเข็มหมุน (ชี้ขึ้นเป็นค่าเริ่มต้น → ต้องบวก 90° ตอนแปลงมุมจาก atan2)
+  const rotor=document.createElementNS('http://www.w3.org/2000/svg','g');
+  rotor.setAttribute('id',id+'-rotor');
+  // ปลายลูกศรสีแดง (ขั้ว N)
+  const redTip=document.createElementNS('http://www.w3.org/2000/svg','path');
+  redTip.setAttribute('d','M0,-16 L5,-8 L-5,-8 Z'); redTip.setAttribute('fill','var(--red)');
+  // ลำตัวสีน้ำเงินครึ่งล่าง
+  const blueBody=document.createElementNS('http://www.w3.org/2000/svg','rect');
+  blueBody.setAttribute('x','-3'); blueBody.setAttribute('y','-8'); blueBody.setAttribute('width','6'); blueBody.setAttribute('height','24'); blueBody.setAttribute('rx','2');
+  blueBody.setAttribute('fill','var(--blue)');
+  // ป้าย N ใกล้ปลายแดง
+  const textN=document.createElementNS('http://www.w3.org/2000/svg','text');
+  textN.textContent='N'; textN.setAttribute('x','0'); textN.setAttribute('y','-20'); textN.setAttribute('fill','var(--red)'); textN.setAttribute('font-size','10'); textN.setAttribute('text-anchor','middle');
+  // จุดหมุนกลาง
+  const dot=document.createElementNS('http://www.w3.org/2000/svg','circle'); dot.setAttribute('r','1.6'); dot.setAttribute('fill','#0f172a');
+
+  rotor.appendChild(redTip); rotor.appendChild(blueBody); rotor.appendChild(textN);
+  g.appendChild(hit); g.appendChild(c); g.appendChild(rotor); g.appendChild(dot);
+  (currentCompassMode==='inside'?compassInsideLayer:compassOutsideLayer).appendChild(g);
+
+  const comp={id,g,rotor,x,y,mode:currentCompassMode}; compasses.set(id,comp);
+
+  // ลากได้ด้วย Pointer Events
+  let dragging=false,ox=0,oy=0;
+  g.addEventListener('pointerdown',e=>{ e.preventDefault(); dragging=true; try{ g.setPointerCapture(e.pointerId);}catch{} g.style.cursor='grabbing'; const p=svgPoint(e); ox=comp.x-p.x; oy=comp.y-p.y;});
+  g.addEventListener('pointermove', e=>{ 
+    if(!dragging) return; 
+    const p=svgPoint(e); 
+    let nx=p.x+ox, ny=p.y+oy; 
+    if(comp.mode==='inside'){
+      nx=Math.min(Math.max(nx, CORE_BOUNDS.x1+10), CORE_BOUNDS.x2-10);
+      ny=Math.min(Math.max(ny, CORE_BOUNDS.y1+6),  CORE_BOUNDS.y2-6);
+    }
+    comp.x=nx; comp.y=ny; 
+    g.setAttribute('transform',`translate(${comp.x},${comp.y})`); 
+  });
+  function endDrag(e){ if(!dragging) return; dragging=false; try{ g.releasePointerCapture(e.pointerId);}catch{} g.style.cursor='grab'; }
+  g.addEventListener('pointerup',endDrag); g.addEventListener('pointercancel',endDrag);
+
+  return comp;
+}
+
+function svgPoint(evt){ const svg=document.querySelector('svg'); const pt=svg.createSVGPoint(); pt.x=evt.clientX; pt.y=evt.clientY; const ctm=svg.getScreenCTM().inverse(); return pt.matrixTransform(ctm); }
+
+// ไฮไลท์แกนเมื่อมีเข็มใกล้คอยล์
+const CORE_BOUNDS={x1:240+170,x2:240+370,y1:135,y2:175};
+function nearCore(comp){ return comp.x>CORE_BOUNDS.x1-30 && comp.x<CORE_BOUNDS.x2+30 && comp.y>CORE_BOUNDS.y1-40 && comp.y<CORE_BOUNDS.y2+40; }
+
+function updateAllCompasses(){
+  let anyNear=false, anyInside=false;
+  for(const comp of compasses.values()){
+    const B=BfieldAt(comp.x,comp.y);
+    let bx=B.bx, by=B.by;
+    // ภายในขดลวด ให้ทิศ S → N (กลับทิศจากนอกคอยล์)
+    if(comp.mode==='inside'){ bx=-bx; by=-by; anyInside=true; }
+    let ang=0; if(B.mag>1e-6){ ang=Math.atan2(by,bx); }
+    comp.rotor.setAttribute('transform',`rotate(${ang*180/Math.PI + 90})`);
+    const baseOpa = (comp.mode==='inside') ? 0.6 : 1; const opa = swOn ? baseOpa : .35; comp.g.style.opacity=opa;
+    if(nearCore(comp)) anyNear=true;
+  }
+  if(swOn){ coreBar.setAttribute('opacity', (anyInside||anyNear) ? '1' : '0.9'); }
+}
+
+// ===== ปุ่มควบคุม =====
+btnPlusLeft.onclick  = ()=>{ polLeftPlus = true;  updateBatteryDrawing(); updateSwitchDrawing(); };
+btnMinusLeft.onclick = ()=>{ polLeftPlus = false; updateBatteryDrawing(); updateSwitchDrawing(); };
+function toggleSwitch(){ swOn = !swOn; updateSwitchDrawing(); }
+btnSW.onclick = toggleSwitch;
+btnPulse.onclick     = ()=>{ const prev = swOn; swOn = !prev; updateSwitchDrawing(); setTimeout(()=>{ swOn = prev; updateSwitchDrawing(); }, 250); };
+btnReset.onclick     = ()=>{ swOn=false; polLeftPlus=true; updateBatteryDrawing(); updateSwitchDrawing(); compassInsideLayer.innerHTML=''; compassOutsideLayer.innerHTML=''; compasses.clear(); };
+btnAddComp.onclick   = ()=>{ const baseX = currentCompassMode==='inside' ? (CORE_BOUNDS.x1+CORE_BOUNDS.x2)/2 : 520 + 24*compasses.size; const baseY = currentCompassMode==='inside' ? (CORE_BOUNDS.y1+CORE_BOUNDS.y2)/2 : 250; makeCompass(baseX, baseY); };
+modeOutsideBtn.onclick = ()=> setCompassMode('outside');
+modeInsideBtn.onclick  = ()=> setCompassMode('inside');
+// แตะใบมีด/พื้นที่สวิตช์เพื่อสับ ON/OFF ได้ด้วยนิ้ว
+switchHit.addEventListener('pointerdown', (e)=>{ e.preventDefault(); toggleSwitch(); });
+
+// ===== เริ่มต้น =====
+function tick(){ updateAllCompasses(); requestAnimationFrame(tick); }
+updateBatteryDrawing();
+updateSwitchDrawing();
+setCompassMode('outside');
+makeCompass(520,250);
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>

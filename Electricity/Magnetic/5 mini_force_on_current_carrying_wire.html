@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini Lab : แรงที่กระทำต่อลวดตัวนำในสนามแม่เหล็ก</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: white;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2563eb;
+            font-size: calc(2.5rem - 5px);
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .simulation-area {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .canvas-container {
+            flex: 1;
+            border: 3px solid #2563eb;
+            border-radius: 15px;
+            background: white;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        #canvas {
+            display: block;
+        }
+        
+        .controls {
+            width: 350px;
+            flex: 0 0 350px;
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 15px;
+            padding: 20px;
+            height: fit-content;
+        }
+        
+        .control-group {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .control-group h3 {
+            margin: 0 0 15px 0;
+            color: #1e40af;
+            font-size: 1.1rem;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 5px;
+        }
+        
+        .control-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            gap: 10px;
+        }
+        
+        label {
+            font-weight: 600;
+            min-width: 80px;
+            font-size: 0.9rem;
+        }
+        
+        input[type="range"] {
+            flex: 1;
+            height: 6px;
+            border-radius: 3px;
+            background: #e2e8f0;
+            outline: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #2563eb;
+            cursor: pointer;
+        }
+        
+        select, button {
+            padding: 8px 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 6px;
+            background: white;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+        
+        button {
+            background: #2563eb;
+            color: white;
+            border-color: #2563eb;
+            font-weight: 600;
+            transition: all 0.2s;
+            margin: 2px;
+        }
+        
+        button:hover {
+            background: #1d4ed8;
+            transform: translateY(-1px);
+        }
+
+        .reset-btn {
+            background: #9ca3af !important;
+            border-color: #9ca3af !important;
+            color: white !important;
+        }
+
+        .reset-btn:hover {
+            background: #6b7280 !important;
+        }
+
+        #canvas {
+            display: block;
+            width: 100%;
+            height: auto;
+            touch-action: manipulation;
+        }
+
+        .footer-link-box {
+            margin-top: 15px;
+            padding: 15px;
+            background: #e0f2fe;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .footer-link-box p {
+            margin: 0;
+            font-size: 0.95rem;
+            color: #0277bd;
+        }
+
+        .footer-link-box a {
+            color: #1565c0;
+            text-decoration: underline;
+            font-weight: 700;
+        }
+
+        .mobile-floating-controls {
+            display: none;
+        }
+
+        .floating-btn {
+            min-width: 120px;
+            min-height: 48px;
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(37,99,235,0.18);
+            font-size: 1rem;
+        }
+
+        @media (max-width: 900px) {
+            html, body {
+                min-height: 100%;
+            }
+
+            body {
+                padding: 12px 12px calc(150px + env(safe-area-inset-bottom, 0px));
+            }
+
+            .container {
+                max-width: 100%;
+            }
+
+            .simulation-area {
+                flex-direction: column;
+                gap: 14px;
+            }
+
+            .controls {
+                width: auto;
+                flex: none;
+                max-height: none;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+                padding-bottom: 140px;
+            }
+
+            h1 {
+                font-size: calc(2.1rem - 5px);
+                line-height: 1.25;
+                margin-bottom: 18px;
+            }
+
+            .canvas-container {
+                width: 100%;
+                overflow: hidden;
+                position: sticky;
+                top: 0;
+                z-index: 5;
+                background: white;
+                box-shadow: 0 10px 24px rgba(15,23,42,0.08);
+            }
+
+            .control-group {
+                padding: 12px;
+            }
+
+            .control-row {
+                align-items: center;
+                gap: 8px;
+            }
+
+            label {
+                min-width: 66px;
+                font-size: 0.84rem;
+            }
+
+            .value-display {
+                min-width: 52px;
+                font-size: 0.85rem;
+            }
+
+            select, button {
+                font-size: 0.88rem;
+                padding: 9px 10px;
+            }
+
+            .play-controls {
+                display: none;
+            }
+
+            .mobile-floating-controls {
+                position: fixed;
+                left: 12px;
+                right: 12px;
+                bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+                z-index: 1000;
+                padding: 10px;
+                border-radius: 20px;
+                background: rgba(255,255,255,0.86);
+                backdrop-filter: blur(8px);
+                border: 1px solid rgba(203,213,225,0.95);
+                box-shadow: 0 10px 28px rgba(15,23,42,0.12);
+            }
+
+            .results {
+                margin-bottom: calc(160px + env(safe-area-inset-bottom, 0px));
+            }
+        }
+        
+        .value-display {
+            min-width: 60px;
+            text-align: right;
+            font-weight: 600;
+            color: #1e40af;
+        }
+        
+        .results {
+            background: #f0f9ff;
+            border: 2px solid #0ea5e9;
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .results h3 {
+            margin: 0 0 15px 0;
+            color: #0c4a6e;
+            font-size: 1.3rem;
+        }
+        
+        .result-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+        }
+        
+        .result-item {
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+            border-left: 4px solid #0ea5e9;
+        }
+        
+        .result-label {
+            font-weight: 600;
+            color: #0c4a6e;
+            font-size: 0.9rem;
+        }
+        
+        .result-value {
+            font-size: 1.1rem;
+            color: #1e40af;
+            font-weight: 700;
+        }
+        
+        .legend {
+            background: #fef3c7;
+            border: 2px solid #f59e0b;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+        
+        .legend h4 {
+            margin: 0 0 10px 0;
+            color: #92400e;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            gap: 10px;
+        }
+        
+        .symbol {
+            font-size: 1.2rem;
+            font-weight: bold;
+            width: 30px;
+            text-align: center;
+        }
+        
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Mini Lab : แรงที่กระทำต่อลวดตัวนำในสนามแม่เหล็ก</h1>
+        
+        <div class="simulation-area">
+            <div class="canvas-container">
+                <canvas id="canvas" width="800" height="600"></canvas>
+            </div>
+            
+            <div class="controls">
+                <div class="control-group">
+                    <h3>กระแสไฟฟ้า (I)</h3>
+                    <div class="control-row">
+                        <label>ขนาด:</label>
+                        <input type="range" id="current" min="0" max="10" step="0.1" value="5">
+                        <span class="value-display" id="currentValue">5.0 A</span>
+                    </div>
+                    <div class="control-row">
+                        <label>ทิศทาง:</label>
+                        <select id="currentDirection">
+                            <option value="AtoB">จาก A ไป B</option>
+                            <option value="BtoA">จาก B ไป A</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <h3>ลวดตัวนำ</h3>
+                    <div class="control-row">
+                        <label>ความยาว:</label>
+                        <input type="range" id="wireLength" min="50" max="300" step="10" value="200">
+                        <span class="value-display" id="wireLengthValue">0.2 m</span>
+                    </div>
+                    <div class="control-row">
+                        <label>มุมหมุน:</label>
+                        <input type="range" id="wireAngle" min="0" max="360" step="15" value="0">
+                        <span class="value-display" id="wireAngleValue">0°</span>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <h3>สนามแม่เหล็ก (B)</h3>
+                    <div class="control-row">
+                        <label>ขนาด:</label>
+                        <input type="range" id="magneticField" min="0" max="5" step="0.1" value="2">
+                        <span class="value-display" id="magneticFieldValue">2.0 T</span>
+                    </div>
+                    <div class="control-row">
+                        <label>ทิศทาง:</label>
+                        <select id="fieldDirection">
+                            <option value="into">เข้าจอ (×)</option>
+                            <option value="out">ออกจอ (•)</option>
+                            <option value="up">ขึ้น (↑)</option>
+                            <option value="down">ลง (↓)</option>
+                            <option value="right">ขวา (→)</option>
+                            <option value="left">ซ้าย (←)</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="control-group play-controls">
+                    <h3>การควบคุม</h3>
+                    <div class="button-group">
+                        <button id="playPauseBtn" onclick="toggleAnimation()">เริ่มเล่น</button>
+                        <button class="reset-btn" onclick="resetSimulation()">รีเซ็ต</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mobile-floating-controls" aria-label="ปุ่มควบคุมลอย">
+            <button id="mobilePlayPauseBtn" class="floating-btn" onclick="toggleAnimation()">เล่น</button>
+            <button class="floating-btn reset-btn" onclick="resetSimulation()">รีเซ็ต</button>
+        </div>
+        
+        <div class="results">
+            <h3>สูตรการคำนวณ</h3>
+            <div class="result-grid">
+                <div class="result-item">
+                    <div class="result-label">แรงแม่เหล็ก (F)</div>
+                    <div class="result-value">F = BIL sin θ</div>
+                    <div style="font-size: 0.8rem; color: #64748b; margin-top: 5px;">(θ คือมุมระหว่างการกระจัด L กับ B)</div>
+                </div>
+                <div class="result-item">
+                    <div class="result-label">ค่าแรงปัจจุบัน</div>
+                    <div class="result-value" id="forceValue">F = 0.0 N</div>
+                </div>
+                <div class="result-item">
+                    <div class="result-label">มุม θ</div>
+                    <div class="result-value" id="angleValue">θ = 0°</div>
+                </div>
+                <div class="result-item">
+                    <div class="result-label">ทิศทางแรง</div>
+                    <div class="result-value" id="forceDirection">ใช้กฎมือขวา</div>
+                </div>
+            </div>
+            <div class="footer-link-box">
+                <p>ศึกษาเพิ่มเติมได้ที่<a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener noreferrer">เพจคลายปมฟิสิกส์</a></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const BASE_WIDTH = 800;
+        const BASE_HEIGHT = 600;
+
+        function resizeCanvas() {
+            const container = document.querySelector('.canvas-container');
+            if (!container) return;
+            const availableWidth = Math.max(280, container.clientWidth - 6);
+            const scale = Math.min(1, availableWidth / BASE_WIDTH);
+            canvas.width = BASE_WIDTH;
+            canvas.height = BASE_HEIGHT;
+            canvas.style.width = `${Math.round(BASE_WIDTH * scale)}px`;
+            canvas.style.height = `${Math.round(BASE_HEIGHT * scale)}px`;
+        }
+        
+        let animationId;
+        let animationTime = 0;
+        let isPlaying = false;
+        
+        // Wire properties
+        let wire = {
+            centerX: canvas.width / 2,
+            centerY: canvas.height / 2,
+            length: 200,
+            angle: 0,
+            velocityX: 0,
+            velocityY: 0
+        };
+        
+        // Update controls
+        function updateControls() {
+            document.getElementById('currentValue').textContent = document.getElementById('current').value + ' A';
+            document.getElementById('wireLengthValue').textContent = (document.getElementById('wireLength').value / 1000).toFixed(1) + ' m';
+            document.getElementById('wireAngleValue').textContent = document.getElementById('wireAngle').value + '°';
+            document.getElementById('magneticFieldValue').textContent = document.getElementById('magneticField').value + ' T';
+            
+            // Update wire properties
+            wire.length = parseFloat(document.getElementById('wireLength').value);
+            wire.angle = parseFloat(document.getElementById('wireAngle').value) * Math.PI / 180;
+            
+            // Calculate and display force
+            calculateForce();
+            
+            // Redraw if not animating
+            if (!animationId) {
+                drawScene();
+            }
+        }
+        
+        // Calculate magnetic force
+        function calculateForce() {
+            const current = parseFloat(document.getElementById('current').value);
+            const magneticField = parseFloat(document.getElementById('magneticField').value);
+            const wireLength = parseFloat(document.getElementById('wireLength').value) / 1000; // Convert to meters
+            const fieldDirection = document.getElementById('fieldDirection').value;
+            const currentDirection = document.getElementById('currentDirection').value;
+            const wireAngle = parseFloat(document.getElementById('wireAngle').value) * Math.PI / 180;
+            
+            // Get vectors for current and magnetic field
+            const currentVector = getCurrentVector(currentDirection, wireAngle);
+            const fieldVector = getFieldVector(fieldDirection);
+            
+            // Calculate angle between I and B using dot product
+            const dotProduct = currentVector.x * fieldVector.x + currentVector.y * fieldVector.y + currentVector.z * fieldVector.z;
+            const currentMagnitude = Math.sqrt(currentVector.x**2 + currentVector.y**2 + currentVector.z**2);
+            const fieldMagnitude = Math.sqrt(fieldVector.x**2 + fieldVector.y**2 + fieldVector.z**2);
+            
+            let theta = 0;
+            if (currentMagnitude > 0 && fieldMagnitude > 0) {
+                const cosTheta = dotProduct / (currentMagnitude * fieldMagnitude);
+                theta = Math.acos(Math.max(-1, Math.min(1, cosTheta))) * 180 / Math.PI;
+            }
+            
+            // Calculate force magnitude
+            const force = magneticField * current * wireLength * Math.sin(theta * Math.PI / 180);
+            
+            // Determine force direction using right-hand rule
+            const forceDirection = getForceDirection(fieldDirection, currentDirection, wireAngle);
+            
+            // Update display
+            document.getElementById('forceValue').textContent = `F = ${force.toFixed(2)} N`;
+            document.getElementById('angleValue').textContent = `θ = ${theta.toFixed(0)}°`;
+            document.getElementById('forceDirection').textContent = forceDirection;
+            
+            return { magnitude: force, direction: forceDirection, theta: theta };
+        }
+        
+        // Determine force direction using right-hand rule
+        function getForceDirection(fieldDir, currentDir, wireAngle) {
+            const current = parseFloat(document.getElementById('current').value);
+            if (current === 0) return 'ไม่มีแรง (I = 0)';
+            
+            // Get actual current direction vector based on wire orientation
+            const currentVector = getCurrentVector(currentDir, wireAngle);
+            const fieldVector = getFieldVector(fieldDir);
+            
+            // Calculate cross product F = I × B (right-hand rule)
+            const forceVector = crossProduct(currentVector, fieldVector);
+            
+            // Convert force vector to direction description
+            return vectorToDirection(forceVector);
+        }
+        
+        // Get current direction vector based on wire angle
+        // Positive angle is defined as counterclockwise from the horizontal reference line.
+        function getCurrentVector(currentDir, wireAngle) {
+            const wireX = Math.cos(wireAngle);
+            const wireY = Math.sin(wireAngle);
+            
+            if (currentDir === 'AtoB') {
+                return { x: wireX, y: wireY, z: 0 };
+            } else {
+                return { x: -wireX, y: -wireY, z: 0 };
+            }
+        }
+        
+        // Get magnetic field vector (corrected coordinate system)
+        function getFieldVector(fieldDir) {
+            switch(fieldDir) {
+                case 'right': return { x: 1, y: 0, z: 0 };
+                case 'left': return { x: -1, y: 0, z: 0 };
+                case 'up': return { x: 0, y: 1, z: 0 }; // Positive y for upward
+                case 'down': return { x: 0, y: -1, z: 0 }; // Negative y for downward
+                case 'into': return { x: 0, y: 0, z: -1 };
+                case 'out': return { x: 0, y: 0, z: 1 };
+                default: return { x: 0, y: 0, z: 0 };
+            }
+        }
+        
+        // Calculate cross product I × B (corrected for right-hand rule)
+        function crossProduct(I, B) {
+            return {
+                x: I.y * B.z - I.z * B.y,
+                y: I.z * B.x - I.x * B.z,
+                z: I.x * B.y - I.y * B.x
+            };
+        }
+        
+        // Convert force vector to direction description (corrected for physics coordinates)
+        function vectorToDirection(force) {
+            const threshold = 0.01;
+            
+            // Check for zero force
+            if (Math.abs(force.x) < threshold && Math.abs(force.y) < threshold && Math.abs(force.z) < threshold) {
+                return 'ไม่มีแรง (I ∥ B)';
+            }
+            
+            // Determine primary direction
+            let direction = '';
+            
+            if (Math.abs(force.z) > threshold) {
+                // Out-of-plane force
+                if (force.z > 0) {
+                    direction = 'ออกจอ (•)';
+                } else {
+                    direction = 'เข้าจอ (×)';
+                }
+            } else {
+                // In-plane force - using physics coordinate system
+                if (Math.abs(force.x) > Math.abs(force.y)) {
+                    // Primarily horizontal
+                    if (force.x > 0) {
+                        direction = 'ขวา (→)';
+                    } else {
+                        direction = 'ซ้าย (←)';
+                    }
+                } else {
+                    // Primarily vertical - corrected for physics coordinates
+                    if (force.y > 0) {
+                        direction = 'ขึ้น (↑)';
+                    } else {
+                        direction = 'ลง (↓)';
+                    }
+                }
+            }
+            
+            return direction;
+        }
+        
+        // Draw magnetic field symbols
+        function drawMagneticField() {
+            const magneticField = parseFloat(document.getElementById('magneticField').value);
+            
+            if (magneticField > 0) {
+                const fieldDirection = document.getElementById('fieldDirection').value;
+                let symbol = '';
+                
+                switch(fieldDirection) {
+                    case 'into': symbol = '×'; break;
+                    case 'out': symbol = '•'; break;
+                    case 'up': symbol = '↑'; break;
+                    case 'down': symbol = '↓'; break;
+                    case 'right': symbol = '→'; break;
+                    case 'left': symbol = '←'; break;
+                }
+                
+                ctx.fillStyle = '#3b82f6';
+                ctx.font = 'bold 24px Arial';
+                
+                // Draw field symbols in grid
+                for (let x = 40; x < canvas.width - 40; x += 60) {
+                    for (let y = 40; y < canvas.height - 40; y += 60) {
+                        ctx.fillText(symbol, x, y);
+                    }
+                }
+                
+                // Draw B label
+                ctx.font = 'bold 40px Arial';
+                const bWidth = ctx.measureText('B').width;
+                
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                ctx.fillRect(15, 15, bWidth + 20, 50);
+                
+                ctx.strokeStyle = '#3b82f6';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(15, 15, bWidth + 20, 50);
+                
+                ctx.fillStyle = '#3b82f6';
+                ctx.fillText('B', 25, 50);
+            }
+        }
+        
+        function drawAngleGuide() {
+            const guideLength = Math.min(170, wire.length / 2 + 55);
+            const radius = Math.min(85, wire.length / 2 + 18);
+            const startAngle = 0;
+            const endAngle = -wire.angle;
+
+            ctx.save();
+
+            // Horizontal dashed reference line
+            ctx.setLineDash([8, 8]);
+            ctx.strokeStyle = 'rgba(100, 116, 139, 0.85)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(wire.centerX, wire.centerY);
+            ctx.lineTo(wire.centerX + guideLength, wire.centerY);
+            ctx.stroke();
+
+            // Angle sweep arc (counterclockwise angle shown on the canvas)
+            if (Math.abs(wire.angle) > 0.001) {
+                ctx.setLineDash([6, 6]);
+                ctx.strokeStyle = 'rgba(37, 99, 235, 0.95)';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(wire.centerX, wire.centerY, radius, startAngle, endAngle, true);
+                ctx.stroke();
+
+                const midAngle = endAngle / 2;
+                const labelRadius = radius + 18;
+                const labelX = wire.centerX + labelRadius * Math.cos(midAngle);
+                const labelY = wire.centerY + labelRadius * Math.sin(midAngle);
+
+                ctx.setLineDash([]);
+                ctx.fillStyle = 'rgba(37, 99, 235, 0.95)';
+                ctx.font = 'bold 24px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(`${Math.round(wire.angle * 180 / Math.PI)}°`, labelX, labelY);
+            }
+
+            ctx.restore();
+        }
+
+        // Draw wire conductor
+        function drawWire() {
+            const halfLength = wire.length / 2;
+            
+            // Positive angle rotates counterclockwise from the horizontal reference.
+            const x1 = wire.centerX - halfLength * Math.cos(wire.angle);
+            const y1 = wire.centerY + halfLength * Math.sin(wire.angle);
+            const x2 = wire.centerX + halfLength * Math.cos(wire.angle);
+            const y2 = wire.centerY - halfLength * Math.sin(wire.angle);
+            
+            ctx.strokeStyle = '#991b1b';
+            ctx.lineWidth = 10;
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+
+            ctx.strokeStyle = '#dc2626';
+            ctx.lineWidth = 8;
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+            
+            // Draw A and B labels at wire ends
+            ctx.font = 'bold 24px Arial';
+            ctx.fillStyle = '#ffffff';
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 2;
+            
+            ctx.strokeText('A', x1 - 12, y1 - 15);
+            ctx.fillText('A', x1 - 12, y1 - 15);
+            
+            ctx.strokeText('B', x2 - 12, y2 - 15);
+            ctx.fillText('B', x2 - 12, y2 - 15);
+            
+            return { x1, y1, x2, y2 };
+        }
+        
+        // Draw current arrow
+        function drawCurrent(wireCoords) {
+            const current = parseFloat(document.getElementById('current').value);
+            if (current === 0) return;
+            
+            const currentDirection = document.getElementById('currentDirection').value;
+            const { x1, y1, x2, y2 } = wireCoords;
+            
+            // Determine current direction on wire based on A to B or B to A
+            let currentX1, currentY1, currentX2, currentY2;
+            
+            if (currentDirection === 'AtoB') {
+                // Current flows from A (x1,y1) to B (x2,y2)
+                currentX1 = x1;
+                currentY1 = y1;
+                currentX2 = x2;
+                currentY2 = y2;
+            } else {
+                // Current flows from B (x2,y2) to A (x1,y1)
+                currentX1 = x2;
+                currentY1 = y2;
+                currentX2 = x1;
+                currentY2 = y1;
+            }
+            
+            // Draw single current arrow at center of wire
+            const centerX = (currentX1 + currentX2) / 2;
+            const centerY = (currentY1 + currentY2) / 2;
+            
+            // Arrow length proportional to current value
+            const baseArrowLength = 20;
+            const arrowLength = baseArrowLength + (current * 8); // Scale with current
+            const angle = Math.atan2(currentY2 - currentY1, currentX2 - currentX1);
+            
+            ctx.strokeStyle = '#f59e0b';
+            ctx.fillStyle = '#f59e0b';
+            ctx.lineWidth = 4;
+            
+            // Arrow shaft
+            const shaftLength = arrowLength * 0.7;
+            const shaftStartX = centerX - (shaftLength / 2) * Math.cos(angle);
+            const shaftStartY = centerY - (shaftLength / 2) * Math.sin(angle);
+            const shaftEndX = centerX + (shaftLength / 2) * Math.cos(angle);
+            const shaftEndY = centerY + (shaftLength / 2) * Math.sin(angle);
+            
+            ctx.beginPath();
+            ctx.moveTo(shaftStartX, shaftStartY);
+            ctx.lineTo(shaftEndX, shaftEndY);
+            ctx.stroke();
+            
+            // Arrow head
+            const headLength = arrowLength * 0.3;
+            ctx.beginPath();
+            ctx.moveTo(shaftEndX, shaftEndY);
+            ctx.lineTo(
+                shaftEndX - headLength * Math.cos(angle - Math.PI / 6),
+                shaftEndY - headLength * Math.sin(angle - Math.PI / 6)
+            );
+            ctx.lineTo(
+                shaftEndX - headLength * Math.cos(angle + Math.PI / 6),
+                shaftEndY - headLength * Math.sin(angle + Math.PI / 6)
+            );
+            ctx.closePath();
+            ctx.fill();
+            
+            // Draw I label
+            ctx.font = 'bold 32px Arial';
+            ctx.fillStyle = '#f59e0b';
+            ctx.fillText('I', wire.centerX + 40, wire.centerY - 20);
+        }
+        
+        // Draw force vector
+        function drawForce(wireCoords) {
+            const forceData = calculateForce();
+            if (forceData.magnitude < 0.01) return;
+            
+            const fieldDirection = document.getElementById('fieldDirection').value;
+            const currentDirection = document.getElementById('currentDirection').value;
+            const forceDirection = getForceDirection(fieldDirection, currentDirection, wire.angle);
+            
+            // Get force vector using physics calculation
+            const currentVector = getCurrentVector(currentDirection, wire.angle);
+            const fieldVector = getFieldVector(fieldDirection);
+            const forceVector = crossProduct(currentVector, fieldVector);
+            
+            // Force vector scale
+            const forceScale = forceData.magnitude * 50;
+            
+            let forceX = 0, forceY = 0;
+            let showSymbol = false;
+            let symbol = '';
+            
+            // Determine force vector direction based on calculated force vector
+            if (Math.abs(forceVector.z) > 0.01) {
+                // Out-of-plane force
+                showSymbol = true;
+                if (forceVector.z > 0) {
+                    symbol = '•';
+                } else {
+                    symbol = '×';
+                }
+            } else {
+                // In-plane force - convert back to canvas coordinates
+                forceX = forceVector.x * forceScale;
+                forceY = -forceVector.y * forceScale; // Negative to convert back to canvas coordinates
+            }
+            
+            ctx.strokeStyle = '#10b981';
+            ctx.fillStyle = '#10b981';
+            ctx.lineWidth = 6;
+            
+            if (showSymbol) {
+                // Draw symbol for out-of-plane force
+                ctx.font = 'bold 48px Arial';
+                ctx.fillText(symbol, wire.centerX - 20, wire.centerY + 80);
+                
+                // Draw F label
+                ctx.font = 'bold 32px Arial';
+                ctx.fillText('F', wire.centerX + 20, wire.centerY + 85);
+            } else if (Math.abs(forceX) > 0.01 || Math.abs(forceY) > 0.01) {
+                // Draw force arrow starting from wire center
+                const startX = wire.centerX;
+                const startY = wire.centerY;
+                const endX = startX + forceX;
+                const endY = startY + forceY;
+                
+                // Arrow shaft
+                ctx.beginPath();
+                ctx.moveTo(startX, startY);
+                ctx.lineTo(endX, endY);
+                ctx.stroke();
+                
+                // Arrow head
+                const angle = Math.atan2(forceY, forceX);
+                const headLength = 25;
+                
+                ctx.beginPath();
+                ctx.moveTo(endX, endY);
+                ctx.lineTo(
+                    endX - headLength * Math.cos(angle - Math.PI / 6),
+                    endY - headLength * Math.sin(angle - Math.PI / 6)
+                );
+                ctx.lineTo(
+                    endX - headLength * Math.cos(angle + Math.PI / 6),
+                    endY - headLength * Math.sin(angle + Math.PI / 6)
+                );
+                ctx.closePath();
+                ctx.fill();
+                
+                // Draw F label
+                ctx.font = 'bold 32px Arial';
+                ctx.fillText('F', endX + 15, endY - 10);
+            }
+        }
+        
+        // Draw complete scene
+        function drawScene() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw magnetic field
+            drawMagneticField();
+
+            // Draw counterclockwise reference and angle guide
+            drawAngleGuide();
+            
+            // Draw wire
+            const wireCoords = drawWire();
+            
+            // Draw current
+            drawCurrent(wireCoords);
+            
+            // Draw force
+            drawForce(wireCoords);
+        }
+        
+        // Animation loop
+        function animate() {
+            if (isPlaying) {
+                // Calculate force vector using physics
+                const forceData = calculateForce();
+                const fieldDirection = document.getElementById('fieldDirection').value;
+                const currentDirection = document.getElementById('currentDirection').value;
+                
+                // Get force vector using cross product
+                const currentVector = getCurrentVector(currentDirection, wire.angle);
+                const fieldVector = getFieldVector(fieldDirection);
+                const forceVector = crossProduct(currentVector, fieldVector);
+                
+                // Update wire velocity based on calculated force vector
+                const forceScale = forceData.magnitude * 0.5;
+                
+                if (Math.abs(forceVector.z) > 0.01) {
+                    // Out-of-plane force - no movement in 2D simulation
+                    wire.velocityX = 0;
+                    wire.velocityY = 0;
+                } else {
+                    // In-plane force - move according to force vector (convert to canvas coordinates)
+                    wire.velocityX = forceVector.x * forceScale;
+                    wire.velocityY = -forceVector.y * forceScale; // Negative to convert to canvas coordinates
+                }
+                
+                // Update wire position
+                wire.centerX += wire.velocityX;
+                wire.centerY += wire.velocityY;
+                
+                // Keep wire within canvas bounds
+                const margin = wire.length / 2 + 50;
+                if (wire.centerX < margin) {
+                    wire.centerX = margin;
+                    wire.velocityX = 0;
+                }
+                if (wire.centerX > canvas.width - margin) {
+                    wire.centerX = canvas.width - margin;
+                    wire.velocityX = 0;
+                }
+                if (wire.centerY < margin) {
+                    wire.centerY = margin;
+                    wire.velocityY = 0;
+                }
+                if (wire.centerY > canvas.height - margin) {
+                    wire.centerY = canvas.height - margin;
+                    wire.velocityY = 0;
+                }
+            }
+            
+            drawScene();
+            animationTime++;
+            animationId = requestAnimationFrame(animate);
+        }
+        
+        // Control functions
+        function syncPlayButtons() {
+            const desktopBtn = document.getElementById('playPauseBtn');
+            const mobileBtn = document.getElementById('mobilePlayPauseBtn');
+            if (desktopBtn) desktopBtn.textContent = isPlaying ? 'หยุด' : 'เริ่มเล่น';
+            if (mobileBtn) mobileBtn.textContent = isPlaying ? 'หยุด' : 'เล่น';
+        }
+
+        function toggleAnimation() {
+            if (isPlaying) {
+                // Stop animation
+                isPlaying = false;
+                wire.velocityX = 0;
+                wire.velocityY = 0;
+            } else {
+                // Start animation
+                isPlaying = true;
+                if (!animationId) {
+                    animate();
+                }
+            }
+            syncPlayButtons();
+        }
+        
+        function resetSimulation() {
+            // Stop animation
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+            isPlaying = false;
+            syncPlayButtons();
+            
+            animationTime = 0;
+            
+            // Reset wire position
+            wire.centerX = canvas.width / 2;
+            wire.centerY = canvas.height / 2;
+            wire.velocityX = 0;
+            wire.velocityY = 0;
+            
+            // Reset controls to default values
+            document.getElementById('current').value = 5;
+            document.getElementById('wireLength').value = 200;
+            document.getElementById('wireAngle').value = 0;
+            document.getElementById('magneticField').value = 2;
+            document.getElementById('currentDirection').value = 'AtoB';
+            document.getElementById('fieldDirection').value = 'into';
+            
+            updateControls();
+            
+            // Start animation loop for drawing
+            animate();
+        }
+        
+        // Add event listeners
+        document.getElementById('current').addEventListener('input', updateControls);
+        document.getElementById('wireLength').addEventListener('input', updateControls);
+        document.getElementById('wireAngle').addEventListener('input', updateControls);
+        document.getElementById('magneticField').addEventListener('input', updateControls);
+        document.getElementById('currentDirection').addEventListener('change', updateControls);
+        document.getElementById('fieldDirection').addEventListener('change', updateControls);
+        
+        // Initialize
+        resizeCanvas();
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+            drawScene();
+        });
+        updateControls();
+        syncPlayButtons();
+        animate();
+    </script>
+</body>
+</html>

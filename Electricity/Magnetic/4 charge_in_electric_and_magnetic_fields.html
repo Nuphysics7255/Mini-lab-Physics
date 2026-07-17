@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Mini Lab : ประจุในสนามไฟฟ้าและสนามแม่เหล็กตั้งฉากกัน</title>
+<!-- real-fix-2026-05-30: settings row/results row/checkbox force vectors -->
+<script>
+window.MathJax = { tex: { inlineMath: [['\\(','\\)'], ['$', '$']] }, svg: { fontCache: 'global' } };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<style>
+:root{
+  --blue:#2f6fd6; --deep:#204d7c; --soft:#edf3fb; --line:#d9e5f2;
+  --orange:#fff3df; --green:#effbea; --red:#d93025; --text:#17324d;
+  --shadow:0 12px 30px rgba(22,54,92,.12);
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;color:var(--text);background:linear-gradient(180deg,#f7fbff,#fff);min-height:100vh;padding:16px;padding-bottom:calc(110px + env(safe-area-inset-bottom));}
+.header{text-align:center;margin:4px auto 12px;max-width:1100px}
+.title1{font-size:clamp(24px,3.5vw,42px);font-weight:900;color:var(--blue);line-height:1.1}
+.title2{font-size:clamp(19px,2.5vw,30px);font-weight:900;color:var(--deep);line-height:1.25;margin-top:4px}
+.main{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:1fr;gap:14px;align-items:start}
+.labCard,.panel,.readout,.note{background:#fff;border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow)}
+.labCard{padding:12px;position:relative;overflow:hidden}
+canvas{width:100%;height:auto;display:block;border-radius:18px;background:#fbfdff;touch-action:none;border:1px solid #e6eef7}
+.toolbar{position:absolute;left:22px;top:22px;display:flex;gap:8px;flex-wrap:wrap;z-index:5}.pill{border:1px solid #cfe0f4;background:rgba(255,255,255,.92);border-radius:999px;padding:7px 10px;font-size:13px;font-weight:800;color:#355d84;backdrop-filter:blur(6px)}
+.panel{padding:14px;display:flex;flex-direction:column;gap:12px}.sectionTitle{font-size:17px;font-weight:900;color:#2d5f90;margin:2px 0 0}.control{background:#f8fbff;border:1px solid #e1edf9;border-radius:18px;padding:11px}.control label{display:flex;justify-content:space-between;gap:8px;font-weight:850;font-size:14px;color:#2d5f90;margin-bottom:8px}.numRow{display:grid;grid-template-columns:42px 1fr 42px;gap:8px;align-items:center}.numRow button,.btn{border:0;border-radius:14px;min-height:38px;font-size:18px;font-weight:900;cursor:pointer;box-shadow:0 3px 0 rgba(0,0,0,.14)}.numRow button{background:#dfeaf6;color:#28577e}.numRow input{width:100%;min-height:40px;border:1px solid #cbdced;border-radius:14px;text-align:center;font-size:16px;font-weight:850;color:#17324d;background:white}.selectRow{display:grid;grid-template-columns:1fr 1fr;gap:8px}.selectRow button{border:1.5px solid #c8dcee;background:#fff;border-radius:16px;padding:10px 8px;font-weight:900;color:#325d85;cursor:pointer}.selectRow button.active{background:#e8f3ff;border-color:#69a7df;color:#165da5}.chargeBtns{grid-template-columns:1fr 1fr 1fr}.chargeBtns button.positive.active{background:#fff1f0;border-color:#ffb0aa;color:#b32017}.chargeBtns button.negative.active{background:#eef5ff;border-color:#8eb8f0;color:#164f96}.readout{padding:13px;margin-top:12px}.readGrid{display:flex;gap:8px;min-width:max-content}.metric{background:#f8fbff;border:1px solid #e2edf8;border-radius:16px;padding:10px}.metric .k{font-size:12px;font-weight:800;color:#5a7693}.metric .v{font-size:18px;font-weight:950;color:#17324d}.status{margin-top:9px;border-radius:16px;padding:11px;font-weight:900;text-align:center;border:1px solid #d8e7f6}.status.good{background:#effbea;color:#25752a}.status.bad{background:#fff6e8;color:#966200}.note{max-width:1180px;margin:14px auto 0;padding:14px;background:#fffdf8}.note h3{margin:0 0 8px;color:#1f5d97;font-size:20px}.note p{margin:6px 0;line-height:1.6}.eq{display:inline-block;background:#f4f8ff;border:1px solid #dce9f7;border-radius:12px;padding:3px 8px;margin:2px 0}.bottomBar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(12px + env(safe-area-inset-bottom));z-index:20;width:min(720px,calc(100vw - 20px));display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;background:rgba(235,241,247,.72);border:1px solid #d8e3ef;border-radius:24px;padding:8px;backdrop-filter:blur(8px)}.btn{font-size:15px;padding:10px 8px}.play{background:#58a6e8;color:#fff}.reset{background:#e4e8ed;color:#506070}.formula{background:#ffe4c4;color:#8b4d00}.modal{position:fixed;inset:0;background:rgba(15,34,55,.45);z-index:50;display:none;padding:calc(18px + env(safe-area-inset-top)) 14px calc(18px + env(safe-area-inset-bottom));overflow:auto}.modal.show{display:block}.modalBox{max-width:760px;margin:0 auto;background:#fff7ee;border:2px solid #efc58f;border-radius:24px;padding:18px;box-shadow:var(--shadow);position:relative}.close{position:fixed;right:18px;top:calc(14px + env(safe-area-inset-top));width:48px;height:48px;border:0;border-radius:18px;background:#e7eef6;color:#45688f;font-size:26px;font-weight:900;z-index:60}.modal h2{margin:0 58px 10px 0;color:#8b4d00}.formulaCard{background:#fff;border:1px solid #efc58f;border-radius:18px;padding:12px;margin:10px 0;line-height:1.65}.footer{text-align:center;margin:18px 0 0;font-weight:800}.footer a{color:#1d63c5;text-decoration:underline}
+.valueScroller{width:100%;max-width:100%;display:flex;gap:10px;overflow-x:auto;overflow-y:hidden;padding:2px 2px 10px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;touch-action:pan-x}
+.valueScroller .control{min-width:255px;flex:0 0 255px;scroll-snap-align:start}
+.optionRow{display:flex;gap:10px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px}
+.directionBlock{padding:9px}.directionBlock label,.chargeBlock label{font-size:13px;margin-bottom:6px}.directionBlock .selectRow{display:flex;gap:7px;overflow-x:auto;flex-wrap:nowrap}.directionBlock .selectRow button{flex:0 0 auto;min-width:105px;padding:8px 10px;border-radius:14px;font-size:13px;line-height:1.25}.chargeBlock{padding:9px}.chargeBtns{display:flex;gap:8px;overflow-x:auto;flex-wrap:nowrap}.chargeBtns button{flex:0 0 auto;min-width:108px;padding:8px 10px;border-radius:14px;font-size:13px;line-height:1.25}
+.checkItem{display:flex;align-items:center;gap:8px;background:#f8fbff;border:1px solid #e1edf9;border-radius:999px;padding:10px 12px;font-weight:900;color:#2d5f90;cursor:pointer;user-select:none}
+.checkItem input{width:18px;height:18px;accent-color:#2f8f4e}
+.readout{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.readGrid{display:flex;gap:8px;min-width:max-content}
+.metric{min-width:165px;flex:1 0 0}
+
+/* mobile-fit-and-horizontal-scroll-fix-2026-05-30 */
+.valueScroller::-webkit-scrollbar,.optionRow::-webkit-scrollbar,.readout::-webkit-scrollbar{height:8px}
+.valueScroller::-webkit-scrollbar-thumb,.optionRow::-webkit-scrollbar-thumb,.readout::-webkit-scrollbar-thumb{background:#c7d9ea;border-radius:999px}
+.valueScroller::-webkit-scrollbar-track,.optionRow::-webkit-scrollbar-track,.readout::-webkit-scrollbar-track{background:#f1f6fb;border-radius:999px}
+@media (max-width:900px){
+  .labCard{max-width:440px;margin-left:auto;margin-right:auto}
+  canvas{width:100%;max-height:255px;object-fit:contain}
+  .panel{overflow:hidden}
+  .valueScroller{display:flex;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;width:100%;max-width:100%;padding:2px 10px 12px;margin:0 -10px;scroll-padding-left:10px}
+  .valueScroller .control{flex:0 0 250px;min-width:250px}
+}
+@media (max-width:430px){
+  .labCard{max-width:355px;padding:6px;border-radius:20px}
+  canvas{max-height:225px;border-radius:15px}
+  .toolbar{left:10px;top:10px;gap:5px}
+  .pill{font-size:10px;padding:5px 7px}
+  .valueScroller{padding-left:10px;padding-right:10px;margin-left:-10px;margin-right:-10px}
+  .valueScroller .control{flex:0 0 235px;min-width:235px}
+}
+
+@media (max-width:900px){body{padding:10px;padding-bottom:calc(110px + env(safe-area-inset-bottom))}.main{grid-template-columns:1fr}.panel{order:0}.labCard{position:sticky;top:calc(8px + env(safe-area-inset-top));z-index:2;padding:8px}.toolbar{left:14px;top:14px}.pill{font-size:11px;padding:6px 8px}.title1{font-size:clamp(20px,6vw,30px)}.title2{font-size:clamp(17px,5vw,24px)}.panel{border-radius:22px}.bottomBar{grid-template-columns:1fr 1fr 1fr}.btn{font-size:13px;min-height:44px}.selectRow button{font-size:13px}}
+@media (max-width:430px){.numRow{grid-template-columns:38px 1fr 38px}.bottomBar{gap:6px;padding:7px}.btn{font-size:12px}.modalBox{padding:15px}.valueScroller .control{min-width:235px;flex-basis:235px}.metric{min-width:150px}}
+
+
+/* layout-polish-v4: จอทดลองพอดีมือถือ + เลื่อนเฉพาะช่องปรับค่า */
+html,body{width:100%;max-width:100%;overflow-x:hidden;}
+body{padding:12px 10px calc(104px + env(safe-area-inset-bottom));}
+.header{margin-bottom:10px;}
+.main{width:100%;max-width:980px;gap:12px;overflow:visible;}
+.panel{width:100%;max-width:100%;overflow:hidden;padding:12px;border-radius:22px;gap:10px;}
+.sectionTitle{font-size:16px;margin-left:2px;}
+.labCard{width:100%;max-width:760px;margin:0 auto;padding:10px;border-radius:22px;}
+canvas{width:100%;aspect-ratio:900/620;height:auto;max-height:min(58vh,430px);object-fit:contain;border-radius:17px;}
+.valueScroller{width:100%;max-width:100%;overflow-x:auto;overflow-y:hidden;display:flex;flex-wrap:nowrap;gap:10px;padding:3px 2px 12px;margin:0;scroll-snap-type:x proximity;overscroll-behavior-x:contain;touch-action:pan-x;}
+.valueScroller .control{flex:0 0 248px;min-width:248px;max-width:248px;scroll-snap-align:start;}
+.control{padding:10px;border-radius:17px;}
+.control label{font-size:13px;margin-bottom:7px;}
+.numRow{grid-template-columns:38px 1fr 38px;gap:7px;}
+.numRow button{min-height:36px;border-radius:13px;font-size:17px;}
+.numRow input{min-height:38px;font-size:15px;border-radius:13px;}
+.directionBlock .selectRow,.chargeBtns,.optionRow{overflow:visible;display:flex;flex-wrap:wrap;gap:7px;padding-bottom:0;}
+.directionBlock .selectRow button{flex:1 1 132px;min-width:0;padding:8px 7px;font-size:12.5px;}
+.chargeBtns button{flex:1 1 116px;min-width:0;padding:8px 7px;font-size:12.5px;}
+.checkItem{flex:1 1 190px;min-width:0;font-size:13px;padding:9px 10px;white-space:normal;}
+.readout{overflow:visible;padding:10px;border-radius:20px;margin-top:10px;}
+.readGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;min-width:0;width:100%;}
+.metric{min-width:0;padding:9px 8px;border-radius:14px;}
+.metric .k{font-size:11px;line-height:1.25;}
+.metric .v{font-size:16px;}
+.status{font-size:13px;line-height:1.35;padding:9px;margin-top:8px;}
+.toolbar{left:18px;top:18px;max-width:calc(100% - 36px);}
+.pill{font-size:12px;padding:6px 9px;}
+.footer{font-size:13px;margin-top:12px;}
+.bottomBar{width:min(620px,calc(100vw - 18px));border-radius:22px;padding:7px;gap:7px;}
+.btn{min-height:42px;border-radius:15px;font-size:13px;}
+@media (max-width:700px){
+  body{padding:8px 8px calc(96px + env(safe-area-inset-bottom));}
+  .header{margin:2px auto 8px;}
+  .title1{font-size:clamp(20px,5.8vw,27px);}
+  .title2{font-size:clamp(15px,4.5vw,20px);line-height:1.2;}
+  .main{gap:9px;}
+  .labCard{position:relative;top:auto;max-width:calc(100vw - 16px);padding:7px;border-radius:19px;}
+  canvas{max-height:34vh;min-height:205px;border-radius:15px;}
+  .toolbar{left:10px;top:10px;gap:5px;}
+  .pill{font-size:10.5px;padding:5px 7px;}
+  .panel{padding:10px;border-radius:20px;gap:9px;}
+  .valueScroller{padding:2px 1px 11px;gap:8px;}
+  .valueScroller .control{flex-basis:218px;min-width:218px;max-width:218px;}
+  .readGrid{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .metric .v{font-size:15px;}
+  .bottomBar{bottom:calc(8px + env(safe-area-inset-bottom));}
+}
+@media (max-width:390px){
+  canvas{max-height:32vh;min-height:190px;}
+  .valueScroller .control{flex-basis:205px;min-width:205px;max-width:205px;}
+  .numRow{grid-template-columns:35px 1fr 35px;gap:6px;}
+  .numRow button{min-height:34px;}
+  .numRow input{min-height:36px;font-size:14px;}
+  .directionBlock .selectRow button,.chargeBtns button{font-size:12px;padding:7px 6px;}
+  .checkItem{font-size:12.5px;}
+  .btn{font-size:12px;min-height:40px;}
+}
+
+
+/* v5 requested layout: lab first, settings below, closable guide, checkbox same row */
+.main{display:flex;flex-direction:column;}
+.labSection{order:1;}
+.panel{order:2;}
+.toolbar{align-items:center;}
+.guideClose{border:1px solid #cfe0f4;background:rgba(255,255,255,.96);color:#45688f;border-radius:999px;width:30px;height:30px;font-size:18px;font-weight:950;line-height:1;cursor:pointer;box-shadow:0 2px 6px rgba(30,70,110,.12)}
+.optionRow{display:grid;grid-template-columns:1fr 1fr;gap:8px;overflow:visible;}
+.checkItem{justify-content:center;text-align:center;white-space:nowrap;}
+@media (max-width:700px){
+  .optionRow{grid-template-columns:1fr 1fr;gap:7px;}
+  .checkItem{font-size:11.5px;padding:8px 7px;gap:5px;}
+  .checkItem input{width:16px;height:16px;flex:0 0 auto;}
+}
+@media (max-width:390px){
+  .checkItem{font-size:10.8px;padding:7px 5px;}
+}
+
+
+
+/* v6 mobile fixed experiment screen: canvas stays still, lower content scrolls */
+.scrollArea{display:flex;flex-direction:column;gap:12px;width:100%;max-width:980px;margin:0 auto;}
+@media (max-width:700px){
+  html,body{height:100%;overflow:hidden;}
+  body{
+    min-height:100dvh;
+    height:100dvh;
+    padding:6px 8px calc(88px + env(safe-area-inset-bottom));
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+  .header{flex:0 0 auto;margin:0 auto 4px;max-width:calc(100vw - 16px);}
+  .title1{font-size:clamp(18px,5.2vw,24px);line-height:1.05;}
+  .title2{font-size:clamp(13px,3.9vw,17px);line-height:1.18;margin-top:2px;}
+  .main{
+    flex:1 1 auto;
+    min-height:0;
+    height:auto;
+    width:100%;
+    display:flex;
+    flex-direction:column;
+    gap:7px;
+    overflow:hidden;
+  }
+  .labSection{flex:0 0 auto;width:100%;min-height:0;}
+  .labCard{
+    position:relative !important;
+    top:auto !important;
+    z-index:5;
+    width:100%;
+    max-width:calc(100vw - 16px);
+    margin:0 auto;
+    padding:6px;
+    border-radius:18px;
+    box-shadow:0 8px 20px rgba(22,54,92,.10);
+  }
+  canvas{
+    width:100%;
+    height:auto;
+    aspect-ratio:900/620;
+    max-height:36dvh;
+    min-height:185px;
+    object-fit:contain;
+    border-radius:14px;
+  }
+  .toolbar{left:8px;top:8px;gap:4px;max-width:calc(100% - 16px);}
+  .pill{font-size:9.5px;padding:4px 6px;}
+  .guideClose{width:26px;height:26px;font-size:17px;}
+  .scrollArea{
+    flex:1 1 auto;
+    min-height:0;
+    overflow-y:auto;
+    overflow-x:hidden;
+    -webkit-overflow-scrolling:touch;
+    overscroll-behavior:contain;
+    padding:0 0 calc(24px + env(safe-area-inset-bottom));
+    gap:8px;
+  }
+  .readout{flex:0 0 auto;margin-top:0;padding:8px;border-radius:18px;}
+  .panel{flex:0 0 auto;padding:9px;border-radius:18px;gap:8px;overflow:hidden;}
+  .valueScroller{
+    overflow-x:auto !important;
+    overflow-y:hidden !important;
+    flex-wrap:nowrap !important;
+    touch-action:pan-x;
+    padding:2px 2px 10px;
+    gap:8px;
+  }
+  .valueScroller .control{flex:0 0 215px;min-width:215px;max-width:215px;}
+  .readGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;}
+  .metric{padding:8px 7px;border-radius:13px;}
+  .metric .k{font-size:10.5px;}
+  .metric .v{font-size:14px;}
+  .status{font-size:12px;padding:8px;}
+  .sectionTitle{font-size:15px;}
+  .control{padding:8px;border-radius:15px;}
+  .control label{font-size:12px;margin-bottom:6px;}
+  .numRow{grid-template-columns:34px 1fr 34px;gap:6px;}
+  .numRow button{min-height:33px;border-radius:12px;font-size:16px;}
+  .numRow input{min-height:35px;border-radius:12px;font-size:14px;}
+  .optionRow{grid-template-columns:1fr 1fr;gap:6px;}
+  .checkItem{font-size:10.8px;line-height:1.2;padding:7px 5px;min-height:38px;}
+  .directionBlock .selectRow button,.chargeBtns button{font-size:11.2px;padding:7px 6px;border-radius:12px;}
+  .footer{font-size:12px;margin:4px 0 10px;}
+  .bottomBar{bottom:calc(6px + env(safe-area-inset-bottom));width:min(600px,calc(100vw - 16px));padding:6px;border-radius:20px;gap:6px;}
+  .btn{min-height:39px;border-radius:14px;font-size:12px;padding:7px 5px;}
+}
+@media (max-width:380px){
+  canvas{max-height:34dvh;min-height:170px;}
+  .valueScroller .control{flex-basis:202px;min-width:202px;max-width:202px;}
+  .title2{font-size:12.5px;}
+}
+
+
+/* v7 FIX: จอทดลอง Fix ไว้ด้านบน ส่วนอื่นเลื่อนขึ้นลง */
+@media (max-width:700px){
+  html,body{
+    height:100%;
+    overflow:hidden !important;
+  }
+
+  body{
+    min-height:100dvh;
+    height:100dvh;
+    display:flex;
+    flex-direction:column;
+    padding:6px 8px calc(88px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .header{
+    flex:0 0 auto;
+  }
+
+  .main{
+    flex:1 1 auto;
+    min-height:0;
+    height:auto;
+    overflow:hidden !important;
+    display:flex !important;
+    flex-direction:column !important;
+  }
+
+  .labSection{
+    flex:0 0 auto !important;
+    position:sticky !important;
+    top:0 !important;
+    z-index:120 !important;
+    background:linear-gradient(180deg,#f7fbff,#fff) !important;
+    padding-bottom:6px;
+  }
+
+  .labCard{
+    position:relative !important;
+    top:auto !important;
+    z-index:121 !important;
+    margin:0 auto !important;
+  }
+
+  canvas{
+    max-height:35dvh !important;
+    min-height:180px !important;
+  }
+
+  .scrollArea{
+    flex:1 1 auto !important;
+    min-height:0 !important;
+    overflow-y:auto !important;
+    overflow-x:hidden !important;
+    -webkit-overflow-scrolling:touch;
+    overscroll-behavior:contain;
+    padding-bottom:calc(28px + env(safe-area-inset-bottom)) !important;
+  }
+}
+
+@media (max-width:380px){
+  canvas{
+    max-height:33dvh !important;
+    min-height:168px !important;
+  }
+}
+
+
+
+/* v8 FIX: ย้ายจอทดลองขึ้นบนและ Fix ไว้ด้านบนจริง ๆ
+   เหตุผล: .scrollArea ไม่มี order จึงถูกจัดอยู่ก่อน .labSection ใน flex column */
+.main{display:flex !important;flex-direction:column !important;}
+.labSection{order:0 !important;}
+.scrollArea{order:1 !important;}
+
+@media (max-width:700px){
+  html,body{
+    width:100%;
+    height:100%;
+    overflow:hidden !important;
+  }
+
+  body{
+    min-height:100dvh;
+    height:100dvh;
+    display:flex !important;
+    flex-direction:column !important;
+    padding:6px 8px calc(86px + env(safe-area-inset-bottom)) !important;
+    gap:5px !important;
+  }
+
+  .header{
+    order:0;
+    flex:0 0 auto !important;
+    margin:0 auto 3px !important;
+    max-width:calc(100vw - 16px);
+  }
+
+  .main{
+    order:1;
+    flex:1 1 auto !important;
+    min-height:0 !important;
+    overflow:hidden !important;
+    display:flex !important;
+    flex-direction:column !important;
+    gap:6px !important;
+  }
+
+  .labSection{
+    order:0 !important;
+    flex:0 0 auto !important;
+    position:sticky !important;
+    top:0 !important;
+    z-index:200 !important;
+    width:100% !important;
+    background:linear-gradient(180deg,#f7fbff 0%,#fff 100%) !important;
+    padding:0 0 6px !important;
+    margin:0 !important;
+  }
+
+  .labCard{
+    position:relative !important;
+    top:auto !important;
+    z-index:201 !important;
+    max-width:calc(100vw - 16px) !important;
+    width:100% !important;
+    margin:0 auto !important;
+    padding:6px !important;
+    border-radius:18px !important;
+  }
+
+  canvas{
+    width:100% !important;
+    height:auto !important;
+    aspect-ratio:900/620 !important;
+    max-height:35dvh !important;
+    min-height:178px !important;
+    object-fit:contain !important;
+    display:block !important;
+  }
+
+  .scrollArea{
+    order:1 !important;
+    flex:1 1 auto !important;
+    min-height:0 !important;
+    overflow-y:auto !important;
+    overflow-x:hidden !important;
+    -webkit-overflow-scrolling:touch !important;
+    overscroll-behavior:contain !important;
+    padding:0 0 calc(24px + env(safe-area-inset-bottom)) !important;
+    gap:8px !important;
+  }
+
+  .readout{margin-top:0 !important;}
+  .bottomBar{z-index:300 !important;}
+}
+
+@media (max-width:380px){
+  canvas{
+    max-height:33dvh !important;
+    min-height:165px !important;
+  }
+}
+
+
+
+/* v10 polish: สูตรสำคัญไม่ให้จอทดลองบัง + footer อยู่ล่างสุด */
+body.formulaOpen .labSection{
+  display:none !important;
+}
+body.formulaOpen .main,
+body.formulaOpen .scrollArea{
+  overflow:visible !important;
+}
+body.formulaOpen .modal{
+  z-index:1000 !important;
+}
+body.formulaOpen .bottomBar{
+  display:none !important;
+}
+.footer{
+  order:99 !important;
+  margin-top:22px !important;
+  padding-bottom:calc(100px + env(safe-area-inset-bottom)) !important;
+}
+@media (max-width:700px){
+  .footer{
+    margin-top:18px !important;
+    padding-bottom:calc(105px + env(safe-area-inset-bottom)) !important;
+  }
+}
+
+
+/* v12 desktop layout only: controls panel on the right, mobile unchanged */
+@media (min-width:701px){
+  body{
+    padding:14px 18px calc(104px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .main{
+    display:grid !important;
+    grid-template-columns:minmax(560px, 1fr) minmax(320px, 390px) !important;
+    grid-template-rows:auto auto !important;
+    align-items:start !important;
+    gap:14px !important;
+    max-width:1220px !important;
+    width:100% !important;
+    margin:0 auto !important;
+    overflow:visible !important;
+  }
+
+  .labSection{
+    grid-column:1 !important;
+    grid-row:1 !important;
+    order:initial !important;
+    position:relative !important;
+    top:auto !important;
+    z-index:auto !important;
+    width:100% !important;
+  }
+
+  .labCard{
+    width:100% !important;
+    max-width:none !important;
+    margin:0 !important;
+    padding:10px !important;
+  }
+
+  canvas{
+    width:100% !important;
+    max-height:min(62vh, 560px) !important;
+    min-height:0 !important;
+    aspect-ratio:900/620 !important;
+  }
+
+  .scrollArea{
+    display:contents !important;
+  }
+
+  .panel{
+    grid-column:2 !important;
+    grid-row:1 / span 2 !important;
+    order:initial !important;
+    align-self:start !important;
+    width:100% !important;
+    max-height:calc(100vh - 132px) !important;
+    overflow-y:auto !important;
+    overflow-x:hidden !important;
+    -webkit-overflow-scrolling:touch !important;
+    padding:12px !important;
+    border-radius:22px !important;
+  }
+
+  .readout{
+    grid-column:1 !important;
+    grid-row:2 !important;
+    margin-top:0 !important;
+    overflow:visible !important;
+  }
+
+  .readGrid{
+    display:grid !important;
+    grid-template-columns:repeat(4,minmax(0,1fr)) !important;
+    min-width:0 !important;
+    width:100% !important;
+  }
+
+  .metric{
+    min-width:0 !important;
+  }
+
+  .footer{
+    grid-column:1 / -1 !important;
+    grid-row:3 !important;
+  }
+
+  .valueScroller{
+    display:flex !important;
+    flex-direction:column !important;
+    overflow:visible !important;
+    gap:9px !important;
+    padding:0 !important;
+    margin:0 !important;
+  }
+
+  .valueScroller .control{
+    flex:0 0 auto !important;
+    min-width:0 !important;
+    max-width:none !important;
+    width:100% !important;
+  }
+
+  .directionBlock .selectRow,
+  .chargeBtns,
+  .optionRow{
+    display:grid !important;
+    grid-template-columns:1fr 1fr !important;
+    gap:7px !important;
+    overflow:visible !important;
+    flex-wrap:unset !important;
+  }
+
+  .directionBlock .selectRow button,
+  .chargeBtns button{
+    min-width:0 !important;
+    width:100% !important;
+    flex:initial !important;
+    padding:8px 6px !important;
+    font-size:12px !important;
+  }
+
+  .checkItem{
+    min-width:0 !important;
+    white-space:normal !important;
+    font-size:12px !important;
+    padding:8px 7px !important;
+  }
+}
+
+</style>
+</head>
+<body>
+<header class="header">
+  <div class="title1">Mini Lab</div>
+  <div class="title2">ประจุไฟฟ้าเคลื่อนที่ในสนามไฟฟ้าและสนามแม่เหล็กตั้งฉากกัน</div>
+</header>
+
+<main class="main">
+<section class="labSection">
+    <div class="labCard">
+      <div class="toolbar">
+        <div class="pill" id="conditionPill">เงื่อนไขเส้นตรง: v = E/B</div>
+        <div class="pill">ลากจุดประจุเพื่อเริ่มใหม่ได้</div>
+        <button class="guideClose" id="guideClose" aria-label="ปิดคำแนะนำ">×</button>
+      </div>
+      <canvas id="lab" width="900" height="620" aria-label="crossed electric and magnetic fields lab"></canvas>
+    </div>
+  </section>
+  <div class="scrollArea">
+    <div class="readout">
+      <div class="readGrid">
+        <div class="metric"><div class="k">แรงไฟฟ้า</div><div class="v" id="FeVal">-</div></div>
+        <div class="metric"><div class="k">แรงแม่เหล็ก</div><div class="v" id="FbVal">-</div></div>
+        <div class="metric"><div class="k">ความเร็วที่ทำให้ตรง</div><div class="v" id="vSelectVal">-</div></div>
+        <div class="metric"><div class="k">ความเร็วอนุภาค</div><div class="v" id="vVal">-</div></div>
+      </div>
+      <div class="status" id="statusBox">เริ่มทดลองได้เลย</div>
+    </div>
+
+<aside class="panel">
+    <div class="sectionTitle">ตั้งค่าการทดลอง</div>
+    <div class="valueScroller" aria-label="แถบเลื่อนตั้งค่าสามค่า">
+      <div class="control">
+        <label><span>ขนาดสนามไฟฟ้า E</span><span id="ELabel">4.0</span></label>
+        <div class="numRow"><button data-step="E" data-delta="-0.5">−</button><input id="EInput" type="number" min="0" max="10" step="0.5" value="4"><button data-step="E" data-delta="0.5">+</button></div>
+      </div>
+      <div class="control">
+        <label><span>ขนาดสนามแม่เหล็ก B</span><span id="BLabel">2.0</span></label>
+        <div class="numRow"><button data-step="B" data-delta="-0.1">−</button><input id="BInput" type="number" min="0.1" max="8" step="0.1" value="2"><button data-step="B" data-delta="0.1">+</button></div>
+      </div>
+      <div class="control">
+        <label><span>ความเร็วเริ่มต้น v</span><span id="vLabel">2.0</span></label>
+        <div class="numRow"><button data-step="v" data-delta="-0.2">−</button><input id="vInput" type="number" min="0.2" max="10" step="0.2" value="2"><button data-step="v" data-delta="0.2">+</button></div>
+      </div>
+    </div>
+    <div class="control directionBlock">
+      <label>ทิศสนามไฟฟ้า</label>
+      <div class="selectRow"><button id="Edown" class="active">E ลง<br><small>บน + / ล่าง −</small></button><button id="Eup">E ขึ้น<br><small>บน − / ล่าง +</small></button></div>
+    </div>
+    <div class="control directionBlock">
+      <label>ทิศสนามแม่เหล็ก</label>
+      <div class="selectRow"><button id="Bin" class="active">× เข้าจอ</button><button id="Bout">• ออกจอ</button></div>
+    </div>
+    <div class="control chargeBlock">
+      <label>ชนิดประจุ</label>
+      <div class="selectRow chargeBtns"><button id="qpos" class="positive active">+ ประจุบวก</button><button id="qneg" class="negative">− ประจุลบ</button></div>
+    </div>
+    <div class="control">
+      <label>การแสดงผลเพิ่มเติม</label>
+      <div class="optionRow">
+        <label class="checkItem"><input id="showFnet" type="checkbox"> แสดงแรงลัพธ์</label>
+        <label class="checkItem"><input id="showVxy" type="checkbox"> แสดงลูกศรและตัวแปร vₓ, vᵧ</label>
+      </div>
+    </div>
+  </aside>
+
+<div class="footer">ศึกษาเพิ่มเติมที่ <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">เพจคลายปมฟิสิกส์</a></div>
+  </div>
+</main>
+
+<nav class="bottomBar">
+  <button class="btn play" id="playBtn">▶️ เล่น</button>
+  <button class="btn reset" id="resetBtn">🔄 รีเซ็ต</button>
+  <button class="btn formula" id="formulaBtn">Σ สูตรสำคัญ</button>
+</nav>
+
+<div class="modal" id="formulaModal">
+  <button class="close" id="closeFormula">×</button>
+  <div class="modalBox">
+    <h2>สูตรสำคัญ</h2>
+    <div class="formulaCard"><b>แรงไฟฟ้า</b><br><span class="eq">\(F_E = qE\)</span><br>ทิศของแรงไฟฟ้าบนประจุบวกไปทิศเดียวกับสนามไฟฟ้า แต่ประจุลบจะตรงข้ามกับสนามไฟฟ้า</div>
+    <div class="formulaCard"><b>แรงแม่เหล็ก</b><br><span class="eq">\(F_B = qvB\)</span><br>ใช้กฎมือขวากับประจุบวก ถ้าเป็นประจุลบให้กลับทิศแรง</div>
+    <div class="formulaCard"><b>เงื่อนไขเคลื่อนที่ตรง</b><br><span class="eq">\(qE = qvB\)</span><br><span class="eq">\(v = \dfrac{E}{B}\)</span><br>จุดสำคัญคือสนามไฟฟ้าและสนามแม่เหล็กต้องทำให้แรงหักล้างกัน ไม่ใช่เสริมกัน</div>
+  </div>
+</div>
+
+<script>
+const canvas=document.getElementById('lab'), ctx=canvas.getContext('2d');
+const els={E:document.getElementById('EInput'),B:document.getElementById('BInput'),v:document.getElementById('vInput')};
+const labels={E:document.getElementById('ELabel'),B:document.getElementById('BLabel'),v:document.getElementById('vLabel')};
+let state={E:4,B:2,v:2,eDir:1,bDir:-1,q:1,playing:false,t:0,showFnet:false,showVxy:false,particle:{x:160,y:310,vx:2.0,vy:0},trail:[]};
+// eDir: +1 means E downward. bDir: -1 means B into screen, +1 out of screen. y positive down.
+const scale={v:52,a:18};
+function clamp(v,min,max){return Math.max(min,Math.min(max,v));}
+function sync(){
+  state.E=clamp(parseFloat(els.E.value)||0,0,10);
+  state.B=clamp(parseFloat(els.B.value)||.1,.1,8);
+  state.v=clamp(parseFloat(els.v.value)||.2,.2,10);
+  state.showFnet=document.getElementById('showFnet')?.checked||false;
+  state.showVxy=document.getElementById('showVxy')?.checked||false;
+  els.E.value=state.E.toFixed(1);els.B.value=state.B.toFixed(1);els.v.value=state.v.toFixed(1);
+  labels.E.textContent=state.E.toFixed(1);labels.B.textContent=state.B.toFixed(1);labels.v.textContent=state.v.toFixed(1);
+  document.getElementById('vSelectVal').textContent=(state.E===0?'0.00':(state.E/state.B).toFixed(2));
+  document.getElementById('vVal').textContent=state.v.toFixed(2);
+  document.getElementById('FeVal').textContent=Math.abs(state.q*state.E).toFixed(2);
+  document.getElementById('FbVal').textContent=Math.abs(state.q*state.v*state.B).toFixed(2);
+  updateButtons();updateStatus();
+}
+function updateButtons(){document.getElementById('Edown').classList.toggle('active',state.eDir===1);document.getElementById('Eup').classList.toggle('active',state.eDir===-1);document.getElementById('Bin').classList.toggle('active',state.bDir===-1);document.getElementById('Bout').classList.toggle('active',state.bDir===1);document.getElementById('qpos').classList.toggle('active',state.q===1);document.getElementById('qneg').classList.toggle('active',state.q===-1);document.getElementById('playBtn').textContent=state.playing?'⏸ หยุด':'▶️ เล่น';}
+function reset(){state.particle={x:160,y:310,vx:state.v,vy:0};state.trail=[];state.t=0;draw();}
+function forceY(){let Fe=state.q*state.E*state.eDir; let Fb=state.q*state.v*state.B*state.bDir; return Fe+Fb;}
+function updateStatus(){
+  const box=document.getElementById('statusBox');
+  if(state.E===0){
+    box.className='status good';
+    box.textContent='ไม่มีสนามไฟฟ้า: ประจุเคลื่อนที่โค้งแบบวงกลมจากแรงแม่เหล็ก';
+    return;
+  }
+  let need=state.E/state.B; let cancelDir=(state.eDir + state.bDir===0); let diff=Math.abs(state.v-need);
+  if(!cancelDir){box.className='status bad';box.textContent='แรงไฟฟ้าและแรงแม่เหล็กมีแนวเสริมกันหรือเบนทิศเดียวกัน — จึงไม่เป็นเส้นตรง';return;}
+  if(diff<0.06){box.className='status good';box.textContent='สมดุลพอดี: v = E/B อนุภาคเคลื่อนที่เป็นเส้นตรง';}
+  else {box.className='status bad';box.textContent= state.v<need ? 'v น้อยเกินไป แรงไฟฟ้ามากกว่าแรงแม่เหล็ก' : 'v มากเกินไป แรงแม่เหล็กมากกว่าแรงไฟฟ้า';}
+}
+function plateSign(top){let topPlus=state.eDir===1; return top? (topPlus?'+':'−') : (topPlus?'−':'+');}
+function drawPlates(){
+  let top={x:105,y:55,w:690,h:44}, bot={x:105,y:520,w:690,h:44};
+  [top,bot].forEach((p,idx)=>{
+    ctx.save();
+    const neutral = state.E===0;
+    ctx.fillStyle = neutral ? '#f7f9fc' : (idx===0?'#fff6f4':'#f5fbff');
+    ctx.strokeStyle = neutral ? '#b9c7d6' : (idx===0?'#e38c85':'#78aee0');
+    ctx.lineWidth=3;roundRect(p.x,p.y,p.w,p.h,7);ctx.fill();ctx.stroke();
+    if(!neutral){
+      ctx.font='900 31px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle=idx===0?'#b7271d':'#1d62a5';
+      let s=plateSign(idx===0);for(let i=0;i<7;i++)ctx.fillText(s,p.x+65+i*(p.w-130)/6,p.y+p.h/2);
+    }
+    ctx.restore();
+  });
+}
+function drawE(){
+  if(state.E===0) return;
+  ctx.save();ctx.strokeStyle='#2f6fd6';ctx.fillStyle='#2f6fd6';ctx.lineWidth=4;let x=70,y1=135,y2=450;if(state.eDir===1) arrow(x,y1,x,y2); else arrow(x,y2,x,y1);ctx.font='900 28px system-ui';ctx.fillText('E',x-28,state.eDir===1?250:350);ctx.restore();
+}
+function drawB(){ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';ctx.strokeStyle='#27384a';ctx.fillStyle='#27384a';ctx.lineWidth=3;for(let r=0;r<5;r++){for(let c=0;c<6;c++){let x=190+c*105+(r%2)*14,y=155+r*75;if(state.bDir<0){ctx.font='900 45px system-ui';ctx.fillText('×',x,y);} else {ctx.beginPath();ctx.arc(x,y,10,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(x,y,20,0,Math.PI*2);ctx.stroke();}}}ctx.restore();}
+function drawParticle(){
+let p=state.particle;ctx.save();ctx.lineWidth=3;
+if(state.trail.length>1){
+  ctx.beginPath();
+  state.trail.forEach((pt,i)=>{if(i===0)ctx.moveTo(pt.x,pt.y);else ctx.lineTo(pt.x,pt.y)});
+  ctx.setLineDash([12,8]);
+  ctx.strokeStyle='rgba(47,111,214,.68)';
+  ctx.lineWidth=4;
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+ctx.beginPath();ctx.arc(p.x,p.y,20,0,Math.PI*2);
+ctx.fillStyle=state.q>0?'#fff2f0':'#eff6ff';
+ctx.strokeStyle=state.q>0?'#d93025':'#2368b5';
+ctx.fill();ctx.stroke();
+ctx.fillStyle=state.q>0?'#d93025':'#2368b5';
+ctx.font='900 33px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';
+ctx.fillText(state.q>0?'+':'−',p.x,p.y-1);
+
+// เวกเตอร์ความเร็วลัพธ์ v: กรณี E=0 ขนาดลูกศรคงที่และหมุนตามทิศการเคลื่อนที่
+let vAngle = Math.atan2(p.vy,p.vx);
+if(!Number.isFinite(vAngle)) vAngle = 0;
+let vLen = state.E===0 ? 95 : clamp(Math.hypot(p.vx*28,p.vy*38),28,155);
+let vxDraw = Math.cos(vAngle)*vLen;
+let vyDraw = Math.sin(vAngle)*vLen;
+arrow(p.x,p.y,p.x+vxDraw,p.y+vyDraw,'#1f6fe5');
+ctx.font='900 27px system-ui';ctx.fillStyle='#1f6fe5';
+ctx.fillText('v',p.x+vxDraw+14,p.y+vyDraw-10);
+
+// แสดงองค์ประกอบความเร็ว vx, vy เฉพาะเมื่อมีสนามไฟฟ้าเท่านั้น
+if(state.showVxy && state.E!==0){
+  ctx.save();ctx.strokeStyle='#2f9e44';ctx.fillStyle='#2f9e44';ctx.lineWidth=4;
+  let vxLen=clamp(Math.abs(p.vx)*28,18,150);
+  arrow(p.x,p.y,p.x+(p.vx>=0?vxLen:-vxLen),p.y,'#2f9e44');
+  ctx.font='900 27px system-ui';
+  let vxTipX=p.x+(p.vx>=0?vxLen:-vxLen);
+  ctx.fillText('vₓ',vxTipX+(p.vx>=0?12:-26),p.y-10);
+  let vyLen=clamp(Math.abs(p.vy)*38,0,115);
+  if(vyLen>2){
+    arrow(p.x,p.y,p.x,p.y+(p.vy>0?vyLen:-vyLen),'#2f9e44');
+    ctx.fillText('vᵧ',p.x+12,p.y+(p.vy>0?vyLen:-vyLen));
+  }else{
+    ctx.fillText('vᵧ = 0',p.x+12,p.y-24);
+  }
+  ctx.restore();
+}
+
+// แสดงแรงลัพธ์เมื่อผู้ใช้ติ๊กเลือก
+let fy=forceY();
+if(state.showFnet && Math.abs(fy)>.05){
+  let len=clamp(Math.abs(fy)*20,22,95);
+  arrow(p.x,p.y,p.x,p.y+(fy>0?len:-len),'#d93025');
+  ctx.fillStyle='#d93025';ctx.font='900 21px system-ui';
+  ctx.fillText('F รวม',p.x+42,p.y+(fy>0?len:-len));
+}
+ctx.restore();
+}
+function drawGuides(){ctx.save();ctx.fillStyle='rgba(255,255,255,.86)';ctx.strokeStyle='#d9e5f2';if(Number(state.E)===0){roundRect(560,132,285,76,16);ctx.fill();ctx.stroke();ctx.fillStyle='#1f6fe5';ctx.font='900 25px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('เคลื่อนที่โค้งแบบวงกลม',702,170);ctx.restore();return;}let need=state.E/state.B;roundRect(600,132,230,76,16);ctx.fill();ctx.stroke();ctx.fillStyle='#244b70';ctx.font='800 18px system-ui';ctx.textAlign='left';ctx.fillText('ตั้งให้ตรง: v = E/B',618,158);ctx.font='900 25px system-ui';ctx.fillStyle='#1f6fe5';ctx.fillText('v = '+need.toFixed(2),618,188);ctx.restore();}
+function draw(){ctx.clearRect(0,0,canvas.width,canvas.height);drawPlates();drawB();drawE();drawGuides();drawParticle();}
+function step(){
+  if(state.playing){
+    let p=state.particle;
+    if(state.E===0){
+      // สนามแม่เหล็กอย่างเดียว: ขนาดความเร็วคงที่ แต่ทิศเปลี่ยน → วิถีโค้งแบบวงกลม
+      const speed=Math.max(state.v,0.2);
+      const omega=0.018*state.q*state.B*state.bDir;
+      const cos=Math.cos(omega), sin=Math.sin(omega);
+      let nvx=p.vx*cos - p.vy*sin;
+      let nvy=p.vx*sin + p.vy*cos;
+      const mag=Math.hypot(nvx,nvy)||1;
+      p.vx=nvx/mag*speed;
+      p.vy=nvy/mag*speed;
+      p.x+=p.vx*scale.v/60;
+      p.y+=p.vy*scale.v/60;
+    }else{
+      let ay=forceY()*0.025;
+      p.vx=state.v;
+      p.vy+=ay;
+      p.x+=p.vx*scale.v/60;
+      p.y+=p.vy*scale.a/60;
+    }
+    state.trail.push({x:p.x,y:p.y});
+    if(state.trail.length>260)state.trail.shift();
+    if(p.x>820||p.x<80||p.y<95||p.y>525){state.playing=false;updateButtons();}
+    draw();
+  }
+  requestAnimationFrame(step)
+}
+function arrow(x1,y1,x2,y2,color){ctx.save();if(color){ctx.strokeStyle=color;ctx.fillStyle=color;}ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();let ang=Math.atan2(y2-y1,x2-x1),h=13;ctx.beginPath();ctx.moveTo(x2,y2);ctx.lineTo(x2-h*Math.cos(ang-Math.PI/6),y2-h*Math.sin(ang-Math.PI/6));ctx.lineTo(x2-h*Math.cos(ang+Math.PI/6),y2-h*Math.sin(ang+Math.PI/6));ctx.closePath();ctx.fill();ctx.restore();}
+function roundRect(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+document.querySelectorAll('[data-step]').forEach(b=>b.addEventListener('click',()=>{let k=b.dataset.step,d=parseFloat(b.dataset.delta);els[k].value=(parseFloat(els[k].value||0)+d).toFixed(k==='B'?1:1);sync();reset();}));
+Object.values(els).forEach(input=>input.addEventListener('change',()=>{sync();reset();}));
+document.getElementById('Edown').onclick=()=>{state.eDir=1;sync();reset();};document.getElementById('Eup').onclick=()=>{state.eDir=-1;sync();reset();};document.getElementById('Bin').onclick=()=>{state.bDir=-1;sync();reset();};document.getElementById('Bout').onclick=()=>{state.bDir=1;sync();reset();};document.getElementById('qpos').onclick=()=>{state.q=1;sync();reset();};document.getElementById('qneg').onclick=()=>{state.q=-1;sync();reset();};
+document.getElementById('showFnet').addEventListener('change',()=>{sync();draw();});document.getElementById('showVxy').addEventListener('change',()=>{sync();draw();});
+document.getElementById('playBtn').onclick=()=>{state.playing=!state.playing;updateButtons();};document.getElementById('resetBtn').onclick=()=>{state.playing=false;updateButtons();reset();};
+document.getElementById('formulaBtn').onclick=()=>{document.body.classList.add('formulaOpen');document.getElementById('formulaModal').classList.add('show');if(window.MathJax)MathJax.typesetPromise();};document.getElementById('closeFormula').onclick=()=>{document.getElementById('formulaModal').classList.remove('show');document.body.classList.remove('formulaOpen');};
+let dragging=false;canvas.addEventListener('pointerdown',e=>{const rect=canvas.getBoundingClientRect();let x=(e.clientX-rect.left)*canvas.width/rect.width,y=(e.clientY-rect.top)*canvas.height/rect.height;let p=state.particle;if(Math.hypot(x-p.x,y-p.y)<45){dragging=true;canvas.setPointerCapture(e.pointerId);state.playing=false;updateButtons();}});canvas.addEventListener('pointermove',e=>{if(!dragging)return;const rect=canvas.getBoundingClientRect();let x=(e.clientX-rect.left)*canvas.width/rect.width,y=(e.clientY-rect.top)*canvas.height/rect.height;state.particle.x=clamp(x,125,780);state.particle.y=clamp(y,120,500);state.particle.vy=0;state.trail=[];draw();});canvas.addEventListener('pointerup',()=>dragging=false);canvas.addEventListener('pointercancel',()=>dragging=false);
+document.getElementById('guideClose').addEventListener('click',()=>{document.querySelector('.toolbar').style.display='none';});
+sync();reset();step();
+</script>
+</body>
+</html>
