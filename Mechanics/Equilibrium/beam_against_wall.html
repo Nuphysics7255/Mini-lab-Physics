@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>คานพิงกำแพง 5.0 m — สมดุล/ไถล</title>
+  <style>
+    :root{
+      --ink:#0f172a;
+      --muted:#475569;
+      --panel:#ffffff;
+      --bg:#eef2f7;
+      --wood:#c58a14;
+      --wall:#dcdcdc;
+      --floor:#b0acac;
+      --line:#0f172a;
+      --accent:#38bdf8;
+      --bright:#fef9c3;
+    }
+    *{box-sizing:border-box;}
+    body{
+      margin:0;
+      background:#fff;
+      font-family:system-ui,"Noto Sans Thai",sans-serif;
+      color:var(--ink);
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:10px;
+      padding:10px 6px 20px;
+    }
+    h2{margin:4px 0 0;font-size:1.05rem;text-align:center;}
+    #wrap{
+      width:100%;
+      max-width:980px;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+    #sim{
+      width:100%;
+      border:1px solid #d4d4d8;
+      border-radius:12px;
+      background:#fff;
+      touch-action:none;
+    }
+    #ctrl{
+      background:var(--panel);
+      border:1px solid #e2e8f0;
+      border-radius:12px;
+      padding:10px;
+      display:grid;
+      gap:8px;
+    }
+    .row{
+      display:flex;
+      flex-wrap:wrap;
+      gap:6px 12px;
+      align-items:center;
+    }
+    label{font-size:0.79rem;white-space:nowrap;}
+    input[type="number"], input[type="text"]{
+      width:70px;
+      padding:3px 5px;
+      border:1px solid #cbd5e1;
+      border-radius:6px;
+      font-size:0.78rem;
+    }
+    input[type="range"]{width:120px;}
+    button{
+      background:#f1f5f9;
+      border:1px solid #cbd5e1;
+      border-radius:8px;
+      padding:5px 12px;
+      font-size:0.8rem;
+      cursor:pointer;
+    }
+    button:hover{background:#e2e8f0;}
+    #info{
+      font-size:0.68rem;
+      line-height:1.35;
+      background:#fff;
+      border:1px solid #e2e8f0;
+      border-radius:10px;
+      padding:6px 8px;
+    }
+    #maxAngleShow{color:#dc2626;font-weight:600;}
+    a.link{
+      color:#0ea5e9;
+      text-decoration:none;
+      font-weight:600;
+    }
+    a.link:hover{text-decoration:underline;}
+    /* modal */
+    #modalCalc{
+      position:fixed;
+      inset:0;
+      background:rgba(15,23,42,0.35);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index:50;
+      padding:10px;
+    }
+    #modalBox{
+      background:linear-gradient(160deg,#fff,#f1f5f9);
+      border:2px solid #38bdf8;
+      border-radius:14px;
+      max-width:580px;
+      width:100%;
+      max-height:85vh;
+      overflow-y:auto;
+      padding:14px 16px 18px;
+      box-shadow:0 20px 40px rgba(15,23,42,0.2);
+    }
+    #modalBox h3{
+      margin-top:0;
+      margin-bottom:6px;
+      font-size:1rem;
+    }
+    #closeModal{
+      background:#ef4444;
+      color:#fff;
+      border:none;
+      border-radius:8px;
+      padding:4px 10px;
+      cursor:pointer;
+      float:right;
+      margin-left:6px;
+    }
+    .eq-block{
+      background:#fef9c3;
+      border:1px solid rgba(0,0,0,0.05);
+      border-radius:10px;
+      padding:6px 10px 2px;
+      margin:8px 0;
+      font-size:0.78rem;
+    }
+    .eq-block p{margin:3px 0;}
+    @media (min-width:760px){
+      #ctrl{grid-template-columns:1.2fr 0.8fr;}
+    }
+  </style>
+  <!-- MathJax -->
+  <script>
+    window.MathJax = {
+      tex: {inlineMath: [['$','$'], ['\\(','\\)']]},
+      svg: {fontCache: 'global'}
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+</head>
+<body>
+  <div id="wrap">
+    <h2>คานไม้ยาว 5.0 m พิงกำแพง — ปรับมวล จุดศูนย์กลางมวล มุม และแรงเสียดทานได้</h2>
+    <canvas id="sim" height="420"></canvas>
+
+    <div id="ctrl">
+      <div>
+        <div class="row">
+          <label>มวลคาน (kg):</label>
+          <input type="number" id="mass" value="10" min="0" step="0.5">
+        </div>
+        <div class="row">
+          <label>จุดศูนย์กลางมวลจากปลายล่าง → บน (%):</label>
+          <input type="range" id="cmPos" min="0" max="100" value="50">
+          <input type="number" id="cmPosNum" min="0" max="100" value="50" step="1">
+        </div>
+        <div class="row">
+          <label>มุมคานกับพื้น (°):</label>
+          <input type="number" id="angleDeg" value="60" min="5" max="89" step="1">
+          <span style="font-size:0.7rem;">มุมปัจจุบัน: <span id="angleShow">60.0</span>°</span>
+        </div>
+        <div class="row">
+          <label>μₛ (กำแพง-คาน):</label>
+          <input type="number" id="muWall" value="0.0" min="0" max="2" step="0.05">
+        </div>
+        <div class="row">
+          <label>μₛ (พื้น-คาน):</label>
+          <input type="number" id="muFloor" value="0.4" min="0" max="2" step="0.05">
+        </div>
+        <div class="row">
+          <button id="playBtn">▶ เล่น</button>
+          <button id="resetBtn">รีเซ็ต</button>
+          <button id="forceBtn">แสดงเวกเตอร์ของแรง</button>
+          <button id="calcBtn">แสดงวิธีคำนวณ</button>
+        </div>
+      </div>
+      <div id="info">
+        <div><strong>สถานะ:</strong> <span id="statusTxt">สมดุล</span></div>
+        <div>มุมคาน = <span id="angleTxt">60.0</span>°</div>
+        <div>มุมที่น้อยที่สุดที่ยังไม่ไถล = <span id="maxAngleShow">คำนวณ...</span></div>
+        <div>F<sub>f</sub> ที่พื้น = <span id="ffVal">-</span> N</div>
+        <div>ขีดจำกัดที่พื้น = <span id="ffLim">-</span> N</div>
+        <div>N (ผนัง) = <span id="nwVal">-</span> N</div>
+        <div>แรงเสียดทานที่ผนัง = <span id="fwVal">-</span> N (ทิศขึ้น)</div>
+        <div>ตำแหน่ง cm = <span id="cmText">กลางคาน</span></div>
+      </div>
+    </div>
+
+    <div style="font-size:0.75rem;margin-top:4px;">
+      ศึกษาเพิ่มเติมได้ที่
+      <a class="link" href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">
+        เพจคลายปมฟิสิกส์
+      </a>
+    </div>
+  </div>
+
+  <!-- MODAL -->
+  <div id="modalCalc">
+    <div id="modalBox">
+      <button id="closeModal">ปิด</button>
+      <h3>วิธีคำนวณสมดุล และหามุมที่น้อยที่สุดที่ยังไม่ไถล</h3>
+
+      <div class="eq-block">
+        <p><strong>1) สมดุลในแนวนอน</strong></p>
+        <p>$$\sum F_x = 0 \;\Rightarrow\; F_f = N_w$$</p>
+      </div>
+
+      <div class="eq-block">
+        <p><strong>2) สมดุลในแนวดิ่ง</strong></p>
+        <p>$$\sum F_y = 0 \;\Rightarrow\; N_f + F_w = W$$</p>
+        <p>และ $$F_w = \mu_{\text{wall}}\, N_w$$</p>
+      </div>
+
+      <div class="eq-block">
+        <p><strong>3) สมดุลโมเมนต์ที่ปลายล่างของคาน</strong></p>
+        <p>
+          $$N_w \, h + F_w \, b = W \,(b f)$$
+        </p>
+        <p>โดย \(b = L \cos\theta,\; h = L \sin\theta\)</p>
+      </div>
+
+      <div class="eq-block">
+        <p><strong>เมื่อคาน “จะเริ่มไถล” ที่พื้น</strong></p>
+        <p>
+          $$F_f = \mu_{\text{floor}}\, N_f$$
+        </p>
+        <p>และจากข้อ 1) จะได้ว่า</p>
+        <p>
+          $$N_w = \mu_{\text{floor}} (W - F_w)$$
+        </p>
+      </div>
+
+      <div class="eq-block">
+        <p><strong>จับคู่กับนิพจน์ \(N_w\) จากโมเมนต์</strong></p>
+        <p>
+          $$N_w = \frac{b f W}{h + b \mu_{\text{wall}}}$$
+        </p>
+        <p>ตัด \(W\) และแทน \(b = L\cos\theta, h = L\sin\theta\) จะได้</p>
+        <p>
+          $$\frac{f\cos\theta}{\sin\theta + \mu_{\text{wall}}\cos\theta}
+          = \frac{\mu_{\text{floor}}}{1 + \mu_{\text{floor}}\mu_{\text{wall}}}$$
+        </p>
+        <p>จัดรูป</p>
+        <p>
+          $$\tan\theta_{\min}
+          = \frac{f(1 + \mu_{\text{floor}}\mu_{\text{wall}}) - \mu_{\text{floor}}\mu_{\text{wall}}}{\mu_{\text{floor}}}$$
+        </p>
+        <p>
+          $$\theta_{\min} = \tan^{-1}\left(
+          \frac{f(1 + \mu_{\text{floor}}\mu_{\text{wall}}) - \mu_{\text{floor}}\mu_{\text{wall}}}{\mu_{\text{floor}}}
+          \right)$$
+        </p>
+        <p style="font-size:0.65rem;color:#475569;">*ในที่นี้ “น้อยที่สุดที่ยังไม่ไถล” คือมุมวิกฤตที่ถ้ายกชันกว่านี้ (มุมมากขึ้น) พื้นจะเริ่มต้านไม่ไหว</p>
+      </div>
+
+      <div id="currentVals" style="font-size:0.72rem;margin-top:6px;background:#fff;border:1px dashed #38bdf8;border-radius:8px;padding:6px 8px;">
+        ค่าปัจจุบันโหลดอยู่...
+      </div>
+    </div>
+  </div>
+
+  <script>
+  const canvas = document.getElementById('sim');
+  const ctx = canvas.getContext('2d');
+
+  let massInput = document.getElementById('mass');
+  let cmRange = document.getElementById('cmPos');
+  let cmNum = document.getElementById('cmPosNum');
+  let angleInput = document.getElementById('angleDeg');
+  let muWallInput = document.getElementById('muWall');
+  let muFloorInput = document.getElementById('muFloor');
+  let playBtn = document.getElementById('playBtn');
+  let forceBtn = document.getElementById('forceBtn');
+  let calcBtn = document.getElementById('calcBtn');
+  let resetBtn = document.getElementById('resetBtn');
+
+  let statusTxt = document.getElementById('statusTxt');
+  let ffVal = document.getElementById('ffVal');
+  let ffLim = document.getElementById('ffLim');
+  let nwVal = document.getElementById('nwVal');
+  let fwVal = document.getElementById('fwVal');
+  let cmText = document.getElementById('cmText');
+  let angleTxt = document.getElementById('angleTxt');
+  let angleShow = document.getElementById('angleShow');
+  let maxAngleShow = document.getElementById('maxAngleShow');
+
+  const modal = document.getElementById('modalCalc');
+  const closeModal = document.getElementById('closeModal');
+  const currentVals = document.getElementById('currentVals');
+
+  const L_m = 5.0;
+  const pxPerMBase = 70;     // ค่าเดิม (จอคอม)
+  let pxPerM = pxPerMBase;   // จะถูกปรับเป็น 60% บนมือถือ
+  let L_px = L_m * pxPerM;   // จะอัปเดตตาม pxPerM
+  const g = 9.81;
+
+  let angle = 60 * Math.PI/180;
+  let mass = 10;
+  let cmFrac = 0.5;
+  let muWall = 0.0;
+  let muFloor = 0.4;
+  let showForces = false;
+  let playing = false;
+
+  let wallX = 80;
+  let floorY = canvas.height - 40;
+  let dragging = false;
+
+  function resizeCanvas(){
+    const w = Math.min(window.innerWidth - 20, 980);
+    canvas.width = w;
+
+    // เฉพาะมือถือ: ลด "ขนาดรูปการทดลอง" เหลือ 60% (ลดสเกลการวาด)
+    const isMobile = window.matchMedia("(max-width: 520px)").matches;
+    const scale = isMobile ? 0.60 : 1.00;
+    pxPerM = pxPerMBase * scale;
+    L_px = L_m * pxPerM;
+
+    floorY = canvas.height - 40;
+    draw();
+  }
+  window.addEventListener('resize', resizeCanvas);
+  resizeCanvas();
+
+  function computeForces(){
+    const b = L_px * Math.cos(angle);
+    const h = L_px * Math.sin(angle);
+    const f = cmFrac;
+    const W = mass * g;
+
+    const denom = h + b * muWall;
+    let Nw = 0, Fw = 0;
+    if (denom > 1e-6){
+      Nw = b * f * W / denom;
+      Fw = muWall * Nw;
+    }
+    const Ff = Nw;
+    const Nf = W - Fw;
+    const floorLimit = muFloor * Nf;
+    const slip = Math.abs(Ff) > floorLimit + 1e-6;
+
+    return {b,h,f,W,Nw,Fw,Ff,Nf,floorLimit,slip};
+  }
+
+  // มุมวิกฤต
+  function getCriticalAngleDeg(){
+    if (muFloor <= 0){
+      return 0;
+    }
+    const A = cmFrac * (1 + muFloor*muWall) - muFloor*muWall;
+    const tanVal = A / muFloor;
+    if (tanVal <= 0){
+      return 0;
+    }
+    return Math.atan(tanVal) * 180/Math.PI;
+  }
+
+  function drawArrow(fromX, fromY, toX, toY, color, label){
+    const headlen = 10;
+    const dx = toX - fromX;
+    const dy = toY - fromY;
+    const ang = Math.atan2(dy, dx);
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(fromX, fromY);
+    ctx.lineTo(toX, toY);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(toX, toY);
+    ctx.lineTo(toX - headlen*Math.cos(ang - Math.PI/6), toY - headlen*Math.sin(ang - Math.PI/6));
+    ctx.lineTo(toX - headlen*Math.cos(ang + Math.PI/6), toY - headlen*Math.sin(ang + Math.PI/6));
+    ctx.lineTo(toX, toY);
+    ctx.fill();
+    if (label){
+      ctx.font = "12px system-ui, 'Noto Sans Thai'";
+      ctx.fillText(label, toX + 6, toY - 4);
+    }
+  }
+
+  function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    // พื้น
+    ctx.fillStyle = "#b3b3b3";
+    ctx.fillRect(0, floorY, canvas.width, 12);
+
+    // กำแพง
+    ctx.fillStyle = "#dddddd";
+    ctx.strokeStyle = "#0f172a";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.rect(wallX - 70, floorY - (L_px + 120), 70, (L_px + 120));
+    ctx.fill();
+    ctx.stroke();
+
+    const {b, h, W, Nw, Fw, Ff, Nf, floorLimit, slip} = computeForces();
+    const baseX = wallX + b;
+    const baseY = floorY;
+    const topX = wallX;
+    const topY = floorY - h;
+
+    // คาน
+    ctx.strokeStyle = "#0f172a";
+    ctx.lineWidth = 6;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(topX, topY);
+    ctx.lineTo(baseX, baseY);
+    ctx.stroke();
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = "#c58a14";
+    ctx.beginPath();
+    ctx.moveTo(topX, topY);
+    ctx.lineTo(baseX, baseY);
+    ctx.stroke();
+
+    // cm
+    const cmX = baseX + (topX - baseX) * cmFrac;
+    const cmY = baseY + (topY - baseY) * cmFrac;
+    ctx.fillStyle = "#0f172a";
+    ctx.beginPath();
+    ctx.arc(cmX, cmY, 5, 0, Math.PI*2);
+    ctx.fill();
+
+    // ป้ายมุมโปร่งใส ไม่มีกรอบ
+    const angleDegCur = angle * 180/Math.PI;
+    ctx.fillStyle = "#0f172a";
+    ctx.font = "bold 16px system-ui,'Noto Sans Thai'";
+    ctx.fillText(angleDegCur.toFixed(1) + "°", baseX - 70, baseY - 16);
+
+    // เวกเตอร์ (เฉพาะสมดุล)
+    if (showForces && !slip){
+      drawArrow(cmX, cmY, cmX, cmY + 40, "#ef4444", "mg");
+      drawArrow(baseX, baseY, baseX - 30, baseY, "#ef4444", "f");
+      drawArrow(topX, topY, topX, topY - 35, "#ef4444", "f (ผนัง)");
+      drawArrow(topX, topY, topX + 35, topY, "#0ea5e9", "N");
+    }
+
+    // จุดจับ
+    ctx.fillStyle = "#0f172a";
+    ctx.beginPath();
+    ctx.arc(baseX, baseY, 7, 0, Math.PI*2);
+    ctx.fill();
+
+    const critDeg = getCriticalAngleDeg();
+    statusTxt.textContent = slip ? "พื้นต้านไม่ไหว → คานไถล" : "สมดุล";
+    ffVal.textContent = Ff.toFixed(1);
+    ffLim.textContent = floorLimit.toFixed(1);
+    nwVal.textContent = Nw.toFixed(1);
+    fwVal.textContent = Fw.toFixed(1);
+    cmText.textContent = (cmFrac*100).toFixed(0) + "% จากปลายล่าง";
+    angleTxt.textContent = angleDegCur.toFixed(1);
+    angleShow.textContent = angleDegCur.toFixed(1);
+    maxAngleShow.textContent = critDeg.toFixed(1) + "°";
+
+    forceBtn.textContent = (!slip ? (showForces ? "ซ่อนเวกเตอร์ของแรง" : "แสดงเวกเตอร์ของแรง") : "แสดงเวกเตอร์ได้เมื่อสมดุล");
+  }
+
+  function animate(){
+    if (playing){
+      const r = computeForces();
+      if (r.slip){
+        let b = r.b + 1.1;
+        if (b >= L_px - 2){
+          b = L_px;
+          angle = 0;
+          playing = false;
+          playBtn.textContent = "▶ เล่น";
+        } else {
+          angle = Math.acos(b / L_px);
+        }
+      } else {
+        playing = false;
+        playBtn.textContent = "▶ เล่น";
+      }
+    }
+    draw();
+    requestAnimationFrame(animate);
+  }
+  requestAnimationFrame(animate);
+
+  function setDefaults(){
+    mass = 10;
+    cmFrac = 0.5;
+    angle = 60 * Math.PI/180;
+    muWall = 0.0;
+    muFloor = 0.4;
+    showForces = false;
+    playing = false;
+
+    massInput.value = 10;
+    cmRange.value = 50;
+    cmNum.value = 50;
+    angleInput.value = 60;
+    muWallInput.value = 0.0;
+    muFloorInput.value = 0.4;
+  }
+
+  // อินพุต
+  massInput.addEventListener('input', ()=>{ mass = parseFloat(massInput.value)||0; });
+  cmRange.addEventListener('input', ()=>{
+    cmFrac = parseFloat(cmRange.value)/100;
+    cmNum.value = cmRange.value;
+  });
+  cmNum.addEventListener('input', ()=>{
+    let v = Math.min(100, Math.max(0, parseInt(cmNum.value)||0));
+    cmNum.value = v;
+    cmRange.value = v;
+    cmFrac = v/100;
+  });
+  angleInput.addEventListener('input', ()=>{
+    let deg = parseFloat(angleInput.value) || 0;
+    if (deg < 5) deg = 5;
+    if (deg > 88) deg = 88;
+    angle = deg * Math.PI/180;
+  });
+  muWallInput.addEventListener('input', ()=>{ muWall = parseFloat(muWallInput.value)||0; });
+  muFloorInput.addEventListener('input', ()=>{ muFloor = parseFloat(muFloorInput.value)||0; });
+
+  playBtn.addEventListener('click', ()=>{
+    playing = !playing;
+    playBtn.textContent = playing ? "⏸ หยุด" : "▶ เล่น";
+    if (playing) showForces = false;
+  });
+
+  forceBtn.addEventListener('click', ()=>{
+    const r = computeForces();
+    if (r.slip){
+      showForces = false;
+    } else {
+      showForces = !showForces;
+    }
+  });
+
+  calcBtn.addEventListener('click', ()=>{
+    const r = computeForces();
+    const angleDegCur = (angle*180/Math.PI).toFixed(2);
+    const critDeg = getCriticalAngleDeg().toFixed(2);
+    currentVals.innerHTML =
+      "มวลคาน m = " + mass.toFixed(2) + " kg<br>" +
+      "W = mg = " + (mass*g).toFixed(2) + " N<br>" +
+      "มุมคานปัจจุบัน = " + angleDegCur + "°<br>" +
+      "มุมที่น้อยที่สุดที่ยังไม่ไถล = <span style='color:#dc2626;font-weight:600;'>" + critDeg + "°</span><br>" +
+      "μ_floor = " + muFloor.toFixed(2) + ", μ_wall = " + muWall.toFixed(2) + "<br>" +
+      (r.slip ? "<span style='color:#dc2626'>ผล: พื้นต้านไม่ไหว → คานไถล</span>" : "<span style='color:#16a34a'>ผล: สมดุล</span>");
+    modal.style.display = "flex";
+    if (window.MathJax) window.MathJax.typesetPromise();
+  });
+  closeModal.addEventListener('click', ()=> modal.style.display="none");
+  modal.addEventListener('click', (e)=>{ if(e.target===modal) modal.style.display="none"; });
+
+  resetBtn.addEventListener('click', ()=>{ setDefaults(); });
+
+  // drag
+  function getPos(evt){
+    const rect = canvas.getBoundingClientRect();
+    if (evt.touches && evt.touches[0]){
+      return { x:evt.touches[0].clientX-rect.left, y:evt.touches[0].clientY-rect.top };
+    } else {
+      return { x:evt.clientX-rect.left, y:evt.clientY-rect.top };
+    }
+  }
+  canvas.addEventListener('mousedown', startDrag);
+  canvas.addEventListener('touchstart', startDrag);
+  function startDrag(e){
+    const pos = getPos(e);
+    const {b} = computeForces();
+    const baseX = wallX + b;
+    const baseY = floorY;
+    const dist = Math.hypot(pos.x - baseX, pos.y - baseY);
+    if (dist < 15){
+      dragging = true;
+      e.preventDefault();
+    }
+  }
+  window.addEventListener('mousemove', dragMove);
+  window.addEventListener('touchmove', dragMove, {passive:false});
+  function dragMove(e){
+    if (!dragging) return;
+    const pos = getPos(e);
+    const newB = Math.max(40, pos.x - wallX);
+    const clampedB = Math.min(newB, L_px);
+    if (clampedB >= L_px - 2){
+      angle = 0;
+    } else {
+      angle = Math.acos(clampedB / L_px);
+    }
+    angleInput.value = (angle*180/Math.PI).toFixed(0);
+    e.preventDefault();
+  }
+  window.addEventListener('mouseup', ()=>dragging=false);
+  window.addEventListener('touchend', ()=>dragging=false);
+
+  setDefaults();
+  </script>
+</body>
+</html>

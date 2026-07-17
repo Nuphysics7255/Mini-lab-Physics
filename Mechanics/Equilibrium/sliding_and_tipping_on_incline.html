@@ -1,0 +1,1313 @@
+<!DOCTYPE html>   
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>กล่องบนพื้นเอียง (แรง เสียดทาน การล้ม)</title>
+<style>
+  :root {
+    --panel:#f4f6f8;
+    --line:#e5e7eb;
+    --text:#1f2937;
+    --accent:#1d4ed8;
+    --gray-500:#6b7280;
+    --gray-700:#374151;
+    --bg-card:#ffffff;
+    --border-card:#d1d5db;
+    --radius-lg:12px;
+
+    --grad-start:#2563eb;
+    --grad-mid:#7c3aed;
+    --grad-end:#ec4899;
+
+    --quiz-bg:#ecfdf5;
+    --quiz-border:#6ee7b7;
+    --quiz-accent:#065f46;
+    --wrong-bg:#fef2f2;
+    --wrong-border:#fecaca;
+    --wrong-accent:#991b1b;
+    --score-pill:#1d4ed8;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Thai","Noto Sans",Arial;
+    color:var(--text);
+    background:#fff
+  }
+  header{
+    padding:12px 16px;
+    border-bottom:1px solid var(--line);
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    flex-wrap:wrap
+  }
+  header h1{
+    margin:0;
+    font-size:18px;
+    color:var(--accent);
+    line-height:1.3;
+  }
+  header .subnote{
+    color:var(--gray-500);
+    font-size:12px;
+    line-height:1.4
+  }
+
+  #wrap{
+    display:grid;
+    grid-template-columns:1fr 360px;
+    gap:12px;
+    padding:12px
+  }
+
+  #canvasWrap{
+    position:relative;
+    border:1px solid var(--line);
+    border-radius:var(--radius-lg);
+    overflow:hidden;
+    min-height:380px;
+    background:#fff
+  }
+  #scene{
+    width:100%;
+    height:100%;
+    display:block;
+    touch-action:none
+  }
+
+  #ui{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--radius-lg);
+    padding:12px;
+    max-height:90vh;
+    overflow-y:auto;
+    font-size:14px;
+  }
+
+  .sec{margin-bottom:12px}
+  .sec h2{
+    margin:0 0 8px 0;
+    font-size:14px;
+    color:#6b7280;
+    letter-spacing:.04em;
+    text-transform:uppercase
+  }
+
+  .row{
+    display:grid;
+    grid-template-columns:1fr auto;
+    align-items:center;
+    gap:8px;
+    margin:8px 0
+  }
+  .row output{
+    min-width:110px;
+    text-align:right;
+    color:var(--accent);
+    font-variant-numeric:tabular-nums
+  }
+  input[type=range]{width:100%}
+
+  .buttons{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-top:8px
+  }
+  button{
+    cursor:pointer;
+    border:1px solid var(--line);
+    background:#fff;
+    padding:8px 10px;
+    border-radius:10px;
+    font-size:12px;
+    line-height:1.2;
+    color:var(--gray-700);
+  }
+  button.primary{
+    background:var(--accent);
+    color:#fff;
+    border-color:var(--accent)
+  }
+  button.small{
+    padding:6px 8px;
+    font-size:12px;
+    line-height:1.2;
+  }
+  #showFormula{
+    border-color:#6366f1;
+    background:#6366f1;
+    color:#fff;
+  }
+  #showQuiz{
+    border-color:#10b981;
+    background:#10b981;
+    color:#fff;
+  }
+
+  .toggleRow{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size:13px;
+    line-height:1.4;
+    color:var(--gray-700);
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:8px 10px;
+  }
+  .toggleRow input{margin:0}
+
+  /* ✅ HUD แบบในรูป */
+  .hud{
+    background:#fff;
+    border:1px dashed var(--line);
+    border-radius:10px;
+    padding:10px;
+    font-size:13px
+  }
+  .hud .pair{
+    display:flex;
+    justify-content:space-between;
+    gap:10px;
+    margin:4px 0
+  }
+  .hud .k{color:#374151}
+  .hud .v{color:#dc2626;font-variant-numeric:tabular-nums; text-align:right; white-space:nowrap;}
+  .hud hr{border:none;border-top:1px dashed #e5e7eb;margin:6px 0;}
+
+  /* ✅ Accordion (มือถือ) */
+  .acc{
+    border:1px solid var(--line);
+    border-radius:12px;
+    background:#fff;
+    overflow:hidden;
+    margin-bottom:10px;
+  }
+  .acc summary{
+    list-style:none;
+    cursor:pointer;
+    padding:10px 12px;
+    font-size:13px;
+    color:#374151;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    user-select:none;
+  }
+  .acc summary::-webkit-details-marker{display:none}
+  .acc summary .hint{
+    color:#6b7280;
+    font-size:12px;
+  }
+  .acc .accBody{
+    padding:10px 12px 2px 12px;
+    border-top:1px solid var(--line);
+    background:#fff;
+  }
+
+  /* ==============================
+     ✅ FULLSCREEN MODAL (สูตร/แบบฝึกหัด)
+     ============================== */
+
+  /* base for floating cards */
+  .floatingCardWrap{
+    position:fixed;
+    inset:0;
+    width:100vw;
+    height:100vh;
+    display:none;
+    z-index:999;
+    padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+    background:rgba(15,23,42,.45);
+    backdrop-filter: blur(2px);
+  }
+
+  .floatingCard{
+    width:100%;
+    height:100%;
+    max-width:none;
+    max-height:none;
+    background:var(--bg-card);
+    border-radius:16px;
+    border:1px solid var(--border-card);
+    box-shadow:0 20px 40px rgba(0,0,0,.18),0 4px 12px rgba(0,0,0,.08);
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+  }
+
+  .cardHeader{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    padding:12px 14px 10px 14px;
+    color:#fff;
+    flex-shrink:0;
+  }
+  .cardHeader .title{
+    font-size:14px;
+    font-weight:600;
+    line-height:1.3;
+  }
+  .cardCloseBtn{
+    border:0;
+    background:rgba(255,255,255,.18);
+    color:#fff;
+    border-radius:10px;
+    font-size:14px;
+    padding:6px 10px;
+    line-height:1;
+    cursor:pointer;
+  }
+
+  .cardBody{
+    background:#fff;
+    color:var(--gray-700);
+    padding:14px;
+    border-top:1px solid rgba(255,255,255,.35);
+    font-size:14px;
+    overflow:auto; /* ✅ เลื่อนในโมดัล */
+    -webkit-overflow-scrolling: touch;
+  }
+  .cardBody h3{
+    margin:0 0 6px 0;
+    font-size:14px;
+    font-weight:700;
+    color:#1f2937;
+  }
+  .eq{
+    font-family:ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+    font-size:13px;
+    color:#1d4ed8;
+    background:#eef2ff;
+    border:1px solid #c7d2fe;
+    border-radius:6px;
+    padding:2px 6px;
+    display:inline-block;
+    line-height:1.35;
+  }
+  .analysisBox{
+    background:#fefce8;
+    border:1px solid #fde68a;
+    border-radius:10px;
+    padding:10px 12px;
+    margin-top:10px;
+    color:#78350f;
+    font-size:13px;
+    line-height:1.45;
+  }
+
+  /* Header gradients */
+  #formulaCard .cardHeader{
+    background:linear-gradient(90deg,var(--grad-start) 0%,var(--grad-mid) 60%,var(--grad-end) 100%);
+  }
+  #quizCard .cardHeader{
+    background:linear-gradient(90deg,#10b981 0%,#14b8a6 50%,#0ea5e9 100%);
+  }
+
+  /* quiz */
+  #quizBody{ font-size:14px; }
+  .scoreRow{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:10px;
+    font-size:13px;
+    color:#1f2937;
+  }
+  .scorePill{
+    background:var(--score-pill);
+    color:#fff;
+    border-radius:999px;
+    font-size:12px;
+    line-height:1.2;
+    padding:4px 10px;
+    font-weight:600;
+  }
+  .quizQuestion{
+    margin-bottom:12px;
+    border-radius:12px;
+    border:1px solid var(--quiz-border);
+    background:var(--quiz-bg);
+    color:var(--quiz-accent);
+    padding:10px 12px;
+    line-height:1.45;
+  }
+  .quizPrompt{
+    font-weight:700;
+    font-size:14px;
+    margin-bottom:6px;
+  }
+  .quizChoices{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:8px;
+  }
+  .quizChoiceBtn{
+    border:1px solid #d1fae5;
+    background:#fff;
+    border-radius:10px;
+    padding:8px 10px;
+    font-size:13px;
+    text-align:left;
+    cursor:pointer;
+    line-height:1.45;
+    color:#065f46;
+  }
+  .quizChoiceBtn.correct{
+    border-color:#10b981;
+    box-shadow:0 0 0 2px rgba(16,185,129,.18);
+  }
+  .quizChoiceBtn.wrong{
+    border-color:var(--wrong-border);
+    background:var(--wrong-bg);
+    color:var(--wrong-accent);
+    box-shadow:0 0 0 2px rgba(248,113,113,.18);
+  }
+  .explainBox{
+    margin-top:10px;
+    border-radius:10px;
+    border:1px solid #bfdbfe;
+    background:#eff6ff;
+    color:#1e3a8a;
+    padding:10px 12px;
+    font-size:13px;
+    line-height:1.55;
+    display:none;
+  }
+  .quizFooter{
+    margin-top:12px;
+    font-size:13px;
+    line-height:1.45;
+    color:#374151;
+  }
+
+  @media (max-width:980px){
+    #wrap{grid-template-columns:1fr}
+  }
+</style>
+
+<!-- MathJax for equations -->
+<script>
+window.MathJax = { tex: {inlineMath: [['$', '$'], ['\\(', '\\)']]} };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+</head>
+<body>
+<header>
+  <h1>การทดลอง: กล่องบนพื้นเอียง</h1>
+  <div class="subnote">
+    • ลากจุดสีน้ำเงินเพื่อปรับมุม θ<br>
+    • จับลากป้าย mg / N / mgcosθ / mgsinθ / f / a เพื่อย้ายป้าย<br>
+    • ถ้าแนวดิ่งของ mg ออกนอกฐาน → กล่อง “ล้ม” ทวนเข็มนาฬิกา รอบมุมซ้ายล่าง
+  </div>
+</header>
+
+<div id="wrap">
+  <div id="canvasWrap">
+    <canvas id="scene"></canvas>
+
+    <!-- สูตร / วิเคราะห์ -->
+    <div id="formulaCardWrap" class="floatingCardWrap" aria-modal="true" role="dialog">
+      <div id="formulaCard" class="floatingCard">
+        <div class="cardHeader">
+          <div class="title">
+            เกณฑ์เริ่มไถล / เริ่มล้ม<br>ใครมาก่อน?
+          </div>
+          <button id="closeFormula" class="cardCloseBtn">✕ ปิด</button>
+        </div>
+        <div class="cardBody">
+          <h3>1. มุมเริ่มไถล</h3>
+          <div>
+            กล่อง “กำลังจะเริ่มไถล” พอดี (จุดวิกฤต) เมื่อ
+            <u>องค์ประกอบของแรง mgในแนวขนานพื้นเอียง</u> เท่ากับ
+            <u>แรงเสียดทานสถิตสูงสุด</u>:<br>
+            $$mg\sin\theta \;=\; \mu_s \, mg\cos\theta$$
+            ตัด $mg$ ทั้งสองฝั่ง จะได้<br>
+            <div class="eq">$\tan\theta_\text{slide} = \mu_s$</div>
+            ถ้าเพิ่มมุมอีกนิดจน
+            $$mg\sin\theta \;>\; \mu_s \, mg\cos\theta$$
+            แรงเสียดทานสถิต “เอาไม่อยู่” แล้ววัตถุจึงไถลลงจริง
+            (เปลี่ยนเป็นแรงเสียดทานจลน์)
+          </div>
+
+          <h3 style="margin-top:10px">2. มุมเริ่มล้ม (คว่ำ)</h3>
+          <div>
+            กล่องจะเริ่ม “ยกขอบ” ถ้าแนวดิ่งของจุดศูนย์มวลเลยฐานด้านลงเขา:<br>
+            $\dfrac{H}{2}\tan\theta \gt \dfrac{W}{2}$<br>
+            หรือ
+            <div class="eq">$\tan\theta_\text{tip} = \dfrac{W}{H}$</div>
+            ( $W$ = ความกว้างฐาน, $H$ = ความสูง )
+          </div>
+
+          <div class="analysisBox">
+            <strong>ใครเกิดก่อน?</strong><br>
+            ค่อย ๆ เพิ่มมุม $\theta$ จาก 0°:<br>
+            • ถ้า $\theta_\text{slide} \lt \theta_\text{tip}$ ⇒ <u>ไถลก่อน</u><br>
+            • ถ้า $\theta_\text{tip} \lt \theta_\text{slide}$ ⇒ <u>ล้มก่อน</u><br><br>
+            สรุปคือ เทียบ $\mu_s$ กับ $W/H$:<br>
+            • ถ้า $\mu_s \lt W/H$ ⇒ ไถลก่อน<br>
+            • ถ้า $\mu_s \gt W/H$ ⇒ ล้มก่อน
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- แบบฝึกหัด -->
+    <div id="quizCardWrap" class="floatingCardWrap" aria-modal="true" role="dialog">
+      <div id="quizCard" class="floatingCard">
+        <div class="cardHeader">
+          <div class="title">
+            แบบฝึกหัดทดสอบเข้าใจ (4 ตัวเลือก)
+          </div>
+          <button id="closeQuiz" class="cardCloseBtn">✕ ปิด</button>
+        </div>
+
+        <div id="quizBody" class="cardBody">
+          <div class="scoreRow">
+            <div>คะแนนรวม</div>
+            <div class="scorePill" id="scorePill">0 / 0</div>
+          </div>
+
+          <!-- Q1 -->
+          <div class="quizQuestion" data-q="1">
+            <div class="quizPrompt">
+              1) เงื่อนไขเชิงทฤษฎีที่กล่องจะเริ่มไถลลงเขา คืออะไร?
+            </div>
+            <div class="quizChoices">
+              <button class="quizChoiceBtn" data-correct="false">A. $mg\cos\theta = \mu_s mg\sin\theta$</button>
+              <button class="quizChoiceBtn" data-correct="true">B. $mg\sin\theta = \mu_s mg\cos\theta$</button>
+              <button class="quizChoiceBtn" data-correct="false">C. $mg = \mu_s$</button>
+              <button class="quizChoiceBtn" data-correct="false">D. $\tan\theta = \dfrac{H}{W}$</button>
+            </div>
+            <div class="explainBox">
+              การเริ่มไถลเกิดเมื่อแรงขนานพื้นเอียงเท่ากับแรงเสียดทานสถิตสูงสุด:<br>
+              $mg\sin\theta = \mu_s \, mg\cos\theta$<br>
+              หาร $mg\cos\theta$ ทั้งสองข้าง →<br>
+              $\tan\theta_\text{slide} = \mu_s$<br>
+              ดังนั้นตัวเลือกที่ถูกคือ B.
+            </div>
+          </div>
+
+          <!-- Q2 -->
+          <div class="quizQuestion" data-q="2">
+            <div class="quizPrompt">
+              2) กล่องจะเริ่ม “ยกขอบ” (กำลังคว่ำ) เมื่อใด?
+            </div>
+            <div class="quizChoices">
+              <button class="quizChoiceBtn" data-correct="true">A. แนวดิ่งของ $mg$ ผ่านออกนอกฐานด้านลงเขา</button>
+              <button class="quizChoiceBtn" data-correct="false">B. $mg = 0$</button>
+              <button class="quizChoiceBtn" data-correct="false">C. เมื่อ $W = H$</button>
+              <button class="quizChoiceBtn" data-correct="false">D. เมื่อ $\mu_s = 0$</button>
+            </div>
+            <div class="explainBox">
+              การคว่ำเกิดจากโมเมนต์รอบขอบล่างซ้าย: ถ้าแนวดิ่งของแรงโน้มถ่วงตกเลยฐาน
+              จุดรับแรงปฏิกิริยาจะย้ายไปสุดขอบเดียว → อีกขอบเริ่มยกขึ้น<br>
+              นี่คือเกณฑ์ล้ม: $\tan\theta_\text{tip}=\dfrac{W}{H}$.
+            </div>
+          </div>
+
+          <!-- Q3 -->
+          <div class="quizQuestion" data-q="3">
+            <div class="quizPrompt">
+              3) ถ้า $\mu_s \lt \dfrac{W}{H}$ จะเกิดอะไรเมื่อเราเพิ่มมุม $\theta$ ช้า ๆ ?
+            </div>
+            <div class="quizChoices">
+              <button class="quizChoiceBtn" data-correct="true">A. กล่องจะไถลก่อนที่จะคว่ำ</button>
+              <button class="quizChoiceBtn" data-correct="false">B. กล่องจะคว่ำก่อนแล้วค่อยไถล</button>
+              <button class="quizChoiceBtn" data-correct="false">C. กล่องจะลอยกลางอากาศ</button>
+              <button class="quizChoiceBtn" data-correct="false">D. อะไรก็ได้ขึ้นกับมวล m อย่างเดียว</button>
+            </div>
+            <div class="explainBox">
+              เทียบมุมวิกฤต:<br>
+              $\tan\theta_\text{slide}=\mu_s$<br>
+              $\tan\theta_\text{tip}=W/H$<br>
+              ถ้า $\mu_s < W/H$ ⇒ $\theta_\text{slide} < \theta_\text{tip}$<br>
+              แปลว่าไถลก่อน (A ถูก)
+            </div>
+          </div>
+
+          <!-- Q4 -->
+          <div class="quizQuestion" data-q="4">
+            <div class="quizPrompt">
+              4) ให้ $\mu_s = 0.40,\; W = 0.30\text{ m},\; H = 0.50\text{ m}$<br>
+              อะไรจะมาก่อน: ไถลหรือคว่ำ?
+            </div>
+            <div class="quizChoices">
+              <button class="quizChoiceBtn" data-correct="true">A. ไถลก่อน</button>
+              <button class="quizChoiceBtn" data-correct="false">B. คว่ำก่อน</button>
+              <button class="quizChoiceBtn" data-correct="false">C. พร้อมกันพอดี</button>
+              <button class="quizChoiceBtn" data-correct="false">D. ไม่มีทางเคลื่อน</button>
+            </div>
+            <div class="explainBox">
+              คำนวณมุมไถล:<br>
+              $\tan\theta_\text{slide} = \mu_s = 0.40$<br>
+              ⇒ $\theta_\text{slide} \approx \tan^{-1}(0.40) \approx 21.8^\circ$<br><br>
+              คำนวณมุมคว่ำ:<br>
+              $\tan\theta_\text{tip} = \dfrac{W}{H} = \dfrac{0.30}{0.50}=0.60$<br>
+              ⇒ $\theta_\text{tip} \approx \tan^{-1}(0.60) \approx 31.0^\circ$<br><br>
+              เพราะ $21.8^\circ < 31.0^\circ$ ⇒ ไถลมาก่อน (A ถูก)
+            </div>
+          </div>
+
+          <div class="quizFooter">
+            คลิกคำตอบของแต่ละข้อเพื่อเช็คทันที จะขึ้นกรอบอธิบายและอัปเดตคะแนน
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- /quiz -->
+  </div>
+
+  <div id="ui">
+    <details class="acc" id="accSet1">
+      <summary>
+        <span>ตั้งค่าแรงเสียดทาน & มวล</span>
+        <span class="hint">แตะเพื่อกาง</span>
+      </summary>
+      <div class="accBody">
+        <div class="row"><label>μₛ</label><output id="oMus">0.35</output></div>
+        <input id="mus" type="range" min="0" max="1" step="0.01" value="0.35">
+
+        <div class="row"><label>μₖ</label><output id="oMuk">0.28</output></div>
+
+        <div class="row"><label>มวล m (kg)</label><output id="oM">2.00 kg</output></div>
+        <input id="m" type="range" min="0.1" max="10" step="0.1" value="2">
+      </div>
+    </details>
+
+    <details class="acc" id="accSet2">
+      <summary>
+        <span>ตั้งค่ากล่อง & มุมพื้นเอียง</span>
+        <span class="hint">แตะเพื่อกาง</span>
+      </summary>
+      <div class="accBody">
+        <div class="row"><label>ความกว้างฐาน W (m)</label><output id="oW">0.50 m</output></div>
+        <input id="w" type="range" min="0.05" max="1.00" step="0.01" value="0.50">
+
+        <div class="row"><label>ความสูง H (m)</label><output id="oH">0.50 m</output></div>
+        <input id="h" type="range" min="0.05" max="1.00" step="0.01" value="0.50">
+
+        <div class="row" style="margin-top:10px"><label>มุมพื้นเอียง θ (°)</label><output id="oTheta">20.0°</output></div>
+        <input id="theta" type="range" min="0" max="60" step="0.1" value="20">
+      </div>
+    </details>
+
+    <div class="sec" style="margin-top:6px">
+      <div class="toggleRow" style="margin-top:8px">
+        <input type="checkbox" id="showVec" checked>
+        <label for="showVec">แสดงเวกเตอร์แรงและป้ายทั้งหมด</label>
+      </div>
+
+      <div class="buttons">
+        <button id="toggle" class="primary">▶ เล่น</button>
+        <button id="reset">⟲ รีเซ็ต</button>
+        <button id="showFormula" class="small">สูตร / วิเคราะห์</button>
+        <button id="showQuiz" class="small">แบบฝึกหัด</button>
+      </div>
+    </div>
+
+    <div class="sec">
+      <h2>ผลลัพธ์</h2>
+      <div class="hud" id="hud"></div>
+    </div>
+
+    <div class="sec" style="font-size:12px;color:#6b7280;line-height:1.4">
+      สีของแรง:<br>
+      mg น้ำเงิน, N เทา (ตำแหน่งฐานเลื่อน), f ม่วง, mgcos เขียว (เข้าคาน),
+      mgsin แดง (ลงเขา), a เทา
+    </div>
+  </div>
+</div>
+
+<script>
+window.MathJax = window.MathJax || {};
+</script>
+
+<script>
+(() => {
+  const canvas = document.getElementById('scene');
+  const wrap = document.getElementById('canvasWrap');
+  const ctx = canvas.getContext('2d');
+
+  // cards + buttons
+  const formulaWrap = document.getElementById('formulaCardWrap');
+  const btnShowFormula = document.getElementById('showFormula');
+  const btnCloseFormula = document.getElementById('closeFormula');
+
+  const quizWrap = document.getElementById('quizCardWrap');
+  const btnShowQuiz = document.getElementById('showQuiz');
+  const btnCloseQuiz = document.getElementById('closeQuiz');
+  const scorePill = document.getElementById('scorePill');
+
+  function lockScroll(lock){
+    document.body.style.overflow = lock ? 'hidden' : '';
+    document.documentElement.style.overflow = lock ? 'hidden' : '';
+  }
+
+  // ✅ เปิด fullscreen modal
+  btnShowFormula.addEventListener('click', ()=>{
+    formulaWrap.style.display='block';
+    lockScroll(true);
+    if (window.MathJax && window.MathJax.typesetPromise) window.MathJax.typesetPromise();
+  });
+  btnCloseFormula.addEventListener('click', ()=>{
+    formulaWrap.style.display='none';
+    lockScroll(false);
+  });
+
+  btnShowQuiz.addEventListener('click', ()=>{
+    quizWrap.style.display='block';
+    lockScroll(true);
+    if (window.MathJax && window.MathJax.typesetPromise) window.MathJax.typesetPromise();
+  });
+  btnCloseQuiz.addEventListener('click', ()=>{
+    quizWrap.style.display='none';
+    lockScroll(false);
+  });
+
+  // ✅ คลิกพื้นหลังเพื่อปิด (ไม่แตะเนื้อการ์ด)
+  formulaWrap.addEventListener('click', (e)=>{
+    if(e.target === formulaWrap){
+      formulaWrap.style.display='none';
+      lockScroll(false);
+    }
+  });
+  quizWrap.addEventListener('click', (e)=>{
+    if(e.target === quizWrap){
+      quizWrap.style.display='none';
+      lockScroll(false);
+    }
+  });
+
+  // Quiz state
+  let quizState = { totalAnswered:0, score:0, answered:{} };
+  function updateScorePill(){ scorePill.textContent = quizState.score + " / " + quizState.totalAnswered; }
+
+  document.querySelectorAll('.quizQuestion').forEach(qBlock=>{
+    const qid = qBlock.getAttribute('data-q');
+    const explain = qBlock.querySelector('.explainBox');
+    const buttons = qBlock.querySelectorAll('.quizChoiceBtn');
+
+    buttons.forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const firstTime = !quizState.answered[qid];
+        const isCorrect = btn.getAttribute('data-correct') === 'true';
+
+        buttons.forEach(b=>{
+          const good = b.getAttribute('data-correct')==='true';
+          b.classList.add(good ? 'correct' : 'wrong');
+          b.disabled = true;
+        });
+
+        explain.style.display='block';
+        if (window.MathJax && window.MathJax.typesetPromise) window.MathJax.typesetPromise();
+
+        if (firstTime){
+          quizState.totalAnswered += 1;
+          if (isCorrect) quizState.score += 1;
+          quizState.answered[qid] = true;
+          updateScorePill();
+        }
+      });
+    });
+  });
+
+  // ---------- responsive ----------
+  const mqMobile = window.matchMedia('(max-width: 640px)');
+  let mobileScale = mqMobile.matches ? 0.60 : 1.0;
+  let hingeMargin = mqMobile.matches ? 24 : 60;
+  let desktopShiftX = mqMobile.matches ? 0 : 200;
+
+  const acc1 = document.getElementById('accSet1');
+  const acc2 = document.getElementById('accSet2');
+  function syncAcc(){
+    if (mqMobile.matches){
+      acc1.removeAttribute('open');
+      acc2.removeAttribute('open');
+    } else {
+      acc1.setAttribute('open','');
+      acc2.setAttribute('open','');
+    }
+  }
+
+  function syncResponsiveVars(){
+    mobileScale = mqMobile.matches ? 0.60 : 1.0;
+    hingeMargin = mqMobile.matches ? 24 : 60;
+    desktopShiftX = mqMobile.matches ? 0 : 200;
+    fitScale();
+    resize();
+    syncAcc();
+  }
+  mqMobile.addEventListener?.('change', syncResponsiveVars);
+
+  function resize(){
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    const rect = wrap.getBoundingClientRect();
+    canvas.width = Math.floor(rect.width * dpr);
+    canvas.height = Math.floor(Math.max(380, rect.height) * dpr);
+    canvas.style.width = rect.width + 'px';
+    canvas.style.height = Math.max(380, rect.height) + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  const $ = (id)=>document.getElementById(id);
+  const ui = {
+    theta: $('theta'),
+    mus: $('mus'),
+    m: $('m'),
+    w: $('w'),
+    h: $('h'),
+    showVec: $('showVec'),
+
+    oTheta: $('oTheta'),
+    oMus: $('oMus'),
+    oMuk: $('oMuk'),
+    oM: $('oM'),
+    oW: $('oW'),
+    oH: $('oH'),
+
+    toggle: $('toggle'),
+    reset: $('reset'),
+    hud: $('hud')
+  };
+
+  const planeLenM = 4.8 * 1.2;
+  let pxPerM = 110;
+
+  function fitScale(){
+    const rect = wrap.getBoundingClientRect();
+    const usable = Math.min(rect.width, Math.max(380, rect.height)) - 140;
+    const base = Math.max(70, Math.min(140, usable / planeLenM));
+    pxPerM = base * mobileScale;
+  }
+
+  window.addEventListener('resize', ()=>{
+    fitScale();
+    resize();
+  });
+
+  fitScale();
+  resize();
+
+  const initS = planeLenM * 0.875;
+  const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+  const toDeg=(r)=>r*180/Math.PI;
+  const fmt=(x,d=2)=> (Math.abs(x)<1e-9?0:x).toFixed(d);
+
+  const FIXED_G = 9.8;
+  const FIXED_A_SCALE = 12;
+
+  const state = {
+    theta: parseFloat(ui.theta.value) * Math.PI/180,
+    m: parseFloat(ui.m.value),
+    mu_s: parseFloat(ui.mus.value),
+    mu_k: 0.8 * parseFloat(ui.mus.value),
+    g: FIXED_G,
+
+    boxW: parseFloat(ui.w.value),
+    boxH: parseFloat(ui.h.value),
+
+    aScale: FIXED_A_SCALE,
+    s: initS,
+    v: 0,
+    a: 0,
+    running:false,
+    isKinetic:false,
+    playedOnce:false,
+
+    tipAngle: 0,
+    tipOmega: 0,
+
+    // ✅ ตำแหน่งป้าย (ตามไฟล์ล่าสุดของพี่)
+    labelOffset: {
+      mg:     {dx:0,dy:14},
+      N:      {dx:0,dy:-16},
+      mgcos:  {dx:70,dy:4},
+      mgsin:  {dx:-65,dy:14},
+      f:      {dx:50,dy:-16},
+      a:      {dx:-20,dy:-16}
+    },
+
+    showVectors: ui.showVec.checked
+  };
+
+  let draggingLabel=false, dragPid=null, dragLabelKey=null;
+  let rotating=false, rotatePid=null;
+
+  const labelScreenPos = {
+    mg:{x:0,y:0},
+    N:{x:0,y:0},
+    mgcos:{x:0,y:0},
+    mgsin:{x:0,y:0},
+    f:{x:0,y:0},
+    a:{x:0,y:0}
+  };
+
+  function setOutputs(){
+    ui.oTheta.textContent = fmt(toDeg(state.theta),1)+'°';
+    ui.oM.textContent = fmt(state.m,2)+' kg';
+    ui.oMus.textContent = fmt(state.mu_s,2);
+    ui.oMuk.textContent = fmt(state.mu_k,2);
+    ui.oW.textContent = fmt(state.boxW,2)+' m';
+    ui.oH.textContent = fmt(state.boxH,2)+' m';
+  }
+  setOutputs();
+
+  ui.theta.addEventListener('input', ()=>{ state.theta = parseFloat(ui.theta.value)*Math.PI/180; setOutputs(); });
+  ui.m.addEventListener('input', ()=>{ state.m = parseFloat(ui.m.value); setOutputs(); });
+  ui.mus.addEventListener('input', ()=>{ state.mu_s = parseFloat(ui.mus.value); state.mu_k = 0.8*state.mu_s; setOutputs(); });
+  ui.w.addEventListener('input', ()=>{ state.boxW = parseFloat(ui.w.value); setOutputs(); });
+  ui.h.addEventListener('input', ()=>{ state.boxH = parseFloat(ui.h.value); setOutputs(); });
+  ui.showVec.addEventListener('change', ()=>{ state.showVectors = ui.showVec.checked; });
+
+  ui.toggle.addEventListener('click', ()=>{
+    state.running = !state.running;
+    state.playedOnce = state.playedOnce || state.running;
+    ui.toggle.textContent = state.running ? '⏸ หยุด' : '▶ เล่น';
+  });
+  ui.reset.addEventListener('click', ()=>{
+    state.s = initS;
+    state.v = 0;
+    state.a = 0;
+    state.isKinetic = false;
+    state.running = false;
+    state.playedOnce = false;
+    state.tipAngle = 0;
+    state.tipOmega = 0;
+    ui.toggle.textContent='▶ เล่น';
+  });
+
+  canvas.addEventListener('pointerdown', (e)=>{
+    const p = getPoint(e), g=geometry();
+
+    const hitKey = state.showVectors ? hitTestLabel(p.x,p.y) : null;
+    if(hitKey){
+      draggingLabel=true;
+      dragPid=e.pointerId;
+      dragLabelKey=hitKey;
+      canvas.setPointerCapture(dragPid);
+      e.preventDefault();
+      return;
+    }
+
+    const dH = Math.hypot(p.x-g.handle.x, p.y-g.handle.y);
+    if (dH<=16){
+      rotating=true;
+      rotatePid=e.pointerId;
+      canvas.setPointerCapture(rotatePid);
+      e.preventDefault();
+    }
+  }, {passive:false});
+
+  canvas.addEventListener('pointermove', (e)=>{
+    const p = getPoint(e), g=geometry();
+
+    if(draggingLabel && e.pointerId===dragPid && dragLabelKey){
+      const off = state.labelOffset[dragLabelKey];
+      off.dx += e.movementX;
+      off.dy += e.movementY;
+      e.preventDefault();
+      return;
+    }
+
+    if(rotating && e.pointerId===rotatePid){
+      let ang = Math.atan2(-(p.y-g.hinge.y), (p.x-g.hinge.x));
+      ang = clamp(ang, 0, Math.PI/3);
+      state.theta = ang;
+      ui.theta.value = toDeg(ang).toFixed(1);
+      setOutputs();
+      e.preventDefault();
+    }
+  }, {passive:false});
+
+  function endPointer(e){
+    if(rotating && e.pointerId===rotatePid){
+      rotating=false;
+      try{canvas.releasePointerCapture(rotatePid);}catch{}
+      rotatePid=null;
+    }
+    if(draggingLabel && e.pointerId===dragPid){
+      draggingLabel=false;
+      try{canvas.releasePointerCapture(dragPid);}catch{}
+      dragPid=null;
+      dragLabelKey=null;
+    }
+  }
+  canvas.addEventListener('pointerup', endPointer);
+  canvas.addEventListener('pointercancel', endPointer);
+  canvas.addEventListener('pointerleave', endPointer);
+
+  function getPoint(e){
+    const r=canvas.getBoundingClientRect();
+    return {x:e.clientX-r.left, y:e.clientY-r.top};
+  }
+
+  function hitTestLabel(x,y){
+    const thresh = 20;
+    let best=null,bestD=Infinity;
+    for (const k in labelScreenPos){
+      const lx=labelScreenPos[k].x, ly=labelScreenPos[k].y;
+      const d=Math.hypot(x-lx,y-ly);
+      if(d<thresh && d<bestD){ best=k; bestD=d; }
+    }
+    return best;
+  }
+
+  let lastT = performance.now();
+  function loop(now){
+    const dt = Math.min(0.05,(now-lastT)/1000);
+    lastT=now;
+    if (state.running) step(dt);
+    draw();
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+
+  function step(dt){
+    const mg_par  = state.m*state.g*Math.sin(state.theta);
+    const mg_perp = state.m*state.g*Math.cos(state.theta);
+    const N = mg_perp;
+    const thresh = state.mu_s * N;
+
+    if (!state.isKinetic){
+      if (mg_par <= thresh){
+        state.a = 0;
+        state.v = 0;
+      } else {
+        state.isKinetic = true;
+      }
+    }
+
+    if (state.isKinetic){
+      const fk = state.mu_k * N;
+      let fricDirSign;
+      if (Math.abs(state.v) < 1e-6) fricDirSign = +1;
+      else fricDirSign = (state.v > 0) ? -1 : +1;
+
+      const net = -mg_par + fricDirSign * fk;
+      state.a = net / state.m;
+
+      state.v += state.a * dt;
+      state.s += state.v * dt + 0.5 * state.a * dt * dt;
+
+      if (Math.abs(state.v) < 1e-3 && mg_par <= thresh){
+        state.v = 0;
+        state.a = 0;
+        state.isKinetic = false;
+      }
+    }
+
+    const minS = (state.boxW*0.5);
+    const maxS = planeLenM - (state.boxW*0.5);
+    state.s = clamp(state.s, minS, maxS);
+
+    const tippedNow = isTipped();
+    if (tippedNow){
+      const torqueAccel = 8;
+      state.tipOmega += torqueAccel * dt;
+      state.tipAngle += state.tipOmega * dt;
+      const maxTip = Math.PI/2;
+      if (state.tipAngle > maxTip){
+        state.tipAngle = maxTip;
+        state.tipOmega = 0;
+      }
+    }
+  }
+
+  function geometry(){
+    const r = canvas.getBoundingClientRect();
+    const width=r.width, height=r.height;
+
+    const hinge = { x: hingeMargin + desktopShiftX, y: height - hingeMargin };
+
+    const ux = Math.cos(state.theta);
+    const uy = -Math.sin(state.theta);
+
+    const nx = Math.sin(state.theta);
+    const ny = Math.cos(state.theta);
+
+    const uRamp = {x:ux,y:uy};
+    const nOut  = {x:-nx,y:-ny};
+
+    const lenPx = planeLenM * pxPerM;
+    const extraPx = 50;
+    const top = {
+      x: hinge.x + ux*(lenPx + extraPx),
+      y: hinge.y + uy*(lenPx + extraPx)
+    };
+    const handle = { x: top.x, y: top.y };
+
+    const sPx = state.s * pxPerM;
+    const halfWpx = (state.boxW*0.5)*pxPerM;
+    const halfHpx = (state.boxH*0.5)*pxPerM;
+
+    const contactMid_world = {
+      x: hinge.x + ux*sPx,
+      y: hinge.y + uy*sPx
+    };
+
+    const A = state.tipAngle;
+    const cosA = Math.cos(A);
+    const sinA = Math.sin(A);
+
+    function rotateLocal(u0,n0){
+      const uRel = u0 - (-halfWpx);
+      const nRel = n0 - 0;
+      const uRot =  uRel*cosA - nRel*sinA;
+      const nRot =  uRel*sinA + nRel*cosA;
+      return {u: uRot + (-halfWpx), n: nRot + 0};
+    }
+
+    const rawP0={u:-halfWpx, n:0};
+    const rawP1={u:+halfWpx, n:0};
+    const rawP2={u:+halfWpx, n:2*halfHpx};
+    const rawP3={u:-halfWpx, n:2*halfHpx};
+
+    const P0 = rotateLocal(rawP0.u,rawP0.n);
+    const P1 = rotateLocal(rawP1.u,rawP1.n);
+    const P2 = rotateLocal(rawP2.u,rawP2.n);
+    const P3 = rotateLocal(rawP3.u,rawP3.n);
+
+    function toWorld(P){
+      return {
+        x: contactMid_world.x + uRamp.x*P.u + nOut.x*P.n,
+        y: contactMid_world.y + uRamp.y*P.u + nOut.y*P.n
+      };
+    }
+
+    const W0=toWorld(P0);
+    const W1=toWorld(P1);
+    const W2=toWorld(P2);
+    const W3=toWorld(P3);
+
+    const rawC={u:0, n:halfHpx};
+    const Crot=rotateLocal(rawC.u,rawC.n);
+    const COM_world=toWorld(Crot);
+
+    const baseMid = { x:(W0.x+W1.x)/2, y:(W0.y+W1.y)/2 };
+
+    return { width,height, hinge,top,handle, ux,uy,nx,ny, boxPts:[W0,W1,W2,W3], COM_world, baseMid };
+  }
+
+  function thetaCrit(){ return Math.atan( state.boxW / state.boxH ); }
+  function isTipped(){ return Math.tan(state.theta) > (state.boxW / state.boxH); }
+  function calcNormalBasePoint(g){
+    const {boxPts, baseMid} = g;
+    const W0 = boxPts[0];
+    const crit = thetaCrit();
+    let t = 0;
+    if (crit > 1e-6) t = state.theta / crit;
+    t = clamp(t,0,1);
+    if (isTipped() || state.tipAngle>0) t = 1;
+    return { x: baseMid.x + (W0.x - baseMid.x)*t, y: baseMid.y + (W0.y - baseMid.y)*t };
+  }
+
+  function drawArrowWithLabel(key, p, q, color, width, headSize, dashed, text){
+    const dx=q.x-p.x, dy=q.y-p.y;
+    const L=Math.hypot(dx,dy)||1;
+    const uxv=dx/L, uyv=dy/L;
+
+    const headLen = headSize * 1.0;
+    const bx = q.x - uxv*headLen;
+    const by = q.y - uyv*headLen;
+
+    ctx.save();
+    ctx.lineWidth=width;
+    ctx.strokeStyle=color;
+
+    if(dashed) ctx.setLineDash([3,4]);
+    ctx.beginPath();
+    ctx.moveTo(p.x,p.y);
+    ctx.lineTo(bx,by);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.beginPath();
+    ctx.moveTo(q.x,q.y);
+    ctx.lineTo(q.x-uxv*headSize-uyv*headSize*0.6, q.y-uyv*headSize+uxv*headSize*0.6);
+    ctx.lineTo(q.x-uxv*headSize+uyv*headSize*0.6, q.y-uyv*headSize-uxv*headSize*0.6);
+    ctx.closePath();
+    ctx.fillStyle=color;
+    ctx.fill();
+
+    if(text){
+      const off = state.labelOffset[key] || {dx:0,dy:14};
+      const px=-uyv, py=uxv;
+      const baseX = q.x + px*10;
+      const baseY = q.y + py*10;
+      const labelX = baseX + off.dx;
+      const labelY = baseY + off.dy;
+
+      ctx.fillStyle=color;
+      ctx.font='13px ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Thai", "Noto Sans", Arial';
+      ctx.textAlign='center';
+      ctx.textBaseline='middle';
+      ctx.fillText(text, labelX, labelY);
+
+      labelScreenPos[key].x = labelX;
+      labelScreenPos[key].y = labelY;
+    }
+    ctx.restore();
+  }
+
+  function draw(){
+    const g = geometry();
+    const { width,height, hinge,top, ux,uy,nx,ny, boxPts, COM_world } = g;
+
+    ctx.clearRect(0,0,width,height);
+    for(const k in labelScreenPos) labelScreenPos[k].x = labelScreenPos[k].y = Infinity;
+
+    ctx.save();
+    ctx.strokeStyle='#d1d5db';
+    ctx.lineWidth=2;
+    ctx.beginPath();
+    ctx.moveTo(0, hinge.y);
+    ctx.lineTo(width, hinge.y);
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.save();
+    ctx.lineWidth=4;
+    ctx.strokeStyle='#6b7280';
+    ctx.beginPath();
+    ctx.moveTo(hinge.x,hinge.y);
+    ctx.lineTo(top.x,top.y);
+    ctx.stroke();
+
+    ctx.fillStyle='#111827';
+    ctx.beginPath();
+    ctx.arc(hinge.x, hinge.y, 5, 0, Math.PI*2);
+    ctx.fill();
+
+    ctx.fillStyle='#1d4ed8';
+    ctx.beginPath();
+    ctx.arc(top.x, top.y, 14, 0, Math.PI*2);
+    ctx.fill();
+    ctx.strokeStyle='#93c5fd';
+    ctx.lineWidth=2;
+    ctx.stroke();
+
+    ctx.fillStyle='#ffffff';
+    ctx.font='12px ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Thai", "Noto Sans", Arial';
+    ctx.textAlign='center';
+    ctx.textBaseline='middle';
+    ctx.fillText('ปรับ', top.x, top.y);
+
+    const rArcBase=40;
+    ctx.strokeStyle='#16a34a';
+    ctx.lineWidth=3;
+    ctx.beginPath();
+    ctx.arc(hinge.x, hinge.y, rArcBase, Math.PI*2, Math.PI*2 - state.theta, true);
+    ctx.stroke();
+
+    ctx.fillStyle='#16a34a';
+    ctx.font='13px ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Thai", "Noto Sans", Arial';
+    ctx.fillText('θ = '+toDeg(state.theta).toFixed(1)+'°', hinge.x+40, hinge.y + 15);
+
+    ctx.restore();
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(boxPts[0].x, boxPts[0].y);
+    for(let i=1;i<boxPts.length;i++) ctx.lineTo(boxPts[i].x, boxPts[i].y);
+    ctx.closePath();
+    ctx.fillStyle='#fde68a';
+    ctx.strokeStyle='#374151';
+    ctx.lineWidth=1.5;
+    ctx.fill(); ctx.stroke();
+    ctx.restore();
+
+    const mg      = state.m*state.g;
+    const mg_par  = state.m*state.g*Math.sin(state.theta);
+    const mg_perp = state.m*state.g*Math.cos(state.theta);
+    const Nmag = mg_perp;
+
+    const thresh = state.mu_s * Nmag;
+    let fSize=0;
+    let fSignDir=+1;
+    let fTextPrefix='fₛ';
+    if (!state.isKinetic){
+      const fs = Math.min(mg_par, thresh);
+      fSize = fs;
+      fSignDir = +1;
+      fTextPrefix='fₛ';
+    } else {
+      const fk = state.mu_k * Nmag;
+      fSize = fk;
+      if (Math.abs(state.v) < 1e-6) fSignDir = +1;
+      else fSignDir = (state.v > 0) ? -1 : +1;
+      fTextPrefix='fₖ';
+    }
+    const fTextFull = `${fTextPrefix} = ${fSize.toFixed(2)} N`;
+
+    const MG_MAX = 160;
+    const kScale = mg > 1e-6 ? Math.min(3, MG_MAX / mg) : 3;
+    const L_mg   = mg * kScale;
+    const L_par  = mg_par * kScale;
+    const L_perp = mg_perp * kScale;
+    const fLenPx = fSize * kScale * 0.8;
+
+    const nb = calcNormalBasePoint(g);
+
+    const show = state.showVectors;
+    if (show){
+      const mgColor = state.playedOnce ? '#93c5fd' : '#2563eb';
+      drawArrowWithLabel('mg', COM_world, {x:COM_world.x, y:COM_world.y+L_mg}, mgColor, 2,8, state.playedOnce, 'mg = '+mg.toFixed(2)+' N');
+
+      const nBase = { x: nb.x - nx*2, y: nb.y - ny*2 };
+      drawArrowWithLabel('N', nBase, {x:nBase.x - nx*L_perp, y:nBase.y - ny*L_perp}, '#4b5563', 2,8, false, 'N = '+Nmag.toFixed(2)+' N');
+
+      drawArrowWithLabel('f', nb, { x: nb.x + (fSignDir*ux)*fLenPx, y: nb.y + (fSignDir*uy)*fLenPx }, '#7c3aed', 2,8, false, fTextFull);
+
+      if (state.playedOnce){
+        drawArrowWithLabel('mgcos', COM_world, {x: COM_world.x + nx*L_perp, y: COM_world.y + ny*L_perp}, '#16a34a', 2,8, false, 'mg cosθ = '+mg_perp.toFixed(2));
+        drawArrowWithLabel('mgsin', COM_world, {x: COM_world.x - ux*L_par, y: COM_world.y - uy*L_par}, '#ef4444', 2,8, false, 'mg sinθ = '+mg_par.toFixed(2));
+
+        const aMag = Math.abs(state.a);
+        if (aMag > 1e-6){
+          const along = (state.a>=0) ? {x:ux,y:uy} : {x:-ux,y:-uy};
+          const start0 = {
+            x: COM_world.x + along.x*(state.boxW*1.8*pxPerM) - nx*(state.boxH*1.0*pxPerM),
+            y: COM_world.y + along.y*(state.boxW*1.8*pxPerM) - ny*(state.boxH*1.0*pxPerM)
+          };
+          const start = { x: start0.x - 30, y: start0.y - 50 };
+          const aLen = Math.min(140, aMag * state.aScale);
+
+          drawArrowWithLabel('a', start, {x:start.x + along.x*aLen, y:start.y + along.y*aLen}, '#6b7280', 2.5,9, false, 'a = '+aMag.toFixed(2)+' m/s²');
+        }
+      }
+    }
+
+    const f_s_max = state.mu_s * Nmag;
+    const theta_startDeg = Math.atan(state.mu_s) * 180 / Math.PI;
+    const theta_tipDeg = Math.atan( state.boxW / state.boxH ) * 180 / Math.PI;
+
+    ui.hud.innerHTML = [
+      kv('θ เริ่มไถล (ทฤษฎี)', theta_startDeg.toFixed(1)+' °'),
+      kv('θ เริ่มล้ม (ทฤษฎี)', theta_tipDeg.toFixed(1)+' °'),
+      '<hr>',
+      kv('mg', mg.toFixed(2)+' N'),
+      kv('N', Nmag.toFixed(2)+' N'),
+      kv('fₛ,max', f_s_max.toFixed(2)+' N'),
+      kv('f (ขณะนั้น)', fTextFull),
+      kv('สถานะไถล', state.isKinetic ? 'ไถล (Kinetic)' : 'หยุดนิ่ง (Static)'),
+      kv('สถานะคว่ำ', (state.tipAngle>0 || isTipped()) ? 'กำลังล้ม (ทวนเข็ม)' : 'ยังตั้งได้')
+    ].join('');
+  }
+
+  function kv(k,v){
+    return '<div class="pair"><div class="k">'+k+'</div><div class="v">'+v+'</div></div>';
+  }
+
+  syncResponsiveVars();
+})();
+</script>
+</body>
+</html>

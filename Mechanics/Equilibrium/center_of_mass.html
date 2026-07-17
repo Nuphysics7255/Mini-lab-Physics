@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>การทดลอง: จุดศูนย์กลางมวล (2 มิติ) — Interactive</title>
+<style>
+  :root{
+    --bg:#ffffff; --ink:#0f172a; --muted:#475569; --panel:#ffffff; --border:#e5e7eb;
+    --axis:#0b2a4a; --grid:#e5e7eb; --com:#f43f5e; --highlight:#22c55e;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Noto Sans Thai",sans-serif}
+  [hidden]{display:none !important}
+
+  .wrap{display:grid;grid-template-columns:360px 1fr;gap:16px;align-items:start;padding:16px;max-width:1400px;margin:0 auto}
+
+  /* ✅ มือถือ: ย้าย "พื้นที่ทดลอง" ขึ้นบนสุด */
+  @media (max-width:950px){
+    .wrap{
+      grid-template-columns:1fr;
+      grid-template-areas:
+        "exp"
+        "panel";
+    }
+    #panel{ grid-area:panel; }
+    #expCard{ grid-area:exp; }
+  }
+
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;box-shadow:0 8px 24px rgba(2,6,23,.06)}
+  .card h2{margin:0 0 8px 0;padding:16px 16px 0 16px;font-size:20px}
+  .card .content{padding:16px}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  button, input, select{font:inherit}
+  button{padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:#f8fafc;cursor:pointer}
+  button.primary{background:#2563eb;color:#fff;border-color:#1d4ed8}
+  button.warn{background:#fee2e2;border-color:#fecaca;color:#991b1b}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  label{font-size:14px;color:var(--muted)}
+  input[type="number"]{width:90px;padding:8px;border:1px solid var(--border);border-radius:10px}
+  table{width:100%;border-collapse:collapse}
+  th,td{border-bottom:1px solid var(--border);padding:6px 4px;text-align:center;font-size:14px}
+  tr.sel{background:#f0f9ff}
+  .footnote{font-size:13px;color:var(--muted)}
+  .badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#eef2ff;color:#3730a3;font-size:12px}
+  .link{color:#2563eb;text-decoration:none}
+  .link:hover{text-decoration:underline}
+
+  /* ✅ กันจอเลื่อนตอนลากบนมือถือ */
+  canvas{
+    width:100%;
+    height:auto;
+    display:block;
+    border:1px solid var(--border);
+    border-radius:14px;
+    background:#fff;
+    touch-action:none; /* สำคัญมาก: ปิดการ scroll/pinch ของ browser บน canvas */
+  }
+
+  .legend{display:flex;gap:10px;flex-wrap:wrap;font-size:13px}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border:1px solid var(--border);border-radius:999px}
+  .dot{width:10px;height:10px;border-radius:50%}
+  .formula{background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:10px}
+
+  /* Modal */
+  .modalBackdrop{position:fixed;inset:0;background:rgba(2,6,23,.55);backdrop-filter:blur(3px);display:grid;place-items:center;z-index:50}
+  .modalCard{width:min(880px,96vw);max-height:88vh;overflow:auto;background:#fff;border:1px solid var(--border);border-radius:16px;box-shadow:0 20px 60px rgba(2,6,23,.25)}
+  .modalHead{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid var(--border)}
+  .modalBody{padding:16px 20px}
+  .modalFoot{display:flex;justify-content:space-between;gap:12px;padding:14px 20px;border-top:1px solid var(--border)}
+  .k{font-weight:600}
+  .quizItem{border:1px solid var(--border);border-radius:12px;padding:12px;margin:10px 0}
+  .quizItem h4{margin:0 0 8px 0}
+  .choice{display:flex;gap:8px;align-items:flex-start;padding:6px 8px;border-radius:10px}
+  .choice:hover{background:#f8fafc}
+  .correct{background:#ecfdf5;border:1px solid #bbf7d0}
+  .wrong{background:#fef2f2;border:1px solid #fecaca}
+  .explain{background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:10px;margin-top:8px}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <!-- Left panel -->
+    <div class="card" id="panel">
+         <div class="content">
+        <div class="row" style="margin-bottom:8px">
+          <button class="primary" id="btnAdd">+ เพิ่มมวล</button>
+          <button id="btnDelete" class="warn" disabled>ลบมวลที่เลือก</button>
+          <button id="btnReset">รีเซ็ต</button>
+          <button id="btnQuiz">แบบฝึกหัด</button>
+          <button id="btnFormula">สูตรสำคัญ</button>
+        </div>
+        <div class="row" style="margin-bottom:8px">
+          <label><input type="checkbox" id="chkSnap"/> จับกริด</label>
+          <label><input type="checkbox" id="chkShowGrid" checked/> แสดงกริด</label>
+          <label><input type="checkbox" id="chkShowAxes" checked/> แสดงแกน</label>
+        </div>
+        <div class="row" style="margin-bottom:8px">
+          <label>สเกล (px/หน่วย) <input type="number" id="inpScale" min="10" max="140" step="5" value="30"/></label>
+        </div>
+        <div class="row" style="margin:10px 0 4px 0">
+          <span class="badge">ลากก้อนมวลด้วยเมาส์/นิ้ว เพื่อย้ายตำแหน่ง</span>
+        </div>
+        <div style="overflow:auto;max-height:260px;border:1px solid var(--border);border-radius:12px">
+          <table id="tbl">
+            <thead>
+              <tr><th>เลือก</th><th>#</th><th>มวล m<sub>i</sub></th><th>x<sub>i</sub></th><th>y<sub>i</sub></th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div style="margin-top:12px">
+          <div><strong>ผลลัพธ์</strong></div>
+          <div>Σm = <span id="sumM">0</span></div>
+          <div>x<sub>CM</sub> = <span id="xcm">0</span> , y<sub>CM</sub> = <span id="ycm">0</span></div>
+        </div>
+        <div style="margin-top:12px" class="formula">
+          <div>สูตร: \(x_{CM}=\dfrac{\sum m_i x_i}{\sum m_i}\) , \(y_{CM}=\dfrac{\sum m_i y_i}{\sum m_i}\)</div>
+          <div class="footnote">ลากมวล/แก้ตัวเลขได้แบบเรียลไทม์</div>
+        </div>
+        <div style="margin-top:12px" class="footnote">
+          ศึกษาเพิ่มเติมได้ที่ <a class="link" href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">เพจ คลายปมฟิสิกส์</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right canvas -->
+    <div class="card" id="expCard">
+      <h2>จุดศูนย์กลางมวลของระบบ</h2>
+      <div class="content">
+        <canvas id="cv" width="900" height="600" aria-label="พื้นที่ทดลอง"></canvas>
+        <div class="legend" id="legend" style="margin-top:8px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: แบบฝึกหัด -->
+  <div id="quizModal" class="modalBackdrop" hidden>
+    <div class="modalCard" role="dialog" aria-modal="true" aria-labelledby="quizTitle">
+      <div class="modalHead">
+        <h3 id="quizTitle">แบบฝึกหัด — จุดศูนย์กลางมวล</h3>
+        <button id="quizClose" type="button" data-close="1" aria-label="ปิด">ปิด</button>
+      </div>
+      <div class="modalBody">
+        <p class="footnote">เลือกคำตอบที่ถูกต้องทั้ง 4 ข้อ แล้วกด <span class="k">ตรวจคำตอบ</span>. สมการอธิบายใช้ <span class="k">MathJax</span>.</p>
+        <div id="quizContainer"></div>
+        <div id="quizScore" style="margin-top:10px;font-weight:600"></div>
+      </div>
+      <div class="modalFoot">
+        <div class="footnote">เคล็ดลับ: จุดศูนย์กลางมวลคือค่าเฉลี่ยถ่วงน้ำหนักของพิกัดด้วยมวล</div>
+        <div>
+          <button id="quizCheck" class="primary">ตรวจคำตอบ</button>
+          <button id="quizClose2" type="button" data-close="1">ปิดกลับสู่หน้าแรก</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: สูตรสำคัญ -->
+  <div id="formulaModal" class="modalBackdrop" hidden>
+    <div class="modalCard" role="dialog" aria-modal="true" aria-labelledby="formulaTitle">
+      <div class="modalHead">
+        <h3 id="formulaTitle">สูตรสำคัญ — จุดศูนย์กลางมวล (Center of Mass)</h3>
+        <button id="formulaClose" type="button" data-close="1" aria-label="ปิด">ปิด</button>
+      </div>
+      <div class="modalBody">
+        <div class="explain">
+          <p><strong>จุดศูนย์กลางมวล</strong> คือจุดที่พิกัดเฉลี่ยถ่วงน้ำหนักด้วยมวลของระบบทั้งหมด ถ้าปล่อยให้เคลื่อนที่อิสระ แรงภายนอกสุทธิจะทำให้จุดนี้เคลื่อนที่ตามกฎของนิวตัน</p>
+          <p><span class="k">กรณีมวลไม่ต่อเนื่อง (หลายก้อน)</span>:
+            \[ x_{CM}=\frac{\sum m_i x_i}{\sum m_i},\qquad y_{CM}=\frac{\sum m_i y_i}{\sum m_i} \]
+          </p>
+          <p><span class="k">กรณีมวลต่อเนื่อง (เนื้อเดียวกัน ความหนาแน่นคงที่)</span>:
+            \[ x_{CM}=\frac{1}{M}\int x\,dm,\qquad y_{CM}=\frac{1}{M}\int y\,dm \]
+            ถ้าเป็นแผ่นบางเนื้อเดียวกัน (ความหนาแน่นพื้นที่คงที่) จะได้
+            \[ x_{CM}=\frac{1}{A}\iint x\,dA,\qquad y_{CM}=\frac{1}{A}\iint y\,dA \]
+          </p>
+          <p><span class="k">วัตถุเนื้อเดียวกันที่มีสมมาตร</span> — จุดศูนย์กลางมวลอยู่ที่จุดตัดแกนสมมาตร เช่น:
+            <ul>
+              <li>แท่งยาวสม่ำเสมอความยาว \(L\): อยู่ที่กึ่งกลาง \(x_{CM}=L/2\)</li>
+              <li>สี่เหลี่ยมผืนผ้ากว้าง \(a\) ยาว \(b\): อยู่ที่กึ่งกลาง \((a/2,\, b/2)\)</li>
+              <li>จานกลมรัศมี \(R\): อยู่ที่จุดศูนย์กลางรูป</li>
+              <li>สามเหลี่ยมเนื้อเดียวกัน: อยู่ที่จุด <em>centroid</em> (จุดตัดเส้นกึ่งกลางพื้นที่) ซึ่งอยู่ห่างฐาน \(h/3\)</li>
+            </ul>
+          </p>
+          <p class="footnote">เคล็ดลับ: รวมรูปร่างซับซ้อนด้วยการบวก/ลบพื้นที่ (กำหนดมวลบวก/ลบ) แล้วใช้ \(\sum m_i\vec r_i/\sum m_i\).</p>
+        </div>
+      </div>
+      <div class="modalFoot">
+        <div class="footnote">สมการเรนเดอร์ด้วย MathJax</div>
+        <div>
+          <button id="formulaClose2" type="button" data-close="1">ปิดกลับสู่หน้าแรก</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MathJax -->
+  <script>
+    window.MathJax = { tex: { inlineMath: [['\\(','\\)'],['$','$']] } };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+<script>
+// ===== Core experiment (canvas, points, COM) =====
+(function(){
+  const cv = document.getElementById('cv');
+  const ctx = cv.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  function fixDpi(){
+    const cssW = cv.clientWidth, cssH = cv.clientHeight;
+    cv.width = Math.round(cssW * dpr);
+    cv.height = Math.round(cssH * dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  fixDpi(); new ResizeObserver(()=>{fixDpi(); draw();}).observe(cv);
+
+  const tblBody = document.querySelector('#tbl tbody');
+  const btnAdd = document.getElementById('btnAdd');
+  const btnDelete = document.getElementById('btnDelete');
+  const btnReset = document.getElementById('btnReset');
+  const chkSnap = document.getElementById('chkSnap');
+  const chkShowGrid = document.getElementById('chkShowGrid');
+  const chkShowAxes = document.getElementById('chkShowAxes');
+  const inpScale = document.getElementById('inpScale');
+  const sumMEl = document.getElementById('sumM');
+  const xcmEl = document.getElementById('xcm');
+  const ycmEl = document.getElementById('ycm');
+  const legend = document.getElementById('legend');
+
+let SCALE = 30;
+inpScale.value = 30; const R = 10;
+  function origin(){ return {x: cv.clientWidth/2, y: cv.clientHeight/2}; }
+  function w2s(p){ const o=origin(); return {x:o.x + p.x*SCALE, y:o.y - p.y*SCALE}; }
+  function s2w(p){ const o=origin(); return {x:(p.x - o.x)/SCALE, y:(o.y - p.y)/SCALE}; }
+
+  let nextId = 1; const colors = ['#ef4444','#2563eb','#16a34a','#f59e0b','#7c3aed','#0ea5e9','#22c55e','#a855f7','#f97316','#e11d48'];
+  let pts = []; let selectedId = null;
+
+  function addPoint(m=1,x=(Math.random()*2-1)*3,y=(Math.random()*2-1)*3){
+    pts.push({id:nextId++, m:+m, x:+x, y:+y, color: colors[(nextId-2)%colors.length]});
+    selectedId = pts[pts.length-1].id; refreshTable(); draw();
+  }
+  function delSelected(){ if(!selectedId) return; pts = pts.filter(p=>p.id!==selectedId); selectedId=null; refreshTable(); draw(); }
+  function reset(){ nextId=1; selectedId=null; pts=[]; addPoint(2,-2,1); addPoint(1,2,2); addPoint(3,0,-1); }
+  function sumM(){ return pts.reduce((s,p)=>s+p.m,0); }
+  function cm(){ const S=sumM(); if(S===0) return {x:0,y:0}; const sx=pts.reduce((s,p)=>s+p.m*p.x,0); const sy=pts.reduce((s,p)=>s+p.m*p.y,0); return {x:sx/S,y:sy/S}; }
+  function refreshLegend(){ legend.innerHTML=''; pts.forEach((p,i)=>{ const div=document.createElement('div'); div.className='pill'; div.innerHTML=`<span class="dot" style="background:${p.color}"></span> m${i+1} = ${p.m}, (x,y)=(${round(p.x)}, ${round(p.y)})`; legend.appendChild(div); }); }
+  function refreshTable(){ tblBody.innerHTML=''; pts.forEach((p,i)=>{ const tr=document.createElement('tr'); if(p.id===selectedId) tr.classList.add('sel'); tr.innerHTML=`
+        <td><input type="radio" name="sel" ${p.id===selectedId?'checked':''} data-id="${p.id}"/></td>
+        <td>${i+1}</td>
+        <td><input type="number" step="0.1" value="${p.m}" data-id="${p.id}" data-field="m"/></td>
+        <td><input type="number" step="0.1" value="${p.x}" data-id="${p.id}" data-field="x"/></td>
+        <td><input type="number" step="0.1" value="${p.y}" data-id="${p.id}" data-field="y"/></td>`; tblBody.appendChild(tr); });
+    tblBody.querySelectorAll('input[type="radio"]').forEach(r=>{ r.addEventListener('change', e=>{ selectedId=+e.target.dataset.id; draw(); highlightRow(); updateButtons(); }); });
+    tblBody.querySelectorAll('input[type="number"]').forEach(inp=>{ inp.addEventListener('input', e=>{ const id=+e.target.dataset.id; const field=e.target.dataset.field; const v=+e.target.value; const p=pts.find(q=>q.id===id); if(!p) return; p[field]=v; draw(); refreshLegend(); updateOutputs(); }); });
+    highlightRow(); updateButtons(); refreshLegend(); updateOutputs(); }
+  function highlightRow(){ [...tblBody.children].forEach((tr,idx)=>{ const id=pts[idx]?.id; tr.classList.toggle('sel', id===selectedId); }); }
+  function updateButtons(){ btnDelete.disabled = !selectedId; }
+  function updateOutputs(){ sumMEl.textContent=round(sumM()); const c=cm(); xcmEl.textContent=round(c.x); ycmEl.textContent=round(c.y); }
+  function round(v){ return Math.round(v*1000)/1000; }
+
+  function draw(){ ctx.clearRect(0,0,cv.clientWidth,cv.clientHeight);
+    if(chkShowGrid.checked){ const step=SCALE; ctx.save(); ctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue('--grid'); ctx.lineWidth=1; const w=cv.clientWidth,h=cv.clientHeight; const o=origin(); ctx.beginPath(); for(let x=o.x%step; x<w; x+=step){ ctx.moveTo(x,0); ctx.lineTo(x,h); } for(let y=o.y%step; y<h; y+=step){ ctx.moveTo(0,y); ctx.lineTo(w,y); } ctx.stroke(); ctx.restore(); }
+    if(chkShowAxes.checked){ ctx.save(); ctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue('--axis'); ctx.lineWidth=2; const o=origin(); ctx.beginPath(); ctx.moveTo(0,o.y); ctx.lineTo(cv.clientWidth,o.y); ctx.moveTo(o.x,0); ctx.lineTo(o.x,cv.clientHeight); ctx.stroke(); ctx.fillStyle='#334155'; ctx.font='12px system-ui'; for(let i=-10;i<=10;i++){ const px=o.x+i*SCALE; ctx.beginPath(); ctx.moveTo(px,o.y-4); ctx.lineTo(px,o.y+4); ctx.stroke(); if(i!==0) ctx.fillText(i.toString(), px-3,o.y+14); const py=o.y-i*SCALE; ctx.beginPath(); ctx.moveTo(o.x-4,py); ctx.lineTo(o.x+4,py); ctx.stroke(); if(i!==0) ctx.fillText(i.toString(), o.x+6,py+4); } ctx.restore(); }
+    pts.forEach((p,idx)=>{ const s=w2s(p); ctx.save(); ctx.fillStyle=p.color; ctx.strokeStyle='#0f172a'; ctx.beginPath(); ctx.arc(s.x,s.y,R,0,Math.PI*2); ctx.fill(); ctx.stroke(); ctx.fillStyle='#0f172a'; ctx.font='13px system-ui'; ctx.fillText(`m${idx+1}`, s.x+R+4, s.y-2); ctx.restore(); if(p.id===selectedId){ ctx.save(); ctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue('--highlight'); ctx.setLineDash([6,4]); ctx.beginPath(); ctx.arc(s.x,s.y,R+6,0,Math.PI*2); ctx.stroke(); ctx.restore(); } });
+    const C=cm(); const Cs=w2s(C); ctx.save(); ctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue('--com'); ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(Cs.x-12,Cs.y); ctx.lineTo(Cs.x+12,Cs.y); ctx.moveTo(Cs.x,Cs.y-12); ctx.lineTo(Cs.x,Cs.y+12); ctx.stroke(); ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--com'); ctx.beginPath(); ctx.arc(Cs.x,Cs.y,3,0,Math.PI*2); ctx.fill(); ctx.fillStyle='#0f172a'; ctx.font='13px system-ui'; ctx.fillText(`CM (${round(C.x)}, ${round(C.y)})`, Cs.x+10, Cs.y-8); ctx.restore(); }
+
+  let draggingId=null;
+
+  cv.addEventListener('pointerdown', (e)=>{
+    e.preventDefault(); // ✅ กัน scroll เริ่มลากบนมือถือ
+    const rect=cv.getBoundingClientRect();
+    const S={x:e.clientX-rect.left,y:e.clientY-rect.top};
+    for(const p of [...pts].reverse()){
+      const s=w2s(p); const dx=S.x-s.x, dy=S.y-s.y;
+      if(dx*dx+dy*dy <= (R+8)*(R+8)){
+        draggingId=p.id; selectedId=p.id; highlightRow(); updateButtons(); draw(); break;
+      }
+    }
+    cv.setPointerCapture(e.pointerId);
+  }, {passive:false});
+
+  cv.addEventListener('pointermove', (e)=>{
+    if(!draggingId) return;
+    e.preventDefault(); // ✅ กันจอเลื่อน/เด้งตามนิ้วขณะลาก
+    const rect=cv.getBoundingClientRect();
+    const S={x:e.clientX-rect.left,y:e.clientY-rect.top};
+    let W=s2w(S);
+    if(chkSnap.checked){ W={x:Math.round(W.x), y:Math.round(W.y)}; }
+    const p=pts.find(q=>q.id===draggingId);
+    if(p){ p.x=W.x; p.y=W.y; }
+    refreshTable(); draw();
+  }, {passive:false});
+
+  cv.addEventListener('pointerup', (e)=>{
+    draggingId=null;
+    try{cv.releasePointerCapture(e.pointerId);}catch{}
+  });
+
+  btnAdd.addEventListener('click', ()=> addPoint());
+  btnDelete.addEventListener('click', delSelected);
+  btnReset.addEventListener('click', reset);
+  chkShowGrid.addEventListener('change', draw);
+  chkShowAxes.addEventListener('change', draw);
+  inpScale.addEventListener('input', e=>{ SCALE=+e.target.value; draw(); });
+
+  reset();
+})();
+</script>
+
+<script>
+// ===== Quiz modal (MathJax ready) =====
+(function(){
+  const btnQuiz = document.getElementById('btnQuiz');
+  const modal = document.getElementById('quizModal');
+  const btnClose = document.getElementById('quizClose');
+  const btnClose2 = document.getElementById('quizClose2');
+  const btnCheck = document.getElementById('quizCheck');
+  const container = document.getElementById('quizContainer');
+  const scoreEl = document.getElementById('quizScore');
+
+  const QUIZ = [
+    { id:1, q:"ให้มวล m₁=2 ที่ (-2,1) และ m₂=1 ที่ (2,2) ของระบบ 2 มวล จงหา \\(x_{CM}\\) ของระบบนี้",
+      choices:["-0.67","0","0.67","1.33"], correct:0,
+      explain:`\\(x_{CM}=\\dfrac{\\sum m_i x_i}{\\sum m_i}=\\dfrac{2(-2)+1(2)}{2+1}=\\dfrac{-4+2}{3}=-\\dfrac{2}{3}\\approx -0.67\\)` },
+    { id:2, q:"ต่อจากข้อ 1 เพิ่มมวล m₃=3 ที่ (0,-1) แล้ว \\(y_{CM}\\) ใหม่เป็นเท่าไร",
+      choices:["-0.50","0","0.17","1.00"], correct:2,
+      explain:`\\(y_{CM}=\\dfrac{2(1)+1(2)+3(-1)}{2+1+3}=\\dfrac{2+2-3}{6}=\\dfrac{1}{6}\\approx 0.17\\)` },
+    { id:3, q:"หากขยายสเกลพิกัดของทุกมวลด้วยตัวคูณ k (ทั้งแกน x,y) แล้ว \\(x_{CM}\\) ใหม่จะเป็นอย่างไร",
+      choices:["ไม่เปลี่ยนแปลง","\\(x'_{CM}=k\\,x_{CM}\\)","\\(x'_{CM}=x_{CM}/k\\)","\\(x'_{CM}=0\\)"], correct:1,
+      explain:`จากนิยาม \\(x'_{CM}=\\dfrac{\\sum m_i (k x_i)}{\\sum m_i}=k\\, \\dfrac{\\sum m_i x_i}{\\sum m_i}=k x_{CM}\\)` },
+    { id:4, q:"มวลเท่ากัน 4 ก้อนอยู่ที่มุมของสี่เหลี่ยมจัตุรัสกึ่งกลางที่จุดกำเนิด จุดศูนย์กลางมวลอยู่ที่ใด",
+      choices:["\\((0,0)\\)","\\((a,a)\\)","\\((a/2,a/2)\\)","ขึ้นกับค่ามวล"], correct:0,
+      explain:`ด้วยสมมาตร พิกัดบวก/ลบหักล้างกัน ทำให้ \\(x_{CM}=y_{CM}=0\\)` }
+  ];
+
+  function typeset(){ if(window.MathJax?.typesetPromise){ MathJax.typesetClear?.(); MathJax.typesetPromise([container]); } }
+
+  function renderQuiz(){ container.innerHTML='';
+    QUIZ.forEach((it,idx)=>{ const wrap=document.createElement('div'); wrap.className='quizItem';
+      wrap.innerHTML=`<h4>ข้อ ${idx+1}. ${it.q}</h4>${it.choices.map((c,i)=>`<label class="choice"><input type="radio" name="q_${it.id}" value="${i}"/> <span>${c}</span></label>`).join('')}<div class="explain" id="exp_${it.id}" style="display:none"></div>`; container.appendChild(wrap); });
+    scoreEl.textContent=''; typeset(); }
+
+  function open(){ modal.hidden=false; modal.style.display='grid'; modal.setAttribute('aria-hidden','false'); renderQuiz(); }
+  function close(){ modal.hidden=true; modal.style.display='none'; modal.setAttribute('aria-hidden','true'); }
+
+  function grade(){ let score=0; QUIZ.forEach(it=>{ const sel=document.querySelector(`input[name="q_${it.id}"]:checked`); const exp=document.getElementById(`exp_${it.id}`); const labels=[...container.querySelectorAll(`input[name="q_${it.id}"]`)].map(x=>x.closest('label')); labels.forEach(l=>l.classList.remove('correct','wrong')); if(sel){ const v=+sel.value; if(v===it.correct){ score++; sel.closest('label').classList.add('correct'); } else { sel.closest('label').classList.add('wrong'); labels[it.correct]?.classList.add('correct'); } } else { labels[it.correct]?.classList.add('correct'); } exp.style.display='block'; exp.innerHTML = `<div><strong>เฉลย:</strong> ${it.choices[it.correct]}</div><div style="margin-top:6px">คำอธิบาย: ${it.explain}</div>`; }); scoreEl.textContent=`คะแนนของคุณ: ${score} / ${QUIZ.length}`; typeset(); }
+
+  btnQuiz?.addEventListener('click', open);
+  btnClose?.addEventListener('click', close);
+  btnClose2?.addEventListener('click', close);
+  btnCheck?.addEventListener('click', grade);
+  document.addEventListener('keydown', (e)=>{ if(!modal.hidden && e.key==='Escape') close(); });
+  modal.addEventListener('click', (e)=>{ if(e.target===modal){ e.stopPropagation(); close(); } });
+  document.addEventListener('click', (e)=>{ const btn=e.target.closest('[data-close="1"]'); if(!modal.hidden && btn){ e.preventDefault(); e.stopPropagation(); close(); } });
+})();
+</script>
+
+<script>
+// ===== Formula modal =====
+(function(){
+  const btnFormula = document.getElementById('btnFormula');
+  const fModal = document.getElementById('formulaModal');
+  const fClose1 = document.getElementById('formulaClose');
+  const fClose2 = document.getElementById('formulaClose2');
+  function openF(){ fModal.hidden=false; fModal.style.display='grid'; fModal.setAttribute('aria-hidden','false'); if(window.MathJax?.typesetPromise){ MathJax.typesetPromise(); } }
+  function closeF(){ fModal.hidden=true; fModal.style.display='none'; fModal.setAttribute('aria-hidden','true'); }
+  btnFormula?.addEventListener('click', openF);
+  fClose1?.addEventListener('click', closeF);
+  fClose2?.addEventListener('click', closeF);
+  document.addEventListener('keydown', (e)=>{ if(!fModal.hidden && e.key==='Escape') closeF(); });
+  fModal.addEventListener('click', (e)=>{ if(e.target===fModal) closeF(); const btn=e.target.closest('[data-close="1"]'); if(btn) closeF(); });
+})();
+</script>
+
+</body>
+</html>
