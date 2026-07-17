@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>การทดลองวงจร AC ตัวต้านทานสองตัวต่ออนุกรม</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <!-- MathJax -->
+  <script>
+    window.MathJax = {
+      tex: {inlineMath: [['\\(','\\)'], ['$', '$']]},
+      svg: {fontCache: 'global'}
+    };
+  </script>
+  <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+  <style>
+    :root{
+      --ink:#0f172a;
+      --panel:#ffffff;
+      --accent:#0ea5e9;
+      --muted:#475569;
+      --border:#e2e8f0;
+    }
+    body{
+      margin:0;
+      background:#f8fafc;
+      font-family:system-ui,"Noto Sans Thai",sans-serif;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:10px;
+      padding:14px 6px 40px;
+      color:var(--ink);
+    }
+    h2{
+      margin:4px 0 6px;
+      text-align:center;
+    }
+    #lab{
+      background:var(--panel);
+      border:1px solid #dbeafe;
+      border-radius:14px;
+      padding:14px;
+      max-width:980px;
+      width:100%;
+      box-shadow:0 4px 16px rgba(15,23,42,.08);
+    }
+    #circuitBox{
+      position:relative;
+      width:420px;
+      margin:auto;
+      height:280px;
+    }
+    #eqUnderSource{
+      position:absolute;
+      top:214px;
+      left:50%;
+      transform:translateX(-50%);
+      background:rgba(255,255,255,.9);
+      border:1px solid #e2e8f0;
+      border-radius:8px;
+      padding:2px 6px;
+      font-size:12px;
+      min-width:180px;
+      text-align:center;
+      cursor:grab;
+    }
+    .inputs{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      margin-top:12px;
+    }
+    .inp{
+      background:#fff;
+      border:1px solid #e2e8f0;
+      border-radius:10px;
+      padding:6px 10px;
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+      min-width:140px;
+      flex:1 1 150px;
+    }
+    .inp label{font-size:12px;color:var(--muted);}
+    .inp input{
+      padding:4px 6px;
+      border:1px solid #cbd5f5;
+      border-radius:6px;
+    }
+    button{
+      background:var(--accent);
+      border:none;
+      color:#fff;
+      padding:6px 12px;
+      border-radius:8px;
+      cursor:pointer;
+      font-size:14px;
+    }
+    button.secondary{
+      background:#e2e8f0;
+      color:#0f172a;
+    }
+    #results{
+      margin-top:14px;
+      background:#f8fafc;
+      border:1px solid #e2e8f0;
+      border-radius:10px;
+      padding:10px;
+      font-size:14px;
+      line-height:1.5;
+    }
+    #graphPanel{
+      margin-top:12px;
+      border:1px solid #e2e8f0;
+      border-radius:10px;
+      padding:8px;
+      display:none;
+      background:#fff;
+      position:relative;
+    }
+    #graphCanvasVolt,
+    #graphCanvasCurr{
+      width:100%;
+      max-width:900px;
+      height:240px;
+      border:1px solid #ddd;
+      border-radius:6px;
+      display:block;
+      margin-bottom:10px;
+    }
+    /* ป้ายลากบนกราฟ */
+    .graph-label{
+      position:absolute;
+      font-size:18px;
+      font-weight:500;
+      cursor:grab;
+      user-select:none;
+      background:rgba(255,255,255,0.0);
+    }
+    #label_vs{left:150px; top:48px; color:#2563eb;}
+    #label_vr2{left:205px; top:78px; color:#f97316;}
+    #label_vr1{left:235px; top:108px; color:#22c55e;}
+
+    /* modal สูตรสำคัญ */
+    #formulaModal{
+      position:fixed;
+      top:0;left:0;right:0;bottom:0;
+      background:rgba(15,23,42,.35);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:10px;
+      z-index:999;
+    }
+    #formulaBox{
+      background:linear-gradient(180deg,#ffffff 0%, #e0f2fe 120%);
+      max-width:620px;
+      width:100%;
+      border-radius:14px;
+      padding:14px 16px 16px;
+      border:2px solid #0ea5e9;
+      box-shadow:0 10px 30px rgba(15,23,42,.15);
+    }
+    #formulaBox h3{
+      margin-top:0;
+      margin-bottom:6px;
+    }
+    a.klaipom {
+      color:#0ea5e9;
+      text-decoration:none;
+      font-weight:600;
+    }
+    a.klaipom:hover { text-decoration:underline; }
+    @media (max-width:560px){
+      #circuitBox{width:100%;transform:scale(.9);transform-origin:top center;}
+      #graphCanvasVolt,#graphCanvasCurr{height:210px;}
+    }
+  </style>
+</head>
+<body>
+  <h2>การทดลอง: วงจรไฟฟ้ากระแสสลับแบบตัวต้านทานสองตัวต่ออนุกรม</h2>
+  <div id="lab">
+    <!-- วงจร -->
+    <div id="circuitBox">
+      <svg id="circuitSVG" width="400" height="210" xmlns="http://www.w3.org/2000/svg">
+        <g id="circuitGroup">
+          <line x1="60" y1="160" x2="340" y2="160" stroke="black" stroke-width="2"/>
+          <circle id="acCircle" cx="200" cy="160" r="30" fill="white" stroke="black" stroke-width="2"/>
+          <path d="M188 165 q5 -10 10 0 q5 10 10 0" fill="none" stroke="black" stroke-width="2" />
+          <line x1="60" y1="160" x2="60" y2="70" stroke="black" stroke-width="2"/>
+          <line x1="60" y1="70" x2="100" y2="70" stroke="black" stroke-width="2"/>
+          <!-- R1 -->
+          <polyline id="r1zig" points="100,70 110,55 120,85 130,55 140,85 150,70"
+                    fill="none" stroke="black" stroke-width="2"/>
+          <line id="r1wire" x1="100" y1="70" x2="150" y2="70" stroke="black" stroke-width="2" style="display:none"/>
+          <text id="r1text" x="110" y="45" font-size="14">R₁</text>
+          <!-- ช่องว่าง 30 px -->
+          <line x1="150" y1="70" x2="210" y2="70" stroke="black" stroke-width="2"/>
+          <!-- R2 -->
+          <polyline id="r2zig" points="210,70 220,55 230,85 240,55 250,85 260,70"
+                    fill="none" stroke="black" stroke-width="2"/>
+          <line id="r2wire" x1="210" y1="70" x2="260" y2="70" stroke="black" stroke-width="2" style="display:none"/>
+          <text id="r2text" x="225" y="45" font-size="14">R₂</text>
+          <!-- ทางออก -->
+          <line x1="260" y1="70" x2="340" y2="70" stroke="black" stroke-width="2"/>
+          <line x1="340" y1="70" x2="340" y2="160" stroke="black" stroke-width="2"/>
+        </g>
+      </svg>
+      <div id="eqUnderSource">\( v(t) = V_{\max}\sin(2\pi\cdot 100\,t) \)</div>
+    </div>
+
+    <!-- ช่องกรอกค่า -->
+    <div class="inputs">
+      <div class="inp">
+        <label>แรงเคลื่อนไฟฟ้าสูงสุด \(V_{\max}\) (โวลต์)</label>
+        <input type="number" id="vmax" value="10" step="0.1">
+      </div>
+      <div class="inp">
+        <label>ความถี่ \(f\) (Hz) (คงที่)</label>
+        <input type="number" id="freq" value="100" disabled>
+      </div>
+      <div class="inp">
+        <label>มุมเฟสเริ่มต้น = k⋅π (กรอก k)</label>
+        <input type="number" id="kphase" value="0" step="0.25">
+      </div>
+      <div class="inp">
+        <label>ค่าความต้านทาน \(R_1\) (Ω)</label>
+        <input type="number" id="r1" value="100" step="1">
+      </div>
+      <div class="inp">
+        <label>ค่าความต้านทาน \(R_2\) (Ω)</label>
+        <input type="number" id="r2" value="200" step="1">
+      </div>
+    </div>
+
+    <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+      <button id="btnCalc">แสดงผล</button>
+      <button id="btnGraph" class="secondary">แสดงกราฟ</button>
+      <button id="btnFormula" class="secondary">สูตรสำคัญ</button>
+    </div>
+
+    <div id="results">
+      กรอกค่าด้านบนแล้วกด “แสดงผล” เพื่อคำนวณและแสดงสมการต่าง ๆ
+    </div>
+
+    <!-- กราฟ -->
+    <div id="graphPanel">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+        <strong>กราฟสัญญาณในเวลา 2 คาบ (0 – 0.02 s)</strong>
+        <button id="btnCloseGraph" class="secondary">ปิดกราฟ</button>
+      </div>
+      <div id="label_vs" class="graph-label">v_s(t)</div>
+      <div id="label_vr2" class="graph-label">V_R2(t)</div>
+      <div id="label_vr1" class="graph-label">V_R1(t)</div>
+
+      <canvas id="graphCanvasVolt" width="900" height="240"></canvas>
+      <canvas id="graphCanvasCurr" width="900" height="240"></canvas>
+    </div>
+
+    <p style="margin-top:12px;font-size:13px;">
+      ศึกษาเพิ่มเติมได้ที่
+      <a class="klaipom" href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener noreferrer">
+        เพจคลายปมฟิสิกส์
+      </a>
+    </p>
+  </div>
+
+  <!-- modal สูตรสำคัญ -->
+  <div id="formulaModal">
+    <div id="formulaBox">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <h3>สูตรสำคัญ — วงจร R(ไม่มี LC)</h3>
+        <button id="btnCloseFormula" class="secondary">ปิด</button>
+      </div>
+      <p>
+        แหล่งจ่ายไฟฟ้ากระแสสลับเขียนได้เป็น  
+        \( v(t) = V_{\max} \sin(\omega t + \phi) \)  
+        โดยที่ \( \omega = 2\pi f \)
+      </p>
+      <p>
+        ในระบบไฟฟ้ากระแสสลับ (AC) ทั้ง “ความต่างศักย์” และ “กระแสไฟฟ้า” จะเปลี่ยนแปลงไปตามเวลาเป็นรูปคลื่นไซน์
+        ทำให้ค่ามันไม่คงที่เหมือนไฟฟ้ากระแสตรง(DC)จากแบตเตอรี่ ดังนั้นเวลาจะหาค่าที่ใช้จริงจึงนิยมใช้ค่า rms
+      </p>
+
+      <p>
+        สำหรับตัวต้านทานล้วน (ไม่มี L, C) กระแสจะ “เฟสเดียวกับความต่างศักย์”  
+        สมการกระแสไฟฟ้าที่ขึ้นกับเวลาคือ<br>   
+        \( i(t) = I_{\max} \sin(\omega t + \phi) \)<br>  
+        โดย \( I_{\max} = \dfrac{V_{\max}}{R_{\text{tot}}} \) 
+      </p>
+         <p>
+        ความต่างศักย์ตกคร่อม(แรงดันตกคร่อม)ตัวต้านทานแต่ละตัว:  
+        \( v_{R1}(t) = i(t)\,R_1 \),<br>  
+        \( v_{R2}(t) = i(t)\,R_2 \)  
+        ซึ่งยังคงเฟสเดียวกับกระแส (รูปแบบกราฟเหมือนกัน)
+
+      <p>
+        <strong>ค่า rms (root mean square)</strong><br> คือค่าที่ทำให้ไฟฟ้ากระแสสลับให้พลังงานได้ “เทียบเท่า” กับไฟฟ้ากระแสตรง  
+        เรียกสั้น ๆ ว่า "ค่าประสิทธิผล (Effective Value)" หรือ "ค่ายังผล"  
+        โดย  
+        \( V_{\text{rms}} = \dfrac{V_{\max}}{\sqrt{2}}, \quad I_{\text{rms}} = \dfrac{I_{\max}}{\sqrt{2}} \)
+      </p>
+     
+      </p>
+      <p>
+        <strong>กำลังเฉลี่ยในตัวต้านทาน</strong><br>
+        \( P_{\text{avg}} = I_{\text{rms}}^{2} R \)  
+        หรือเขียนสมการในรูปความต่างศักย์ได้ว่า  
+        \( P_{\text{avg}} = \dfrac{V_{\text{rms}}^{2}}{R} \)
+      </p>
+      <p style="font-size:12px;">ศึกษาเพิ่มเติมได้ที่ <a class="klaipom" href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener noreferrer">เพจคลายปมฟิสิกส์</a></p>
+    </div>
+  </div>
+
+  <script>
+    const btnCalc = document.getElementById('btnCalc');
+    const results = document.getElementById('results');
+    const eqUnderSource = document.getElementById('eqUnderSource');
+    const r1text = document.getElementById('r1text');
+    const r2text = document.getElementById('r2text');
+    const r1zig = document.getElementById('r1zig');
+    const r2zig = document.getElementById('r2zig');
+    const r1wire = document.getElementById('r1wire');
+    const r2wire = document.getElementById('r2wire');
+
+    function updateAll(){
+      const Vmax = parseFloat(document.getElementById('vmax').value)||0;
+      const f = 100;
+      const k = parseFloat(document.getElementById('kphase').value)||0;
+      const phi = k * Math.PI;
+      const R1 = parseFloat(document.getElementById('r1').value)||0;
+      const R2 = parseFloat(document.getElementById('r2').value)||0;
+      const Rtot = R1 + R2;
+
+      // แสดง/ซ่อนตัวต้านทานเมื่อค่าเป็น 0
+      if (R1 === 0){
+        r1zig.style.display = "none";
+        r1text.style.display = "none";
+        r1wire.style.display = "block";
+      } else {
+        r1zig.style.display = "block";
+        r1text.style.display = "block";
+        r1wire.style.display = "none";
+        r1text.textContent = `R₁ = ${R1} Ω`;
+      }
+      if (R2 === 0){
+        r2zig.style.display = "none";
+        r2text.style.display = "none";
+        r2wire.style.display = "block";
+      } else {
+        r2zig.style.display = "block";
+        r2text.style.display = "block";
+        r2wire.style.display = "none";
+        r2text.textContent = `R₂ = ${R2} Ω`;
+      }
+
+      eqUnderSource.innerHTML = `\\( v(t) = ${Vmax}\\,\\sin(2\\pi\\cdot 100\\,t + ${k}\\pi) \\)`;
+      if (window.MathJax) MathJax.typesetPromise([eqUnderSource]);
+
+      if (Rtot <= 0){
+        results.innerHTML = "กรุณาใส่ค่า R₁ และ R₂ ให้ได้ค่ามากกว่า 0";
+        return {Vmax,f,phi,R1,R2,Rtot};
+      }
+
+      const Imax = Vmax / Rtot;
+      const Irms = Imax / Math.SQRT2;
+      const Vs_rms = Vmax / Math.SQRT2;
+      const Vrms_R1 = Irms * R1;
+      const Vrms_R2 = Irms * R2;
+      // กำลังเฉลี่ย (กันหารศูนย์)
+      const P_R1 = R1 > 0 ? Irms*Irms*R1 : 0;
+      const P_R2 = R2 > 0 ? Irms*Irms*R2 : 0;
+
+      results.innerHTML = `
+        <p><strong style="color:#2563eb;">สมการแหล่งจ่าย:</strong> <span style="color:#2563eb;">\\( v(t) = ${Vmax}\\sin(2\\pi(100)t + ${k}\\pi) \\)</span></p>
+        <p><strong>สมการกระแส:</strong> \\( i(t) = \\dfrac{${Vmax}}{${Rtot}}\\sin(2\\pi(100)t + ${k}\\pi) \\)</p>
+        <p><span style="color:#2563eb;">\\( V_{s,\\text{rms}} = ${Vs_rms.toFixed(2)}\\ \\text{V} \\)</span></p>
+        <p>\\( I_{\\text{rms}} = ${Irms.toFixed(2)}\\ \\text{A} \\)</p>
+        <p><span style="color:#22c55e;">\\( V_{R1,\\text{rms}} = ${Vrms_R1.toFixed(2)}\\ \\text{V} \\)</span>, 
+           <span style="color:#f97316;">\\( V_{R2,\\text{rms}} = ${Vrms_R2.toFixed(2)}\\ \\text{V} \\)</span></p>
+        <p><span style="color:#22c55e;">กำลังเฉลี่ยที่ R₁: \\( P_{R1} = ${P_R1.toFixed(2)}\\ \\text{W} \\)</span><br>
+           <span style="color:#f97316;">กำลังเฉลี่ยที่ R₂: \\( P_{R2} = ${P_R2.toFixed(2)}\\ \\text{W} \\)</span></p>
+        <p><strong>แรงดันตามเวลา:</strong><br>
+        <span style="color:#22c55e;">\\( v_{R1}(t) = ${ (Vmax*(R1/Rtot) || 0).toFixed(2) }\\sin(2\\pi(100)t + ${k}\\pi) \\)</span><br>
+        <span style="color:#f97316;">\\( v_{R2}(t) = ${ (Vmax*(R2/Rtot) || 0).toFixed(2) }\\sin(2\\pi(100)t + ${k}\\pi) \\)</span>
+        </p>
+      `;
+      if (window.MathJax) MathJax.typesetPromise([results]);
+
+      return {Vmax,f,phi,R1,R2,Rtot};
+    }
+
+    btnCalc.addEventListener('click', updateAll);
+
+    const btnGraph = document.getElementById('btnGraph');
+    const graphPanel = document.getElementById('graphPanel');
+    const btnCloseGraph = document.getElementById('btnCloseGraph');
+
+    const canvasVolt = document.getElementById('graphCanvasVolt');
+    const ctxV = canvasVolt.getContext('2d');
+
+    const canvasCurr = document.getElementById('graphCanvasCurr');
+    const ctxI = canvasCurr.getContext('2d');
+
+    function resizeCanvases(){
+      const panelWidth = document.getElementById('graphPanel').clientWidth - 20;
+      [canvasVolt, canvasCurr].forEach(cv=>{
+        cv.width = panelWidth > 300 ? panelWidth : 300;
+      });
+    }
+
+    function drawGraphs(){
+      const {Vmax,f,phi,R1,R2,Rtot} = updateAll();
+      if (!Rtot || Rtot<=0) return;
+
+      resizeCanvases();
+
+      const T = 1/f;
+      const tEnd = 2*T;
+      const N = 500;
+      const dt = tEnd / (N-1);
+
+      let maxV = 0;
+      let maxI = 0;
+      const arr = [];
+      for (let i=0;i<N;i++){
+        const t = i*dt;
+        const vs = Vmax * Math.sin(2*Math.PI*f*t + phi);
+        const it = (Vmax/Rtot) * Math.sin(2*Math.PI*f*t + phi);
+        const vR1 = it * R1;
+        const vR2 = it * R2;
+        arr.push({t,vs,it,vR1,vR2});
+        maxV = Math.max(maxV, Math.abs(vs), Math.abs(vR1), Math.abs(vR2));
+        maxI = Math.max(maxI, Math.abs(it));
+      }
+      if (maxV < 1e-6) maxV = 1;
+      if (maxI < 1e-6) maxI = 1;
+
+      // วาดกราฟแรงดัน
+      ctxV.clearRect(0,0,canvasVolt.width,canvasVolt.height);
+      const marginL = 40, marginR = 10, marginT = 20, marginB = 25;
+      const innerW = canvasVolt.width - marginL - marginR;
+      const innerH = canvasVolt.height - marginT - marginB;
+      const zeroY = marginT + innerH/2;
+
+      ctxV.strokeStyle = "#94a3b8";
+      ctxV.lineWidth = 1;
+      ctxV.beginPath();
+      ctxV.moveTo(marginL, marginT);
+      ctxV.lineTo(marginL, marginT + innerH);
+      ctxV.stroke();
+      ctxV.fillStyle = "#0f172a";
+      ctxV.font = "18px system-ui";
+      ctxV.fillText("V", marginL-18, marginT+10);
+
+      ctxV.beginPath();
+      ctxV.moveTo(marginL, zeroY);
+      ctxV.lineTo(marginL + innerW, zeroY);
+      ctxV.stroke();
+
+      function plotV(fn,color){
+        ctxV.beginPath();
+        ctxV.strokeStyle=color;
+        ctxV.lineWidth=1.6;
+        arr.forEach((p,idx)=>{
+          const x = marginL + (p.t/tEnd)*innerW;
+          const y = zeroY - (fn(p)/maxV)*(innerH/2 - 5);
+          if (idx===0) ctxV.moveTo(x,y); else ctxV.lineTo(x,y);
+        });
+        ctxV.stroke();
+      }
+
+      plotV(p=>p.vs, "#2563eb");
+      plotV(p=>p.vR1, "#22c55e");
+      plotV(p=>p.vR2, "#f97316");
+
+      ctxV.fillStyle = "#0f172a";
+      ctxV.font = "18px system-ui";
+      ctxV.fillText("t (s)", canvasVolt.width - 50, zeroY + 18);
+
+      // กราฟกระแส
+      ctxI.clearRect(0,0,canvasCurr.width,canvasCurr.height);
+      const mL2=40,mR2=10,mT2=20,mB2=25;
+      const w2 = canvasCurr.width - mL2 - mR2;
+      const h2 = canvasCurr.height - mT2 - mB2;
+      const zeroY2 = mT2 + h2/2;
+
+      ctxI.strokeStyle = "#94a3b8";
+      ctxI.beginPath();
+      ctxI.moveTo(mL2, mT2);
+      ctxI.lineTo(mL2, mT2+h2);
+      ctxI.stroke();
+      ctxI.fillStyle="#0f172a";
+      ctxI.font = "18px system-ui";
+      ctxI.fillText("I", mL2-18, mT2+10);
+
+      ctxI.beginPath();
+      ctxI.moveTo(mL2, zeroY2);
+      ctxI.lineTo(mL2+w2, zeroY2);
+      ctxI.stroke();
+
+      ctxI.beginPath();
+      ctxI.strokeStyle="#000";
+      ctxI.lineWidth=1.6;
+      arr.forEach((p,idx)=>{
+        const x = mL2 + (p.t/tEnd)*w2;
+        const y = zeroY2 - (p.it/maxI)*(h2/2 - 5);
+        if (idx===0) ctxI.moveTo(x,y); else ctxI.lineTo(x,y);
+      });
+      ctxI.stroke();
+
+      const labelT = 0.002;
+      const fracI = labelT / tEnd;
+      const xI = mL2 + fracI * w2;
+      const yI = zeroY2 - ( ((Vmax/Rtot)*Math.sin(2*Math.PI*f*labelT+phi))/maxI )*(h2/2 - 5);
+      ctxI.fillStyle="#000";
+      ctxI.fillText("i(t)", xI+6, yI-6);
+      ctxI.fillText("t (s)", canvasCurr.width - 50, zeroY2 + 18);
+    }
+
+    btnGraph.addEventListener('click', ()=>{
+      graphPanel.style.display = 'block';
+      drawGraphs();
+    });
+    btnCloseGraph.addEventListener('click', ()=>{
+      graphPanel.style.display = 'none';
+    });
+
+    // สูตรสำคัญ modal
+    const btnFormula = document.getElementById('btnFormula');
+    const formulaModal = document.getElementById('formulaModal');
+    const btnCloseFormula = document.getElementById('btnCloseFormula');
+    btnFormula.addEventListener('click', ()=>{
+      formulaModal.style.display = 'flex';
+      if (window.MathJax) MathJax.typesetPromise([document.getElementById('formulaBox')]);
+    });
+    btnCloseFormula.addEventListener('click', ()=> formulaModal.style.display='none');
+
+    // ลากป้ายสมการใต้แหล่งจ่ายได้
+    (function(){
+      let dragging = false;
+      let offsetX = 0, offsetY = 0;
+      eqUnderSource.addEventListener('mousedown', (e)=>{
+        dragging = true;
+        offsetX = e.clientX - eqUnderSource.offsetLeft;
+        offsetY = e.clientY - eqUnderSource.offsetTop;
+        eqUnderSource.style.cursor = 'grabbing';
+      });
+      document.addEventListener('mousemove', (e)=>{
+        if(!dragging) return;
+        eqUnderSource.style.left = (e.clientX - offsetX) + 'px';
+        eqUnderSource.style.top = (e.clientY - offsetY) + 'px';
+      });
+      document.addEventListener('mouseup', ()=>{
+        dragging = false;
+        eqUnderSource.style.cursor = 'grab';
+      });
+    })();
+
+    // ลากป้าย 3 อันบนกราฟได้
+    function makeDraggable(el){
+      let drag = false, offX=0, offY=0;
+      el.addEventListener('mousedown', e=>{
+        drag = true;
+        offX = e.clientX - el.offsetLeft;
+        offY = e.clientY - el.offsetTop;
+        el.style.cursor = 'grabbing';
+      });
+      document.addEventListener('mousemove', e=>{
+        if(!drag) return;
+        el.style.left = (e.clientX - offX) + 'px';
+        el.style.top = (e.clientY - offY) + 'px';
+      });
+      document.addEventListener('mouseup', ()=>{
+        drag = false;
+        el.style.cursor = 'grab';
+      });
+    }
+    makeDraggable(document.getElementById('label_vs'));
+    makeDraggable(document.getElementById('label_vr1'));
+    makeDraggable(document.getElementById('label_vr2'));
+
+    // เรียกครั้งแรก
+    updateAll();
+  </script>
+</body>
+</html>
