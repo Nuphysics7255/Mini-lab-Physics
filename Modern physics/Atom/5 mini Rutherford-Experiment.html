@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>การทดลองรัทเทอร์ฟอร์ด</title>
+<style>
+  :root{
+    --ink:#0f172a; --line:#e2e8f0; --accent:#0ea5e9;
+    --gold:#f9d976; --goldEdge:#facc15; --atom:#b45309; --danger:#ef4444; --warn:#f59e0b; --ok:#10b981;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#fff;color:var(--ink);font-family:system-ui,"Noto Sans Thai",sans-serif;
+       display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px 6px 90px;}
+  h1{font-size:1.12rem;margin:6px 0 0;text-align:center}
+  #wrap{width:min(100%,1120px);display:flex;flex-direction:column;gap:8px}
+  #panel{background:#fff;border:1px solid var(--line);border-radius:14px;padding:8px;
+         display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;align-items:center}
+  .btn{background:#fff;border:1px solid #cbd5e1;border-radius:999px;padding:6px 14px;
+       font-size:.8rem;cursor:pointer;display:flex;gap:6px;align-items:center;transition:.15s}
+  .btn.main{background:var(--accent);color:#fff;border-color:transparent}
+  .ctrl{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  #sim{border:1px solid var(--line);border-radius:14px;padding:6px;background:#fff}
+  canvas{width:100%;max-width:100%;border:1px solid #e2e8f0;border-radius:12px;background:#fff}
+  #legend{font-size:.72rem;margin-top:4px}
+  #note{font-size:.78rem;line-height:1.35;margin-top:6px}
+
+  /* โมดัลอธิบายหลักการ (รูปแบบเดิม) */
+  #modalExplain{position:fixed;inset:0;background:rgba(15,23,42,.38);display:none;align-items:center;justify-content:center;padding:14px;z-index:50}
+  #modalBox{background:#fff;max-width:640px;width:min(100%,640px);border-radius:16px;border:2px solid #e2e8f0;
+            box-shadow:0 20px 40px rgba(15,23,42,.15);padding:16px 16px 12px;max-height:85vh;overflow-y:auto}
+  #modalBox h2{font-size:1rem;margin:0 0 6px}
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:.72rem}
+  .pill.ok{background:rgba(16,185,129,.12);color:var(--ok);border:1px solid rgba(16,185,129,.35)}
+  .pill.warn{background:rgba(245,158,11,.12);color:var(--warn);border:1px solid rgba(245,158,11,.35)}
+  .pill.dan{background:rgba(239,68,68,.12);color:var(--danger);border:1px solid rgba(239,68,68,.35)}
+  .callout{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:10px 12px;margin:10px 0}
+  .callout h3{margin:0 0 6px;font-size:.92rem;color:#475569}
+  .bul{margin:6px 0 0 1em}
+  .bul li{margin:.25em 0}
+
+  /* ปุ่มลิงก์ฟ้าอ่อน */
+  #footerLink{position:fixed;bottom:8px;left:0;width:100%;display:flex;justify-content:center;pointer-events:none}
+  #footerLink a{pointer-events:auto;background:#eaf6ff;border:1px solid #cfe8ff;border-radius:999px;
+                padding:5px 15px;font-size:.72rem;text-decoration:none;color:#0f172a;box-shadow:0 8px 20px rgba(15,23,42,.06)}
+
+  /* แผงเตือนหมุนจอ (มือถือแนวตั้ง) */
+  #rotateHint{position:fixed;inset:0;background:rgba(255,255,255,.96);display:none;align-items:center;justify-content:center;z-index:60;text-align:center;padding:20px}
+  #rotateCard{border:1px solid #e2e8f0;border-radius:16px;background:#fff;padding:20px 22px;box-shadow:0 20px 40px rgba(15,23,42,.12);max-width:380px}
+  .phoneIcon{width:48px;height:48px;border:2px solid #94a3b8;border-radius:10px;margin:0 auto 10px;position:relative}
+  .phoneIcon::after{content:"";position:absolute;left:50%;top:50%;width:26px;height:6px;border:2px solid #94a3b8;border-radius:6px;transform:translate(-50%,-50%) rotate(90deg);}
+  @media (max-width:700px){#panel{flex-direction:column;align-items:flex-start}}
+</style>
+
+<!-- MathJax สำหรับเลขยกกำลังในหมายเหตุ -->
+<script>
+  window.MathJax={tex:{inlineMath:[['\\(','\\)'],['$','$']]},svg:{fontCache:'global'}};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+</head>
+<body>
+  <div id="wrap">
+    <h1>การทดลองรัทเทอร์ฟอร์ด</h1>
+
+    <div id="panel">
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn main" id="btnPlay">▶ เล่น</button>
+        <button class="btn" id="btnPause">⏸ หยุด</button>
+        <button class="btn" id="btnReset">↺ รีเซ็ต</button>
+        <button class="btn" id="btnExplain">📘 อธิบายหลักการ</button>
+        <button class="btn" id="btnToggleNuc">👁 แสดง/ซ่อนนิวเคลียส</button>
+        <button class="btn" id="btnSingle">🎯 ยิงทีละนัด</button>
+      </div>
+      <div class="ctrl">
+        <label for="spd">ความเร็วอนุภาค (ช้า→เร็ว)</label>
+        <input id="spd" type="range" min="0.6" max="2.0" step="0.02" value="1.0">
+        <span id="spdVal" style="font-size:.78rem">1.00×</span>
+      </div>
+    </div>
+
+    <div id="sim">
+      <canvas id="cv" width="1120" height="560"></canvas>
+      <div id="legend">ภาพนี้ไม่ใช่มาตราส่วนจริง — รัศมีอะตอมใหญ่กว่านิวเคลียสประมาณ \(10^5\) เท่า</div>
+    </div>
+  </div>
+
+  <!-- ปุ่มลิงก์ฟ้าอ่อน -->
+  <div id="footerLink">
+    <a href="https://www.facebook.com/resolvephysics" target="_blank">ศึกษาเพิ่มเติมได้ที่เพจ คลายปมฟิสิกส์</a>
+  </div>
+
+  <!-- แผงเตือนหมุนจอ -->
+  <div id="rotateHint" aria-hidden="true">
+    <div id="rotateCard">
+      <div class="phoneIcon"></div>
+      <h3>หมุนหน้าจอเป็นแนวนอน</h3>
+      <p>เพื่อดูการทดลองแบบเต็มพื้นที่บนมือถือ</p>
+    </div>
+  </div>
+
+  <!-- โมดัลอธิบายหลักการ (เนื้อหาเดิม) -->
+  <div id="modalExplain">
+    <div id="modalBox">
+      <h2>อธิบายหลักการทดลองของรัทเทอร์ฟอร์ด</h2>
+
+      <div class="callout">
+        <h3>แนวคิด</h3>
+        <ul class="bul">
+          <li>ยิงอนุภาคแอลฟา \((\alpha)\) ซึ่งมีประจุ <span class="pill warn">บวก</span> ทะลุผ่านแผ่นทองคำบาง และสังเกตการ<br><strong>กระทบ</strong>ที่ <strong>จอโค้งตรวจจับอนุภาคแอลฟา</strong>.</li>
+          <li>เมื่อเข้าใกล้/ชน <strong>นิวเคลียส</strong> (ประจุ <span class="pill warn">บวก</span>) จะถูกแรงผลักไฟฟ้า → <span class="pill warn">เบน</span> หรือ <span class="pill dan">สะท้อน</span>.</li>
+        </ul>
+      </div>
+
+      <div class="callout">
+        <h3>ผลที่สังเกต</h3>
+        <ul class="bul">
+          <li><span class="pill ok">ส่วนใหญ่พุ่งตรง</span> → อะตอมส่วนมากเป็น <em>ที่ว่างเปล่า</em></li>
+          <li><span class="pill warn">บางส่วนเบน</span>  → เข้าใกล้นิวเคลียสจึงถูกผลัก</li>
+          <li><span class="pill dan">ส่วนน้อยสะท้อน</span>  เฉียดแกนมาก/เกือบชนนิวเคลียส จึงถูกผลักกระเด็นกลับหลัง</li>
+        </ul>
+      </div>
+
+      <div class="callout">
+        <h3>ข้อสรุป / แบบจำลองอะตอม</h3>
+        <ul class="bul">
+          <li>มี <strong>นิวเคลียส</strong> เล็กมากอยู่กลางอะตอม (โปรตอน + นิวตรอน)</li>
+          <li><strong>อิเล็กตรอน</strong> วนอยู่รอบนอก</li>
+          <li>ขนาดจริงต่างกันมาก: รัศมีอะตอม ≈ \(10^5\) × รัศมีนิวเคลียส — เปรียบเหมือน <em>เม็ดพริกไทย</em> (นิวเคลียส) กลาง <em>สนามฟุตบอล</em> (อะตอม)</li>
+        </ul>
+      </div>
+
+      <p style="text-align:right;margin-top:10px">
+        <button class="btn" id="btnCloseModal">ปิด</button>
+      </p>
+    </div>
+  </div>
+
+<script>
+/* ====== Canvas + Physics ====== */
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+const W = cv.width, H = cv.height;
+
+let running = false;
+let showNucleus = false;
+
+// จอโค้ง (เส้นทึบสีเทา) และป้ายขยับซ้าย 100 px
+const arcCenter = { x: W*0.62, y: H/2 };
+const arcR = Math.min(W,H)*0.48;
+const arcStart = (-140*Math.PI)/180;
+const arcEnd   = ( 140*Math.PI)/180;
+
+// แผ่นทองคำ
+const foilW = 200, foilH = 420;
+const foilX = arcCenter.x - foilW/2;
+const foilY = arcCenter.y - foilH/2;
+
+// นิวเคลียส + วงอะตอม: 3 วง “ชิดไม่ซ้อน”
+const nuclei = [];
+const nucleusR = 6;
+const repelRange = 20;
+const atomR = 70;
+(function makeThreeTouching(){
+  const cx = foilX + foilW/2;
+  const midY = arcCenter.y;
+  const topY = midY - 2*atomR;
+  const botY = midY + 2*atomR;
+  nuclei.push({x: cx, y: topY});
+  nuclei.push({x: cx, y: midY});
+  nuclei.push({x: cx, y: botY});
+})();
+
+// แหล่งกำเนิด (กล่องดำ) และช่วงยิง
+const spawnSpan = 240;
+const spawnYmin = H/2 - spawnSpan/2;
+const spawnYmax = H/2 + spawnSpan/2;
+
+// สปีดจากสไลเดอร์
+let speedK = 1.0;
+document.getElementById('spd').addEventListener('input', e=>{
+  speedK = parseFloat(e.target.value);
+  document.getElementById('spdVal').textContent = speedK.toFixed(2)+'×';
+});
+
+// อนุภาค & แฟลช
+const particles = [];
+const flashes = [];
+
+// 1% สะท้อน
+function spawnParticle(single=false){
+  const y = Math.random()*(spawnYmax-spawnYmin) + spawnYmin;
+  const modeBias = (Math.random() < 0.01) ? 'reflectChance' : 'normal';
+  particles.push({ x: 40, y, vx: 3.2*speedK, vy: 0, alive:true, modeBias });
+  if(single){ running=false; }
+}
+
+function nearestNucleus(x,y){
+  let best=null, bestD2=Infinity;
+  for(const n of nuclei){
+    const dx=x-n.x, dy=y-n.y, d2=dx*dx+dy*dy;
+    if(d2<bestD2){bestD2=d2; best=n;}
+  }
+  return {n:best, d:Math.sqrt(bestD2)};
+}
+
+function update(){
+  if(running && Math.random()<0.55) spawnParticle(false);
+
+  for(const p of particles){
+    if(!p.alive) continue;
+
+    // ชนจอโค้ง?
+    const rx = p.x - arcCenter.x, ry = p.y - arcCenter.y;
+    const rNow = Math.hypot(rx, ry);
+    const ang = Math.atan2(ry, rx);
+    if(ang>=arcStart && ang<=arcEnd && rNow >= arcR-2 && p.x > arcCenter.x - arcR*0.6){
+      flashes.push({x:p.x,y:p.y,life:1.0});
+      p.alive = false; continue;
+    }
+    if(p.x > W+40 || p.y < -60 || p.y > H+60){ p.alive=false; continue; }
+
+    // โต้ตอบในแผ่นทอง
+    if(p.x >= foilX && p.x <= foilX+foilW && p.y >= foilY && p.y <= foilY+foilH){
+      const {n, d} = nearestNucleus(p.x, p.y);
+      const dx = p.x - n.x, dy = p.y - n.y;
+      const dirx = dx/(d||1), diry = dy/(d||1);
+
+      if(d <= nucleusR || (p.modeBias==='reflectChance' && d <= nucleusR + 6)){
+        // สะท้อน
+        const k = 260 * speedK;
+        p.vx += dirx * (k/d); p.vy += diry * (k/d);
+      } else if(d <= nucleusR + repelRange){
+        // โค้งเบน
+        const k = (200*speedK) / Math.max(80, d*d);
+        p.vx += dirx * k; p.vy += diry * k;
+      }
+
+      // จำกัดความเร็ว
+      const sp = Math.hypot(p.vx,p.vy), cap=4.2*speedK;
+      if(sp>cap){ p.vx = p.vx/sp*cap; p.vy = p.vy/sp*cap; }
+    }
+
+    p.x += p.vx; p.y += p.vy;
+  }
+
+  // เอฟเฟกต์แสงวาบ
+  for(const f of flashes){ f.life -= 0.03; }
+  while(flashes.length && flashes[0].life<=0) flashes.shift();
+
+  draw();
+  requestAnimationFrame(update);
+}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+
+  // เครื่องกำเนิด + ป้าย (ขยับไปทางขวาอีก 100 px จากเดิม)
+  ctx.fillStyle='#000';
+  ctx.fillRect(10, spawnYmin, 16, spawnSpan);
+  ctx.fillStyle='#0f172a'; ctx.font='12px system-ui';
+  ctx.fillText('เครื่องกำเนิดอนุภาคแอลฟา', 80, spawnYmin - 8); // ← เดิม 30 → เพิ่มอีก 100 px
+
+  // จอโค้ง: เส้นทึบสีเทา + ป้ายขยับซ้าย 100 px
+  ctx.strokeStyle='#64748b'; ctx.lineWidth=1.8;
+  ctx.beginPath(); ctx.arc(arcCenter.x, arcCenter.y, arcR, arcStart, arcEnd); ctx.stroke();
+  ctx.fillStyle='#0f172a'; ctx.font='11px system-ui';
+  ctx.fillText('จอโค้งตรวจจับอนุภาคแอลฟา', arcCenter.x - 210, arcCenter.y - arcR + 18);
+
+  // แผ่นทองคำ + ป้าย
+  ctx.fillStyle='rgba(249,217,118,0.92)';
+  ctx.fillRect(foilX, foilY, foilW, foilH);
+  ctx.strokeStyle='#facc15'; ctx.lineWidth=2; ctx.strokeRect(foilX, foilY, foilW, foilH);
+  ctx.fillStyle='#0f172a'; ctx.font='12px system-ui'; ctx.textAlign='center';
+  ctx.fillText('แผ่นทองคำเปลว', foilX + foilW/2, foilY + foilH + 18);
+
+  // วงอะตอม (เส้นปะ) + นิวเคลียส — 3 วง “ชิดไม่ซ้อน”
+  if(showNucleus){
+    for(const n of nuclei){
+      ctx.beginPath(); ctx.setLineDash([2,2]); ctx.arc(n.x, n.y, atomR, 0, Math.PI*2);
+      ctx.strokeStyle=getCSS('--atom','#b45309'); ctx.stroke(); ctx.setLineDash([]);
+
+      ctx.beginPath(); ctx.arc(n.x, n.y, nucleusR, 0, Math.PI*2);
+      ctx.fillStyle='#ef4444'; ctx.fill();
+      ctx.strokeStyle='#b91c1c'; ctx.stroke();
+      ctx.fillStyle='#fff'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.font='10px system-ui';
+      ctx.fillText('+', n.x, n.y);
+    }
+  }
+
+  // อนุภาค \u03B1
+  for(const p of particles){
+    if(!p.alive) continue;
+    ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI*2);
+    ctx.fillStyle='#ef4444'; ctx.fill();
+  }
+
+  // แสงวาบบนจอโค้ง
+  for(const f of flashes){
+    const r = 20*(f.life);
+    const g = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, r);
+    g.addColorStop(0,'rgba(255,255,170,0.95)');
+    g.addColorStop(0.5,'rgba(255,200,80,0.5)');
+    g.addColorStop(1,'rgba(255,200,80,0)');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(f.x,f.y,r,0,Math.PI*2); ctx.fill();
+  }
+}
+
+function getCSS(v,fallback){
+  const s = getComputedStyle(document.documentElement).getPropertyValue(v);
+  return s && s.trim().length ? s.trim() : fallback;
+}
+
+// ปุ่มควบคุม
+document.getElementById('btnPlay').onclick  = ()=>{ running = true; };
+document.getElementById('btnPause').onclick = ()=>{ running = false; };
+document.getElementById('btnReset').onclick = ()=>{ running = false; particles.length = 0; flashes.length = 0; };
+document.getElementById('btnExplain').onclick = ()=>{ document.getElementById('modalExplain').style.display='flex'; };
+document.getElementById('btnCloseModal').onclick = ()=>{ document.getElementById('modalExplain').style.display='none'; };
+document.getElementById('btnToggleNuc').onclick = ()=>{ showNucleus = !showNucleus; };
+document.getElementById('btnSingle').onclick    = ()=>{ spawnParticle(true); };
+
+// Loop เริ่มต้น
+(function init(){ draw(); requestAnimationFrame(update); })();
+
+/* ====== เตือนหมุนจอเฉพาะมือถือแนวตั้ง ====== */
+const rotateHint = document.getElementById('rotateHint');
+function isPhonePortrait(){
+  const isNarrow = Math.min(window.innerWidth, window.innerHeight) <= 768;
+  const isPortrait = window.matchMedia && window.matchMedia("(orientation: portrait)").matches;
+  return isNarrow && isPortrait;
+}
+function refreshRotateHint(){ rotateHint.style.display = isPhonePortrait() ? 'flex' : 'none'; }
+window.addEventListener('resize', refreshRotateHint);
+window.addEventListener('orientationchange', ()=>setTimeout(refreshRotateHint,100));
+document.addEventListener('DOMContentLoaded', refreshRotateHint);
+</script>
+</body>
+</html>

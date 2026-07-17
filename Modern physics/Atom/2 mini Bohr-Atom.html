@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mini Lab : แบบจำลองอะตอมของโบร์</title>
+<style>
+  :root{ --bg:#0b0f14; --ink:#ffffff; --muted:#cbd5e1; --panel:#f3f4f6; --panel-ink:#111827; --line:#e5e7eb; --accent:#60a5fa; --accent-ink:#ffffff; --orange:#ffe4c4; --orange-ink:#8b4d00; --green:#dcfce7; --green-ink:#166534; --soft-gray:#e5e7eb; --soft-gray-ink:#475569; --blue:#2f6fd6; --card-bg:#ffffff; }
+  *{box-sizing:border-box} html,body{height:100%}
+  body{margin:0;font-family:system-ui,Segoe UI,Inter,'Noto Sans Thai',Arial,sans-serif;color:var(--ink);background:var(--bg)}
+  .app{display:grid;grid-template-columns:340px 1fr;height:100dvh;min-height:100dvh}
+  aside{background:var(--panel);border-right:1px solid var(--line);padding:16px;overflow:auto;color:var(--panel-ink);min-height:0}
+  main{position:relative;overflow:hidden;min-height:0}
+  header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line);background:#0a0f16;color:var(--ink)}
+  h1{font-size:24px;margin:0;font-weight:900;color:var(--blue)} .badge{font-size:12px;opacity:.8}
+  .control{display:grid;gap:10px;margin-top:10px} .control label{font-size:12px;color:#475569}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .row{display:flex;flex-wrap:wrap;gap:8px;align-items:end;margin-bottom:12px}
+  select{width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:12px;background:#fff;color:#111827;outline:none}
+  .btn{padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--accent);color:var(--accent-ink);font-weight:700;cursor:pointer}
+  .btn:active{transform:translateY(1px)} .btn.secondary{background:transparent;color:var(--panel-ink)}
+  #resetBtn{background:var(--soft-gray);color:var(--soft-gray-ink)}
+  #formulaBtn{background:var(--orange);color:var(--orange-ink)}
+  #quizBtn{background:var(--green);color:var(--green-ink)}
+  .card{border:1px solid var(--line);border-radius:16px;padding:14px;background:var(--card-bg);box-shadow:0 4px 12px rgba(0,0,0,.12)}
+  .card h3{margin:0 0 6px 0;font-size:13px;color:#0f172a}
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:4px 8px;font-size:12px;color:#1f2937} .kv div:nth-child(odd){color:#64748b}
+  .stage{position:absolute;inset:0;display:grid;place-items:center}
+  canvas{background:#0b1220;width:100%;height:100%}
+  .hud{position:absolute;top:12px;left:12px;display:grid;gap:8px;max-width:min(360px,calc(100% - 24px))}
+  .hud .pill{background:rgba(15,23,42,.45);color:#fff;border:1px solid rgba(255,255,255,.22);padding:9px 11px;border-radius:12px;backdrop-filter:blur(6px);font-size:10px;font-weight:400;letter-spacing:0}
+  .hud .pill h4{margin:0 0 5px 0;font-size:10px;font-weight:500;color:#fff}
+  .legend{position:absolute;bottom:10px;left:12px;font-size:12px;color:var(--muted)}
+  .footer{position:absolute;bottom:10px;right:12px;font-size:12px;color:var(--muted)} .footer a{color:#60a5fa;text-decoration:underline}
+  .frame{position:absolute;inset:8px;border:2px solid var(--line);border-radius:16px;pointer-events:none}
+  .formula{margin-top:12px;font-size:12px;line-height:1.6;background:linear-gradient(135deg,#fff3e8 0%, #ffedd5 100%);border:1px solid #fdba74;border-radius:14px;padding:12px;color:#0f172a}
+  .formula code{background:#fff7ed;padding:3px 8px;border-radius:10px;border:1px solid #fdba74;display:inline-block}
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,0.72);display:none;align-items:center;justify-content:center;z-index:300;padding:18px}
+  .overlay .content{position:relative;background:#fff;color:#000;padding:24px;border-radius:20px;width:min(1100px,96vw);height:min(92dvh,920px);overflow:auto;box-shadow:0 20px 50px rgba(0,0,0,.35)}
+  .overlay h3{margin-top:0}
+  .overlay .close-floating{position:fixed;top:calc(14px + env(safe-area-inset-top));right:calc(14px + env(safe-area-inset-right));z-index:340;border:none;border-radius:999px;padding:10px 14px;background:rgba(15,23,42,.92);color:#fff;font-weight:800;cursor:pointer;box-shadow:0 8px 20px rgba(0,0,0,.28)}
+  .quiz-question{margin-bottom:12px;font-weight:bold}
+  .quiz-options button{display:block;width:100%;margin:4px 0;padding:10px;border-radius:10px;border:1px solid #ccc;background:#f9fafb;cursor:pointer;text-align:left}
+  .quiz-result{margin-top:10px;font-weight:bold}
+  @media (max-width:900px){
+    body{overflow:hidden}
+    .app{grid-template-columns:1fr;grid-template-rows:minmax(300px,42dvh) 1fr;height:100dvh;min-height:100dvh}
+    aside{order:2;border-right:none;border-top:1px solid var(--line);padding:14px 14px calc(130px + env(safe-area-inset-bottom));overflow:auto;-webkit-overflow-scrolling:touch}
+    main{order:1;position:relative;min-height:0}
+    .stage{position:absolute;inset:0}
+    header{padding-top:calc(10px + env(safe-area-inset-top));padding-bottom:10px}
+    h1{font-size:20px;line-height:1.2}
+    .badge{display:none}
+    .row{position:sticky;top:0;z-index:20;background:var(--panel);padding-bottom:8px}
+    .hud,.legend,.footer{display:none}
+    .hud{top:10px;left:10px;right:auto;max-width:min(112px,28vw);gap:4px}
+    .hud .pill{font-size:4px;padding:4px 5px;background:rgba(15,23,42,.36);border-radius:10px}
+    .hud .pill h4{font-size:4px;margin-bottom:2px;font-weight:500}
+    .legend{left:10px;right:10px;bottom:42px;font-size:10px}
+    .footer{left:10px;right:10px;bottom:12px;font-size:10px;text-align:left}
+    .overlay{padding:0}
+    .overlay .content{width:100vw;height:100dvh;max-height:none;border-radius:0;padding:calc(70px + env(safe-area-inset-top)) 16px calc(130px + env(safe-area-inset-bottom));overflow:auto}
+    .overlay .close-floating{top:calc(12px + env(safe-area-inset-top));right:12px}
+  }
+  body.light{--bg:#ffffff; --ink:#111827;} body.light canvas{background:#ffffff;} body.light .hud .pill{background:rgba(255,255,255,0.7);color:#000;border:1px solid rgba(0,0,0,.2);} body.light .hud .pill h4{color:#000} body.light .legend, body.light .footer{color:#111827}
+</style>
+</head>
+<body>
+  <div class="app">
+    <aside>
+      <h2 style="margin:0 0 4px 0; font-size:18px">แผงควบคุม</h2>
+      <div class="badge">Bohr Hydrogen Atom • หน่วย eV</div>
+      <div class="row">
+        <button class="btn" id="playToggleBtn">▶︎ เล่น</button>
+        <button class="btn secondary" id="resetBtn">รีเซ็ต</button>
+        <button class="btn secondary" id="toggleEnergyBtn">ซ่อนแผนภาพ</button>
+        <button class="btn secondary" id="toggleBgBtn">สลับพื้นหลัง</button>
+        <button class="btn secondary" id="formulaBtn">สรุปสูตร</button>
+        <button class="btn secondary" id="quizBtn">แบบฝึกหัด</button>
+      </div>
+      <div class="control card" id="controls">
+        <div class="grid2">
+          <div>
+            <label for="nSelect">เลือกชั้นเริ่มต้น nᵢ</label>
+            <select id="nSelect">
+              <option value="1">n = 1 (พื้น)</option>
+              <option value="2">n = 2</option>
+              <option value="3">n = 3</option>
+              <option value="4">n = 4</option>
+              <option value="5">n = 5</option>
+              <option value="inf">n = ∞</option>
+            </select>
+          </div>
+          <div>
+            <label for="nfSelect">กำหนดชั้นปลายทาง n𝒇</label>
+            <select id="nfSelect">
+              <option value="1">n𝒇 = 1</option>
+              <option value="2">n𝒇 = 2</option>
+              <option value="3">n𝒇 = 3</option>
+              <option value="4">n𝒇 = 4</option>
+              <option value="5">n𝒇 = 5</option>
+              <option value="inf">n𝒇 = ∞</option>
+            </select>
+          </div>
+        </div>
+        <div class="card" id="constantsCard">
+          <h3>ค่าคงที่ & สเกล (H)</h3>
+          <div class="kv">
+            <div>a<sub>0</sub> (รัศมีโบร์):</div><div>5.29177×10⁻¹¹ m</div>
+            <div>v<sub>1</sub> ≈</div><div>2.187×10⁶ m/s</div>
+            <div>E<sub>1</sub>:</div><div>−13.6 eV</div>
+            <div>ความสัมพันธ์:</div><div>rₙ=a₀ n², vₙ=v₁/n</div>
+          </div>
+        </div>
+        <div class="card formula" style="margin-top:12px">
+          <h3>สูตรสำคัญ (สำหรับ n ใดๆ)</h3>
+          <p><code>rₙ = a₀ n²</code></p>
+          <p><code>vₙ = v₁ / n</code></p>
+          <p><code>E<sub>k</sub>(n) = +13.6 / n²  eV</code></p>
+          <p><code>E<sub>p</sub>(n) = −27.2 / n²  eV</code></p>
+          <p><code>E<sub>n</sub> = −13.6 / n²  eV</code> (และ → 0 เมื่อ n→∞)</p>
+        </div>
+      </div>
+    </aside>
+    <main>
+      <header>
+        <h1 id="titleText">Mini Lab : แบบจำลองอะตอมของโบร์</h1>
+        <div class="badge">Bohr model</div>
+      </header>
+      <div class="stage" id="stage">
+        <canvas id="cv"></canvas>
+        <div class="frame" aria-hidden="true"></div>
+        <div class="hud">
+          <div class="pill" id="label-n"><h4>สถานะวงโคจร</h4><div>n = 1</div></div>
+          <div class="pill" id="label-rv"><h4>r และ v</h4><div>rₙ = …, vₙ = …</div></div>
+          <div class="pill" id="label-energy"><h4>พลังงาน (eV)</h4><div>Ek = …, Ep = …, En = …</div></div>
+        </div>
+        <div class="legend">แสดงวงโคจร n = 1–4 เสมอ (กด "เล่น" เพื่อเปลี่ยน nᵢ → n𝒇)</div>
+        <div class="footer">ศึกษาเพิ่มเติมได้ที่เพจ <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">คลายปมฟิสิกส์</a></div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Overlay for formula summary -->
+  <!-- Overlay for formula summary -->
+  <div class="overlay" id="formulaOverlay">
+    <div class="content">
+      <button class="close-floating" onclick="closeOverlay('formulaOverlay')">❌ ปิด</button>
+      <h3>สรุปสูตรและความสัมพันธ์ (Bohr – H)</h3>
+      <p><strong>หลักการ:</strong> ระดับพลังงานไม่ต่อเนื่อง เปลี่ยนชั้นต้อง <b>ดูด</b> หรือ <b>คาย</b> พลังงานโฟตอน โดย <code>|ΔE| = hf = hc/λ</code></p>
+      <ul>
+        <li>รัศมี: <code>rₙ = a₀ n²</code></li>
+        <li>อัตราเร็ว: <code>vₙ = v₁ / n</code></li>
+        <li>พลังงานจลน์: <code>E<sub>k</sub>(n) = +13.6 / n²</code> eV</li>
+        <li>พลังงานศักย์: <code>E<sub>p</sub>(n) = −27.2 / n²</code> eV</li>
+        <li>พลังงานรวม: <code>E<sub>n</sub> = −13.6 / n²</code> eV</li>
+      </ul>
+      <p><strong>ความสัมพันธ์:</strong> <code>E<sub>p</sub> = −2 E<sub>k</sub></code>, <code>E<sub>n</sub> = E<sub>k</sub> + E<sub>p</sub> = −E<sub>k</sub> = E<sub>p</sub>/2</code></p>
+      <p><strong>ตัวอย่างที่ n=3:</strong> <code>E<sub>k</sub> = +1.51</code> eV, <code>E<sub>p</sub> = −3.02</code> eV, <code>E<sub>n</sub> = −1.51</code> eV</p>
+      
+    </div>
+  </div>
+
+  <!-- Overlay for quiz -->
+  <div class="overlay" id="quizOverlay">
+    <div class="content">
+      <button class="close-floating" onclick="closeOverlay('quizOverlay')">❌ ปิด</button>
+      <h3>แบบฝึกหัด</h3>
+      <div id="quizContainer"></div>
+      
+    </div>
+  </div>
+
+<script>
+(function(){
+  // ===== Grab elements =====
+  const stage=document.getElementById('stage');
+  const cv=document.getElementById('cv');
+  const g=cv.getContext('2d');
+  const nSel=document.getElementById('nSelect');
+  const nfSel=document.getElementById('nfSelect');
+  const toggleEnergyBtn=document.getElementById('toggleEnergyBtn');
+  const toggleBgBtn=document.getElementById('toggleBgBtn');
+  const playBtn=document.getElementById('playToggleBtn');
+  const resetBtn=document.getElementById('resetBtn');
+  const formulaBtn=document.getElementById('formulaBtn');
+  const quizBtn=document.getElementById('quizBtn');
+  const formulaOverlay=document.getElementById('formulaOverlay');
+  const quizOverlay=document.getElementById('quizOverlay');
+  const quizContainer=document.getElementById('quizContainer');
+
+  window.closeOverlay=function(id){ const el=document.getElementById(id); if(el) el.style.display='none'; };
+  if(formulaBtn && formulaOverlay){ formulaBtn.addEventListener('click',()=>{ formulaOverlay.style.display='flex'; }); }
+  if(quizBtn && quizOverlay){ quizBtn.addEventListener('click',()=>{ startQuiz(); quizOverlay.style.display='flex'; }); }
+
+  // ===== Theme toggle =====
+  toggleBgBtn.addEventListener('click',()=>{ document.body.classList.toggle('light'); });
+
+  // ===== Physics (Bohr) =====
+  const a0=5.29177e-11; const v1=2.187e6; // SI
+  const En=n=>-13.6/(n*n); const r_n=n=>a0*n*n; const v_n=n=>v1/n; const Ek=n=>+13.6/(n*n); const Ep=n=>-27.2/(n*n);
+  const HC_EV_NM=1240; // eV·nm
+
+  // ===== State =====
+  let w=0,h=0,cx=0,cy=0; // canvas size
+  const isMobile=()=>window.innerWidth<=900;
+  let t=0;               // time
+  let running=false;     // unified play/pause (เริ่มหยุดไว้ก่อน)
+  let currentN=1;        // ni
+  let plannedN=2;        // nf
+  let showEnergyPanel=true;
+  const baseOrbitPx=50;  // visual scale for n=1
+  let scale=1;           // auto scale orbits if too big
+  const mobileOrbitVisualScale=1; // mobile uses desktop-like orbit proportions, scaled down to fit
+
+  // photon packet & persistent energy arrows
+  let wave=null;         // {start,dur,color,lambda,sx,sy,dx,dy,tx,ty,mode,toN,_cachedU}
+  const arrows=[];       // keep all transitions shown on energy diagram
+  let lockElectron=null; // freeze electron during absorb
+  let pauseStart=null;   // pause timestamp
+
+  // ===== Utils =====
+  const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+  const fmtSci=x=>{const a=Math.abs(x);if(a===0)return'0';return(a>=1e4||a<1e-2)?x.toExponential(2).replace('e','×10^'):x.toFixed(3)};
+  function wavelengthToRGB(lambda){lambda=Math.max(380,Math.min(780,lambda));let r=0,g=0,b=0; if(lambda<440){r=-(lambda-440)/(440-380);g=0;b=1;} else if(lambda<490){r=0;g=(lambda-440)/(490-440);b=1;} else if(lambda<510){r=0;g=1;b=-(lambda-510)/(510-490);} else if(lambda<580){r=(lambda-510)/(580-510);g=1;b=0;} else if(lambda<645){r=1;g=-(lambda-645)/(645-580);b=0;} else {r=1;g=0;b=0.2;} let s=1; if(lambda<420)s=0.6+0.4*(lambda-380)/40; else if(lambda>645)s=0.6+0.4*(780-lambda)/135; return `rgb(${Math.round(255*r*s)},${Math.round(255*g*s)},${Math.round(255*b*s)})`;}
+
+  // ===== Layout & scaling =====
+  function resize(){
+    const rect=stage.getBoundingClientRect();
+    const dpr=window.devicePixelRatio||1;
+    cv.style.width=rect.width+'px';
+    cv.style.height=rect.height+'px';
+    cv.width=Math.max(1,Math.floor(rect.width*dpr));
+    cv.height=Math.max(1,Math.floor(rect.height*dpr));
+    g.setTransform(1,0,0,1,0,0); g.scale(dpr,dpr);
+    w=rect.width; h=rect.height; cx=isMobile()?w*0.42:w*0.42; cy=isMobile()?h*0.52:h*0.52;
+    updateScale();
+  }
+  function updateScale(){
+    const maxN=Math.max(4,isFinite(currentN)?currentN:5,isFinite(plannedN)?plannedN:5);
+    const mobileOrbitFactor=1;
+    const visualScale=isMobile()?mobileOrbitVisualScale:1;
+    const maxOrbitPx=baseOrbitPx*(maxN*maxN)*visualScale;
+    const margin=isMobile()?24:36;
+    const maxAllowed=(Math.min(cx,cy)-margin)*mobileOrbitFactor;
+    scale=(maxOrbitPx>maxAllowed)?(maxAllowed/maxOrbitPx):1;
+  }
+
+  // ===== Drawing helpers =====
+  function circle(x,y,r,color,lw=1,dash=[]){g.save();g.setLineDash(dash);g.strokeStyle=color;g.lineWidth=lw;g.beginPath();g.arc(x,y,r,0,Math.PI*2);g.stroke();g.restore();}
+  function fillCircle(x,y,r,color){g.fillStyle=color;g.beginPath();g.arc(x,y,r,0,Math.PI*2);g.fill();}
+  function annotateOrbit(n,R){ if(isMobile()) return; const ang=-Math.PI/6; const x=cx+R*Math.cos(ang); const y=cy+R*Math.sin(ang); g.save(); g.fillStyle='#e2e8f0'; g.font='12px system-ui,Segoe UI,Inter,Arial'; g.textAlign='left'; g.textBaseline='middle'; g.fillText(`n=${n}`,x+6,y); if(n===2)g.fillText('r₂ = 4 r₁',x+6,y+16); if(n===3)g.fillText('r₃ = 9 r₁',x+6,y+16); if(n===4)g.fillText('r₄ = 16 r₁',x+6,y+16); g.restore();}
+  function drawArrowHead(x,y,ang,color){g.save();g.translate(x,y);g.rotate(ang);g.fillStyle=color;g.beginPath();g.moveTo(0,0);g.lineTo(-6,-10);g.lineTo(6,-10);g.closePath();g.fill();g.restore();}
+
+  // ===== Energy panel =====
+  const energyPanel={x:0,y:0,w:0,h:0,levels:[]};
+  function layoutEnergyPanel(){if(isMobile()){energyPanel.w=clamp(Math.floor(w*0.15),84,104);energyPanel.h=Math.min(h-28,Math.round(380*0.62));energyPanel.x=w-energyPanel.w-8;energyPanel.y=10;}else{energyPanel.w=clamp(Math.floor(w*0.34),200,260);energyPanel.h=Math.min(h-40,Math.round(380*1.5));energyPanel.x=w-energyPanel.w-14;energyPanel.y=18;}}
+  function mapEnergyToY(E){const top=energyPanel.y+14;const bottom=energyPanel.y+energyPanel.h-42;return bottom-((E-(-13.6))/(0-(-13.6)))*(bottom-top);} 
+  function drawEnergyDiagram(){ if(!showEnergyPanel) return; layoutEnergyPanel(); const {x,y,w:pw,h:ph}=energyPanel; 
+    // panel bg
+    g.save(); g.fillStyle='rgba(15,23,42,.35)'; g.strokeStyle='rgba(255,255,255,.2)'; g.lineWidth=1.2; roundRect(g,x,y,pw,ph,12,true,true); g.restore();
+
+    energyPanel.levels=[];
+    for(let n=1;n<=6;n++){
+      const E=En(n); const baseY=mapEnergyToY(E);
+      const labelShift=(n===2||n===3||n===4)?30:(n===5?20:0);
+      let lineShift=labelShift; if(n===4) lineShift=25; if(n===5) lineShift=10;
+      const labelY=baseY+labelShift; const lineY=baseY+lineShift;
+      const label=`n=${n}  (${E.toFixed(2)} eV)`; g.fillStyle='#e5e7eb'; g.font=(isMobile()?'6px':'12px')+' system-ui,Segoe UI,Inter,Arial'; g.textAlign='left'; g.textBaseline='bottom'; const textX=x+18; g.fillText(label,textX,labelY-2);
+      const textW=g.measureText(label).width; const leftStart=Math.min(x+pw-60, textX+textW+6);
+      if(isFinite(currentN)&&n===currentN){ g.save(); g.shadowColor='rgba(96,165,250,.9)'; g.shadowBlur=12; g.strokeStyle='rgba(147,197,253,1)'; g.lineWidth=2.4; g.beginPath(); g.moveTo(leftStart,lineY); g.lineTo(x+pw-16,lineY); g.stroke(); g.restore(); }
+      else { g.strokeStyle='rgba(96,165,250,.7)'; g.lineWidth=1.5; g.beginPath(); g.moveTo(leftStart,lineY); g.lineTo(x+pw-16,lineY); g.stroke(); }
+      energyPanel.levels.push({n, x:leftStart-2, y:lineY-10, w:(x+pw-16)-(leftStart-2), h:20});
+    }
+    // n = ∞
+    const yInf=mapEnergyToY(0); const infLabel='n = ∞ (0 eV)'; g.fillStyle='#cbd5e1'; g.font=(isMobile()?'6px':'12px')+' system-ui,Segoe UI,Inter,Arial'; g.textAlign='left'; g.textBaseline='bottom'; const infTextX=x+18; g.fillText(infLabel,infTextX,yInf-2); const infLeft=Math.min(x+pw-60,infTextX+g.measureText(infLabel).width+6); g.setLineDash([4,4]); g.strokeStyle='rgba(148,163,184,.9)'; g.lineWidth=1.2; g.beginPath(); g.moveTo(infLeft,yInf); g.lineTo(x+pw-16,yInf); g.stroke(); g.setLineDash([]);
+
+    // persistent transition arrows
+    const getLineY=n=>{ if(!isFinite(n)) return yInf; const base=mapEnergyToY(En(n)); const lbl=(n===2||n===3||n===4)?30:(n===5?20:0); let ln=lbl; if(n===4) ln=25; if(n===5) ln=10; return base+ln;};
+    arrows.forEach((ar,i)=>{
+      const y0=getLineY(ar.fromN), y1=getLineY(ar.toN); const xArrow=x+pw-26 - i*10;
+      g.save(); g.strokeStyle=ar.color; g.lineWidth= i===arrows.length-1 ? 2.6 : 1.8; g.beginPath(); g.moveTo(xArrow,y0); g.lineTo(xArrow,y1); g.stroke(); const ang=(y1>y0)?Math.PI/2:-Math.PI/2; drawArrowHead(xArrow,y1,ang,ar.color); g.fillStyle=ar.color; g.font=(isMobile()?'6px':'12px')+' system-ui,Segoe UI,Inter,Arial'; g.textAlign='right'; const midY=(y0+y1)/2; const sign=ar.deltaE>0?'ดูดพลังงาน':'คายพลังงาน'; const dELabel=`|ΔE|=${Math.abs(ar.deltaE).toFixed(2)} eV`; if(ar.lambda>0) g.fillText(`${sign} • ${Math.round(ar.lambda)} nm • ${dELabel}`, xArrow-8, midY+4); else g.fillText(`${sign} • ${dELabel}`, xArrow-8, midY+4); g.restore();
+    });
+
+    if(!isMobile()){ g.fillStyle='#93c5fd'; g.font='12px system-ui,Segoe UI,Inter,Arial'; g.textAlign='center'; g.fillText('แผนภาพพลังงาน (คลิกเลือกชั้น)', x+pw/2, y+ph-18); }
+  }
+  function roundRect(ctx,x,y,w,h,r,fill,stroke){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);if(fill)ctx.fill();if(stroke)ctx.stroke();}
+  function hitEnergyLevels(mx,my){for(const L of energyPanel.levels){if(mx>=L.x&&mx<=L.x+L.w&&my>=L.y&&my<=L.y+L.h)return L.n;}return null;}
+
+  // ===== HUD =====
+  function updateHUD(){const n=isFinite(currentN)?currentN:1; const r=r_n(n), v=v_n(n); document.querySelector('#label-n div').textContent=isFinite(currentN)?`n = ${n}`:'n = ∞'; document.querySelector('#label-rv div').textContent=isFinite(currentN)?`rₙ=${fmtSci(r)} m , vₙ=${fmtSci(v)} m/s`:'r → ∞ , v → 0'; document.querySelector('#label-energy div').textContent=isFinite(currentN)?`Ek=${Ek(n).toFixed(2)} eV , Ep=${Ep(n).toFixed(2)} eV , En=${En(n).toFixed(2)} eV`:'Ek=0, Ep=0, En=0';}
+
+  // ===== Render =====
+  function render(dt){ if(running) t+=dt; g.clearRect(0,0,w,h);
+    const visual=isMobile()?mobileOrbitVisualScale:1;
+    const particleVisual=isMobile()?0.5:1;
+    // orbits 1..4 always
+    for(let n=1;n<=4;n++){
+      let R=baseOrbitPx*(n*n)*scale*visual;
+      if(isMobile() && n===1) R += 5;
+      circle(cx,cy,R,'rgba(96,165,250,.45)',1.6,[6,6]);
+      annotateOrbit(n,R);
+    }
+    if(isFinite(currentN)&&currentN>4){const R=baseOrbitPx*(currentN*currentN)*scale*visual; circle(cx,cy,R,'rgba(96,165,250,.7)',1.4,[4,4]); annotateOrbit(currentN,R);} 
+    // proton
+    g.save(); g.shadowColor='rgba(96,165,250,.9)'; g.shadowBlur=18*particleVisual; fillCircle(cx,cy,14*particleVisual,'#1d4ed8'); g.restore(); g.save(); g.fillStyle='#bfdbfe'; g.font=`bold ${16*particleVisual}px system-ui,Segoe UI,Inter,Arial`; g.textAlign='center'; g.textBaseline='middle'; g.fillText('+',cx,cy+.5); g.restore();
+
+    // electron position
+    let ex=cx,ey=cy;
+    if(lockElectron){ ex=lockElectron.x; ey=lockElectron.y; }
+    else if(isFinite(currentN)){
+      const R=baseOrbitPx*(currentN*currentN)*scale*visual; const omega=0.9/Math.max(1,currentN); const ang=t*omega; ex=cx+R*Math.cos(ang); ey=cy+R*Math.sin(ang);
+    } else {
+      const R2=baseOrbitPx*4*scale*visual; const pathLen=Math.min(w*0.4,420); const x0=cx+R2, y0=cy; ex=x0+((t*120)%pathLen); ey=y0; g.save(); const grad=g.createLinearGradient(x0,y0,x0+pathLen,y0); grad.addColorStop(0,'rgba(255,152,0,0.0)'); grad.addColorStop(1,'rgba(255,152,0,0.6)'); g.strokeStyle=grad; g.lineWidth=3; g.beginPath(); g.moveTo(x0,y0); g.lineTo(x0+pathLen,y0); g.stroke(); g.restore();
+    }
+    // draw electron
+    g.save(); g.shadowColor='rgba(255,152,0,.95)'; g.shadowBlur=18*particleVisual; fillCircle(ex,ey,9*particleVisual,'#ea580c'); g.restore(); g.save(); g.fillStyle='#ffedd5'; g.font=`bold ${16*particleVisual}px system-ui,Segoe UI,Inter,Arial`; g.textAlign='center'; g.textBaseline='middle'; g.fillText('e⁻',ex,ey+.5); g.restore(); g.save(); g.fillStyle='#ffedd5'; g.font=`bold ${14*visual}px system-ui,Segoe UI,Inter,Arial`; g.textAlign='center'; g.textBaseline='middle'; g.fillText('e',ex,ey+.5); g.restore();
+
+    // photon wave packet
+    if(wave){
+      let u;
+      if(!running && pauseStart){ u = wave._cachedU ?? 0; }
+      else { const elapsed=(performance.now()-wave.start)/1000; u=Math.min(1, elapsed/wave.dur); wave._cachedU=u; }
+      const cxp=wave.sx+wave.dx*u, cyp=wave.sy+wave.dy*u;
+      const A=6, L=28, seg=80; g.save(); g.strokeStyle=wave.color; g.lineWidth=2.2; g.beginPath(); for(let s=-seg/2; s<=seg/2; s+=2){ const px=cxp+wave.tx*s, py=cyp+wave.ty*s; const nx=-wave.ty, ny=wave.tx; const off=Math.sin((s+seg/2)/L*Math.PI*2)*A; const qx=px+nx*off, qy=py+ny*off; if(s===-seg/2) g.moveTo(qx,qy); else g.lineTo(qx,qy);} g.stroke(); g.fillStyle=wave.color; g.font='12px system-ui,Segoe UI,Inter,Arial'; g.textAlign='center'; if(wave.lambda>0) g.fillText(`${Math.round(wave.lambda)} nm`, cxp, cyp-14); g.restore();
+      if(u>=1-1e-6 && running){ if(wave.mode==='absorb'){ currentN=wave.toN; lockElectron=null; updateScale(); } wave=null; }
+    }
+
+    drawEnergyDiagram(); updateHUD();
+  }
+
+  // ===== Loop =====
+  let last=performance.now(); function loop(now){ const dt=Math.min(0.05,(now-last)/1000); last=now; render(dt); requestAnimationFrame(loop);} 
+
+  // ===== Events =====
+  window.addEventListener('resize', resize);
+  nSel.addEventListener('change',()=>{ // set ni → electron will orbit at this level
+    currentN=(nSel.value==='inf')?Infinity:parseInt(nSel.value,10); updateScale();
+  });
+  nfSel.addEventListener('change',()=>{ plannedN=(nfSel.value==='inf')?Infinity:parseInt(nfSel.value,10); updateScale(); });
+  toggleEnergyBtn.addEventListener('click',()=>{ showEnergyPanel=!showEnergyPanel; toggleEnergyBtn.textContent=showEnergyPanel?'ซ่อนแผนภาพ':'แสดงแผนภาพ'; });
+
+  function setRunning(state){
+    if(state===running) return;
+    if(state){ // resume
+      if(pauseStart){ const paused=performance.now()-pauseStart; if(wave) wave.start += paused; pauseStart=null; }
+      running=true; playBtn.textContent='⏸︎ หยุด';
+    } else { // pause
+      if(running){ pauseStart=performance.now(); if(wave){ const elapsed=(pauseStart - wave.start)/1000; wave._cachedU=Math.min(1, elapsed / wave.dur); } }
+      running=false; playBtn.textContent='▶︎ เล่น';
+    }
+  }
+
+  playBtn.addEventListener('click',()=>{
+    if(!running){ // จากหยุด → เล่น: เดินเวลา + ยิงคลื่นเข้าชน e- ทันทีถ้ายังไม่มีคลื่น
+      setRunning(true);
+      if(!wave && isFinite(currentN) && plannedN!==currentN){ triggerTransition(currentN, plannedN); }
+      return;
+    }
+    // กำลังเล่น → หยุด
+    setRunning(false);
+  });
+
+  resetBtn.addEventListener('click',()=>{ currentN=1; plannedN=2; nSel.value='1'; nfSel.value='2'; updateScale(); wave=null; arrows.length=0; lockElectron=null; t=0; setRunning(false); });
+  cv.addEventListener('mousemove',(e)=>{ if(!showEnergyPanel) return; const r=cv.getBoundingClientRect(); const mx=e.clientX-r.left, my=e.clientY-r.top; const hit=hitEnergyLevels(mx,my); cv.style.cursor= hit? 'pointer':'default'; });
+  cv.addEventListener('click',(e)=>{ if(!showEnergyPanel) return; const r=cv.getBoundingClientRect(); const mx=e.clientX-r.left, my=e.clientY-r.top; const hit=hitEnergyLevels(mx,my); if(hit){ plannedN = hit; nfSel.value= String(hit); updateScale(); }});
+
+  // ===== Transition trigger =====
+  function triggerTransition(fromN,toN){ if(fromN===toN) return; const Efrom=isFinite(fromN)?En(fromN):0; const Eto=isFinite(toN)?En(toN):0; const dE=Eto-Efrom; const lambda=Math.abs(dE)>1e-9?HC_EV_NM/Math.abs(dE):0; const color=lambda?wavelengthToRGB(lambda):'#fff';
+    // electron position now
+    const visual=isMobile()?mobileOrbitVisualScale:1;
+    let ex,ey; if(isFinite(fromN)){ const R=baseOrbitPx*(fromN*fromN)*scale*visual; const omega=0.9/Math.max(1,fromN); const ang=t*omega; ex=cx+R*Math.cos(ang); ey=cy+R*Math.sin(ang);} else { ex=cx+baseOrbitPx*4*scale*visual; ey=cy; }
+    // persist arrow for diagram
+    arrows.push({ fromN, toN, color, lambda, deltaE:dE });
+    if(dE>0){ // absorb: wave travels *into* electron, then jump up
+      lockElectron={x:ex,y:ey}; const sx=16, sy=ey; const dx=ex-sx, dy=ey-sy; const speed=220; const dist=Math.hypot(dx,dy); const dur=Math.max(1.2, dist/speed); const len=Math.hypot(dx,dy)||1; const tx=dx/len, ty=dy/len; wave={ start:performance.now(), dur, color, lambda, sx,sy, dx,dy, tx,ty, mode:'absorb', toN};
+    } else { // emit: jump down then wave travels out
+      currentN=toN; updateScale(); const sx=ex, sy=ey; const dx=(w-20)-sx, dy=0; const speed=260; const dist=Math.hypot(dx,dy); const dur=Math.max(1.2, dist/speed); const len=Math.hypot(dx,dy)||1; const tx=dx/len, ty=dy/len; wave={ start:performance.now(), dur, color, lambda, sx,sy, dx,dy, tx,ty, mode:'emit' };
+    }
+  }
+
+  // ===== Init =====
+  function init(){
+    function ensureLayout(){ const rect=stage.getBoundingClientRect(); if(rect.width<80||rect.height<80){ requestAnimationFrame(ensureLayout); return; } resize(); nSel.value='1'; nfSel.value='2'; requestAnimationFrame(loop); }
+    ensureLayout();
+  }
+  init();
+
+  // ===== Quiz logic =====
+  const quizData=[
+    {q:"รัศมีวงโคจรที่ 3 มีค่าเป็นกี่เท่าของรัศมีวงโคจรที่ 2?", options:["1.5 เท่า","2 เท่า","2.25 เท่า","3 เท่า"], answer:2, explain:"r ∝ n² ดังนั้น r₃/r₂ = 9/4 = 2.25"},
+    {q:"อัตราเร็วในวงโคจรที่ 3 เป็นกี่เท่าของวงโคจรที่ 1?", options:["1/3","1/2","1/√3","1/9"], answer:0, explain:"vₙ = v₁/n ดังนั้น v₃/v₁ = 1/3"},
+    {q:"ที่สถานะกระตุ้นที่ 2 (n=3) อิเล็กตรอนมีพลังงานศักย์เท่าไร?", options:["−27.2/9 eV","−13.6/3 eV","−27.2/3 eV","−13.6/9 eV"], answer:0, explain:"Ep = −27.2/n² = −27.2/9 eV"},
+    {q:"ถ้าอิเล็กตรอนเปลี่ยนจาก n=1 ไป n=3 ต้องดูดหรือคายพลังงานเท่าใด?", options:["ดูด 12.1 eV","คาย 12.1 eV","ดูด 13.6 eV","คาย 13.6 eV"], answer:0, explain:"ΔE = E₃ − E₁ = (−1.51)−(−13.6)=12.1 eV ต้องดูด"},
+    {q:"ถ้าอิเล็กตรอนเปลี่ยนจาก n=4 ไป n=2 ต้องดูดหรือคายพลังงานเท่าใด?", options:["ดูด 2.55 eV","คาย 2.55 eV","ดูด 3.4 eV","คาย 3.4 eV"], answer:1, explain:"ΔE = E₂ − E₄ = −3.4−(−0.85)=−2.55 eV → คาย 2.55 eV"},
+    {q:"ถ้าต้องการให้อิเล็กตรอนที่ n=2 หลุดจากอะตอม ต้องใช้พลังงานอย่างน้อยเท่าใด?", options:["3.4 eV","10.2 eV","13.6 eV","27.2 eV"], answer:0, explain:"E₂ = −3.4 eV ต้องใช้พลังงาน 3.4 eV เพื่อให้ En=0"},
+    {q:"สูตรของพลังงานรวม En ที่ระดับ n คืออะไร?", options:["−13.6/n² eV","−27.2/n eV","13.6/n² eV","−13.6n eV"], answer:0, explain:"En = −13.6/n² eV"},
+    {q:"พลังงานโฟตอนที่ปล่อยออกมาเมื่ออิเล็กตรอนกระโดดจาก n=3 → n=2 คือเท่าไร?", options:["1.89 eV","3.4 eV","10.2 eV","12.1 eV"], answer:0, explain:"ΔE = E₂ − E₃ = −3.4 − (−1.51) = −1.89 eV → ปล่อยโฟตอนพลังงาน 1.89 eV"}
+  ];
+  function startQuiz(){
+    quizContainer.innerHTML='';
+    let score=0; const total=quizData.length;
+    const scoreBox=document.createElement('div');
+    scoreBox.style.margin='8px 0 12px';
+    scoreBox.style.fontWeight='bold';
+    scoreBox.textContent=`คะแนน: 0/${total}`;
+    quizContainer.appendChild(scoreBox);
+
+    quizData.forEach((d,idx)=>{
+      const wrap=document.createElement('div');
+      wrap.className='qitem';
+      wrap.style.border='1px solid #e5e7eb';
+      wrap.style.borderRadius='12px';
+      wrap.style.padding='12px';
+      wrap.style.margin='12px 0';
+
+      const q=document.createElement('div');
+      q.className='quiz-question';
+      q.textContent=`ข้อ ${idx+1}. ${d.q}`;
+      wrap.appendChild(q);
+
+      const opts=document.createElement('div');
+      opts.className='quiz-options';
+      d.options.forEach((op,i)=>{
+        const btn=document.createElement('button');
+        btn.textContent=op; btn.style.transition='transform .05s';
+        btn.addEventListener('click',()=>{
+          if(wrap.dataset.answered==='1') return; // already answered
+          wrap.dataset.answered='1';
+          const correct=(i===d.answer);
+          if(correct){ score++; btn.style.borderColor='#16a34a'; btn.style.background='#ecfdf5'; }
+          else { btn.style.borderColor='#dc2626'; btn.style.background='#fef2f2'; }
+          [...opts.querySelectorAll('button')].forEach(b=>{ b.disabled=true; b.style.opacity='0.9'; });
+          const exp=document.createElement('div');
+          exp.className='quiz-result';
+          exp.style.color= correct ? 'green' : 'red';
+          exp.innerHTML = correct ? `ถูกต้อง ✔ ${d.explain}` : `ผิด ✘ คำตอบที่ถูกคือ <b>${d.options[d.answer]}</b><br>${d.explain}`;
+          wrap.appendChild(exp);
+          scoreBox.textContent=`คะแนน: ${score}/${total}`;
+        });
+        opts.appendChild(btn);
+      });
+      wrap.appendChild(opts);
+      quizContainer.appendChild(wrap);
+    });
+
+    const restart=document.createElement('button');
+    restart.className='btn'; restart.textContent='เริ่มทำใหม่';
+    restart.onclick=()=> startQuiz();
+    quizContainer.appendChild(restart);
+  }
+})();
+</script>
+</body>
+</html>

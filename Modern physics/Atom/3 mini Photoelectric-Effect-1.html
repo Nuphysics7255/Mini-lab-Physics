@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>แล็บโต้ตอบ: ปรากฏการณ์โฟโตอิเล็กตริก — กราฟ Ek–f</title>
+<style>
+  /* ========= THEME (Dark = default) ========= */
+  :root{
+    --bg:#0b1020;
+    --panel:#0f172a;
+    --ink:#e5e7eb;
+    --muted:#94a3b8;
+    --accent:#22d3ee;
+    --electron:#fb923c;
+    --hi-border:#38bdf8;
+    --hi-bg:rgba(56,189,248,.08);
+
+    --overlay: rgba(15,23,42,.55);
+    --sheet-bg: #f8fafc;
+    --sheet-ink:#0f172a;
+    --sheet-muted:#334155;
+    --chip:#e2f3ff;
+    --chip-border:#bae6fd;
+    --cta:#0ea5e9;
+
+    --canvas-bg:#050914;
+    --hud-bg:rgba(2,6,23,.72);
+    --hud-border:rgba(148,163,184,.25);
+    --badge-fill:rgba(2,6,23,.82);
+    --badge-stroke:rgba(148,163,184,.28);
+  }
+
+  /* ========= THEME (Light) ========= */
+  body.light{
+    --bg:#ffffff;
+    --panel:#f3f4f6;
+    --ink:#0f172a;
+    --muted:#475569;
+    --accent:#0891b2;
+
+    --overlay: rgba(0,0,0,.35);
+    --sheet-bg:#ffffff;
+    --sheet-ink:#0f172a;
+    --sheet-muted:#334155;
+
+    --canvas-bg:#ffffff;
+    --hud-bg:rgba(255,255,255,.85);
+    --hud-border:rgba(0,0,0,.12);
+    --badge-fill:rgba(255,255,255,.92);
+    --badge-stroke:rgba(0,0,0,.12);
+  }
+
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui, Inter, "Noto Sans Thai", ui-sans-serif, sans-serif;}
+  header{padding:10px 16px;border-bottom:1px solid #1f2937;background:linear-gradient(180deg,#0b1225,#0a0f1c)}
+  body.light header{background:linear-gradient(180deg,#ffffff,#f3f4f6);border-bottom-color:#e5e7eb}
+  header h1{margin:0;font-size:18px;letter-spacing:.3px}
+  .global-theme-wrap{max-width:1400px;margin:0 auto;padding:8px 12px 0;display:flex;justify-content:flex-end}
+  .global-theme-wrap button{min-height:38px;padding:6px 14px;font-size:14px;font-weight:700;border-radius:999px}
+
+  main{display:grid;grid-template-columns: 420px 1fr;gap:16px;padding:12px;max-width:1400px;margin:0 auto}
+  @media (max-width: 960px){ main{grid-template-columns:1fr;}}
+
+  .panel{background:var(--panel);border:1px solid #1f2937;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+  body.light .panel{border-color:#e5e7eb; box-shadow: 0 10px 26px rgba(0,0,0,.07)}
+  .controls{padding:14px;display:flex;flex-direction:column;gap:0}
+  .controls h2{font-size:14px;margin:0 0 10px;color:var(--muted);font-weight:600}
+  .row{display:grid;grid-template-columns: 1fr 190px;align-items:center;gap:8px;margin:8px 0}
+  .row label{font-size:13px;color:#cbd5e1}
+  body.light .row label{color:#334155}
+  .row input[type="number"], .row select{
+    width:100%;padding:8px 10px;border-radius:8px;
+    border:1px solid #233046;background:#0b1428;color:#e2e8f0;font-weight:600
+  }
+  body.light .row input[type="number"], body.light .row select{
+    border-color:#d1d5db;background:#ffffff;color:#0f172a;
+  }
+  .top-theme-wrap{display:none}
+  .btns{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0 0 0;order:2}
+  .btns button{width:100%;min-height:46px;font-weight:800}
+  .control-fields{order:1}
+  .desktop-legend{order:3}
+  .mobile-legend{display:none}
+  .mobile-primary-bar,.mobile-secondary-bar{display:none}
+  button{padding:8px 12px;border-radius:10px;border:1px solid #1f2937;background:#0b1428;color:#e2e8f0;cursor:pointer}
+  button.primary{background:#0369a1;border-color:#0ea5e9}
+  button.ghost{background:transparent}
+  button.play{background:#38bdf8;border-color:#38bdf8;color:#ffffff}
+  button.reset{background:#e5e7eb;border-color:#d1d5db;color:#334155}
+  button.emit{background:#fecaca;border-color:#fca5a5;color:#7f1d1d}
+  button.formula{background:#fed7aa;border-color:#fdba74;color:#7c2d12}
+  button.quiz{background:#dcfce7;border-color:#86efac;color:#14532d}
+  button.graph{background:#fed7aa;border-color:#fdba74;color:#7c2d12}
+  button.theme{background:#e5e7eb;border-color:#d1d5db;color:#334155}
+  body.light button{border-color:#e5e7eb;background:#ffffff;color:#0f172a}
+  body.light button.play{background:#38bdf8;border-color:#38bdf8;color:#ffffff}
+  body.light button.reset{background:#e5e7eb;border-color:#d1d5db;color:#334155}
+  body.light button.emit{background:#fecaca;border-color:#fca5a5;color:#7f1d1d}
+  body.light button.formula{background:#fed7aa;border-color:#fdba74;color:#7c2d12}
+  body.light button.quiz{background:#dcfce7;border-color:#86efac;color:#14532d}
+  body.light button.graph{background:#fed7aa;border-color:#fdba74;color:#7c2d12}
+  body.light button.theme{background:#e5e7eb;border-color:#d1d5db;color:#334155}
+  button.graph{background:#fed7aa;border-color:#fdba74;color:#7c2d12}
+  button.theme{background:#e5e7eb;border-color:#d1d5db;color:#334155}
+  button:active{transform:translateY(1px)}
+  .legend{font-size:12px;color:#9ca3af;margin-top:10px;line-height:1.5}
+  body.light .legend{color:#475569}
+  .link{color:#60a5fa;text-decoration:none}
+  body.light .link{color:#2563eb}
+
+  .hi-field{border:1.5px solid var(--hi-border)!important;background:var(--hi-bg)!important;font-weight:800!important;}
+
+  .stage-wrap{position:relative}
+  canvas{width:100%;height:auto;aspect-ratio:16/9;min-height:420px;background:var(--canvas-bg);border-radius:12px;border:1px solid #1f2937;display:block}
+  body.light canvas{border-color:#e5e7eb}
+
+  .hud{position:absolute;right:12px;bottom:12px;background:var(--hud-bg);backdrop-filter: blur(6px);
+       border:1px solid var(--hud-border);border-radius:10px;padding:10px;max-width:420px;font-size:12px;color:inherit}
+
+  .hud .kv{display:grid;grid-template-columns:auto 1fr;gap:6px 10px}
+  #hud_E,#hud_w,#hud_Ek{color:#ef4444;font-weight:800}
+  #hud_status{color:#22c55e;font-weight:800}
+
+  .metal-label{
+    position:absolute;
+    transform: translate(0, -50%);
+    background:var(--hud-bg);
+    border:1px solid var(--hud-border);
+    padding:8px 12px;border-radius:10px;
+    font-size:16px;font-weight:700;color:inherit;
+    box-shadow:0 6px 18px rgba(0,0,0,.18);
+    white-space:nowrap
+  }
+
+  /* ===== Popups ===== */
+  .overlay{position:fixed;inset:0;background:var(--overlay);display:none;z-index:999}
+  .overlay.show{display:block}
+  .sheet{
+    width:100vw;height:100dvh;max-height:none;overflow:auto;
+    background:var(--sheet-bg);color:var(--sheet-ink);
+    border-radius:0;border:1px solid #e2e8f0;
+    box-shadow: 0 20px 60px rgba(0,0,0,.25);
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: calc(env(safe-area-inset-bottom) + 120px);
+  }
+  body.light .sheet{box-shadow: 0 20px 60px rgba(0,0,0,.12)}
+  .sheet header{
+    position:sticky;top:0;background:linear-gradient(180deg,#ffffff,#f8fafc);
+    border-bottom:1px solid #e5e7eb;border-top-left-radius:16px;border-top-right-radius:16px;
+    padding:14px 16px;display:flex;align-items:center;justify-content:space-between
+  }
+  .sheet h3{margin:0;font-size:18px}
+  .sheet .content{padding:16px 18px 18px}
+  .pill{
+    display:inline-block;background:var(--chip);border:1px solid var(--chip-border);color:#075985;
+    padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700;margin-right:8px
+  }
+  .close-btn{
+    background:#e0f2fe;color:#075985;border:1px solid #bae6fd;border-radius:10px;padding:6px 10px;cursor:pointer
+  }
+  .formula{
+    background:#ffffff;border:1px dashed #bae6fd;border-radius:12px;padding:12px;margin:10px 0;color:#0f172a
+  }
+  .grid-two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .graph-layout{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:16px;align-items:start;margin-top:10px}
+  .graph-layout .graph-main,.graph-layout .graph-side{min-width:0}
+  @media (max-width:800px){ .grid-two{grid-template-columns:1fr} }
+
+
+  @media (max-width:900px){
+    body{padding-bottom:220px}
+    main{display:flex;flex-direction:column;gap:12px;padding:12px}
+    canvas{min-height:0;height:auto !important;aspect-ratio:16/9}
+    .stage-wrap{order:1;position:sticky;top:calc(env(safe-area-inset-top) + 8px);z-index:5;padding:10px;background:var(--bg);display:flex;flex-direction:column;gap:10px}
+    .controls{order:2;padding-bottom:280px;overflow:visible}
+    .global-theme-wrap{padding:8px 12px 0;justify-content:flex-start}
+    .global-theme-wrap button{min-height:32px;padding:4px 10px;font-size:11px;box-shadow:0 6px 16px rgba(0,0,0,.14)}
+    .btns{display:none}
+    .sheet{padding-top:max(env(safe-area-inset-top),16px);padding-bottom:calc(max(env(safe-area-inset-bottom),16px) + 120px)}
+    #graphCanvas{aspect-ratio:16/10;height:auto !important;min-height:0;min-width:0;width:100% !important;display:block}
+    .desktop-legend{display:none}
+    .mobile-legend{display:block;position:static;margin-top:14px;padding:9px 11px;border:1px solid #1f2937;border-radius:12px;background:var(--panel);font-size:10px;line-height:1.42;color:#9ca3af;z-index:1;order:3}
+    body.light .mobile-legend{border-color:#e5e7eb;color:#475569}
+    .mobile-fab-wrap{display:block;position:fixed;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom) + 34px);z-index:30;width:calc(100vw - 24px);max-width:none;margin:0 auto}
+    .mobile-primary-bar,.mobile-secondary-bar{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;align-items:start;width:100%}
+    .mobile-secondary-bar{margin-top:14px}
+    .mobile-primary-bar button,.mobile-secondary-bar button{min-height:44px;height:44px;font-size:16px;line-height:1.1;font-weight:800;box-shadow:0 6px 16px rgba(0,0,0,.14);padding:4px 4px;width:100%;max-width:100%;min-width:0;border-radius:12px;display:flex;align-items:center;justify-content:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .hud{position:static;right:auto;bottom:auto;max-width:none;width:100%;font-size:11px;margin-top:0}
+    .hud .kv{grid-template-columns:auto 1fr auto 1fr;gap:8px 12px;align-items:center}
+    .hud .kv > div{min-width:0}
+    #hud_status{grid-column:2 / span 3;overflow-wrap:anywhere}
+    .metal-label{max-width:calc(100% - 40px);font-size:14px;white-space:normal}
+    .graph-layout{grid-template-columns:1fr;gap:12px}
+    .graph-layout .graph-main{order:1}
+    .graph-layout .graph-side{order:2}
+    .graph-layout .formula{margin-top:0}
+    .graph-layout .graph-side > *{width:100%}
+    .mobile-secondary-bar #mFormula,.mobile-secondary-bar #mQuiz,.mobile-secondary-bar #mGraph{align-self:start}
+    .mobile-secondary-bar #mFormula{margin-top:0}
+    #graphOverlay .sheet header{position:sticky;top:0;padding-right:76px}
+    #graphOverlay #closeGraph{position:fixed;top:calc(env(safe-area-inset-top) + 10px);right:14px;z-index:70;box-shadow:0 8px 18px rgba(0,0,0,.15)}
+    #closeGraph2{display:none}
+
+  }
+
+  /* แบบฝึกหัด */
+  .qcard{
+    background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:12px;margin:10px 0;
+  }
+  .qcard h4{margin:0 0 8px 0;color:#0f172a}
+  .choices{display:grid;gap:8px}
+  .choice{
+    display:flex;align-items:center;gap:10px;padding:8px;border:1px solid #e2e8f0;border-radius:10px;background:#f8fafc;cursor:pointer
+  }
+  .choice input{accent-color:#0284c7}
+  .submit-quiz{
+    margin-top:12px;padding:10px 14px;border-radius:10px;background:var(--cta);border:1px solid #38bdf8;color:#052c3b;font-weight:800;cursor:pointer
+  }
+  .result-box{
+    margin-top:12px;background:#ecfeff;border:1px solid #a5f3fc;color:#164e63;border-radius:12px;padding:10px
+  }
+  .explain{margin-top:8px;border-top:1px dashed #cbd5e1;padding-top:8px;color:#0f172a}
+</style>
+</head>
+<body>
+  <header>
+    <h1 style="color:#2563eb;font-weight:800;">Mini Lab : ปรากฏการณ์โฟโตอิเล็กตริก</h1>
+  </header>
+
+  <div class="global-theme-wrap">
+    <button class="theme" id="toggleTheme">สลับพื้นหลัง (ขาว/มืด)</button>
+  </div>
+
+  <main>
+    <section class="panel controls">
+      <h2>ตั้งค่าการทดลอง</h2>
+
+      <div class="control-fields">
+      <div class="row">
+        <label>ตัวอย่างฟังก์ชันงานของโลหะ</label>
+        <select id="metalPreset" title="เลือกโลหะเพื่อกำหนด w โดยอัตโนมัติ (eV)">
+          <option value="custom" selected>— กำหนดเอง —</option>
+          <option value="2.14">Cesium (Cs) ≈ 2.14 eV</option>
+          <option value="2.30">Potassium (K) ≈ 2.30 eV</option>
+          <option value="2.28">Sodium (Na) ≈ 2.28 eV</option>
+          <option value="2.87">Calcium (Ca) ≈ 2.87 eV</option>
+          <option value="4.08">Aluminum (Al) ≈ 4.08 eV</option>
+          <option value="4.30">Zinc (Zn) ≈ 4.30 eV</option>
+          <option value="4.70">Copper (Cu) ≈ 4.70 eV</option>
+          <option value="4.26">Silver (Ag) ≈ 4.26 eV</option>
+          <option value="5.65">Platinum (Pt) ≈ 5.65 eV</option>
+        </select>
+      </div>
+
+      <div class="row">
+        <label><b>w (eV)</b></label>
+        <input id="work" class="hi-field" type="number" step="0.01" min="0" value="2.30" />
+      </div>
+
+      <div class="row">
+        <label>โหมดปรับ</label>
+        <select id="adjustMode">
+          <option value="f">ปรับด้วยความถี่ f (THz)</option>
+          <option value="lambda">ปรับด้วยความยาวคลื่น λ (nm)</option>
+          <option value="E" selected>ปรับด้วยพลังงานแสง E (eV)</option>
+        </select>
+      </div>
+
+      <div class="row">
+        <label>ความถี่ f (THz)</label>
+        <input id="freqNum" type="number" step="1" min="200" max="1600" value="724" />
+      </div>
+
+      <div class="row">
+        <label>ความยาวคลื่น λ (nm)</label>
+        <input id="lambdaNum" type="number" step="1" min="187" max="1500" value="413" />
+      </div>
+
+      <div class="row">
+        <label><b>Eแสง (eV)</b></label>
+        <input id="ENum" class="hi-field" type="number" step="0.001" value="3.000" />
+      </div>
+
+      <div class="row">
+        <label>จำนวนโฟตอนต่อครั้ง</label>
+        <input id="photonCount" type="number" step="1" min="1" max="500" value="1" />
+      </div>
+
+      </div>
+
+      <div class="btns">
+        <button class="emit" id="emit">ปล่อยโฟตอน</button>
+        <button class="play" id="play">เริ่ม/หยุด</button>
+        <button class="reset" id="reset">รีเซ็ต</button>
+        <button class="formula" id="openFormula">สูตรสำคัญ</button>
+        <button class="quiz" id="openQuiz">แบบฝึกหัด</button>
+        <button class="graph" id="openGraph">กราฟ Ek–f</button>
+      </div>
+
+      <div class="legend desktop-legend">
+        <b>หลักการ:</b> โฟตอนถ่ายเทพลังงานแบบ 1 ต่อ 1 ไปยังอิเล็กตรอนในโลหะ<br/>
+        ถ้า <b>Eแสง &lt; w</b> → ไม่เกิดการปลดปล่อยอิเล็กตรอน (ยังเห็นโฟตอนชนโลหะ)<br/>
+        ถ้า <b>Eแสง = w</b> → อิเล็กตรอนหลุดแต่ <b>Ek(max) = 0</b><br/>
+        ถ้า <b>Eแสง &gt; w</b> → <b>Ek(max) = Eแสง − w</b>
+      </div>
+
+      <div class="legend desktop-legend" style="margin-top:10px">
+        แหล่งที่มา: <a class="link" href="https://www.facebook.com/resolvephysics" target="_blank">เพจ คลายปมฟิสิกส์</a>
+      </div>
+
+      <div class="mobile-legend">
+        <b>หลักการ:</b> โฟตอนถ่ายเทพลังงานแบบ 1 ต่อ 1 ไปยังอิเล็กตรอนในโลหะ<br/>
+        ถ้า <b>Eแสง &lt; w</b> → ไม่เกิดการปลดปล่อยอิเล็กตรอน (ยังเห็นโฟตอนชนโลหะ)<br/>
+        ถ้า <b>Eแสง = w</b> → อิเล็กตรอนหลุดแต่ <b>Ek(max) = 0</b><br/>
+        ถ้า <b>Eแสง &gt; w</b> → <b>Ek(max) = Eแสง − w</b>
+        <div style="margin-top:8px">แหล่งที่มา: <a class="link" href="https://www.facebook.com/resolvephysics" target="_blank">เพจ คลายปมฟิสิกส์</a></div>
+      </div>
+    </section>
+
+    <section class="panel stage-wrap">
+      <canvas id="stage" width="1280" height="720"></canvas>
+
+      <!-- ป้ายโลหะ -->
+      <div class="metal-label" id="metalLabel">โลหะ (w = — eV)</div>
+
+      <!-- HUD -->
+      <div class="hud" id="hud">
+        <div class="kv">
+          <div>f:</div><div id="hud_f">—</div>
+          <div>λ:</div><div id="hud_lambda">—</div>
+          <div>Eแสง:</div><div id="hud_E">—</div>
+          <div>w:</div><div id="hud_w">—</div>
+          <div>Ek(max):</div><div id="hud_Ek">—</div>
+          <div>สถานะ:</div><div id="hud_status">—</div>
+        </div>
+      </div>
+
+    </section>
+
+    <div class="mobile-fab-wrap">
+      <div class="mobile-primary-bar">
+        <button class="emit" id="mEmit">ปล่อย</button>
+        <button class="play" id="mPlay">เล่น</button>
+        <button class="reset" id="mReset">รีเซ็ต</button>
+      </div>
+
+      <div class="mobile-secondary-bar">
+        <button class="formula" id="mFormula">สูตรสำคัญ</button>
+        <button class="quiz" id="mQuiz">แบบฝึกหัด</button>
+        <button class="graph" id="mGraph">กราฟ</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- ===== Popup: สูตรสำคัญ ===== -->
+  <div class="overlay" id="formulaOverlay" aria-hidden="true">
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="formulaTitle">
+      <header>
+        <h3 id="formulaTitle">สูตรสำคัญ & หลักการ</h3>
+        <button class="close-btn" id="closeFormula">ปิด</button>
+      </header>
+      <div class="content">
+        <span class="pill">Photoelectric Effect</span>
+        <div style="margin-top:8px;color:var(--sheet-muted)">
+          เมื่อแสง (โฟตอน) ตกกระทบผิวโลหะ พลังงานของโฟตอนจะถ่ายเทให้กับอิเล็กตรอนเป็นแบบ “ครั้งละ 1 ต่อ 1”
+          หากพลังงานโฟตอนไม่พอเอาชนะแรงยึดเหนี่ยว (ฟังก์ชันงาน w) อิเล็กตรอนจะไม่หลุดออกมา
+        </div>
+
+        <div class="formula">
+          <b>สูตรหลัก:</b> <br/>
+          <b>Ek(max) = Eแสง − w</b><br/>
+          <small>
+            โดยที่: Ek(max) = พลังงานจลน์สูงสุดของอิเล็กตรอนที่ถูกปลดปล่อย (หน่วย eV),<br/>
+            Eแสง = พลังงานโฟตอน (eV), w = ฟังก์ชันงานของโลหะ (eV)
+          </small>
+        </div>
+
+        <div class="grid-two">
+          <div>
+            <h4 style="margin:8px 0 6px 0">เมื่อไรอิเล็กตรอนจะ “หลุด”?</h4>
+            <ul style="margin:0 0 8px 16px;color:var(--sheet-muted)">
+              <li>ถ้า <b>Eแสง &gt; w</b> → หลุด และมีพลังงานจลน์เหลือ: <b>Ek(max) = Eแสง − w</b></li>
+              <li>ถ้า <b>Eแสง = w</b> → หลุด “พอดี” แต่ <b>Ek(max)=0</b></li>
+              <li>ถ้า <b>Eแสง &lt; w</b> → ไม่หลุด</li>
+            </ul>
+          </div>
+          <div>
+            <h4 style="margin:8px 0 6px 0">หมายเหตุ: ทำไมต้องมีคำว่า “max” ?</h4>
+            <div style="color:var(--sheet-muted)">
+              อิเล็กตรอนในโลหะไม่ได้อยู่ผิวหน้าเหมือนกันทั้งหมด บางตัวอยู่ “ลึก” ต้องใช้พลังงานมากกว่าจะหลุด
+              ดังนั้นพลังงานจลน์ที่ได้จริงของอิเล็กตรอนส่วนใหญ่จะน้อยกว่า หรือเท่ากับค่า <b>Ek(max)</b> ซึ่งเป็น “ค่าสูงสุด”
+              ที่เกิดกับอิเล็กตรอนที่สูญเสียพลังงานให้น้อยที่สุด (เช่นอยู่ใกล้ผิว)
+            </div>
+          </div>
+        </div>
+
+        <div class="formula">
+          <b>ความสัมพันธ์กับความถี่/ความยาวคลื่น</b><br/>
+          Eแสง = h f = (hc)/λ  &nbsp; (เมื่อ h = ค่าคงที่พลังค์, c = ความเร็วแสง, f = ความถี่, λ = ความยาวคลื่น)
+        </div>
+
+        <div style="text-align:right;margin-top:8px">
+          <button class="close-btn" id="closeFormula2">ปิด</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Popup: แบบฝึกหัด (Multiple Choice) ===== -->
+  <div class="overlay" id="quizOverlay" aria-hidden="true">
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="quizTitle">
+      <header>
+        <h3 id="quizTitle">แบบฝึกหัดพื้นฐาน</h3>
+        <button class="close-btn" id="closeQuiz">ปิด</button>
+      </header>
+      <div class="content" id="quizContent">
+        <!-- ข้อสอบจะถูกใส่ด้วย JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Popup: กราฟ Ek(max)–f ===== -->
+  <div class="overlay" id="graphOverlay" aria-hidden="true">
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="graphTitle">
+      <header>
+        <h3 id="graphTitle">กราฟ Ek(max)–f (พลังงานจลน์สูงสุด vs ความถี่)</h3>
+        <button class="close-btn" id="closeGraph">ปิด</button>
+      </header>
+      <div class="content" id="graphContent">
+        <div class="pill">เส้นตรงตามสมการ Ek(max) = (h/e)·f − w</div>
+        <div class="graph-layout">
+          <div class="graph-main">
+            <canvas id="graphCanvas" width="900" height="420" style="width:100%;height:auto;border:1px dashed #bae6fd;border-radius:12px;background:#fff"></canvas>
+          </div>
+          <div class="graph-side">
+            <div class="formula">
+              <div style="font-weight:800;margin-bottom:6px">ตั้งค่า</div>
+              <label style="display:block;font-size:13px;color:var(--sheet-muted)">w (eV)</label>
+              <input id="graph_w_input" type="number" step="0.01" min="0" value="2.30"
+                     style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid #d1d5db;background:#fff;color:#0f172a;font-weight:700">
+              <div style="margin-top:10px;color:var(--sheet-muted);font-size:14px;line-height:1.6">
+                <div>ความชัน (m): <b id="slopeVal">—</b> <small>eV/THz</small></div>
+                <div>จุดตัดแกน f (ความถี่ขีดเริ่ม f₀): <b id="f0Val">—</b> <small>THz</small></div>
+                <div>จุดตัดแกนEk(max): <b id="yintVal">—</b> <small>eV</small></div>
+              </div>
+            </div>
+            <div class="formula">
+              <div style="font-weight:800;margin-bottom:6px">สรุปสูตร (กรณีหน่วยพลังงาน eV)</div>
+              <div>Ek(max) = (h/e)·f − w</div>
+              <div>slope(m)=h/e<small>(คงที่)ไม่ขึ้นกับชนิดโลหะ</div>
+              </div>f₀ = w /(h/e)</div>
+              <div></b>จุดตัดแกนตั้ง</b>:<b>Ek(max) = −w (eV)</b></div>
+              <div style="margin-top:6px;color:#334155">
+              <div><b>หมายเหตุ</b><div>
+ ถ้าพลังงานอยู่ในหน่วย J <br>สูตรคือ </b>Ek(max) = hf − w 
+                <br>slope = h และ f₀ = w/h
+              </div>
+            </div>
+            <div class="formula">
+              <div><b>อธิบาย:</b></div>
+              <div style="color:#334155;font-size:14px;margin-top:6px">
+                • จุดตัดแกน f: f₀ เป็นค่าความถี่ขีดเริ่มที่อิเล็กตรอนหลุดพอดี Ek(max)=0<br>
+                • ส่วนที่  Ek(max) &lt; 0 แสดงเป็น <b>เส้นปะ</b> เพื่อให้เห็นแนวโน้มเชิงเส้น
+              </div>
+            </div>
+            <div style="text-align:right"><button class="close-btn" id="closeGraph2">ปิด</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  // ===== ค่าคงที่ฟิสิกส์ =====
+  const h=6.62607015e-34, q=1.602176634e-19, me=9.10938356e-31, c=299792458;
+
+  // ===== DOM หลัก =====
+  const canvas=document.getElementById('stage'),ctx=canvas.getContext('2d');
+  const metalPreset=document.getElementById('metalPreset'),
+        workInput=document.getElementById('work'),
+        adjustModeSel=document.getElementById('adjustMode'),
+        freqNum=document.getElementById('freqNum'),
+        lambdaNum=document.getElementById('lambdaNum'),
+        ENum=document.getElementById('ENum'),
+        photonCountInput=document.getElementById('photonCount');
+  const emitBtn=document.getElementById('emit'),
+        playBtn=document.getElementById('play'),
+        resetBtn=document.getElementById('reset'),
+        toggleThemeBtn=document.getElementById('toggleTheme');
+
+  // Popups
+  const formulaOverlay=document.getElementById('formulaOverlay');
+  const openFormula=document.getElementById('openFormula');
+  const closeFormula=document.getElementById('closeFormula');
+  const closeFormula2=document.getElementById('closeFormula2');
+
+  const quizOverlay=document.getElementById('quizOverlay');
+  const openQuiz=document.getElementById('openQuiz');
+  const closeQuiz=document.getElementById('closeQuiz');
+  const quizContent=document.getElementById('quizContent');
+
+  // Graph
+  const graphOverlay = document.getElementById('graphOverlay');
+  const openGraph = document.getElementById('openGraph');
+  const closeGraph = document.getElementById('closeGraph');
+  const closeGraph2 = document.getElementById('closeGraph2');
+  const graphCanvas = document.getElementById('graphCanvas');
+  const gctx = graphCanvas.getContext('2d');
+  const graph_w_input = document.getElementById('graph_w_input');
+  const slopeVal = document.getElementById('slopeVal');
+  const f0Val = document.getElementById('f0Val');
+  const yintVal = document.getElementById('yintVal');
+
+  // HUD
+  const hud={f:document.getElementById('hud_f'),
+             lambda:document.getElementById('hud_lambda'),
+             E:document.getElementById('hud_E'),
+             w:document.getElementById('hud_w'),
+             Ek:document.getElementById('hud_Ek'),
+             status:document.getElementById('hud_status')};
+  const metalLabel=document.getElementById('metalLabel');
+
+  // เวที
+  const W=canvas.width,H=canvas.height;
+  const metal={x:90,y:H*0.15,w:220,h:H*0.7};
+  const lightSource={x:W*0.75,y:80};
+  const lightDir={x:-1,y:0.6};
+  const lightSpeed=360;
+
+  // สถานะ
+  let electrons=[],freeElectrons=[],photons=[],impacts=[],running=true,lastCalc={EeV:0,Ek_eV:0,pColor:'#fff',f_THz:750,lambda_nm:0};
+
+  function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+  function fmt(x,d=3){if(!isFinite(x))return '—';return Number(x).toLocaleString(undefined,{maximumFractionDigits:d});}
+  function photonColorFromF(f){
+    const nm=(c/f)*1e9; let color='#ffffff';
+    if(nm>=380&&nm<=780){
+      if(nm<450) color='#8b5cf6';
+      else if(nm<520) color='#60a5fa';
+      else if(nm<590) color='#22c55e';
+      else if(nm<620) color='#f59e0b';
+      else if(nm<700) color='#f97316';
+      else color='#ef4444';
+    }
+    return color;
+  }
+
+  function setSingleElectron(){
+    electrons.length=0; freeElectrons.length=0;
+    const x=metal.x+metal.w/2, y=metal.y+metal.h/2;
+    electrons.push({x,y,r:7});
+  }
+
+  function setFromFreqTHz(fTHz, from){
+    fTHz = clamp(fTHz, 200, 1600);
+    const f = fTHz*1e12;
+    const EeV = (h*f)/q;
+    const lambda_nm = (c/f)*1e9;
+
+    if(from!=='freqNum')   freqNum.value   = Math.round(fTHz);
+    if(from!=='lambdaNum') lambdaNum.value = Math.round(clamp(lambda_nm,187,1500));
+    if(from!=='ENum')      ENum.value      = EeV.toFixed(3);
+
+    calcAll(f, EeV, lambda_nm);
+  }
+  function setFromLambdaNm(lambda_nm, from){
+    lambda_nm = clamp(lambda_nm, 187, 1500);
+    const f = c/(lambda_nm*1e-9);
+    const fTHz = f/1e12;
+    const EeV = (h*f)/q;
+
+    if(from!=='lambdaNum') lambdaNum.value = Math.round(lambda_nm);
+    if(from!=='freqNum')   freqNum.value   = Math.round(clamp(fTHz,200,1600));
+    if(from!=='ENum')      ENum.value      = EeV.toFixed(3);
+
+    calcAll(f, EeV, lambda_nm);
+  }
+  function setFromEnergyEV(EeV, from){
+    EeV = Math.max(0, Number(EeV)||0);
+    const f = (EeV*q)/h;
+    const fTHz = f/1e12;
+    const lambda_nm = (c/f)*1e9;
+
+    if(from!=='ENum')      ENum.value      = EeV.toFixed(3);
+    if(from!=='freqNum')   freqNum.value   = Math.round(clamp(fTHz,200,1600));
+    if(from!=='lambdaNum') lambdaNum.value = Math.round(clamp(lambda_nm,187,1500));
+
+    calcAll(f, EeV, lambda_nm);
+  }
+
+  function calcAll(f, EeV, lambda_nm){
+    if(f==null){
+      const fTHz=Number(freqNum.value);
+      f=fTHz*1e12; EeV=(h*f)/q; lambda_nm=(c/f)*1e9;
+    }
+
+    const w_eV = Number(workInput.value||0);
+    const Ek_eV = Math.max(0, EeV - w_eV);
+
+    lastCalc={...lastCalc,EeV,Ek_eV,pColor:photonColorFromF(f),f_THz:f/1e12,lambda_nm};
+
+    hud.f.textContent=`${fmt(f/1e12,2)} THz`;
+    hud.lambda.textContent=`${fmt(lambda_nm,2)} nm`;
+    hud.E.textContent=`${fmt(EeV,3)} eV`;
+    hud.w.textContent=`${fmt(w_eV,3)} eV`;
+    hud.Ek.textContent=`${fmt(Ek_eV,3)} eV`;
+    hud.status.textContent=(EeV<w_eV)?'E<w: ไม่ปลดปล่อย':(Math.abs(EeV-w_eV)<1e-9?'E=w: Ek(max)=0':'E>w: Ek(max)=E-w');
+
+    // ตำแหน่งป้าย w ทางขวาของโลหะ ห่าง 30px ที่ความสูง 0.7
+    metalLabel.textContent=`โลหะ (w = ${fmt(w_eV,3)} eV)`;
+    metalLabel.style.left = (metal.x + metal.w + 30) + 'px';
+    metalLabel.style.top  = (metal.y + metal.h*0.7) + 'px';
+  }
+
+  function drawBrushedMetalRect(x,y,w,h){
+    const g = ctx.createLinearGradient(x, y, x+w, y);
+    g.addColorStop(0.0,  '#aeb5bd');
+    g.addColorStop(0.25, '#e6eaee');
+    g.addColorStop(0.5,  '#c7cdd3');
+    g.addColorStop(0.75, '#f1f4f7');
+    g.addColorStop(1.0,  '#aeb5bd');
+    ctx.fillStyle=g;
+    ctx.fillRect(x,y,w,h);
+
+    ctx.save();
+    ctx.globalAlpha=0.20;
+    ctx.strokeStyle='rgba(0,0,0,.35)';
+    for(let yy=y+2; yy<y+h; yy+=3){
+      ctx.beginPath();
+      ctx.moveTo(x, yy + Math.sin(yy*0.05)*0.6);
+      ctx.lineTo(x+w, yy + Math.cos(yy*0.05)*0.6);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    ctx.save();
+    const g2 = ctx.createLinearGradient(x,y,x,y+h);
+    g2.addColorStop(0,'rgba(255,255,255,.35)');
+    g2.addColorStop(0.08,'rgba(255,255,255,0)');
+    g2.addColorStop(0.92,'rgba(0,0,0,0)');
+    g2.addColorStop(1,'rgba(0,0,0,.20)');
+    ctx.fillStyle=g2;
+    ctx.fillRect(x,y,w,h);
+    ctx.restore();
+
+    ctx.strokeStyle='rgba(0,0,0,.35)';
+    ctx.lineWidth=1;
+    ctx.strokeRect(x+0.5,y+0.5,w-1,h-1);
+  }
+
+  function createPhotons(n){
+    for(let i=0;i<n;i++){
+      const x=lightSource.x+(Math.random()-0.5)*80,
+            y=lightSource.y+(Math.random()-0.5)*40,
+            dir={...lightDir};
+      const mag=Math.hypot(dir.x,dir.y); dir.x/=mag; dir.y/=mag;
+      const speed=lightSpeed*(0.9+Math.random()*0.2);
+      const vx=dir.x*speed, vy=dir.y*speed;
+      const angle=Math.atan2(vy,vx);
+      photons.push({x,y,angle,len:30,amp:6,color:lastCalc.pColor,vx,vy,hit:false});
+    }
+  }
+
+  function addImpact(x,y,color){ impacts.push({x,y,color,t:0,ttl:0.35}); }
+
+  function tryEmitElectron(p, now){
+    if(p.x>metal.x && p.x<metal.x+metal.w && p.y>metal.y && p.y<metal.y+metal.h){
+      p.hit=true;
+      const EeV = lastCalc.EeV, w = Number(workInput.value||0);
+      addImpact(p.x, p.y, p.color);
+      if(EeV<w) return;
+      const EkJ = (EeV - w)*q;
+      const v=Math.sqrt(2*EkJ/me);
+      const vpx=clamp((v/1e6)*30,60,900);
+      freeElectrons.push({x:metal.x+metal.w+2,y:p.y,r:7,vx:vpx,vy:(Math.random()-0.5)*20,emittedAt: now});
+    }
+  }
+
+  function drawMetal(){ drawBrushedMetalRect(metal.x,metal.y,metal.w,metal.h); }
+
+  function drawLightSource(){
+    ctx.save();
+    ctx.translate(lightSource.x,lightSource.y);
+    ctx.rotate(Math.atan2(lightDir.y,lightDir.x));
+    ctx.fillStyle='#1f2937'; ctx.fillRect(-20,-8,40,16);
+    ctx.fillStyle='#94a3b8'; ctx.fillRect(20,-10,14,20);
+    ctx.fillStyle='rgba(255,255,200,.25)';
+    ctx.beginPath();
+    ctx.moveTo(34,-20); ctx.lineTo(160,-56); ctx.lineTo(160,56); ctx.lineTo(34,20);
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+
+  function drawPhotonPacket(p){
+    const {x,y,angle,len,amp,color}=p;
+    ctx.save(); ctx.translate(x,y); ctx.rotate(angle);
+    ctx.globalCompositeOperation='lighter';
+    ctx.shadowColor=color; ctx.shadowBlur=18;
+
+    ctx.beginPath();
+    const k= (Math.PI*2)/10;
+    for(let s=-len/2; s<=len/2; s+=2){
+      const yy = Math.sin(s*k)*amp, xx = s;
+      if(s===-len/2) ctx.moveTo(xx,yy); else ctx.lineTo(xx,yy);
+    }
+    ctx.strokeStyle=color; ctx.lineWidth=3; ctx.stroke();
+    ctx.beginPath(); ctx.arc(len/2, 0, 2.6, 0, Math.PI*2); ctx.fillStyle=color; ctx.fill();
+
+    ctx.restore(); ctx.globalCompositeOperation='source-over';
+  }
+
+  function drawImpacts(dt){
+    impacts.forEach(im=>{
+      im.t += dt;
+      const life = Math.min(1, im.t/im.ttl);
+      const alpha = (1-life);
+      ctx.save();
+      ctx.globalCompositeOperation='lighter';
+      ctx.strokeStyle=im.color;
+      ctx.fillStyle=im.color;
+      ctx.globalAlpha = 0.4*alpha;
+      ctx.beginPath();
+      ctx.arc(im.x, im.y, 10+life*16, 0, Math.PI*2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.globalAlpha = 0.6*alpha;
+      ctx.arc(im.x, im.y, 2.2, 0, Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+    });
+    impacts = impacts.filter(im=>im.t < im.ttl);
+  }
+
+  function drawPhotons(dt, now){
+    for(const p of photons){
+      if(!p.hit){ p.x+=p.vx*dt; p.y+=p.vy*dt; }
+      drawPhotonPacket(p);
+      if(!p.hit) tryEmitElectron(p, now);
+    }
+    photons=photons.filter(p=>!p.hit && p.x>-50 && p.x<W+50 && p.y>-50 && p.y<H+50);
+  }
+  function drawFreeElectrons(dt){
+    for(const e of freeElectrons){
+      e.x+=e.vx*dt; e.y+=e.vy*dt;
+      ctx.beginPath(); ctx.fillStyle='#fb923c';
+      ctx.arc(e.x,e.y,e.r,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#111'; ctx.font='12px sans-serif';
+      ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('e',e.x,e.y);
+    }
+    freeElectrons=freeElectrons.filter(e=>e.x<W+60 && e.y>0 && e.y<H);
+  }
+
+  function drawBadge(text, x, y){
+    ctx.font='700 28px ui-sans-serif, system-ui, "Noto Sans Thai"';
+    ctx.textBaseline='middle';
+    const padX=14, h=40, w=ctx.measureText(text).width + padX*2, r=12;
+    let x0 = clamp(x, 0, W - w - 2), y0 = clamp(y, 0, H - h - 2);
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(x0+r,y0);
+    ctx.arcTo(x0+w,y0,x0+w,y0+h,r);
+    ctx.arcTo(x0+w,y0+h,x0,y0+h,r);
+    ctx.arcTo(x0,y0+h,x0,y0,r);
+    ctx.arcTo(x0,y0,x0+w,y0,r);
+    ctx.fillStyle=getComputedStyle(document.body).getPropertyValue('--badge-fill') || 'rgba(2,6,23,.82)';
+    ctx.fill();
+    ctx.strokeStyle=getComputedStyle(document.body).getPropertyValue('--badge-stroke') || 'rgba(148,163,184,.28)';
+    ctx.lineWidth=2; ctx.stroke();
+    ctx.shadowColor='rgba(0,0,0,.25)'; ctx.shadowBlur=10; ctx.shadowOffsetY=4;
+    ctx.fillStyle=getComputedStyle(document.body).getPropertyValue('--ink') || '#e5e7eb';
+    ctx.fillText(text, x0+padX, y0+h/2);
+    ctx.restore();
+  }
+  function drawFloatingTags(now){
+    let leadPhoton=null;
+    for(const p of photons){ if(!leadPhoton || p.x < leadPhoton.x) leadPhoton=p; }
+    if(leadPhoton){
+      const txt=`Eแสง = ${fmt(lastCalc.EeV,3)} eV`;
+      const badgeX = leadPhoton.x + 14;
+      const badgeY = leadPhoton.y - 20 - 40;
+      drawBadge(txt, badgeX, badgeY);
+    }
+
+    const READY_DELAY = 0.7;
+    let leadElec=null;
+    for(const e of freeElectrons){
+      if(now - (e.emittedAt||0) >= READY_DELAY){
+        if(!leadElec || e.x > leadElec.x) leadElec=e;
+      }
+    }
+    if(leadElec){
+      const txt=`Ek(max) = ${fmt(lastCalc.Ek_eV,3)} eV`;
+      const badgeX = leadElec.x + 14;
+      const badgeY = leadElec.y - 20 - 40;
+      drawBadge(txt, badgeX, badgeY);
+    }
+  }
+
+  // ===== แบบฝึกหัด =====
+  const QUIZ = [
+    { q: "กำหนด w = 2.30 eV ถ้า Eแสง = 2.00 eV จะเกิดอะไรขึ้น?",
+      choices: ["อิเล็กตรอนหลุดด้วย Ek(max) = 0.30 eV", "อิเล็กตรอนไม่หลุด", "อิเล็กตรอนหลุดแต่ Ek(max)=0", "ข้อมูลไม่พอ"],
+      ans: 1, why: "เพราะ Eแสง < w จึงไม่สามารถเอาชนะแรงยึดเหนี่ยวได้ อิเล็กตรอนไม่หลุด" },
+    { q: "กำหนด w = 2.30 eV ถ้า Eแสง = 2.30 eV จะได้ผลอย่างไร?",
+      choices: ["ไม่หลุด", "หลุดและ Ek(max)=0", "หลุดและ Ek(max)=0.46 eV", "ขึ้นกับจำนวนโฟตอน"],
+      ans: 1, why: "เมื่อ Eแสง = w อิเล็กตรอนหลุดพอดีโดยไม่มีพลังงานจลน์คงเหลือ (Ek(max)=0)" },
+    { q: "กำหนด w = 2.30 eV ถ้า Eแสง = 3.10 eV ค่า Ek(max) เท่ากับเท่าไร?",
+      choices: ["0.80 eV", "1.20 eV", "3.10 eV", "0 eV"],
+      ans: 0, why: "Ek(max) = Eแสง − w = 3.10 − 2.30 = 0.80 eV" },
+    { q: "เหตุผลที่ใช้คำว่า Ek(max) แทน Ek คืออะไร?",
+      choices: ["เพื่อให้ดูเท่เฉยๆ", "เพราะอิเล็กตรอนทุกตัวได้พลังงานเท่ากัน", "เพราะบางอิเล็กตรอนอยู่ลึก สูญเสียพลังงานมากกว่า จึงได้ Ek น้อยกว่า", "เพราะขึ้นกับจำนวนโฟตอน"],
+      ans: 2, why: "อิเล็กตรอนที่อยู่ลึกต้องใช้พลังงานมากกว่าในการหลุด ทำให้ Ek จริงของมันน้อยกว่าค่าสูงสุด" }
+  ];
+
+  function renderQuiz(){
+    const thaiChoices = ['ก','ข','ค','ง'];
+    const wrap = document.createElement('div');
+    wrap.innerHTML = `
+      <div class="pill">ทดสอบความเข้าใจ</div>
+      <p style="color:var(--sheet-muted);margin:8px 0 12px 0">เลือกคำตอบที่ถูกต้องที่สุดในแต่ละข้อ</p>
+      ${QUIZ.map((it,idx)=>`
+        <div class="qcard" data-q="${idx}">
+          <h4>ข้อที่ ${idx+1}. ${it.q}</h4>
+          <div class="choices">
+            ${it.choices.map((c,i)=>`
+              <label class="choice">
+                <input type="radio" name="q${idx}" value="${i}"/>
+                <span>${thaiChoices[i]}. ${c}</span>
+              </label>
+            `).join('')}
+          </div>
+          <div class="explain" id="exp${idx}" style="display:none"></div>
+        </div>
+      `).join('')}
+      <button class="submit-quiz" id="submitQuizBtn">ตรวจคำตอบ</button>
+      <div class="result-box" id="quizResult" style="display:none"></div>
+      <div style="text-align:right;margin-top:8px"><button class="close-btn" id="closeQuiz2">ปิด กลับสู่หน้าแรก</button></div>
+    `;
+    quizContent.innerHTML = '';
+    quizContent.appendChild(wrap);
+
+    document.getElementById('submitQuizBtn').onclick = () => {
+      let score=0;
+      QUIZ.forEach((it,idx)=>{
+        const sel = quizContent.querySelector('input[name="q'+idx+'"]:checked');
+        const ans = sel ? Number(sel.value) : -1;
+        const correct = ans===it.ans;
+        if(correct) score++;
+
+        const exp = document.getElementById('exp'+idx);
+        exp.style.display='block';
+        exp.innerHTML = '<b>เฉลย:</b> '+it.choices[it.ans]+'<br/><small>'+it.why+'</small>';
+
+        const card = quizContent.querySelector('.qcard[data-q="'+idx+'"]');
+        card.style.borderColor = correct ? '#86efac' : '#fecaca';
+        card.style.background = correct ? '#ecfdf5' : '#fff7ed';
+      });
+      const result = document.getElementById('quizResult');
+      result.style.display='block';
+      result.textContent = 'คะแนนของคุณ: '+score+' / '+QUIZ.length;
+    };
+
+    document.getElementById('closeQuiz2').onclick = () => hideOverlay(quizOverlay);
+  }
+
+  // ====== ลูปอนิเมชันหลัก ======
+  let last=performance.now();
+  function loop(nowMs){
+    const now = nowMs/1000;
+    const dt=Math.min(0.05,(nowMs-last)/1000); last=nowMs;
+    if(running){
+      ctx.clearRect(0,0,W,H);
+      drawLightSource();
+      drawMetal();
+      drawPhotons(dt, now);
+      drawFreeElectrons(dt);
+      drawImpacts(dt);
+      drawFloatingTags(now);
+    }
+    requestAnimationFrame(loop);
+  }
+
+  function applyPreset(wev){ workInput.value = (+wev).toFixed(2); calcAll(); }
+  metalPreset.onchange = () => { if(metalPreset.value!=='custom') applyPreset(parseFloat(metalPreset.value)); };
+  workInput.oninput = () => calcAll();
+
+  adjustModeSel.onchange = () => {
+    const mode = adjustModeSel.value;
+    freqNum.disabled   = mode!=='f';
+    lambdaNum.disabled = mode!=='lambda';
+    ENum.disabled      = mode!=='E';
+  };
+
+  freqNum.oninput   = () => { if(!freqNum.disabled)   setFromFreqTHz(Number(freqNum.value), 'freqNum'); };
+  lambdaNum.oninput = () => { if(!lambdaNum.disabled) setFromLambdaNm(Number(lambdaNum.value), 'lambdaNum'); };
+  ENum.oninput      = () => { if(!ENum.disabled)      setFromEnergyEV(Number(ENum.value), 'ENum'); };
+
+  emitBtn.onclick = ()=> createPhotons(Number(photonCountInput.value));
+  playBtn.onclick = ()=> running=!running;
+
+  // ✅ รีเซ็ตค่าเริ่มต้น
+  function resetToDefaults(){
+    photons=[]; freeElectrons=[]; impacts=[];
+    workInput.value = '2.30';
+    adjustModeSel.value = 'E';
+    freqNum.disabled = true;
+    lambdaNum.disabled = true;
+    ENum.disabled = false;
+    photonCountInput.value = '1';
+    setFromEnergyEV(3.000, 'ENum');
+    setSingleElectron();
+  }
+  resetBtn.onclick = resetToDefaults;
+
+  // Toggle Theme
+  toggleThemeBtn.onclick = () => {
+    document.body.classList.toggle('light');
+  };
+
+  // Popups
+  function showOverlay(el){ el.classList.add('show'); el.setAttribute('aria-hidden','false'); }
+  function hideOverlay(el){ el.classList.remove('show'); el.setAttribute('aria-hidden','true'); }
+  openFormula.onclick = ()=> showOverlay(formulaOverlay);
+  [closeFormula, closeFormula2].forEach(btn => btn.onclick = ()=> hideOverlay(formulaOverlay));
+  openQuiz.onclick = ()=>{ renderQuiz(); showOverlay(quizOverlay); };
+  closeQuiz.onclick = ()=> hideOverlay(quizOverlay);
+
+  // ===== กราฟ Ek–f =====
+  const h_over_e = h/q;              // eV·s
+  const m_per_THz = h_over_e * 1e12; // eV/THz
+
+  function drawEkf(){
+    const Wg = graphCanvas.width, Hg = graphCanvas.height;
+    const L=70, R=20, T=20, B=60;
+    const fMin = 0, fMax = 1600;
+    const w_eV = Number(graph_w_input.value||0);
+    const EkMin = -Math.max(1, w_eV*1.2);
+    const EkMax = Math.max(2, m_per_THz*fMax - w_eV);
+    const x2px=f => L + (f - fMin) * (Wg-L-R)/(fMax - fMin);
+    const y2px=Ek => (Hg - B) - (Ek - EkMin) * (Hg - T - B)/(EkMax - EkMin);
+
+    // clear
+    gctx.clearRect(0,0,Wg,Hg);
+
+    // axes
+    gctx.strokeStyle = '#cbd5e1'; gctx.lineWidth = 1; gctx.beginPath();
+    const yZero = y2px(0);
+    gctx.moveTo(L, yZero); gctx.lineTo(Wg-R, yZero);
+    gctx.moveTo(x2px(0), T); gctx.lineTo(x2px(0), Hg-B); gctx.stroke();
+
+    // ticks
+    gctx.fillStyle = '#334155'; gctx.font = '12px ui-sans-serif';
+    for(let f=0; f<=fMax; f+=200){
+      const x=x2px(f); gctx.beginPath(); gctx.moveTo(x, yZero-4); gctx.lineTo(x, yZero+4); gctx.stroke();
+      gctx.fillText(String(f), x-10, yZero+18);
+    }
+    const EkStep = Math.max(0.5, Math.round((EkMax - EkMin)/10*2)/2);
+    for(let Ek=EkMin; Ek<=EkMax; Ek+=EkStep){
+      const y=y2px(Ek); gctx.beginPath(); gctx.moveTo(L-4, y); gctx.lineTo(L+4, y); gctx.stroke();
+      gctx.fillText(Ek.toFixed(1), L-44, y+4);
+    }
+
+    // labels
+    gctx.font = '13px ui-sans-serif';
+    gctx.fillText('f (THz)', Wg/2 - 20, Hg - 20);
+    gctx.save(); gctx.translate(18, Hg/2); gctx.rotate(-Math.PI/2); gctx.fillText('Ek (eV)', -26, 0); gctx.restore();
+
+    // solid line for Ek>=0
+    gctx.lineWidth = 2; gctx.strokeStyle = '#0ea5e9'; gctx.beginPath(); let started=false;
+    for(let f=fMin; f<=fMax; f+=2){
+      const Ek = m_per_THz*f - w_eV;
+      if(Ek>=0){
+        const x=x2px(f), y=y2px(Ek);
+        if(!started){ gctx.moveTo(x,y); started=true; } else gctx.lineTo(x,y);
+      }
+    }
+    gctx.stroke();
+
+    // dashed line for Ek<0
+    gctx.beginPath(); gctx.setLineDash([8,6]); started=false;
+    for(let f=fMin; f<=fMax; f+=2){
+      const Ek = m_per_THz*f - w_eV;
+      if(Ek<0){
+        const x=x2px(f), y=y2px(Ek);
+        if(!started){ gctx.moveTo(x,y); started=true; } else gctx.lineTo(x,y);
+      }
+    }
+    gctx.strokeStyle = '#60a5fa'; gctx.stroke(); gctx.setLineDash([]);
+
+    // threshold f0
+    const f0 = w_eV / m_per_THz;
+    const x0 = x2px(f0);
+    gctx.strokeStyle='#ef4444'; gctx.setLineDash([6,6]); gctx.beginPath(); gctx.moveTo(x0, T); gctx.lineTo(x0, Hg-B); gctx.stroke(); gctx.setLineDash([]);
+    gctx.fillStyle='#ef4444'; gctx.fillText(`f₀ ≈ ${f0.toFixed(1)} THz`, x0+6, T+16);
+
+    // y intercept at f=0 is -w
+    const yint = -w_eV;
+    const yintPx = y2px(yint);
+    gctx.fillStyle='#16a34a';
+    gctx.fillText(`y-intercept ≈ ${(-w_eV).toFixed(2)} eV`, L+8, yintPx-8);
+    gctx.beginPath(); gctx.arc(x2px(0), yintPx, 4, 0, 2*Math.PI); gctx.fill();
+
+    // slope annotation
+    gctx.fillStyle = '#075985';
+    gctx.fillText(`m ≈ ${m_per_THz.toFixed(6)} eV/THz`, Wg-220, T+16);
+
+    // HUD values
+    slopeVal.textContent = m_per_THz.toFixed(6);
+    f0Val.textContent = f0.toFixed(2);
+    yintVal.textContent = (-w_eV).toFixed(2);
+  }
+
+  // Graph bindings
+  function openGraphSheet(){ drawEkf(); showOverlay(graphOverlay); }
+  openGraph.onclick = () => openGraphSheet();
+  closeGraph.onclick = () => hideOverlay(graphOverlay);
+  closeGraph2.onclick = () => hideOverlay(graphOverlay);
+  graph_w_input.oninput = () => drawEkf();
+
+  // ปุ่มลอยบนมือถือ
+  const mEmit = document.getElementById('mEmit');
+  const mPlay = document.getElementById('mPlay');
+  const mReset = document.getElementById('mReset');
+  const mFormula = document.getElementById('mFormula');
+  const mQuiz = document.getElementById('mQuiz');
+  const mGraph = document.getElementById('mGraph');
+  if(mEmit) mEmit.onclick = () => emitBtn.click();
+  if(mPlay) mPlay.onclick = () => playBtn.click();
+  if(mReset) mReset.onclick = () => resetBtn.click();
+  if(mFormula) mFormula.onclick = () => openFormula.click();
+  if(mQuiz) mQuiz.onclick = () => openQuiz.click();
+  if(mGraph) mGraph.onclick = () => openGraph.click();
+
+  // เริ่มต้น
+  resetToDefaults();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

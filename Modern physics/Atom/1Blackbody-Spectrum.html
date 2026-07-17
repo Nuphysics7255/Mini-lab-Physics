@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>แล็บวัตถุดำ — Blackbody Radiation Interactive Lab</title>
+<!-- Theme (เหลือง–ครีม–ฟ้า) -->
+<style>
+  :root{
+    --bg:#f7f7f5;       /* ครีมสว่าง */
+    --ink:#0f172a;      /* ตัวอักษรเข้ม */
+    --muted:#475569;    /* คำอธิบาย */
+    --panel:#ffffff;    /* กล่อง */
+    --line:#e2e8f0;     /* เส้นแบ่ง */
+    --blue:#38bdf8;     /* ฟ้า */
+    --blue-ink:#053b4a;
+    --gold:#facc15;     /* เหลืองทอง */
+    --soft:#dbeafe;     /* ฟ้าอ่อน */
+    --accent:#22c55e;   /* เขียวปุ่ม */
+    --danger:#ef4444;   /* แดง */
+    --shadow:0 10px 28px rgba(2,8,23,.08);
+    --radius:18px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui, Inter, "Noto Sans Thai", ui-sans-serif}
+  a{color:#0ea5e9;text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:1200px;margin:24px auto;padding:16px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}
+  header.top{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:12px}
+  header.top h1{font-size:20px;margin:0;color:#2563eb;font-weight:800}
+  .pill{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(180deg,#fff8dc,#fff1b7);border:1px solid #fde68a;color:#6b5400;padding:8px 12px;border-radius:999px;font-weight:600}
+  .controls{display:flex;align-items:center;gap:10px;margin-left:auto;flex-wrap:wrap;justify-content:flex-end}
+  .mobile-slider{display:none;margin-top:14px}
+  input[type="range"]{width:260px}
+  .btn{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(180deg,#e0f2fe,#bfdbfe);border:1px solid #93c5fd;color:#0b3b5a;padding:10px 14px;border-radius:12px;font-weight:600;cursor:pointer}
+  .btn:hover{filter:brightness(0.98)}
+  .cta{background:linear-gradient(180deg,#dcfce7,#bbf7d0);border:1px solid #86efac;color:#064e3b}
+  .danger{background:#fee2e2;border:1px solid #fecaca;color:#7f1d1d}
+  /* layout */
+  .grid{display:grid;grid-template-columns:320px 1fr;gap:14px}
+  @media (max-width:920px){.grid{grid-template-columns:1fr}}
+  svg.block{display:block;border-radius:14px;background:#0b0d12}
+  .note{font-size:12px;color:var(--muted);margin-top:8px}
+  /* modals */
+  .modal{position:fixed;inset:0;background:rgba(2,8,23,.55);display:none;align-items:stretch;justify-content:stretch;padding:0;z-index:50}
+  .modal.show{display:flex}
+  .sheet{width:100vw;height:100vh;max-height:100vh;overflow:auto;background:var(--panel);border:none;border-radius:0;box-shadow:none;position:relative}
+  .sheet header{padding:22px 24px 14px 24px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:flex-start;background:linear-gradient(180deg,#fff,#fefce8);position:sticky;top:0;z-index:2;padding-right:120px}
+  .sheet h2{margin:0;font-size:18px}
+  .sheet .content{padding:20px 24px 140px 24px}
+  .close{background:#fee2e2;border:1px solid #fecaca;color:#7f1d1d;border-radius:999px;padding:10px 16px;font-weight:700;cursor:pointer;position:fixed;top:max(14px, env(safe-area-inset-top));right:16px;z-index:60;box-shadow:0 8px 20px rgba(2,8,23,.16)}
+  .chip{display:inline-block;background:#fff7ed;border:1px solid #fed7aa;color:#7c2d12;border-radius:999px;padding:4px 10px;font-size:12px;margin-right:6px}
+  /* quiz */
+  .quiz q{font-weight:600}
+  .qcard{border:1px solid var(--line);border-radius:12px;padding:12px;margin:10px 0;background:#ffffff}
+  .opt{display:block;padding:8px 10px;border-radius:10px;border:1px solid #e5e7eb;margin:6px 0;cursor:pointer}
+  .opt:hover{background:#f8fafc}
+  .ans{margin-top:8px;padding:10px;border-radius:10px;background:#f1f5f9;color:#0f172a;display:none}
+  .ok{background:#dcfce7;border:1px solid #86efac}
+  .bad{background:#fee2e2;border:1px solid #fecaca}
+  .score{font-weight:800;color:#064e3b}
+  .footer-link{margin-top:12px;background:#fff7ed;border:1px solid #fed7aa;color:#7c2d12;border-radius:12px;padding:10px}
+
+  @media (max-width:720px){
+    .wrap{margin:0 auto;padding:8px}
+    header.top h1{font-size:19px;line-height:1.35}
+    header.top > .pill{display:none}
+    .controls{width:100%;margin-left:0;justify-content:flex-start}
+    .controls input[type="range"]{display:none}
+    .controls .btn{flex:1 1 calc(50% - 6px);min-height:54px;justify-content:center;text-align:center;line-height:1.25;padding:10px 10px;white-space:normal}
+    .mobile-slider{display:block}
+    .mobile-slider .pill{display:flex;justify-content:center;align-items:center;margin-bottom:10px;font-size:18px;padding:10px 14px}
+    .mobile-slider input[type="range"]{width:100%}
+    .sheet header{padding:20px 18px 14px 18px;padding-right:96px}
+    .sheet h2{font-size:20px;line-height:1.35}
+    .sheet .content{padding:18px 16px 140px 16px}
+    .close{right:12px;top:max(12px, env(safe-area-inset-top))}
+  }
+
+</style>
+<!-- MathJax (render LaTeX) -->
+<script async id="MathJax-script" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+<style id="blackbody-mobile-real-fix">
+@media (max-width: 720px){
+
+  /* ซ่อนป้ายอุณหภูมิด้านบน เหลือเฉพาะป้ายใกล้สไลเดอร์ด้านล่าง */
+  header.top > .pill{
+    display:none !important;
+  }
+
+  /* ให้ปุ่มอธิบายหลักการ / แบบฝึกหัด ลงมาอีกบรรทัด */
+  .controls{
+    width:100% !important;
+    margin-left:0 !important;
+    justify-content:flex-start !important;
+    gap:10px !important;
+  }
+  .controls .btn{
+    flex:1 1 calc(50% - 6px) !important;
+    min-height:54px !important;
+    white-space:normal !important;
+    line-height:1.25 !important;
+    text-align:center !important;
+    justify-content:center !important;
+  }
+
+  /* ย้ายสไลเดอร์ลงมาใต้จอทดลองตามที่พี่ต้องการไว้ก่อนหน้า */
+  .controls input[type="range"]{
+    display:none !important;
+  }
+  .mobile-slider{
+    display:block !important;
+    margin-top:14px !important;
+    margin-bottom:16px !important;
+  }
+  .mobile-slider .pill{
+    display:flex !important;
+    justify-content:center !important;
+    align-items:center !important;
+    margin-bottom:10px !important;
+    font-size:18px !important;
+    padding:10px 14px !important;
+  }
+  .mobile-slider input[type="range"]{
+    width:100% !important;
+  }
+
+  /* จุดที่พังจริง: ข้อความใต้รูปบนถูกกราฟล่างกินพื้นที่ */
+  .grid{
+    display:grid !important;
+    grid-template-columns:1fr !important;
+    gap:26px !important;   /* เพิ่มระยะห่างจริงระหว่างการ์ดสองใบ */
+  }
+  .grid > .card:first-child{
+    padding-bottom:34px !important;  /* เผื่อพื้นที่ให้ข้อความ 2 บรรทัดใต้รูปบน */
+  }
+  .grid > .card:first-child .note{
+    display:block !important;
+    position:relative !important;
+    z-index:3 !important;
+    margin-top:14px !important;
+    margin-bottom:0 !important;
+    line-height:1.55 !important;
+    font-size:12px !important;
+  }
+  .grid > .card:nth-child(2){
+    margin-top:12px !important;  /* ดันกราฟลงเพิ่มอีกชั้น */
+  }
+  .grid > .card:nth-child(2) .note{
+    margin-top:14px !important;
+    line-height:1.55 !important;
+    font-size:12px !important;
+  }
+
+  /* ตัวอักษรบนจอสเปกตรัม/กราฟ ให้ใหญ่ขึ้น */
+  #plotSvg text{
+    font-size:22px !important;
+  }
+}
+</style>
+
+
+<style id="swap-label-under-slider">
+@media (max-width:720px){
+  /* ให้สไลเดอร์อยู่ก่อน แล้วค่อยเป็นป้ายข้อความ */
+  .mobile-slider{
+    display:flex !important;
+    flex-direction:column !important;
+  }
+  .mobile-slider input[type="range"]{
+    order:1 !important;
+    margin-bottom:10px !important;
+  }
+  .mobile-slider .pill{
+    order:2 !important;
+  }
+}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <header class="top">
+      <h1>Mini Lab : วัตถุดำ (Blackbody Radiation)</h1>
+      <span class="pill">ปรับอุณหภูมิ \(T\) = <span id="tVal">6000</span> K</span>
+      <div class="controls">
+        <input id="tSlider" type="range" min="1000" max="10000" step="50" value="6000" />
+        <button class="btn cta" id="btnTheory">อธิบายหลักการ</button>
+        <button class="btn" id="btnQuiz">แบบฝึกหัด</button>
+      </div>
+    </header>
+
+    <div class="grid">
+      <!-- ดาว (วัตถุดำทรงกลม — ไม่มีเงา) -->
+      <div class="card" style="background:linear-gradient(180deg,#fffbea,#e0f2fe);border-color:#fde68a">
+        <svg id="starSvg" class="block" viewBox="0 0 340 340" width="100%" height="100%">
+          <defs>
+            <radialGradient id="starGlow" cx="50%" cy="50%" r="64%">
+              <stop offset="0%"  stop-color="#ffffff" stop-opacity="1"/>
+              <stop offset="55%" stop-color="#ffffff" stop-opacity="0.55"/>
+              <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+            </radialGradient>
+            <radialGradient id="starCore" cx="40%" cy="38%" r="60%">
+              <stop id="c0" offset="0%"  stop-color="#ffffff"/>
+              <stop id="c1" offset="70%" stop-color="#ff9c33"/>
+              <stop id="c2" offset="100%" stop-color="#1a0a00"/>
+            </radialGradient>
+            <filter id="softGlow"><feGaussianBlur stdDeviation="18"/></filter>
+          </defs>
+          <circle id="halo" cx="170" cy="170" r="120" fill="url(#starGlow)" filter="url(#softGlow)"/>
+          <circle id="star" cx="170" cy="170" r="92" fill="url(#starCore)"/>
+        </svg>
+        <div class="note">วัตถุดำทรงกลม: อุณหภูมิสูงขึ้น → สว่างขึ้นและโทนสีขาวมากขึ้น (ใกล้ดาวอุณหภูมิสูง)</div>
+      </div>
+
+      <!-- กราฟสเปกตรัม -->
+      <div class="card" style="background:linear-gradient(180deg,#ffffff,#eef6ff)">
+        <svg id="plotSvg" class="block" viewBox="0 0 850 520" width="100%">
+          <defs>
+            <!-- พื้นหลังสเปกตรัมต่อเนื่อง 380–780 nm -->
+            <linearGradient id="visGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%"   stop-color="#000"/>
+              <stop offset="2%"   stop-color="#4b0082"/>
+              <stop offset="9%"   stop-color="#3b2fff"/>
+              <stop offset="16%"  stop-color="#245bff"/>
+              <stop offset="24%"  stop-color="#00a6ff"/>
+              <stop offset="30%"  stop-color="#00d3c8"/>
+              <stop offset="37%"  stop-color="#00c94f"/>
+              <stop offset="45%"  stop-color="#a8f000"/>
+              <stop offset="52%"  stop-color="#ffe600"/>
+              <stop offset="59%"  stop-color="#ffb300"/>
+              <stop offset="66%"  stop-color="#ff7a00"/>
+              <stop offset="74%"  stop-color="#ff3a2e"/>
+              <stop offset="82%"  stop-color="#e6001a"/>
+              <stop offset="92%"  stop-color="#6d0000"/>
+              <stop offset="100%" stop-color="#000"/>
+            </linearGradient>
+            <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="4" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+          <!-- กริด/แกนจะวาดด้วย canvas (foreignObject) -->
+          <g id="spectrumLayer"></g>
+          <!-- ขอบสีแดง 50px ด้านขวาของช่วงมองเห็น -->
+          <rect id="redEdge" x="0" y="0" width="50" height="50" fill="#d51f1f" opacity=".85" rx="2" ry="2"/>
+          <!-- เส้นกราฟ -->
+          <path id="curve" fill="none" stroke="#f8fafc" stroke-width="3.2" filter="url(#glow)"/>
+          <!-- เส้นยอด (Wien) -->
+          <line id="peakLine" x1="0" y1="0" x2="0" y2="0" stroke="#f59e0b" stroke-width="2.2" stroke-dasharray="6 6"/>
+          <text id="peakLabel" x="0" y="0" fill="#f59e0b" font-size="12" text-anchor="middle"></text>
+        </svg>
+        <div class="note">Tสูงขึ้น → ความเข้มแสงทุกlamda จะมากขึ้น  โดยเฉพราะlamdaสั้นจะเข้มโดดเด่นมากขึ้น ทำให้สีของวัตถุเปลี่ยนไป เช่น จากสีแดงไปเป็นสีส้ม เหลือง และสุดท้ายเป็นสีขาวอมน้ำเงิน ซึ่งเป็นแสงที่มีความยาวคลื่นสั้นลง</div>
+      </div>
+    </div>
+
+    <div class="mobile-slider card" aria-label="แถบปรับอุณหภูมิสำหรับมือถือ">
+      <div class="pill">ปรับอุณหภูมิ \(T\) = <span id="tValMobile">6000</span> K</div>
+      <input id="tSliderMobile" type="range" min="1000" max="10000" step="50" value="6000" />
+    </div>
+
+    <div class="footer-link">
+      ศึกษาเพิ่มเติมที่เพจ <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">คลายปมฟิสิกส์</a>
+    </div>
+  </div>
+</div>
+
+<!-- ======= Modal: Theory ======= -->
+<div id="theoryModal" class="modal" role="dialog" aria-modal="true">
+  <div class="sheet">
+    <header>
+      <h2>อธิบายหลักการ — วัตถุดำ (Blackbody)</h2>
+      <button class="close" id="closeTheory">ปิด</button>
+    </header>
+    <div class="content">
+      <p class="chip">ภาพรวม</p>
+      <p><b>วัตถุดำ</b> คือวัตถุอุดมคติที่ <u>ดูดกลืน</u> และ <u>แผ่รังสี</u> ได้สมบูรณ์แบบในทุกความยาวคลื่น ถ้าอุณหภูมิเป็น \(T\) มันจะแผ่พลังงานไฟฟ้า-แม่เหล็กเป็นสเปกตรัมต่อเนื่องเฉพาะตัว ขึ้นกับ \(T\) อย่างเดียว</p>
+
+      <p class="chip">สมการสำคัญ</p>
+      <ul>
+        <li>กฎของพลังค์ (ความสว่างเชิงสเปกตรัมต่อความยาวคลื่น)
+          \[
+          B_\lambda(\lambda,T)=\frac{2hc^2}{\lambda^5\left(e^{\frac{hc}{\lambda kT}}-1\right)}
+          \]
+        </li>
+        <li>กฎของวีน (ตำแหน่งยอดกราฟ) 
+          \[
+          \lambda_{\text{peak}}=\frac{b}{T},\quad b\approx 2.897\times10^{6}\ \text{nm·K}
+          \]
+        </li>
+        <li>กฎสเตฟาน–โบลท์ซมันน์ (พลังงานรวมที่แผ่จากผิวหน่วยพื้นที่ทุกทิศทาง)
+          \[
+          j^\star=\sigma T^4,\quad \sigma\approx 5.67\times10^{-8}\ \text{W·m}^{-2}\text{·K}^{-4}
+          \]
+        </li>
+        <li>พลังงานโฟตอนเดี่ยว
+          \[
+          E=hf = \frac{hc}{\lambda}
+          \]
+        </li>
+        <li>พลังงานของคลื่นแม่เหล็กไฟฟ้าที่มีโฟตอนความถี่เดียวจำนวน \(n\) ตัว
+          \[
+          E_n = n\,h f
+          \]
+        </li>
+        <li>พลังงานของคลื่นแม่เหล็กไฟฟ้าที่มีหลายความถี่ (หลายชุดโฟตอน)
+          \[
+          E_{\text{total}}=\sum_i n_i\,h f_i \ \ (\text{หรือแบบต่อเนื่อง}\ U=\int_0^\infty \rho(\lambda,T)\,d\lambda)
+          \]
+        </li>
+      </ul>
+
+      <p class="chip">ความสัมพันธ์เชิงคุณภาพ</p>
+      <ul>
+        <li>เพิ่ม \(T\) → กราฟสูงขึ้นทั้งช่วง (รวมพลังงานมากขึ้นตาม \(T^4\)) และยอดเลื่อนไปทาง \(\lambda\) สั้นลง (ไปทางสีน้ำเงิน)</li>
+        <li>ลด \(T\) → กราฟเตี้ยลง และยอดเลื่อนไปทาง \(\lambda\) ยาวขึ้น (ไปทางสีแดง)</li>
+      </ul>
+
+      <p class="chip">พลังค์อธิบายอย่างไร?</p>
+      <p>ก่อนพลังค์ นักฟิสิกส์ใช้กฎแบบคลาสสิกแล้วเจอ “หายนะรังสีอุลตราไวโอเลต” (พลังงานอินฟินิตี้ที่ \(\lambda\) สั้นมาก) พลังค์เสนอว่า <b>พลังงานมีค่าไม่ต่อเนื่อง</b> เป็นก้อน ๆ (ควอนตัม) ขนาด \(E=hf\) ทำให้การแจกแจงพลังงานสอดคล้องการทดลองและแก้ปัญหานั้นได้ ถือเป็นจุดเริ่มต้นของกลศาสตร์ควอนตัม</p>
+
+      <p class="chip">ความเข้าใจผิดที่พบบ่อย</p>
+      <ul>
+        <li>คิดว่าวัตถุดำต้อง “สีดำ” เสมอ — จริง ๆ แล้ววัตถุดำคืออุดมคติทางการแผ่/ดูดรังสี วัตถุดำที่ร้อนมากจะสว่างสีขาวได้</li>
+        <li>คิดว่าสีที่เห็นคือ “สีเดียว” — จริง ๆ เป็นผลรวมสเปกตรัมต่อเนื่องทั้งช่วงที่ตาเห็น</li>
+      </ul>
+
+      <p class="chip">ต่างจากการแผ่รังสีของแก๊สอย่างไร?</p>
+      <ul>
+        <li><b>วัตถุดำ:</b> สเปกตรัมต่อเนื่อง เกิดจากการสั่นของอะตอม/อิเล็กตรอน  ความเข้มและสีที่เปล่งออกมาขึ้นกับ \(T\) เท่านั้น</li>
+        <li><b>แก๊สเจือจาง:</b> สเปกตรัมเส้น (line spectrum) — การเปลี่ยนระดับพลังงานอิเล็กตรอนในอะตอม/ไอออน ให้เส้นเฉพาะที่ความยาวคลื่นจำเพาะ</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ======= Modal: Quiz ======= -->
+<div id="quizModal" class="modal" role="dialog" aria-modal="true">
+  <div class="sheet" style="width:min(1000px,96vw)">
+    <header>
+      <h2>แบบฝึกหัดวัตถุดำ — ปรนัย + เฉลยละเอียด</h2>
+      <button class="close" id="closeQuiz">ปิด</button>
+    </header>
+    <div class="content quiz">
+      <div class="qcard" data-correct="b">
+        <q>1) ถ้าอุณหภูมิเพิ่มขึ้นจาก \(3000\) K เป็น \(6000\) K ยอดกราฟจะเลื่อนไปทางใด?</q>
+        <label class="opt"><input type="radio" name="q1" value="a"> ไปทางความยาวคลื่นยาวขึ้น (แดง)</label>
+        <label class="opt"><input type="radio" name="q1" value="b"> ไปทางความยาวคลื่นสั้นลง (น้ำเงิน)</label>
+        <label class="opt"><input type="radio" name="q1" value="c"> ไม่เลื่อน</label>
+        <div class="ans">
+          เฉลย: ใช้กฎของวีน \( \lambda_{\text{peak}}=\dfrac{b}{T}\) เมื่อ \(T\) เพิ่ม \(\lambda_{\text{peak}}\) ลด → เลื่อนไปทางสั้นลง
+        </div>
+      </div>
+
+      <div class="qcard" data-correct="c">
+        <q>2) ความสัมพันธ์เชิงกำลังของพลังงานรวมกับอุณหภูมิของวัตถุดำคือข้อใด</q>
+        <label class="opt"><input type="radio" name="q2" value="a"> \(j^\star\propto T\)</label>
+        <label class="opt"><input type="radio" name="q2" value="b"> \(j^\star\propto T^2\)</label>
+        <label class="opt"><input type="radio" name="q2" value="c"> \(j^\star\propto T^4\)</label>
+        <div class="ans">
+          เฉลย: กฎสเตฟาน–โบลท์ซมันน์ \( j^\star=\sigma T^4 \)
+        </div>
+      </div>
+
+      <div class="qcard" data-correct="a">
+        <q>3) โฟตอนความยาวคลื่น \(500\) nm มีพลังงานเท่าใด (เลือกนิพจน์ที่ถูก)</q>
+        <label class="opt"><input type="radio" name="q3" value="a"> \(E=\dfrac{hc}{\lambda}=\dfrac{(6.626\times10^{-34})(3.0\times10^8)}{500\times10^{-9}}\)</label>
+        <label class="opt"><input type="radio" name="q3" value="b"> \(E=\lambda hc\)</label>
+        <label class="opt"><input type="radio" name="q3" value="c"> \(E=\dfrac{\lambda}{hc}\)</label>
+        <div class="ans">
+          เฉลย: \(E=hf=\dfrac{hc}{\lambda}\) แทนค่า \(\lambda=500\ \text{nm}\)
+        </div>
+      </div>
+
+      <div class="qcard" data-correct="d">
+        <q>4) สเปกตรัมใดเป็น “ต่อเนื่อง”</q>
+        <label class="opt"><input type="radio" name="q4" value="a"> เส้นดูดกลืนของไฮโดรเจน</label>
+        <label class="opt"><input type="radio" name="q4" value="b"> เส้นแผ่รังสีของโซเดียม</label>
+        <label class="opt"><input type="radio" name="q4" value="c"> สเปกตรัมจากหลอดก๊าซความดันต่ำ</label>
+        <label class="opt"><input type="radio" name="q4" value="d"> สเปกตรัมจากวัตถุดำที่ \(T\) คงที่</label>
+        <div class="ans">
+          เฉลย: วัตถุดำให้สเปกตรัมต่อเนื่อง ขณะที่แก๊สให้สเปกตรัมเส้น
+        </div>
+      </div>
+
+      <div class="qcard" data-correct="b">
+        <q>5) ถ้า \(T=4000\) K แล้วเพิ่มเป็น \(8000\) K พลังงานรวมต่อหน่วยพื้นที่เพิ่มประมาณกี่เท่า</q>
+        <label class="opt"><input type="radio" name="q5" value="a"> 2 เท่า</label>
+        <label class="opt"><input type="radio" name="q5" value="b"> 16 เท่า</label>
+        <label class="opt"><input type="radio" name="q5" value="c"> 4 เท่า</label>
+        <div class="ans">
+          เฉลย: \(j^\star\propto T^4\) → \((8000/4000)^4=2^4=16\)
+        </div>
+      </div>
+
+      <div class="qcard" data-correct="a">
+        <q>6) คลื่นแม่เหล็กไฟฟ้าความถี่เดียว มีโฟตอน \(n\) ตัว พลังงานรวมคือ</q>
+        <label class="opt"><input type="radio" name="q6" value="a"> \(E_n=n\,hf\)</label>
+        <label class="opt"><input type="radio" name="q6" value="b"> \(E_n=\dfrac{hf}{n}\)</label>
+        <label class="opt"><input type="radio" name="q6" value="c"> \(E_n=h f^n\)</label>
+        <div class="ans">เฉลย: โฟตอนแต่ละตัวพลังงาน \(hf\) รวม \(n\) ตัวคือ \(n\,hf\)</div>
+      </div>
+
+      <div class="qcard" data-correct="c">
+        <q>7) หลักคิดใดทำให้แบบจำลองคลาสสิกล้มเหลวแต่พลังค์แก้ได้</q>
+        <label class="opt"><input type="radio" name="q7" value="a"> ความเร็วแสงเปลี่ยนตามตัวกลาง</label>
+        <label class="opt"><input type="radio" name="q7" value="b"> อุณหภูมิไม่สม่ำเสมอ</label>
+        <label class="opt"><input type="radio" name="q7" value="c"> พลังงานถูกคำนวณเป็นควอนตัม \(E=hf\)</label>
+        <div class="ans">เฉลย: สมมติฐานควอนตัมของพลังค์แก้ปัญหาหายนะ UV</div>
+      </div>
+
+      <div class="qcard" data-correct="b">
+        <q>8) ข้อใด “ไม่ถูกต้อง” เกี่ยวกับวัตถุดำ</q>
+        <label class="opt"><input type="radio" name="q8" value="a"> สีที่เห็นเป็นผลรวมสเปกตรัมที่ตาไว</label>
+        <label class="opt"><input type="radio" name="q8" value="b"> วัตถุดำต้องมืดเสมอ ไม่มีวันสว่างสีขาว</label>
+        <label class="opt"><input type="radio" name="q8" value="c"> รูปร่างกราฟขึ้นกับ \(T\) เท่านั้น</label>
+        <div class="ans">เฉลย: วัตถุดำที่ร้อนมากสว่างสีขาวได้ ไม่จำเป็นต้อง “มืด” เสมอ</div>
+      </div>
+
+      <div style="margin-top:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <button class="btn cta" id="btnCheck">ตรวจคำตอบ</button>
+        <div id="scoreBox" class="pill" style="display:none">คะแนน: <span class="score" id="scoreVal"></span></div>
+        <button class="btn danger" id="btnShowAll">แสดงเฉลยทั้งหมด</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===================== ฟิสิกส์ + กราฟ ===================== */
+const h=6.62607015e-34,c=2.99792458e8,k=1.380649e-23;
+const HEIGHT_FACTOR=4; // คูณความสูงกราฟทั้งหมด ×4 (ตามคำสั่งล่าสุด)
+const WIEN_b_nmK=2.897771955e6;
+
+const tSlider=document.getElementById('tSlider');
+const tVal=document.getElementById('tVal');
+const tSliderMobile=document.getElementById('tSliderMobile');
+const tValMobile=document.getElementById('tValMobile');
+
+/* ดาว (วัตถุดำทรงกลม) */
+const c0=document.getElementById('c0'),c1=document.getElementById('c1'),c2=document.getElementById('c2');
+const halo=document.getElementById('halo');
+
+/* กราฟ */
+const plotSvg=document.getElementById('plotSvg');
+const spectrumLayer=document.getElementById('spectrumLayer');
+const redEdge=document.getElementById('redEdge');
+const curve=document.getElementById('curve');
+const peakLine=document.getElementById('peakLine');
+const peakLabel=document.getElementById('peakLabel');
+
+const PAD={l:70,r:16,t:22,b:44};
+const VW=850,VH=520;
+const PW=VW-PAD.l-PAD.r, PH=VH-PAD.t-PAD.b;
+const X_MIN=1, X_MAX=1600, VIS_MIN=380, VIS_MAX=780, T_REF=10000;
+
+const xScale=nm=>PAD.l+((nm-X_MIN)/(X_MAX-X_MIN))*PW;
+const yPix=val=>PAD.t+PH-val;
+
+/* Planck */
+function Blambda(lam_m,T){
+  const b=(h*c)/(lam_m*k*T);
+  if(b>700) return 0;
+  return (2*h*c**2) / ( (lam_m**5) * Math.expm1(b) );
+}
+
+/* สเปกตรัมพื้นหลัง + ขอบแดง 50px */
+function drawSpectrum(){
+  spectrumLayer.innerHTML='';
+  const x1=xScale(VIS_MIN), x2=xScale(VIS_MAX);
+  const rect=document.createElementNS('http://www.w3.org/2000/svg','rect');
+  rect.setAttribute('x',x1); rect.setAttribute('y',PAD.t);
+  rect.setAttribute('width',x2-x1); rect.setAttribute('height',PH);
+  rect.setAttribute('fill','url(#visGradient)'); rect.setAttribute('opacity','0.8');
+  spectrumLayer.appendChild(rect);
+
+  // UV/IR มืดลงเล็กน้อย
+  const mkDark=(x,w)=>{const r=document.createElementNS('http://www.w3.org/2000/svg','rect');
+    r.setAttribute('x',x); r.setAttribute('y',PAD.t); r.setAttribute('width',w); r.setAttribute('height',PH);
+    r.setAttribute('fill','#000'); r.setAttribute('opacity','.35'); spectrumLayer.appendChild(r);};
+  mkDark(PAD.l, Math.max(0, x1-PAD.l));
+  mkDark(x2, Math.max(0, (PAD.l+PW)-x2));
+
+  // ขอบสีแดง 50px ชิดปลายขวาของช่วงมองเห็น
+  redEdge.setAttribute('x', x2-50);
+  redEdge.setAttribute('y', PAD.t);
+  redEdge.setAttribute('height', PH);
+  redEdge.setAttribute('width', 50);
+}
+
+/* วาดแกน/กริดด้วย Canvas */
+(function axes(){
+  const fo=document.createElementNS('http://www.w3.org/2000/svg','foreignObject');
+  fo.setAttribute('x','0');fo.setAttribute('y','0');fo.setAttribute('width',VW);fo.setAttribute('height',VH);
+  plotSvg.insertBefore(fo, plotSvg.firstChild);
+  const cv=document.createElement('canvas');
+  cv.width=VW*devicePixelRatio; cv.height=VH*devicePixelRatio;
+  cv.style.width=VW+'px'; cv.style.height=VH+'px';
+  fo.appendChild(cv);
+  const ctx=cv.getContext('2d'); ctx.scale(devicePixelRatio, devicePixelRatio);
+
+  const grid='#e5e7eb', axis='#64748b';
+
+  // grid
+  ctx.strokeStyle=grid; ctx.lineWidth=1;
+  for(let nm=0; nm<=X_MAX; nm+=100){
+    const x=Math.round(xScale(nm))+0.5;
+    if(nm>=X_MIN){ ctx.beginPath(); ctx.moveTo(x,PAD.t); ctx.lineTo(x,PAD.t+PH); ctx.stroke(); }
+  }
+  const rows=6;
+  for(let i=0;i<=rows;i++){
+    const y=Math.round(PAD.t+(PH/rows)*i)+.5;
+    ctx.beginPath(); ctx.moveTo(PAD.l,y); ctx.lineTo(PAD.l+PW,y); ctx.stroke();
+  }
+  // axes
+  ctx.strokeStyle=axis; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(PAD.l, PAD.t+PH+0.5); ctx.lineTo(PAD.l+PW, PAD.t+PH+0.5); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(PAD.l-0.5, PAD.t); ctx.lineTo(PAD.l-0.5, PAD.t+PH); ctx.stroke();
+
+  // labels
+  const graphFontSize = window.innerWidth <= 720 ? 22 : 12;
+  ctx.fillStyle=axis; ctx.font=`${graphFontSize}px ui-sans-serif`;
+  ctx.textAlign='center';
+  const xTickY = PAD.t + PH + (window.innerWidth <= 720 ? 26 : 18);
+  for(let nm=0; nm<=X_MAX; nm+=200){
+    const x=xScale(nm); if(nm>=X_MIN) ctx.fillText(nm.toString(), x, xTickY);
+  }
+  ctx.textAlign='right'; ctx.fillText('ความยาวคลื่น (nm)', PAD.l+PW, PAD.t+PH+(window.innerWidth <= 720 ? 48 : 34));
+  ctx.save(); ctx.translate(window.innerWidth <= 720 ? 22 : 14, PAD.t+PH/2); ctx.rotate(-Math.PI/2);
+  ctx.textAlign='center'; ctx.fillText('ความเข้มเชิงสเปกตรัม (fixed Y; ×4 height)', 0, 0);
+  ctx.restore();
+})();
+
+/* คำนวณสเกล Y คงที่จาก T_ref แล้วคูณ ×4 */
+function refMax(T){let ymax=0,N=1200;for(let i=0;i<N;i++){const nm=X_MIN+(i/(N-1))*(X_MAX-X_MIN);const v=Blambda(nm*1e-9,T);if(v>ymax)ymax=v;}return ymax;}
+const Y_REF_MAX=refMax(T_REF);
+const Y_SCALE=(PH*0.92)/(Y_REF_MAX||1);
+
+/* วาดกราฟ + เส้นยอด */
+function drawCurve(T){
+  const N=1200; let d='';
+  for(let i=0;i<N;i++){
+    const nm=X_MIN+(i/(N-1))*(X_MAX-X_MIN);
+    const val=Blambda(nm*1e-9,T)*Y_SCALE*HEIGHT_FACTOR;
+    const x=xScale(nm);
+    const y=yPix(Math.min(val, PH*0.98));
+    d += (i===0?`M ${x} ${y}`:` L ${x} ${y}`);
+  }
+  curve.setAttribute('d', d);
+
+  const lambdaPeak=WIEN_b_nmK/T;
+  const xPeak=xScale(Math.max(X_MIN, Math.min(X_MAX, lambdaPeak)));
+  peakLine.setAttribute('x1',xPeak); peakLine.setAttribute('x2',xPeak);
+  peakLine.setAttribute('y1',PAD.t); peakLine.setAttribute('y2',PAD.t+PH);
+  peakLabel.setAttribute('x',xPeak); peakLabel.setAttribute('y', window.innerWidth <= 720 ? PAD.t + 24 : PAD.t + 14);
+  peakLabel.setAttribute('font-size', window.innerWidth <= 720 ? '22' : '12');
+  peakLabel.textContent = `λ_peak ≈ ${lambdaPeak.toFixed(0)} nm`;
+}
+
+/* CCT(K) -> RGB สำหรับสีดาว */
+function cctToRGB(T){
+  // Tanner Helland
+  T=Math.max(1000,Math.min(40000,T))/100;
+  let r,g,b;
+  r=T<=66?255:329.698727446*Math.pow((T-60),-0.1332047592);
+  g=T<=66?99.4708025861*Math.log(T)-161.1195681661:288.1221695283*Math.pow((T-60),-0.0755148492);
+  b=T>=66?255:(T<=19?0:138.5177312231*Math.log(T-10)-305.0447927307);
+  const clamp=v=>Math.max(0,Math.min(255,v));
+  return {r:clamp(r)|0,g:clamp(g)|0,b:clamp(b)|0};
+}
+function updateStar(T){
+  const {r,g,b}=cctToRGB(T);
+  c0.setAttribute('stop-color','#ffffff');
+  c1.setAttribute('stop-color', `rgb(${r},${g},${b})`);
+  c2.setAttribute('stop-color','#000000');
+  const tNorm=Math.max(0,Math.min(1,(T-1000)/(10000-1000)));
+  halo.setAttribute('opacity', 0.35 + 0.5*tNorm);
+  halo.setAttribute('r', 120 + 50*tNorm);
+}
+
+/* รวมอัปเดต */
+function updateAll(){
+  const T=+tSlider.value;
+  tVal.textContent=T;
+  if(tValMobile) tValMobile.textContent=T;
+  if(tSliderMobile && tSliderMobile.value !== String(T)) tSliderMobile.value = String(T);
+  drawCurve(T);
+  updateStar(T);
+}
+drawSpectrum();
+updateAll();
+tSlider.addEventListener('input', updateAll);
+if(tSliderMobile){
+  tSliderMobile.addEventListener('input', ()=>{
+    tSlider.value = tSliderMobile.value;
+    updateAll();
+  });
+}
+
+/* ===================== Modals + Quiz ===================== */
+const theoryModal=document.getElementById('theoryModal');
+const quizModal=document.getElementById('quizModal');
+document.getElementById('btnTheory').onclick=()=>{theoryModal.classList.add('show')};
+document.getElementById('btnQuiz').onclick=()=>{quizModal.classList.add('show')};
+document.getElementById('closeTheory').onclick=()=>{theoryModal.classList.remove('show')};
+document.getElementById('closeQuiz').onclick=()=>{quizModal.classList.remove('show')};
+theoryModal.addEventListener('click',e=>{if(e.target===theoryModal)theoryModal.classList.remove('show')});
+quizModal.addEventListener('click',e=>{if(e.target===quizModal)quizModal.classList.remove('show')});
+
+/* ตรวจข้อสอบ */
+function checkQuiz(){
+  let score=0,total=0;
+  document.querySelectorAll('.qcard').forEach((q,i)=>{
+    total++;
+    const name='q'+(i+1);
+    const correct=q.dataset.correct;
+    const chosen=(q.querySelector(`input[name="${name}"]:checked`)||{}).value;
+    const ans=q.querySelector('.ans');
+    ans.style.display='block';
+    if(chosen===correct){score++;q.classList.add('ok');q.classList.remove('bad')}
+    else{q.classList.add('bad');q.classList.remove('ok')}
+  });
+  document.getElementById('scoreVal').textContent=`${score} / ${total}`;
+  document.getElementById('scoreBox').style.display='inline-flex';
+  if(window.MathJax){MathJax.typesetPromise();}
+}
+document.getElementById('btnCheck').onclick=checkQuiz;
+document.getElementById('btnShowAll').onclick=()=>{
+  document.querySelectorAll('.qcard .ans').forEach(a=>a.style.display='block');
+  if(window.MathJax){MathJax.typesetPromise();}
+};
+</script>
+</body>
+</html>
