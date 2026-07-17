@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Mini Lab : ความดันกับจำนวนโมเลกุลของแก๊ส</title>
+<style>
+  :root{
+    --blue:#2f6fd6;
+    --deep:#204d7c;
+    --sky:#eaf4ff;
+    --soft:#f7fbff;
+    --orange:#ffe4c4;
+    --green:#e7f7df;
+    --gray:#eef2f6;
+    --red:#e54848;
+    --ink:#16324f;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Tahoma, sans-serif;
+    color:var(--ink);
+    background:linear-gradient(180deg,#f7fbff,#eef7ff);
+    min-height:100vh;
+    overflow-x:hidden;
+  }
+  header{
+    padding:18px 14px 8px;
+    text-align:center;
+  }
+  h1{
+    margin:0;
+    font-size:clamp(24px,4vw,42px);
+    color:var(--blue);
+    font-weight:900;
+    line-height:1.2;
+  }
+  .subtitle{
+    margin-top:6px;
+    color:var(--deep);
+    font-weight:800;
+    font-size:clamp(15px,2vw,20px);
+  }
+  .wrap{
+    width:min(1200px, calc(100vw - 20px));
+    margin:0 auto;
+    display:grid;
+    grid-template-columns: 1fr 330px;
+    gap:14px;
+    padding-bottom:140px;
+  }
+  .lab-card,.panel,.info-card{
+    background:rgba(255,255,255,.92);
+    border:1px solid #d9e7f5;
+    border-radius:24px;
+    box-shadow:0 10px 28px rgba(41,94,150,.12);
+  }
+  .lab-card{
+    position:relative;
+    overflow:hidden;
+    min-height:560px;
+  }
+  canvas{
+    display:block;
+    width:100%;
+    height:560px;
+    background:linear-gradient(180deg,#dff2ff 0%,#eef8ff 62%,#dcecf8 100%);
+    border-radius:24px;
+  }
+  .top-readout{
+    position:absolute;
+    left:14px;
+    top:14px;
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    z-index:2;
+  }
+  .pill{
+    background:rgba(255,255,255,.88);
+    border:1px solid #d7e6f3;
+    border-radius:999px;
+    padding:8px 12px;
+    font-weight:900;
+    color:#25537e;
+    box-shadow:0 4px 14px rgba(39,91,144,.10);
+    font-size:14px;
+  }
+  .danger{color:#c92d2d}
+  .warning{
+    position:absolute;
+    right:14px;
+    top:14px;
+    background:#fff2d7;
+    border:1px solid #f1c784;
+    color:#9a6100;
+    border-radius:16px;
+    padding:9px 12px;
+    font-weight:900;
+    z-index:2;
+    display:none;
+    box-shadow:0 5px 16px rgba(159,103,0,.16);
+  }
+  .warning.show{display:block; animation:pulse .5s infinite alternate}
+  @keyframes pulse{from{transform:scale(1)}to{transform:scale(1.04)}}
+  .boom-text{
+    position:absolute;
+    inset:0;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    font-size:clamp(54px,10vw,120px);
+    font-weight:1000;
+    color:#d72d2d;
+    text-shadow:0 5px 0 #fff,0 12px 30px rgba(0,0,0,.28);
+    z-index:5;
+    pointer-events:none;
+  }
+  .boom-text.show{display:flex; animation:boomPop .8s ease-out both}
+  @keyframes boomPop{
+    0%{transform:scale(.3) rotate(-10deg); opacity:0}
+    35%{transform:scale(1.25) rotate(5deg); opacity:1}
+    100%{transform:scale(1) rotate(0deg); opacity:.95}
+  }
+  .panel{
+    padding:14px;
+    align-self:start;
+  }
+  .btnrow{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px}
+  button{
+    border:0;
+    border-radius:18px;
+    padding:13px 12px;
+    font-weight:900;
+    color:#16324f;
+    cursor:pointer;
+    box-shadow:0 6px 0 rgba(0,0,0,.12), 0 12px 22px rgba(42,96,150,.13);
+    transform:translateY(0);
+    transition:.12s;
+    font-size:15px;
+  }
+  button:active{transform:translateY(3px); box-shadow:0 3px 0 rgba(0,0,0,.12)}
+  .pumpBtn{background:#bfe0ff}
+  .autoBtn{background:#dff1ff}
+  .resetBtn{background:#e6e9ee}
+  .formulaBtn{background:var(--orange)}
+  .toggleBtn{background:#eef4fb}
+  .stat{
+    background:#f6fbff;
+    border:1px solid #dbeafa;
+    border-radius:18px;
+    padding:12px;
+    margin:10px 0;
+  }
+  .stat b{color:var(--blue)}
+  .bar{
+    height:16px;
+    background:#e8eef5;
+    border-radius:999px;
+    overflow:hidden;
+    margin-top:8px;
+  }
+  .bar > div{
+    height:100%;
+    width:0%;
+    background:linear-gradient(90deg,#7bc7ff,#ffb347,#ff5858);
+    border-radius:999px;
+    transition:.25s;
+  }
+  .note{
+    font-size:14px;
+    line-height:1.55;
+    color:#385d82;
+    background:#fffaf1;
+    border:1px solid #efd4a5;
+    border-radius:18px;
+    padding:11px;
+  }
+  .footer-link{
+    position:fixed;
+    left:0; right:0; bottom:0;
+    text-align:center;
+    background:rgba(255,255,255,.88);
+    border-top:1px solid #d9e7f5;
+    padding:10px 12px calc(10px + env(safe-area-inset-bottom));
+    z-index:20;
+    font-weight:900;
+  }
+  .footer-link a{color:#1e6bd6; text-decoration:underline}
+  .modal{
+    position:fixed;
+    inset:0;
+    background:#fff5e8;
+    z-index:50;
+    display:none;
+    overflow:auto;
+    padding:calc(72px + env(safe-area-inset-top)) 18px 120px;
+  }
+  .modal.show{display:block}
+  .close{
+    position:fixed;
+    right:14px;
+    top:calc(14px + env(safe-area-inset-top));
+    width:54px;
+    height:54px;
+    border-radius:18px;
+    background:#e8edf4;
+    color:#4d647d;
+    font-size:26px;
+    box-shadow:none;
+    z-index:55;
+  }
+  .formula-box{
+    max-width:900px;
+    margin:0 auto;
+    background:#fff;
+    border:2px solid #f3b86d;
+    border-radius:24px;
+    padding:18px;
+    line-height:1.75;
+    font-size:18px;
+  }
+  .formula-box h2{color:#c76c00;margin-top:0}
+  .formula-card{
+    background:#fff8ee;
+    border:1.5px solid #f0c082;
+    border-radius:18px;
+    padding:12px 14px;
+    margin:12px 0;
+  }
+  .formula{
+    font-size:22px;
+    color:#1d5eac;
+    font-weight:900;
+    text-align:center;
+    margin:8px 0;
+  }
+  @media (max-width: 860px){
+    .wrap{grid-template-columns:1fr}
+    .lab-card{min-height:520px}
+    canvas{height:520px}
+    .panel{position:relative}
+    .top-readout{font-size:12px}
+    .pill{font-size:12px;padding:7px 9px}
+    .warning{left:14px; right:auto; top:58px; font-size:13px}
+    .btnrow{grid-template-columns:1fr 1fr}
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Mini Lab : ความดันกับจำนวนโมเลกุลของแก๊ส</h1>
+  <div class="subtitle">สูบลมเข้าไปในถัง → จำนวนโมเลกุลเพิ่ม → ชนผนังถี่ขึ้น → ความดันเพิ่ม</div>
+</header>
+
+<main class="wrap">
+  <section class="lab-card">
+    <div class="top-readout">
+      <div class="pill">จำนวนโมเลกุล: <span id="nTxt">20</span></div>
+      <div class="pill">ความดัน: <span id="pTxt">1.0</span> atm</div>
+      <div class="pill danger">ขีดระเบิด: 8.0 atm</div>
+    </div>
+    <div class="warning" id="warn">⚠️ ความดันสูง! </div>
+    <div class="boom-text" id="boomText">ปัง!</div>
+    <canvas id="lab" width="900" height="560"></canvas>
+  </section>
+
+  <aside class="panel">
+    <div class="btnrow">
+      <button class="pumpBtn" id="pumpBtn">🫧 สูบลม</button>
+      <button class="autoBtn" id="autoBtn">▶️ สูบต่อเนื่อง</button>
+      <button class="resetBtn" id="resetBtn">🔄 รีเซ็ต</button>
+      <button class="formulaBtn" id="formulaBtn">Σ สูตรสำคัญ</button>
+    </div>
+    <button class="toggleBtn" id="soundBtn" style="width:100%;margin-bottom:8px;">🔊 เปิดเสียง</button>
+    <div class="stat">
+      <div><b>ความดันประมาณ</b></div>
+      <div style="font-size:30px;font-weight:1000;color:#2f6fd6"><span id="bigP">1.0</span> atm</div>
+      <div class="bar"><div id="pBar"></div></div>
+    </div>
+    <div class="stat">
+      <div><b>สถานะถัง</b></div>
+      <div id="status">ปลอดภัย — โมเลกุลชนผนังไม่ถี่มาก</div>
+    </div>
+    <div class="note">
+      แนวคิดสำคัญ: ถ้าควบคุมให้ปริมาตรและอุณหภูมิคงที่ เมื่อเพิ่มจำนวนโมเลกุลแก๊ส ความถี่ในการชนผนังถังจะเพิ่มขึ้น ความดันจึงสูงขึ้น
+    </div>
+  </aside>
+</main>
+
+<div class="modal" id="formulaModal">
+  <button class="close" id="closeFormula">×</button>
+  <div class="formula-box">
+    <h2>Σ สูตรสำคัญ</h2>
+    <div class="formula-card">
+      <b>กฎแก๊สอุดมคติ</b>
+      <div class="formula">PV = Nk<sub>B</sub>T</div>
+      ถ้าให้ปริมาตร <b>V</b> และอุณหภูมิ <b>T</b> คงที่ จะได้ว่า ความดัน <b>P</b> แปรผันตรงกับจำนวนโมเลกุล <b>N</b>
+      <div class="formula">P ∝ N
+<div style="margin-top:8px;color:#234d7a">
+<b>N</b> = จำนวนโมเลกุลของแก๊ส<br>
+<b>k<sub>B</sub></b> = ค่าคงที่โบลต์ซมันน์ (Boltzmann Constant)<br>
+<b>T</b> = อุณหภูมิสัมบูรณ์ (K)
+</div>
+
+    </div>
+    <div class="formula-card">
+      <b>อธิบายด้วยภาพโมเลกุล</b><br>
+      จำนวนโมเลกุลมากขึ้น → ชนผนังถังถี่ขึ้น → แรงเฉลี่ยต่อพื้นที่มากขึ้น → ความดันเพิ่มขึ้น
+    </div>
+    <div class="formula-card">
+      <b>จุดที่ต้องระวัง</b><br>
+      การทดลองนี้ตั้งใจให้เห็นความสัมพันธ์ <b>P ∝ N</b> โดยสมมติว่าอุณหภูมิและปริมาตรถังคงที่ ถ้าอุณหภูมิเปลี่ยน ความดันก็เปลี่ยนได้เช่นกัน
+    </div>
+  </div>
+</div>
+
+<div class="footer-link">
+  ศึกษาเพิ่มเติมที่ <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">เพจคลายปมฟิสิกส์</a>
+</div>
+
+<script>
+const canvas = document.getElementById('lab');
+const ctx = canvas.getContext('2d');
+
+const nTxt = document.getElementById('nTxt');
+const pTxt = document.getElementById('pTxt');
+const bigP = document.getElementById('bigP');
+const pBar = document.getElementById('pBar');
+const statusEl = document.getElementById('status');
+const warn = document.getElementById('warn');
+const boomText = document.getElementById('boomText');
+
+let W=900,H=560;
+let molecules=[];
+let incoming=[];
+let debris=[];
+let gasCloud=[];
+let pumpT=0;
+let pumpKick=0;
+let moleculeCount=20;
+let pressure=1.0;
+let exploded=false;
+let auto=false;
+let soundOn=true;
+let lastAuto=0;
+
+const tank = {x:330,y:150,w:300,h:250,r:28};
+const pipe = {x1:260,y:275,x2:330,y:275};
+const pump = {x:80,y:165,w:130,h:230};
+
+function resizeCanvas(){
+  const rect = canvas.getBoundingClientRect();
+  const ratio = window.devicePixelRatio || 1;
+  canvas.width = Math.round(rect.width*ratio);
+  canvas.height = Math.round(rect.height*ratio);
+  ctx.setTransform(ratio,0,0,ratio,0,0);
+  W = rect.width; H = rect.height;
+}
+window.addEventListener('resize', resizeCanvas);
+
+function rand(a,b){return a+Math.random()*(b-a)}
+function init(){
+  molecules=[];
+  incoming=[];
+  debris=[];
+  gasCloud=[];
+  moleculeCount=20;
+  pressure=1.0;
+  exploded=false;
+  auto=false;
+  document.getElementById('autoBtn').textContent='▶️ สูบต่อเนื่อง';
+  boomText.classList.remove('show');
+  for(let i=0;i<moleculeCount;i++) addMolecule(false);
+  updateReadout();
+}
+function addMolecule(randomEdge=true){
+  const speed = rand(1.1,2.2);
+  const ang = rand(0,Math.PI*2);
+  molecules.push({
+    x: rand(tank.x+24,tank.x+tank.w-24),
+    y: rand(tank.y+24,tank.y+tank.h-24),
+    vx: Math.cos(ang)*speed,
+    vy: Math.sin(ang)*speed,
+    r: rand(4,6),
+    c: Math.random()>.5 ? '#1f78ff' : '#1aa7ff'
+  });
+}
+function pumpAir(){
+  if(exploded) return;
+  pumpKick=1;
+  moleculeCount += 8;
+  const pipeStart = {x:pump.x+pump.w, y:pump.y+185};
+  const pipeEnd = {x:tank.x, y:tank.y+tank.h/2};
+  for(let i=0;i<8;i++){
+    incoming.push({
+      t: -i*0.055,
+      speed: rand(0.020,0.032),
+      offset: rand(-3.5,3.5),
+      r:rand(3.5,5.5),
+      c: Math.random()>.5 ? '#111' : '#1f78ff',
+      x: pipeStart.x,
+      y: pipeStart.y
+    });
+  }
+  playPump();
+  updatePressure();
+  if(pressure>=5.8 && pressure<8) playBeep();
+  if(pressure>=8.0) explode();
+}
+function updatePressure(){
+  pressure = Math.min(9.5, moleculeCount/20);
+  updateReadout();
+}
+function updateReadout(){
+  nTxt.textContent=moleculeCount;
+  const p=pressure.toFixed(1);
+  pTxt.textContent=p;
+  bigP.textContent=p;
+  pBar.style.width=Math.min(100,pressure/8*100)+'%';
+  warn.classList.toggle('show', pressure>=5.8 && !exploded);
+  if(exploded){
+    statusEl.textContent='ถังระเบิด — แก๊สกระจายออกจากถัง';
+  }else if(pressure>=5.8){
+    statusEl.textContent='อันตราย — โมเลกุลชนผนังถี่มาก ความดันสูง';
+  }else if(pressure>=3.0){
+    statusEl.textContent='ความดันเพิ่มขึ้น — โมเลกุลชนผนังถี่ขึ้น';
+  }else{
+    statusEl.textContent='ปลอดภัย — โมเลกุลชนผนังไม่ถี่มาก';
+  }
+}
+function explode(){
+  if(exploded) return;
+  exploded=true;
+  auto=false;
+  document.getElementById('autoBtn').textContent='▶️ สูบต่อเนื่อง';
+  boomText.classList.add('show');
+  playBang();
+  for(const m of molecules){
+    gasCloud.push({x:m.x,y:m.y,vx:rand(-6,6),vy:rand(-6,6),r:m.r,c:m.c,life:rand(80,130)});
+  }
+  molecules=[];
+  for(let i=0;i<44;i++){
+    debris.push({
+      x:tank.x+tank.w/2+rand(-80,80),
+      y:tank.y+tank.h/2+rand(-70,70),
+      vx:rand(-7,7), vy:rand(-8,5),
+      rot:rand(0,Math.PI),
+      vr:rand(-.16,.16),
+      w:rand(12,34), h:rand(5,12),
+      life:rand(100,160)
+    });
+  }
+  updateReadout();
+}
+function roundedRect(x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.lineTo(x+w-r,y);
+  ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r);
+  ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h);
+  ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r);
+  ctx.quadraticCurveTo(x,y,x+r,y);
+  ctx.closePath();
+}
+function drawGauge(cx,cy,r){
+  ctx.save();
+  ctx.fillStyle='#fff';
+  ctx.strokeStyle='#264c75';
+  ctx.lineWidth=4;
+  ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle='#27496d'; ctx.font='bold 15px system-ui'; ctx.textAlign='center';
+  ctx.fillText('Pressure',cx,cy-12);
+  ctx.fillText(pressure.toFixed(1)+' atm',cx,cy+42);
+  for(let i=0;i<=8;i++){
+    const a = Math.PI*0.78 + (Math.PI*1.44)*(i/8);
+    const x1=cx+Math.cos(a)*(r-10), y1=cy+Math.sin(a)*(r-10);
+    const x2=cx+Math.cos(a)*(r-20), y2=cy+Math.sin(a)*(r-20);
+    ctx.strokeStyle=i>=6?'#e54848':'#395f86';
+    ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+  }
+  const a = Math.PI*0.78 + (Math.PI*1.44)*Math.min(1,pressure/8);
+  ctx.strokeStyle=pressure>=5.8?'#e54848':'#2f6fd6';
+  ctx.lineWidth=5;
+  ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+Math.cos(a)*(r-27), cy+Math.sin(a)*(r-27)); ctx.stroke();
+  ctx.fillStyle='#263c55'; ctx.beginPath(); ctx.arc(cx,cy,6,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+function drawPump(){
+  const bounce = pumpKick>0 ? Math.sin((1-pumpKick)*Math.PI*4)*18 : 0;
+  const handleY = pump.y-42 + bounce;
+  ctx.save();
+  // base cylinder
+  ctx.fillStyle='#d9e4ef';
+  ctx.strokeStyle='#486a8c';
+  ctx.lineWidth=4;
+  roundedRect(pump.x,pump.y+45,pump.w,pump.h-45,18); ctx.fill(); ctx.stroke();
+  ctx.fillStyle='#b9c7d7';
+  ctx.fillRect(pump.x+14,pump.y+pump.h-20,pump.w-28,18);
+  // piston rod
+  ctx.strokeStyle='#333'; ctx.lineWidth=8;
+  ctx.beginPath(); ctx.moveTo(pump.x+pump.w/2,handleY); ctx.lineTo(pump.x+pump.w/2,pump.y+86+bounce*0.3); ctx.stroke();
+  // handle
+  ctx.strokeStyle='#111'; ctx.lineWidth=10; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(pump.x+25,handleY); ctx.lineTo(pump.x+pump.w-25,handleY); ctx.stroke();
+  // plunger
+  ctx.fillStyle='#222';
+  roundedRect(pump.x+12,pump.y+78+bounce*0.25,pump.w-24,18,8); ctx.fill();
+  ctx.fillStyle='#1d3557'; ctx.font='bold 18px system-ui'; ctx.textAlign='center';
+  ctx.fillText('สูบลม',pump.x+pump.w/2,pump.y+pump.h+32);
+  ctx.restore();
+}
+function drawPipe(){
+  ctx.save();
+  ctx.strokeStyle='#5b6f83';
+  ctx.lineWidth=26; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(pump.x+pump.w,pump.y+185); ctx.lineTo(tank.x,tank.y+tank.h/2); ctx.stroke();
+  ctx.strokeStyle='#b7d7f2'; ctx.lineWidth=16;
+  ctx.beginPath(); ctx.moveTo(pump.x+pump.w,pump.y+185); ctx.lineTo(tank.x,tank.y+tank.h/2); ctx.stroke();
+  ctx.fillStyle='#2b557c'; ctx.font='bold 15px system-ui'; ctx.textAlign='center';
+  ctx.fillText('ท่อลม', (pump.x+pump.w+tank.x)/2, pump.y+160);
+  ctx.restore();
+}
+function drawTank(){
+  ctx.save();
+  if(!exploded){
+    const grad = ctx.createLinearGradient(tank.x,tank.y,tank.x,tank.y+tank.h);
+    grad.addColorStop(0,'#e9f8ff'); grad.addColorStop(1,'#bfe4ff');
+    ctx.fillStyle=grad;
+    ctx.strokeStyle=pressure>=5.8?'#e54848':'#2b5d88';
+    ctx.lineWidth=pressure>=5.8?6:4;
+    roundedRect(tank.x,tank.y,tank.w,tank.h,tank.r); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='rgba(255,255,255,.35)';
+    roundedRect(tank.x+18,tank.y+16,tank.w-36,44,18); ctx.fill();
+    ctx.fillStyle='#17466e'; ctx.font='bold 20px system-ui'; ctx.textAlign='center';
+    ctx.fillText('ถังแก๊ส',tank.x+tank.w/2,tank.y+34);
+    if(pressure>=5.8){
+      ctx.strokeStyle='rgba(229,72,72,.5)';
+      ctx.lineWidth=2;
+      for(let i=0;i<7;i++){
+        ctx.beginPath();
+        ctx.moveTo(tank.x+rand(35,tank.w-35), tank.y+rand(40,tank.h-40));
+        ctx.lineTo(tank.x+rand(35,tank.w-35), tank.y+rand(40,tank.h-40));
+        ctx.stroke();
+      }
+    }
+  }else{
+    ctx.strokeStyle='#b84545'; ctx.lineWidth=6;
+    ctx.beginPath(); ctx.moveTo(tank.x+30,tank.y+35); ctx.lineTo(tank.x+100,tank.y+8); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(tank.x+tank.w-40,tank.y+tank.h-20); ctx.lineTo(tank.x+tank.w+45,tank.y+tank.h+10); ctx.stroke();
+  }
+  ctx.restore();
+}
+function updateMolecules(){
+  if(!exploded){
+    const speedBoost = 1 + Math.min(1.2, pressure/10);
+    for(const m of molecules){
+      m.x += m.vx*speedBoost;
+      m.y += m.vy*speedBoost;
+      if(m.x-m.r<tank.x){m.x=tank.x+m.r; m.vx*=-1;}
+      if(m.x+m.r>tank.x+tank.w){m.x=tank.x+tank.w-m.r; m.vx*=-1;}
+      if(m.y-m.r<tank.y){m.y=tank.y+m.r; m.vy*=-1;}
+      if(m.y+m.r>tank.y+tank.h){m.y=tank.y+tank.h-m.r; m.vy*=-1;}
+    }
+    const pipeStart = {x:pump.x+pump.w, y:pump.y+185};
+    const pipeEnd = {x:tank.x, y:tank.y+tank.h/2};
+    const dx = pipeEnd.x - pipeStart.x;
+    const dy = pipeEnd.y - pipeStart.y;
+    const len = Math.hypot(dx,dy) || 1;
+    const nx = -dy/len;
+    const ny = dx/len;
+    for(let i=incoming.length-1;i>=0;i--){
+      const q=incoming[i];
+      q.t += q.speed;
+      const tt = Math.max(0, Math.min(1, q.t));
+      q.x = pipeStart.x + dx*tt + nx*q.offset;
+      q.y = pipeStart.y + dy*tt + ny*q.offset;
+      if(q.t >= 1){
+        molecules.push({
+          x:tank.x+25,
+          y:tank.y+tank.h/2+rand(-18,18),
+          vx:rand(1,2.4),
+          vy:rand(-1.6,1.6),
+          r:q.r,
+          c:q.c
+        });
+        incoming.splice(i,1);
+      }
+    }
+    while(molecules.length>moleculeCount) molecules.pop();
+  }else{
+    for(const g of gasCloud){
+      g.x += g.vx; g.y += g.vy; g.vy += .03; g.life--; g.r*=.995;
+    }
+    gasCloud=gasCloud.filter(g=>g.life>0);
+    for(const d of debris){
+      d.x += d.vx; d.y += d.vy; d.vy += .12; d.rot += d.vr; d.life--;
+    }
+    debris=debris.filter(d=>d.life>0);
+  }
+  pumpKick = Math.max(0,pumpKick-.06);
+}
+function drawMolecules(){
+  ctx.save();
+  for(const m of molecules){
+    ctx.fillStyle=m.c;
+    ctx.beginPath(); ctx.arc(m.x,m.y,m.r,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,.55)';
+    ctx.beginPath(); ctx.arc(m.x-1.5,m.y-1.5,m.r*.35,0,Math.PI*2); ctx.fill();
+  }
+  for(const q of incoming){
+    ctx.fillStyle=q.c;
+    ctx.beginPath(); ctx.arc(q.x,q.y,q.r,0,Math.PI*2); ctx.fill();
+  }
+  for(const g of gasCloud){
+    ctx.globalAlpha=Math.max(.05,g.life/120);
+    ctx.fillStyle=g.c;
+    ctx.beginPath(); ctx.arc(g.x,g.y,g.r,0,Math.PI*2); ctx.fill();
+  }
+  ctx.globalAlpha=1;
+  for(const d of debris){
+    ctx.save();
+    ctx.translate(d.x,d.y); ctx.rotate(d.rot);
+    ctx.fillStyle='#7fa2c0'; ctx.strokeStyle='#345c7e'; ctx.lineWidth=1;
+    ctx.fillRect(-d.w/2,-d.h/2,d.w,d.h); ctx.strokeRect(-d.w/2,-d.h/2,d.w,d.h);
+    ctx.restore();
+  }
+  ctx.restore();
+}
+function drawCollisionLines(){
+  if(exploded) return;
+  const count = Math.min(22, Math.floor(pressure*3));
+  ctx.save();
+  ctx.strokeStyle=pressure>=5.8?'rgba(229,72,72,.32)':'rgba(47,111,214,.18)';
+  ctx.lineWidth=2;
+  for(let i=0;i<count;i++){
+    const side=Math.floor(Math.random()*4);
+    let x,y,x2,y2;
+    if(side===0){x=tank.x+rand(20,tank.w-20);y=tank.y+4;x2=x+rand(-16,16);y2=y+rand(8,22)}
+    if(side===1){x=tank.x+tank.w-4;y=tank.y+rand(20,tank.h-20);x2=x-rand(8,22);y2=y+rand(-16,16)}
+    if(side===2){x=tank.x+rand(20,tank.w-20);y=tank.y+tank.h-4;x2=x+rand(-16,16);y2=y-rand(8,22)}
+    if(side===3){x=tank.x+4;y=tank.y+rand(20,tank.h-20);x2=x+rand(8,22);y2=y+rand(-16,16)}
+    ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x2,y2); ctx.stroke();
+  }
+  ctx.restore();
+}
+function drawScene(ts){
+  ctx.clearRect(0,0,W,H);
+  // scale original layout to current canvas width
+  ctx.save();
+  const sx = W/900, sy=H/560;
+  ctx.scale(sx,sy);
+  // keep model coords at 900x560
+  drawPipe();
+  drawPump();
+  drawTank();
+  drawCollisionLines();
+  drawMolecules();
+  drawGauge(740,185,72);
+  // floor
+  ctx.fillStyle='rgba(86,126,160,.12)';
+  ctx.fillRect(0,455,900,105);
+  ctx.restore();
+}
+function loop(ts){
+  if(auto && !exploded && ts-lastAuto>520){
+    pumpAir();
+    lastAuto=ts;
+  }
+  updateMolecules();
+  drawScene(ts);
+  requestAnimationFrame(loop);
+}
+function audioCtx(){
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if(!AC || !soundOn) return null;
+  if(!window._ac) window._ac = new AC();
+  return window._ac;
+}
+function beep(freq=700,dur=.12,type='sine',gain=.06){
+  const ac=audioCtx(); if(!ac) return;
+  const o=ac.createOscillator(), g=ac.createGain();
+  o.type=type; o.frequency.value=freq; g.gain.value=gain;
+  o.connect(g); g.connect(ac.destination);
+  o.start();
+  g.gain.exponentialRampToValueAtTime(.001, ac.currentTime+dur);
+  o.stop(ac.currentTime+dur);
+}
+function playPump(){beep(180,.06,'square',.03)}
+function playBeep(){beep(880,.11,'sine',.05); setTimeout(()=>beep(880,.11,'sine',.05),130)}
+function playBang(){
+  const ac=audioCtx(); if(!ac) return;
+  const bufferSize = ac.sampleRate*.45;
+  const buffer = ac.createBuffer(1, bufferSize, ac.sampleRate);
+  const data = buffer.getChannelData(0);
+  for(let i=0;i<bufferSize;i++){
+    data[i]=(Math.random()*2-1)*Math.pow(1-i/bufferSize,2.2);
+  }
+  const noise=ac.createBufferSource();
+  noise.buffer=buffer;
+  const gain=ac.createGain();
+  gain.gain.value=.35;
+  noise.connect(gain); gain.connect(ac.destination);
+  noise.start();
+  beep(85,.35,'sawtooth',.22);
+}
+document.getElementById('pumpBtn').addEventListener('click', pumpAir);
+document.getElementById('autoBtn').addEventListener('click',()=>{
+  if(exploded) return;
+  auto=!auto;
+  document.getElementById('autoBtn').textContent=auto?'⏸ หยุดสูบ':'▶️ สูบต่อเนื่อง';
+});
+document.getElementById('resetBtn').addEventListener('click', init);
+document.getElementById('soundBtn').addEventListener('click',()=>{
+  soundOn=!soundOn;
+  document.getElementById('soundBtn').textContent=soundOn?'🔊 เปิดเสียง':'🔇 ปิดเสียง';
+});
+document.getElementById('formulaBtn').addEventListener('click',()=>document.getElementById('formulaModal').classList.add('show'));
+document.getElementById('closeFormula').addEventListener('click',()=>document.getElementById('formulaModal').classList.remove('show'));
+
+resizeCanvas();
+init();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
