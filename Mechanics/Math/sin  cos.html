@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Interactive Trigonometric Graphs — sin cos</title>
+<script>
+window.MathJax = { tex: { inlineMath: [['\\(','\\)'], ['$', '$']] }, svg: { fontCache: 'global' } };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<style>
+:root{
+  --blue:#2f6fd6; --red:#e01818; --cos:#14a25a; --ink:#132033;
+  --muted:#6b778c; --panel:#f5f8fc; --line:#dbe5f0;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:#fff}
+body{padding:16px 14px 110px}
+.wrap{max-width:1120px;margin:0 auto}
+.header{text-align:center;margin:4px auto 12px}
+.title{font-size:clamp(25px,4vw,46px);font-weight:900;color:var(--blue);line-height:1.1}
+.sub{font-size:clamp(15px,2vw,19px);color:#204d7c;font-weight:800;margin-top:4px}
+.card{background:#fff;border:1px solid var(--line);border-radius:26px;box-shadow:0 12px 30px rgba(47,111,214,.10);padding:14px;margin:12px 0}
+.lab{display:grid;grid-template-columns:minmax(420px,1fr) 340px;gap:14px;align-items:stretch}
+.board{background:#07070b;border-radius:22px;padding:10px;min-height:560px;position:relative;overflow:hidden;touch-action:none}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:14px}
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:end}
+.field{display:flex;flex-direction:column;gap:6px}
+label{font-weight:900;color:#234b74;font-size:14px}
+input,select{border:1.5px solid #b7cbe1;border-radius:16px;padding:12px;font-size:17px;font-weight:800;background:white;color:var(--ink);width:100%}
+.hint{grid-column:1/-1;color:var(--muted);font-size:13px;line-height:1.45}
+.btns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px}
+button{border:0;border-radius:16px;padding:12px 10px;font-weight:900;font-size:15px;cursor:pointer;box-shadow:0 5px 0 rgba(0,0,0,.13)}
+.primary{background:#74a7db;color:white}.gray{background:#e5e9ef;color:#40556e}.green{background:#dff2da;color:#1f6f35}.orange{background:#ffe4c4;color:#8b4d00}
+.readout{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.val{background:white;border:1px solid var(--line);border-radius:18px;padding:10px}
+.val b{display:block;font-size:13px;color:#53657a;margin-bottom:4px}.val span{font-size:20px;font-weight:950}
+.sinv span{color:var(--red)} .cosv span{color:var(--cos)}
+.note{font-size:14px;line-height:1.6;color:#43556b;margin-top:10px}
+canvas{width:100%;height:100%;display:block}
+.footer{position:fixed;left:0;right:0;bottom:0;background:rgba(255,255,255,.94);border-top:1px solid #dbe5f0;text-align:center;padding:12px 10px calc(12px + env(safe-area-inset-bottom));font-weight:800;z-index:10}
+.footer a{color:#2f6fd6;text-decoration:underline}
+@media (max-width:860px){
+  body{padding:10px 10px 104px}
+  .lab{grid-template-columns:1fr}
+  .board{min-height:520px}
+  .controls{grid-template-columns:1fr}
+  .btns{grid-template-columns:1fr 1fr 1fr}
+  .readout{grid-template-columns:1fr 1fr}
+}
+@media (max-width:520px){
+  .board{min-height:480px}
+  .btns{grid-template-columns:1fr 1fr}
+  .readout{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <div class="title">Interactive Trigonometric Graphs</div>
+    <div class="sub">วงกลมหนึ่งหน่วย + กราฟ \( \sin\theta \) ด้านขวา + กราฟ \( \cos\theta \) แนวตั้ง</div>
+  </div>
+
+  <div class="card lab">
+    <div class="board" id="board">
+      <canvas id="cv"></canvas>
+    </div>
+
+    <div class="panel">
+      <div class="controls">
+        <div class="field">
+          <label>กรอกมุม \( \theta \) ได้ทั้งบวกและลบ</label>
+          <input id="angleInput" value="45" inputmode="text" autocomplete="off" placeholder="เช่น -30, 45, -pi/2" />
+        </div>
+        <div class="field">
+          <label>หน่วยของมุม</label>
+          <select id="unit">
+            <option value="deg">องศา</option>
+            <option value="rad">เรเดียน</option>
+          </select>
+        </div>
+        <div class="hint">
+          ใช้นิ้วแตะ/ลากจุดสีแดงบนวงกลมเพื่อปรับมุมได้โดยตรง<br>
+          พิมพ์มุมติดลบได้ เช่น <b>-30</b>, <b>-90</b> หรือแบบเรเดียน <b>-pi/2</b>
+        </div>
+      </div>
+
+      <div class="btns">
+        <button class="primary" onclick="stepAngle(-15)">−15°</button>
+        <button class="primary" onclick="stepAngle(15)">+15°</button>
+        <button class="gray" onclick="resetAngle()">🔄 รีเซ็ต</button>
+        <button class="orange" onclick="setPreset('-90')">−90°</button>
+        <button class="orange" onclick="setPreset('-45')">−45°</button>
+        <button class="orange" onclick="setPreset('0')">0°</button>
+        <button class="green" onclick="setPreset('30')">30°</button>
+        <button class="green" onclick="setPreset('60')">60°</button>
+        <button class="green" onclick="setPreset('90')">90°</button>
+      </div>
+
+      <div class="readout">
+        <div class="val sinv"><b>\(\sin\theta\)</b><span id="sinVal">0</span></div>
+        <div class="val cosv"><b>\(\cos\theta\)</b><span id="cosVal">0</span></div>
+        <div class="val"><b>มุม</b><span id="angleVal">0°</span></div>
+        <div class="val"><b>เรเดียน</b><span id="radVal">0</span></div>
+      </div>
+
+      <div class="note">
+        กราฟ \( \sin\theta \) อยู่ข้างวงกลมทางขวา ส่วน \( \cos\theta \) วางเป็นแกนตั้งตามภาพร่างของพี่
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="footer">ศึกษาเพิ่มเติมที่ <a href="https://www.facebook.com/resolvephysics" target="_blank">เพจคลายปมฟิสิกส์</a></div>
+
+<script>
+const cv = document.getElementById('cv');
+const board = document.getElementById('board');
+const ctx = cv.getContext('2d');
+const input = document.getElementById('angleInput');
+const unit = document.getElementById('unit');
+let angleRad = Math.PI/4;
+let dragging = false;
+let geom = {};
+
+function parseAngle(str){
+  let s = String(str).trim().toLowerCase().replace(/\s+/g,'').replace(/π/g,'pi');
+  if(!s) return angleRad;
+  if(unit.value === 'rad'){
+    if(s.includes('pi')){
+      try{
+        const safe = s.replace(/pi/g, `(${Math.PI})`);
+        if(/^[0-9+\-*/().]+$/.test(safe)) return Function('"use strict";return ('+safe+')')();
+      }catch(e){}
+    }
+    const n = Number(s); return isFinite(n) ? n : angleRad;
+  }
+  const n = Number(s); return isFinite(n) ? n*Math.PI/180 : angleRad;
+}
+function syncFromInput(){ angleRad = parseAngle(input.value); draw(); }
+function setInputFromRad(r){
+  angleRad = r;
+  if(unit.value === 'deg') input.value = fmt(radToDeg(r));
+  else input.value = fmt(r);
+  draw();
+}
+function radToDeg(r){ return r*180/Math.PI; }
+function fmt(x){ if(Math.abs(x)<1e-10)x=0; return Number(x).toFixed(3).replace(/\.?0+$/,''); }
+function drawArrow(x1,y1,x2,y2,color='#ddd',w=2){
+  ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=w;
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+  const a=Math.atan2(y2-y1,x2-x1), len=10;
+  ctx.beginPath();
+  ctx.moveTo(x2,y2);
+  ctx.lineTo(x2-len*Math.cos(a-Math.PI/6), y2-len*Math.sin(a-Math.PI/6));
+  ctx.lineTo(x2-len*Math.cos(a+Math.PI/6), y2-len*Math.sin(a+Math.PI/6));
+  ctx.closePath(); ctx.fill();
+}
+function drawText(t,x,y,color='#ddd',size=14,align='center'){
+  ctx.fillStyle=color; ctx.font=`900 ${size}px system-ui`; ctx.textAlign=align; ctx.textBaseline='middle'; ctx.fillText(t,x,y);
+}
+function resize(){
+  const rect = cv.getBoundingClientRect();
+  const dpr = Math.max(1, window.devicePixelRatio || 1);
+  cv.width = Math.round(rect.width*dpr);
+  cv.height = Math.round(rect.height*dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  draw();
+}
+function draw(){
+  const W=cv.clientWidth, H=cv.clientHeight;
+  ctx.clearRect(0,0,W,H);
+
+  const s = Math.sin(angleRad), c = Math.cos(angleRad);
+  document.getElementById('sinVal').textContent=fmt(s);
+  document.getElementById('cosVal').textContent=fmt(c);
+  document.getElementById('angleVal').textContent=fmt(radToDeg(angleRad))+'°';
+  document.getElementById('radVal').textContent=fmt(angleRad);
+
+  const cx = Math.max(95, W*0.20), cy = H*0.30;
+  const R = Math.min(W*0.145, H*0.155, 92);
+  const px = cx + R*c, py = cy - R*s;
+  geom = {cx,cy,R};
+
+  // unit circle
+  ctx.strokeStyle='#e01818'; ctx.lineWidth=4;
+  ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.stroke();
+  drawArrow(cx-R-35,cy,cx+R+38,cy,'#d9d9d9',2);
+  drawArrow(cx,cy+R+34,cx,cy-R-36,'#d9d9d9',2);
+  ctx.strokeStyle='#d7dde6'; ctx.lineWidth=2.2;
+  ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(px,py); ctx.stroke();
+  ctx.strokeStyle='rgba(255,255,255,.62)';
+  ctx.beginPath(); ctx.moveTo(px,py); ctx.lineTo(px,cy); ctx.stroke();
+  ctx.fillStyle='#ff2020'; ctx.beginPath(); ctx.arc(px,py,7,0,Math.PI*2); ctx.fill();
+  drawText('ลากจุดนี้', px+28, py-15, '#ffd7d7', 12, 'left');
+
+  // sin graph: right of circle
+  const gx = cx + R + 70, gy = cy;
+  const gEnd = W - 24, amp = R;
+  drawArrow(gx,gy,gEnd,gy,'#d9d9d9',2);
+  drawArrow(gx,gy+amp+32,gx,gy-amp-38,'#d9d9d9',2);
+  drawText('sin θ',gx+18,gy-amp-42,'#ff2c2c',21,'left');
+  ctx.setLineDash([6,6]); ctx.strokeStyle='rgba(224,24,24,.55)'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(gx,gy-amp); ctx.lineTo(gEnd,gy-amp); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(gx,gy+amp); ctx.lineTo(gEnd,gy+amp); ctx.stroke();
+  ctx.setLineDash([]);
+  drawText('1',gx-14,gy-amp,'#ddd',13); drawText('−1',gx-18,gy+amp,'#ddd',13);
+
+  const span = 2*Math.PI;
+  ctx.strokeStyle='#e01818'; ctx.lineWidth=4; ctx.beginPath();
+  for(let i=0;i<=420;i++){
+    const t = angleRad + span*i/420;
+    const x = gx + (gEnd-gx)*i/420;
+    const y = gy - amp*Math.sin(t);
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  }
+  ctx.stroke();
+  ctx.fillStyle='#ff2020'; ctx.beginPath(); ctx.arc(gx,gy-amp*s,6,0,Math.PI*2); ctx.fill();
+
+  // connection sin
+  ctx.setLineDash([5,5]); ctx.strokeStyle='rgba(224,24,24,.65)';
+  ctx.beginPath(); ctx.moveTo(px,py); ctx.lineTo(gx,gy-amp*s); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // cos graph: vertical style like sketch, below circle
+  const vcx = cx + 10, vTop = H*0.48, vBottom = H - 42;
+  const cosAxisY = vTop + 18;
+  const vMid = (vTop + vBottom)/2;
+  const vAmpX = R;
+  const vAmpY = (vBottom-vTop)/2 - 18;
+  drawArrow(vcx-vAmpX-40, cosAxisY, vcx+vAmpX+72, cosAxisY, '#d9d9d9', 2);
+  drawArrow(vcx, vBottom+8, vcx, vTop-22, '#d9d9d9', 2);
+  drawText('cos', vcx+vAmpX+78, cosAxisY, '#35d16f', 32, 'left');
+  ctx.strokeStyle='#14a25a'; ctx.lineWidth=5; ctx.beginPath();
+  for(let i=0;i<=360;i++){
+    const t = angleRad + 2*Math.PI*i/360;
+    const y = cosAxisY + (vBottom-cosAxisY)*i/360;
+    const x = vcx + vAmpX*Math.cos(t);
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  }
+  ctx.stroke();
+
+  const yCur = cosAxisY;
+  const xCur = px;
+  ctx.fillStyle='#35d16f'; ctx.beginPath(); ctx.arc(xCur,yCur,6,0,Math.PI*2); ctx.fill();
+  ctx.setLineDash([5,5]); ctx.strokeStyle='rgba(20,162,90,.65)';
+  ctx.beginPath(); ctx.moveTo(px,py); ctx.lineTo(px,yCur); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // labels and angle arc
+  ctx.strokeStyle='#ffd1d1'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.arc(cx,cy,R*0.34,0,-angleRad, angleRad<0); ctx.stroke();
+  drawText('θ', cx+R*0.44, cy-R*0.22, '#ffb1b1', 15);
+}
+function pointerToAngle(e){
+  const rect=cv.getBoundingClientRect();
+  const x=(e.clientX ?? e.touches?.[0]?.clientX)-rect.left;
+  const y=(e.clientY ?? e.touches?.[0]?.clientY)-rect.top;
+  return Math.atan2(geom.cy-y, x-geom.cx);
+}
+function down(e){ dragging=true; board.setPointerCapture?.(e.pointerId); setInputFromRad(pointerToAngle(e)); }
+function move(e){ if(dragging){ e.preventDefault(); setInputFromRad(pointerToAngle(e)); } }
+function up(e){ dragging=false; }
+board.addEventListener('pointerdown', down);
+board.addEventListener('pointermove', move);
+board.addEventListener('pointerup', up);
+board.addEventListener('pointercancel', up);
+
+function setPreset(v){ unit.value='deg'; input.value=v; syncFromInput(); }
+function resetAngle(){ unit.value='deg'; input.value='45'; syncFromInput(); }
+function stepAngle(d){ setInputFromRad(angleRad + d*Math.PI/180); }
+input.addEventListener('input', syncFromInput);
+unit.addEventListener('change', () => { setInputFromRad(angleRad); });
+window.addEventListener('resize', resize);
+setTimeout(()=>{syncFromInput(); resize();},50);
+</script>
+</body>
+</html>
