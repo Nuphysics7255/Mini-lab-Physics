@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>ถาดคลื่นน้ำ — เลี้ยวเบนผ่านช่องเปิด (Single Slit)</title>
+<style>
+  :root{
+    --ink:#0f172a; --muted:#475569; --line:#e5e7eb; --bg:#ffffff;
+    --accent:#2563eb; --accent-soft:#eff6ff;
+    --water:#e6f4ff; --water-deep:#bfe6ff;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; touch-action:manipulation}
+  html,body{height:100%}
+  body{margin:0; font-family:system-ui, Inter, 'Noto Sans Thai', sans-serif; color:var(--ink); background:var(--bg)}
+  header{padding:12px 14px; border-bottom:1px solid var(--line); display:grid; gap:8px}
+  header h1{margin:0; font-size:18px}
+  .controls{display:grid; grid-template-columns:repeat(12,1fr); gap:10px}
+  .control{grid-column:span 12; display:grid; gap:6px}
+  .row{display:flex; align-items:center; gap:10px}
+  .control label{font-size:13px; color:var(--muted)}
+  input[type="range"]{width:100%}
+  button{appearance:none; border:1px solid var(--accent); background:var(--accent); color:#fff; border-radius:10px; padding:10px 14px; font-weight:600; cursor:pointer}
+  button.secondary{background:#fff; color:var(--accent)}
+  main{display:grid; place-items:center; padding:10px; position:relative}
+  canvas{width:min(1100px, 96vw); height:min(66vh, 65vw); border:1px solid var(--line); border-radius:14px; background:linear-gradient(180deg, var(--water) 0%, var(--water-deep) 100%); image-rendering:auto}
+  .legend{font-size:12px; color:var(--muted)}
+  .overlay{position:absolute; inset:0; background:#fff; padding:20px; overflow:auto;}
+  .overlay h2{margin-top:0}
+
+/* --- Layout: desktop controls on top, mobile controls below canvas --- */
+body{margin:0; font-family:system-ui, Inter, 'Noto Sans Thai', sans-serif; color:var(--ink); background:var(--bg); display:flex; flex-direction:column; min-height:100vh}
+.site-header{padding:12px 14px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:10px}
+.site-header h1{margin:0; font-size:18px}
+.controlbar{padding:10px 14px; border-bottom:1px solid var(--line)}
+main{display:grid; place-items:center; padding:10px; position:relative; flex:1}
+canvas{width:min(1100px, 96vw); height:min(66vh, 65vw); border:1px solid var(--line); border-radius:14px; background:linear-gradient(180deg, var(--water) 0%, var(--water-deep) 100%); image-rendering:auto}
+
+/* Mobile: move the control bar below the simulation (canvas) */
+@media (max-width: 760px){
+  .controlbar{order:3; border-top:1px solid var(--line); border-bottom:none; padding-bottom:14px}
+  main{order:2}
+  .site-header{order:1}
+  canvas{height:min(70vh, 92vw)} /* ให้จอทดลองชัดในมือถือ */
+  .controls{gap:8px}
+  .control{grid-column:span 12 !important}
+  button{width:100%}
+  .legend{padding-top:8px}
+}
+
+/* Desktop order (default) */
+.site-header{order:1}
+.controlbar{order:2}
+main{order:3}
+
+/* --- Theory overlay: full screen, no controls shown inside --- */
+.overlay{
+  position:fixed; inset:0;
+  background:linear-gradient(180deg, #f8fbff 0%, #ffffff 60%);
+  padding:18px 14px calc(18px + env(safe-area-inset-bottom));
+  overflow:auto;
+  z-index:9999;
+}
+.overlay .theory-wrap{max-width:980px; margin:0 auto; display:grid; gap:14px}
+.overlay .theory-title{
+  display:flex; align-items:flex-start; justify-content:space-between; gap:12px
+}
+.overlay h2{margin:0; font-size:22px}
+.overlay .subtitle{margin:4px 0 0; color:var(--muted); font-size:13px; line-height:1.5}
+.overlay-close{
+  position:fixed; top:12px; right:12px;
+  width:44px; height:44px;
+  border-radius:14px;
+  border:1px solid var(--line);
+  background:#fff;
+  color:var(--ink);
+  font-size:20px;
+  display:grid; place-items:center;
+  box-shadow:0 6px 18px rgba(15,23,42,.12);
+  cursor:pointer;
+  z-index:10000;
+}
+.card{
+  border:1px solid var(--line);
+  border-radius:16px;
+  background:#fff;
+  padding:14px;
+  box-shadow:0 10px 24px rgba(15,23,42,.06);
+}
+.card h3{margin:0 0 8px; font-size:16px}
+.card p{margin:0; color:var(--ink); line-height:1.6}
+.muted{color:var(--muted)}
+.grid2{display:grid; grid-template-columns: 1.1fr .9fr; gap:12px}
+@media (max-width: 760px){
+  .overlay{padding-top:60px}
+  .grid2{grid-template-columns:1fr}
+  .overlay h2{font-size:20px}
+}
+.illus{
+  border-radius:14px;
+  border:1px solid #dbeafe;
+  background:linear-gradient(180deg, #eff6ff 0%, #ffffff 60%);
+  padding:10px;
+}
+.caption{font-size:12px; color:var(--muted); margin-top:8px}
+ul.clean{margin:8px 0 0 18px; color:var(--ink); line-height:1.7}
+.pill{
+  display:inline-flex; align-items:center; gap:8px;
+  padding:6px 10px;
+  border-radius:999px;
+  background:var(--accent-soft);
+  border:1px solid #dbeafe;
+  color:#1d4ed8;
+  font-weight:600;
+  font-size:12px;
+}
+.note{
+  background:#f8fafc;
+  border:1px dashed #cbd5e1;
+  border-radius:14px;
+  padding:12px;
+  color:var(--ink);
+}
+
+  /* Theory page callout (blue text for current experimental values) */
+  .callout{
+    margin-top:14px;
+    padding:12px 14px;
+    border:1px dashed #cbd5e1;
+    background:#f8fafc;
+    border-radius:12px;
+    color:#2563eb;
+  }
+  .callout mjx-container{ color:#2563eb !important; }
+
+
+  /* Control panel placed below canvas on mobile (and above on desktop via order) */
+  main{display:flex; flex-direction:column; gap:12px}
+  canvas{order:2}
+  .panel{order:1}
+  .panel .controls{margin-top:0}
+  .panel .legend{margin-top:6px; text-align:left}
+
+  /* Orange theory button */
+  button.btn-theory{
+    border-color:#f59e0b;
+    background:#f59e0b;
+    color:#fff;
+  }
+  button.btn-theory:hover{filter:brightness(0.97)}
+
+  @media (max-width: 720px){
+    /* On mobile: panel goes below the simulation */
+    canvas{order:1; width:96vw; height:min(70vh, 100vw);}  /* keep simulation tall but not too tall */
+    .panel{order:2}
+
+    /* Controls stack: sliders full width; play + theory same row */
+    .controls{gap:10px}
+    .controls .control{grid-column:span 12 !important}
+    .controls .control.btn-half{grid-column:span 6 !important}
+
+    header{padding-bottom:8px}
+    header h1{font-size:18px}
+  }
+
+
+  /* === HARD FIX: layout & buttons === */
+  main{display:flex; gap:12px; align-items:flex-start;}
+  canvas{flex:1 1 auto;}
+  .panel{flex:0 0 360px;}
+
+  .controls{display:grid; grid-template-columns:repeat(12,1fr); gap:10px}
+  .control{grid-column:span 12;}
+  .control.half{grid-column:span 6 !important;}
+  #toggle, #btnTheory{width:100%;}
+
+  /* Orange theory button */
+  #btnTheory{background:#f59e0b !important; border-color:#f59e0b !important; color:#fff !important;}
+
+  @media (max-width: 720px){
+    main{flex-direction:column;}
+    canvas{width:96vw; height:min(70vh, 100vw);}
+    .panel{width:100%;}
+    .control.half{grid-column:span 6 !important;}
+  }
+
+
+/* ===== FINAL LAYOUT FIX (GRID) ===== */
+main{
+  display:grid !important;
+  grid-template-columns: 1fr 360px;
+  gap:16px;
+  align-items:start;
+}
+canvas{grid-column:1;}
+.panel{grid-column:2;}
+
+/* Desktop buttons same row */
+.controls{
+  display:grid;
+  grid-template-columns:repeat(12,1fr);
+  gap:10px;
+}
+.control{grid-column:span 12;}
+.control.half{grid-column:span 6 !important;}
+
+/* Mobile: panel below canvas */
+@media (max-width: 768px){
+  main{
+    grid-template-columns: 1fr;
+  }
+  canvas{grid-column:1;}
+  .panel{grid-column:1;}
+}
+
+
+/* ===== REMOVE TOP GAP ABOVE CANVAS ===== */
+html, body{
+  margin:0;
+  padding:0;
+}
+
+header{
+  margin-bottom:0 !important;
+  padding-bottom:6px !important;
+}
+
+main{
+  margin-top:0 !important;
+  padding-top:0 !important;
+}
+
+canvas{
+  margin-top:0 !important;
+  align-self:start;
+}
+
+
+/* ===== FIX: main was centering content (place-items:center) causing top blank space ===== */
+main{
+  place-items: unset !important;
+  justify-items: start !important;
+  align-items: start !important;
+  align-content: start !important;
+  justify-content: start !important;
+  padding: 0 10px 10px !important;
+}
+canvas{
+  display:block;
+  margin-top:0 !important;
+}
+
+
+/* ===== v10: remove any top gap + title blue ===== */
+header h1{ color:#2563eb !important; }
+
+/* Make page flow deterministic */
+body{ display:flex; flex-direction:column; min-height:100vh; }
+main{
+  flex:1 1 auto;
+  display:grid !important;
+  grid-template-columns: 1fr 360px;
+  grid-auto-rows: min-content;
+  gap:16px;
+  align-content:start !important;
+  justify-content:start !important;
+  align-items:start !important;
+  justify-items:start !important;
+  padding:0 10px 10px !important;
+}
+canvas{
+  justify-self:start !important;
+  align-self:start !important;
+  margin:0 !important;
+}
+.panel{ align-self:start !important; }
+
+@media (max-width: 768px){
+  main{ grid-template-columns:1fr; }
+}
+
+
+/* ===== v11: FORCE canvas + panel in SAME TOP ROW (remove order side-effects) ===== */
+main{
+  display:grid !important;
+  grid-template-columns: 1fr 360px;
+  grid-template-rows: auto;
+  gap:16px;
+  align-content:start !important;
+  align-items:start !important;
+  justify-items:start !important;
+  padding:0 10px 10px !important;
+}
+canvas{
+  order:0 !important;
+  grid-column:1 !important;
+  grid-row:1 !important;
+  align-self:start !important;
+  margin:0 !important;
+}
+.panel{
+  order:0 !important;
+  grid-column:2 !important;
+  grid-row:1 !important;
+  align-self:start !important;
+}
+
+/* Mobile: panel under canvas */
+@media (max-width: 768px){
+  main{grid-template-columns:1fr;}
+  canvas{grid-column:1 !important; grid-row:1 !important;}
+  .panel{grid-column:1 !important; grid-row:2 !important;}
+}
+
+</style>
+  <script>
+    window.MathJax = { tex: { inlineMath: [["\\(","\\)"],["$","$"]], displayMath: [["\\[","\\]"],["$$","$$"]] }, svg:{fontCache:'global'} };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+</head>
+<body>
+  <header class="site-header">
+  <h1>การเลี้ยวเบนของคลื่นน้ำผ่านช่องเปิด (Ripple Tank — Single Slit)</h1>
+</header>
+
+<div id="controlBar" class="controlbar">
+</div>
+  <main>
+    <canvas id="view" width="960" height="540"></canvas>
+    <section class="panel" aria-label="แผงควบคุม">
+<div class="controls">
+    <div class="control" >
+      <label>ความยาวคลื่น λ  (cm.) <span id="lambdaVal">2.0</span></label>
+      <input id="lambda" type="range" min="0.5" max="6" step="0.1" value="2"/>
+    </div>
+    <div class="control" >
+      <label>ช่องเปิด d  (cm.) <span id="slitVal">4.0</span></label>
+      <input id="slit" type="range" min="0.5" max="12" step="0.1" value="4"/>
+    </div>
+    <div class="control btn-half">
+        <button id="toggle">⏸︎ หยุดภาพ</button>
+    </div>
+
+    <div class="control btn-half">
+        <button id="btnTheory">อธิบายหลักการ</button>
+    </div>
+  </div>
+
+  <div class="legend">
+    ศึกษาเพิ่มเติมที่ <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">เพจคลายปมฟิสิกส์</a>
+  </div>
+    </section>
+    <div id="overlay" class="overlay" style="display:none"></div>
+  </main>
+
+<script>
+(() => {
+  const canvas = document.getElementById('view');
+  const ctx = canvas.getContext('2d');
+  const overlay = document.getElementById('overlay');
+  const W = 320, H = 180;
+  const off = document.createElement('canvas');
+  off.width = W; off.height = H;
+  const ictx = off.getContext('2d');
+  const imgData = ictx.createImageData(W, H);
+
+  const lambdaSlider = document.getElementById('lambda');
+  const slitSlider = document.getElementById('slit');
+  const lambdaVal = document.getElementById('lambdaVal');
+  const slitVal = document.getElementById('slitVal');
+  const toggleBtn = document.getElementById('toggle');
+  let playing = true;
+  toggleBtn.addEventListener('click', () => {
+    playing = !playing;
+    toggleBtn.textContent = playing ? '⏸︎ หยุดภาพ' : '▶︎ เล่น';
+  });
+
+  // --- Theory overlay (full screen) ---
+let lastPlaying = true;
+
+window.__closeTheory = function(){
+  overlay.style.display = 'none';
+  overlay.innerHTML = '';
+  playing = lastPlaying;
+  toggleBtn.textContent = playing ? '⏸︎ หยุดภาพ' : '▶︎ เล่น';
+};
+
+document.getElementById('btnTheory').addEventListener('click', ()=>{
+  // pause animation while reading
+  lastPlaying = playing;
+  playing = false;
+  toggleBtn.textContent = '▶︎ เล่น';
+
+  const lambdaCm = parseFloat(lambdaSlider.value);
+  const slitCm = parseFloat(slitSlider.value);
+
+  overlay.innerHTML = String.raw`
+    <button class="overlay-close" aria-label="ปิด" onclick="window.__closeTheory()">❌</button>
+
+    <div class="theory-wrap">
+      <div class="theory-title">
+        <div>
+          <div class="pill">โหมดอธิบายหลักการ</div>
+          <h2 style="margin-top:10px">การเลี้ยวเบนของคลื่นน้ำผ่านช่องเปิด</h2>
+          <div class="subtitle">
+            แนวคิดสำคัญคือ “ช่องเปิดทำตัวเหมือนแหล่งกำเนิดคลื่นใหม่” ตามหลักการของฮอยเกนส์
+            และปริมาณการเลี้ยวเบนขึ้นกับอัตราส่วน \( \frac{d}{\lambda} \)
+          </div>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="card">
+          <h3>ภาพประกอบ (สรุปมุมมอง)</h3>
+          <div class="illus">
+
+            <svg viewBox="0 0 720 360" width="100%" height="auto" role="img" aria-label="ภาพประกอบการเลี้ยวเบนผ่านช่องเปิด">
+              <defs>
+                <linearGradient id="g" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0" stop-color="#e6f4ff"/>
+                  <stop offset="1" stop-color="#bfe6ff"/>
+                </linearGradient>
+                <clipPath id="clipRight">
+                  <rect x="374" y="0" width="346" height="360"/>
+                </clipPath>
+              </defs>
+
+              <rect x="0" y="0" width="720" height="360" fill="url(#g)"/>
+
+              <!-- incoming plane wavefronts -->
+              <g opacity="0.45">
+                <line x1="50" y1="0" x2="50" y2="360" stroke="#2563eb" stroke-width="3" stroke-opacity="0.18"/>
+<line x1="74" y1="0" x2="74" y2="360" stroke="#2563eb" stroke-width="3" stroke-opacity="0.18"/>
+<line x1="98" y1="0" x2="98" y2="360" stroke="#2563eb" stroke-width="3" stroke-opacity="0.18"/>
+<line x1="122" y1="0" x2="122" y2="360" stroke="#2563eb" stroke-width="3" stroke-opacity="0.18"/>
+<line x1="146" y1="0" x2="146" y2="360" stroke="#2563eb" stroke-width="3" stroke-opacity="0.18"/>
+<line x1="170" y1="0" x2="170" y2="360" stroke="#2563eb" stroke-width="3" stroke-opacity="0.18"/>
+<line x1="194" y1="0" x2="194" y2="360" stroke="#2563eb" stroke-width="3" stroke-opacity="0.18"/>
+<line x1="218" y1="0" x2="218" y2="360" stroke="#2563eb" stroke-width="3" stroke-opacity="0.18"/>
+<line x1="242" y1="0" x2="242" y2="360" stroke="#2563eb" stroke-width="3" stroke-opacity="0.18"/>
+<line x1="266" y1="0" x2="266" y2="360" stroke="#2563eb" stroke-width="3" stroke-opacity="0.18"/>
+<line x1="290" y1="0" x2="290" y2="360" stroke="#2563eb" stroke-width="3" stroke-opacity="0.18"/>
+<line x1="314" y1="0" x2="314" y2="360" stroke="#2563eb" stroke-width="3" stroke-opacity="0.18"/>
+<line x1="338" y1="0" x2="338" y2="360" stroke="#2563eb" stroke-width="3" stroke-opacity="0.18"/>
+              </g>
+
+              <!-- barrier with slit (centered) : gap = 25px -->
+              <rect x="346" y="0" width="28" height="167.5" fill="#0b0f19" opacity="0.92"/>
+              <rect x="346" y="192.5" width="28" height="167.5" fill="#0b0f19" opacity="0.92"/>
+
+              <!-- diffracted circular wavefronts (clipped to the right side) -->
+              <g clip-path="url(#clipRight)">
+                <circle cx="374" cy="180" r="30" fill="none" stroke="#2563eb" stroke-width="3" stroke-opacity="0.25"/>
+<circle cx="374" cy="180" r="55" fill="none" stroke="#2563eb" stroke-width="3" stroke-opacity="0.25"/>
+<circle cx="374" cy="180" r="80" fill="none" stroke="#2563eb" stroke-width="3" stroke-opacity="0.25"/>
+<circle cx="374" cy="180" r="105" fill="none" stroke="#2563eb" stroke-width="3" stroke-opacity="0.25"/>
+<circle cx="374" cy="180" r="130" fill="none" stroke="#2563eb" stroke-width="3" stroke-opacity="0.25"/>
+<circle cx="374" cy="180" r="155" fill="none" stroke="#2563eb" stroke-width="3" stroke-opacity="0.25"/>
+<circle cx="374" cy="180" r="180" fill="none" stroke="#2563eb" stroke-width="3" stroke-opacity="0.25"/>
+<circle cx="374" cy="180" r="205" fill="none" stroke="#2563eb" stroke-width="3" stroke-opacity="0.25"/>
+              </g>
+
+              <!-- labels -->
+              <text x="28" y="28" font-size="16" fill="#334155">คลื่นตกกระทบ</text>
+              <text x="402" y="28" font-size="16" fill="#334155">คลื่นหลังช่องเปิด</text>
+
+              <text x="312" y="188" font-size="16" fill="#ef4444" font-weight="700">ช่องเปิด</text>
+            </svg>
+
+          </div>
+          <div class="cap">กำแพงมี “ช่องเปิด” → ด้านหลังช่องเปิดเกิดหน้าคลื่นใหม่โค้งออก</div>
+        </div>
+
+        <div class="card">
+          <h3>เงื่อนไขที่ทำให้เลี้ยวเบน “มาก-น้อย”</h3>
+          <div class="subtitle" style="margin-top:-6px">เทียบขนาดช่องเปิด \(d\) กับความยาวคลื่น \( \lambda \)</div>
+          <ul class="clean">
+            <li><b>ถ้า \( d \ll \lambda \)</b> → คลื่นแผ่ออกกว้างมาก (เหมือนออกจากแหล่งกำเนิดจุด)</li>
+            <li><b>ถ้า \( d \approx \lambda \)</b> → เลี้ยวเบนชัด แผ่กว้าง “พอดี”</li>
+            <li><b>ถ้า \( d \gg \lambda \)</b> → คลื่นยังเกือบเป็นแนวตรง (เลี้ยวเบนน้อย)</li>
+          </ul>
+
+          <div class="callout">
+            <b>ค่าปัจจุบันในจอทดลอง</b><br/>
+            \( \lambda = ${lambdaCm.toFixed(1)}\,\text{cm} \), \( d = ${slitCm.toFixed(1)}\,\text{cm} \)<br/>
+            ดังนั้น \( \frac{d}{\lambda} = ${(slitCm/lambdaCm).toFixed(2)} \)
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>สรุปจำง่าย</h3>
+        <ul class="clean">
+          <li>ช่องเปิดทำหน้าที่เหมือน “แหล่งกำเนิดคลื่นย่อยหลายจุด”</li>
+          <li>ยิ่งช่องเปิดเล็กเมื่อเทียบกับความยาวคลื่น → ยิ่งแผ่ออกกว้าง</li>
+          <li>ลองปรับ \(d\) และ \( \lambda \) ในจอทดลอง แล้วสังเกตความโค้งของหน้าคลื่น</li>
+        </ul>
+      </div>
+
+      <div class="legend" style="padding:0 2px 4px">
+        ศึกษาเพิ่มเติมที่ <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">เพจคลายปมฟิสิกส์</a>
+      </div>
+    </div>
+  `;
+
+  overlay.style.display = 'block';
+
+
+  // --- Math fallback (when offline / MathJax CDN blocked) ---
+  const fallbackMath = (rootEl) => {
+    if(!rootEl) return;
+    let h = rootEl.innerHTML;
+
+    // common replacements
+    h = h.replace(/\\frac\{d\}\{\\lambda\}/g, 'd/λ');
+    h = h.replace(/\\lambda/g, 'λ');
+    h = h.replace(/\\approx/g, '≈');
+    h = h.replace(/\\ll/g, '≪');
+    h = h.replace(/\\gg/g, '≫');
+    h = h.replace(/\\text\{cm\}/g, 'cm');
+
+    // remove LaTeX delimiters \( \) \[ \]
+    h = h.replace(/\\\(/g, '').replace(/\\\)/g, '');
+    h = h.replace(/\\\[/g, '').replace(/\\\]/g, '');
+
+    // collapse extra spaces
+    h = h.replace(/\s{2,}/g, ' ');
+    rootEl.innerHTML = h;
+  };
+
+  // typeset MathJax (robust: wait for startup if needed)
+  const __typeset = () => {
+    if(window.MathJax && window.MathJax.typesetPromise){
+      window.MathJax.typesetPromise([overlay]).catch(()=>{});
+      return true;
+    }
+    return false;
+  };
+  if(window.MathJax && window.MathJax.startup && window.MathJax.startup.promise){
+    window.MathJax.startup.promise.then(() => { __typeset(); });
+  } else {
+    // retry a few times in case MathJax is still loading
+    let tries = 0;
+    const timer = setInterval(() => {
+      tries++;
+      if(__typeset() || tries >= 20) clearInterval(timer);
+    }, 100);
+
+    // if MathJax never becomes available (offline / blocked), use readable fallback
+    setTimeout(() => {
+      if(!(window.MathJax && window.MathJax.typesetPromise)){
+        fallbackMath(overlay);
+      }
+    }, 1800);
+  }
+});
+
+  const cmPerPx = 0.25;
+  function cmToPx(cm){ return cm / cmPerPx; }
+  const wallX = Math.floor(W * 0.2);
+
+  function buildSources(slitCm){
+    const half = cmToPx(slitCm)/2;
+    const y0 = H/2 - half;
+    const y1 = H/2 + half;
+    const stepPx = cmToPx(0.5);
+    const n = Math.max(2, Math.floor((y1 - y0)/stepPx));
+    const list = [];
+    for(let i=0;i<=n;i++){
+      const y = y0 + (i/n)*(y1 - y0);
+      list.push({x: wallX+1, y});
+    }
+    return list;
+  }
+
+  function shade(value){
+    const baseR = 0xE6, baseG = 0xF4, baseB = 0xFF;
+    const deepR = 0xBF, deepG = 0xE6, deepB = 0xFF;
+    const t = 0.5 + 0.5*value;
+    const r = Math.round(baseR*(1-t) + deepR*t);
+    const g = Math.round(baseG*(1-t) + deepG*t);
+    const b = Math.round(baseB*(1-t) + deepB*t);
+    return [r,g,b,255];
+  }
+
+  let t = 0;
+  const c = 30;
+
+  function render(){
+    const lambdaCm = parseFloat(lambdaSlider.value);
+    const slitCm = parseFloat(slitSlider.value);
+    lambdaVal.textContent = lambdaCm.toFixed(1);
+    slitVal.textContent = slitCm.toFixed(1);
+
+    const k = 2*Math.PI / lambdaCm;
+    const omega = k * c;
+
+    const sources = buildSources(slitCm);
+    const data = imgData.data;
+    let p = 0;
+
+    for(let y=0; y<H; y++){
+      for(let x=0; x<W; x++){
+        let val = 0;
+        if(x >= wallX){
+          let ax = 0;
+          for(const s of sources){
+            const dx = (x - s.x), dy = (y - s.y);
+            const rpx = Math.hypot(dx, dy);
+            const rcm = rpx * cmPerPx;
+            const atten = 1/Math.max(1, Math.sqrt(rcm));
+            ax += Math.sin(k*rcm - omega*t) * atten;
+          }
+          val = ax / Math.sqrt(sources.length);
+        } else {
+          const dx = (wallX - x);
+          const rcm = dx * cmPerPx;
+          val = Math.sin(k*rcm + omega*t);
+        }
+
+        if(val>1) val=1; if(val<-1) val=-1;
+        const [r,g,b,a] = shade(val);
+        data[p++] = r; data[p++] = g; data[p++] = b; data[p++] = a;
+      }
+    }
+
+    ictx.putImageData(imgData, 0, 0);
+
+    ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(off, 0, 0, canvas.width, canvas.height);
+
+    const scaleX = canvas.width / W;
+    const scaleY = canvas.height / H;
+    const slitHalfPx = cmToPx(slitCm)/2;
+    const slitY0 = (H/2 - slitHalfPx)*scaleY;
+    const slitY1 = (H/2 + slitHalfPx)*scaleY;
+
+    const barrierX = wallX*scaleX;
+    const barrierW = Math.max(10, Math.round(canvas.width*0.008));
+    ctx.fillStyle = '#0b0f19';
+
+    ctx.fillRect(barrierX - barrierW/2, 0, barrierW, Math.max(0, slitY0));
+    ctx.fillRect(barrierX - barrierW/2, slitY1, barrierW, canvas.height - slitY1);
+
+    ctx.restore();
+  }
+
+  function loop(){
+    if(playing) {
+      t += 1/60;
+      render();
+    }
+    requestAnimationFrame(loop);
+  }
+
+  render();
+  loop();
+})();
+</script>
+</body>
+</html>

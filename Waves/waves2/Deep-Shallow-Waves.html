@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+
+<html lang="th">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1, viewport-fit=cover" name="viewport"/>
+<title>การหักเหของคลื่นน้ำ (มองด้านข้าง) — น้ำลึก → น้ำตื้น</title>
+<style>
+  :root{--ink:#0f172a;--muted:#64748b;--line:#e5e7eb;--bg:#fff;--wave:#0f68c9;--accent:#2563eb;--btn:#e0f2fe;--card:#f0f9ff;--card2:#fff7ed;--chip:#e2e8f0}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{margin:0;font-family:system-ui, Inter, 'Noto Sans Thai', sans-serif;color:var(--ink);background:var(--bg);-webkit-text-size-adjust:100%;text-size-adjust:100%}
+  header{padding:12px 14px;border-bottom:1px solid var(--line);display:grid;gap:10px}
+  header h1{margin:0;font-size:18px}
+  .controls{display:grid;grid-template-columns:repeat(12,1fr);gap:10px;align-items:center}
+  .controls input[type="range"]{width:100%}
+  .pill{display:inline-flex;gap:8px;align-items:center;border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-size:14px;background:#fff}
+  .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .canvas-wrap{position:relative;height:calc(100dvh - 280px);min-height:380px}
+@media (max-width:768px){.canvas-wrap{height:80dvh;}}
+  canvas{position:absolute;inset:0;width:100%;height:100%;display:block;background:#ffffff;touch-action:none}
+  .badge{position:absolute;top:10px;left:12px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:6px 10px;font-size:14px}
+  .footer{padding:10px 14px;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+  .hint{color:var(--muted);font-size:14px}
+  button{border:1px solid var(--line);background:var(--btn);padding:8px 10px;border-radius:10px;font-size:14px;cursor:pointer}
+  a.brand{color:var(--accent);text-decoration:none}
+
+  /* Info & exercise panels */
+  .panels{padding:12px 14px;display:grid;grid-template-columns:1fr;gap:12px}
+  .card{border:1px solid var(--line); background:var(--card); border-radius:14px; padding:12px}
+  .card h3{margin:0 0 8px 0; font-size:16px}
+  .card p{margin:6px 0; color:#0b304f}
+  .card .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+  .chip{background:var(--chip);border-radius:999px;padding:4px 10px;font-size:12px;color:#1f2937;border:1px solid #cbd5e1}
+  .formula-line{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+  .formula-box{background:#ffffff;border:1px dashed #93c5fd;border-radius:10px;padding:6px 10px;font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace}
+  .note{font-size:13px;color:#334155}
+  .exercise{border:1px solid var(--line);background:var(--card2);border-radius:14px;padding:12px}
+  .exercise h4{margin:0 0 8px 0;font-size:15px}
+  .exercise .q{margin:6px 0}
+  .exercise .ans{margin:6px 0;display:none}
+  .hidden{display:none}
+
+  
+  /* Formula modal (page standard-ish) */
+  #formulaModal{position:fixed;inset:0;z-index:50}
+  #formulaBackdrop{position:absolute;inset:0;background:rgba(15,23,42,0.45)}
+  #formulaSheet{
+    position:absolute;left:50%;top:50%;
+    transform:translate(-50%,-50%);
+    width:min(900px,92vw);
+    max-height:min(82dvh,720px);
+    overflow:auto;
+    background:#fff7ed;
+    border:1px solid #fed7aa;
+    border-radius:16px;
+    padding:14px 14px 16px;
+    box-shadow:0 18px 60px rgba(0,0,0,0.22);
+  }
+  #formulaClose{
+    position:sticky; top:10px; float:right;
+    border:1px solid var(--line); background:#ffffff;
+    border-radius:999px; padding:8px 10px; cursor:pointer
+  }
+  #formulaContent .card{background:#fff7ed;border:none;padding:0}
+  #formulaContent .formula-box{background:#ffffff;border:1px solid #fdba74}
+
+
+  /* Mobile control bar under simulation */
+  .mobile-bar{display:none}
+  @media (max-width: 820px){
+    header{padding:10px 12px}
+    header h1{font-size:16px; line-height:1.25}
+    .canvas-wrap{height:calc(100dvh - 230px); min-height:360px}
+    .controls{gap:8px}
+    .pill{font-size:13px}
+    button{font-size:13px;padding:8px 10px}
+    .mobile-bar{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      flex-wrap:wrap;
+      padding:10px 12px;
+      border-top:1px solid var(--line);
+      background:#ffffff;
+      position:sticky;
+      bottom:0;
+      z-index:20;
+    }
+    .mobile-bar .row{width:100%; justify-content:space-between}
+    .mobile-bar .row.buttons{gap:8px; justify-content:space-between}
+    .mobile-bar button{flex:1; min-width:110px}
+    .mobile-bar .freqRow{width:100%}
+    .mobile-bar input[type="range"]{width:100%}
+    /* Frequency controls in mobile bar: keep − [number] + and pill in one row */
+    .mobile-bar .freqRow{display:flex; align-items:center; gap:6px; flex-wrap:nowrap}
+    .mobile-bar .freqRow label{display:none}
+    .mobile-bar .freqRow button{flex:0 0 44px; min-width:44px; padding:8px 0}
+    .mobile-bar .freqRow input[type="number"]{flex:0 0 74px; width:74px; padding:8px 6px; text-align:center}
+    .mobile-bar .freqRow .pill{flex:1; min-width:0}
+    /* Hide header control rows on mobile (they will be moved to mobile-bar by JS) */
+    #desktopFreqRow, #desktopBtnRow{display:none !important}
+  }
+
+
+  /* === Button color standards === */
+  button.btn-formula{background:#fde68a;border-color:#f59e0b;color:#92400e}
+  button.btn-exercise{background:#dcfce7;border-color:#22c55e;color:#166534}
+  button.btn-reset{background:#e5e7eb;border-color:#9ca3af;color:#374151}
+  button.btn-view{background:#ffffff;border-color:#60a5fa;color:#1d4ed8}
+
+
+  @media (max-width: 768px){
+    body{
+      -webkit-text-size-adjust:100%;
+      text-size-adjust:100%;
+    }
+    canvas{
+      height:80% !important;
+    }
+    .badge, .pill, .hint{
+      font-size:13px;
+      line-height:1.2;
+    }
+  }
+
+
+  /* === Mission mode buttons (white/black, separated group) === */
+  .mission-group{
+    display:inline-flex;
+    gap:8px;
+    padding:6px;
+    border:2px solid #111827;
+    border-radius:14px;
+    background:#ffffff;
+    margin-left:10px;
+  }
+  .mission-group .mission-label{
+    display:inline-flex;align-items:center;
+    font-size:12px;color:#111827;
+    padding:0 6px;
+  }
+  button.btn-mission, button.btn-free{
+    background:#ffffff;
+    border:2px solid #111827;
+    color:#111827;
+    font-weight:600;
+  }
+  button.btn-mission:hover, button.btn-free:hover{ background:#f3f4f6; }
+
+  /* === Mission overlay (โปร่งแสง แต่ไม่ทำให้ภาพเบลอ) === */
+  .mission-overlay{position:absolute;inset:0;z-index:40;display:flex;align-items:center;justify-content:center}
+  .mission-overlay.hidden{display:none}
+  .mission-backdrop{position:absolute;inset:0;background:rgba(255,255,255,0.55)} /* no blur */
+  .mission-panel{
+    position:relative;
+    width:min(560px,92vw);
+    background:rgba(255,255,255,0.80);
+    border:1px solid rgba(37,99,235,0.35);
+    border-radius:18px;
+    padding:14px 14px 12px;
+    box-shadow:0 18px 60px rgba(0,0,0,0.12);
+  }
+  .mission-panel h3{margin:0 0 8px 0;font-size:16px}
+  .mission-panel p{margin:8px 0;color:#0b304f}
+  .mission-mini{color:var(--muted);font-size:13px;margin-top:6px}
+  .mission-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+  .mission-row button{flex:1;min-width:120px}
+  .mission-good{color:#166534}
+  .mission-warn{color:#9f1239}
+  .mission-choices{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+  .mission-choice{background:#ffffff;border:1px solid var(--line);border-radius:12px;padding:10px;cursor:pointer}
+  .mission-choice:hover{border-color:#60a5fa}
+
+  /* Show button when overlay hidden */
+  #missionShowFab{
+    position:absolute;top:10px;right:12px;z-index:35;
+    border-radius:999px;padding:8px 10px;background:#ffffff
+  }
+
+
+  /* === Mission button (single, with pink icon) === */
+  .btn-mission-only{
+    background:#ffffff;
+    border:2px solid #111827;
+    color:#111827;
+    font-weight:700;
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+  }
+  .btn-mission-only .micon{
+    width:18px;height:18px;
+    display:inline-block;
+    flex:0 0 auto;
+  }
+  .btn-mission-only .micon svg{
+    width:18px;height:18px;
+    stroke:#ec4899; /* pink-500 */
+  }
+
+
+  /* draggable mission label */
+  #missionPanel{touch-action:none}
+  #missionTitle{cursor:move; user-select:none}
+
+
+
+/* === Mobile: mission overlay always on top + minimize FAB === */
+@media (max-width:768px){
+  #missionShowFab{display:inline-flex}
+  .mission-overlay{
+    position:fixed !important;
+    inset:0 !important;
+    z-index:99999 !important;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: calc(env(safe-area-inset-bottom) + 84px);
+  }
+  #missionPanel{}
+  #missionTitle{font-size:1.2em;}
+
+  #missionShowFab{
+    position:fixed !important;
+    right:12px;
+    bottom: calc(env(safe-area-inset-bottom) + 12px);
+    z-index:100000 !important;
+    border-radius:999px !important;
+    padding:10px 12px !important;
+    box-shadow:0 10px 30px rgba(0,0,0,0.18);
+  }
+}
+
+
+  /* FAB visibility (desktop hidden by default) */
+  #missionShowFab{display:none}
+
+@media (max-width: 768px){
+  /* Mission panel drag usability on mobile */
+  .mission-panel{ touch-action:none; }
+  #missionTitle{ touch-action:none; cursor:grab; user-select:none; -webkit-user-select:none; }
+}
+
+</style>
+</head>
+<body>
+<header>
+<h1>การหักเหของคลื่นน้ำ (มองด้านข้าง) — น้ำลึก → น้ำตื้น</h1>
+<div class="controls">
+<div class="row" id="desktopFreqRow" style="grid-column:span 6">
+<label for="freqNum">ความถี่ f (Hz)</label>
+<button aria-label="ลดความถี่" class="btn-reset" id="freqMinus" type="button">−</button>
+<input class="num" id="freqNum" max="2.0" min="1.0" step="0.1" type="number" value="1.0"/>
+<button aria-label="เพิ่มความถี่" class="btn-reset" id="freqPlus" type="button">+</button>
+<span class="pill" id="freqVal">f = <b>1.0</b> Hz</span>
+</div>
+<div class="row" id="desktopBtnRow" style="grid-column:span 6;justify-content:flex-end">
+<button id="play">เล่น</button>
+<button class="btn-view" id="toggleView">มุมมอง: ด้านข้าง</button>
+<button class="btn-mission-only" id="missionBtn" type="button">
+<span aria-hidden="true" class="micon">
+<svg fill="none" stroke="#ec4899" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<!-- target -->
+<circle cx="12" cy="12" r="9"></circle>
+<circle cx="12" cy="12" r="5"></circle>
+<circle cx="12" cy="12" r="1.5"></circle>
+<!-- arrow -->
+<path d="M16.5 7.5l5-5"></path>
+<path d="M19 2h2.5v2.5"></path>
+<path d="M15.5 8.5l2 2"></path>
+<path d="M14 10l-1.5 1.5"></path>
+</svg>
+</span>ภารกิจ
+        </button>
+<button class="btn-formula" id="formulaBtn">สูตรสำคัญ</button>
+<button class="btn-exercise" id="exerciseBtn">แบบฝึกหัด</button>
+<button class="btn-reset" id="reset">รีเซ็ต</button>
+</div>
+<div class="row" style="grid-column:span 12">
+<span class="pill">v<sub>ลึก</sub>=<b>10.0</b> cm/s , v<sub>ตื้น</sub>=<b>5.0</b> cm/s</span>
+<span class="pill">สูตร: v = f λ ,  v<sub>2</sub>/v<sub>1</sub> = λ<sub>2</sub>/λ<sub>1</sub> (f คงที่)</span>
+<span class="pill">ลากขอบน้ำตื้น (สี่เหลี่ยม) เพื่อย้ายเขต</span>
+</div>
+</div>
+</header>
+<!-- Formula & Exercise Panels -->
+<div class="panels">
+<div class="card hidden" id="formulaCard">
+<h3>สูตรสำคัญ &amp; แนวคิดการหักเหของคลื่น</h3>
+<p><b>เมื่อคลื่นจากน้ำลึก → น้ำตื้น</b> อัตราเร็ว <b>ลดลง</b> และความยาวคลื่น <b>สั้นลง</b> แต่ <b>ความถี่ f คงที่</b> (เพราะแหล่งกำเนิดเดียวกัน)</p>
+<div class="chips">
+<span class="chip">น้ำลึก: v<sub>ลึก</sub> มาก → λ<sub>ลึก</sub> มาก</span>
+<span class="chip">น้ำตื้น: v<sub>ตื้น</sub> น้อย → λ<sub>ตื้น</sub> น้อย</span>
+<span class="chip">f ไม่เปลี่ยนเมื่อผ่านเขต</span>
+</div>
+<div class="formula-line">
+<span class="formula-box">v = f λ</span>
+<span class="formula-box">v<sub>2</sub>/v<sub>1</sub> = λ<sub>2</sub>/λ<sub>1</sub> (เมื่อ f คงที่)</span>
+<span class="formula-box">ตัวอย่างนี้: v<sub>ลึก</sub>=10.0 cm/s, v<sub>ตื้น</sub>=5.0 cm/s</span>
+</div>
+<p class="note">ในมุมมองด้านบน (top view) จะเห็นแนวหน้าคลื่นห่างกันมากในน้ำลึก และถี่ขึ้นในน้ำตื้น แสดงผลด้วยแถบสีเข้ม/อ่อน</p>
+</div>
+<div class="exercise hidden" id="exercisePanel">
+<h4>แบบฝึกหัด</h4>
+<div class="q">
+<b>ข้อ 1 (พื้นฐาน):</b> เมื่อคลื่นจากน้ำลึกเข้าสู่น้ำตื้น โดยแหล่งกำเนิดเดิม สิ่งใด <u>ไม่เปลี่ยน</u>?
+        <div style="margin-top:6px">
+<label><input name="q1" type="radio"/> อัตราเร็ว v</label>
+<label style="margin-left:10px"><input name="q1" type="radio"/> ความยาวคลื่น λ</label>
+<label style="margin-left:10px"><input id="q1corr" name="q1" type="radio"/> ความถี่ f</label>
+<button id="q1show" style="margin-left:10px">เฉลย</button>
+</div>
+<div class="ans" id="q1ans">เฉลย: <b>ความถี่ f</b> คงที่ เพราะแหล่งกำเนิดไม่เปลี่ยน ส่วน v และ λ เปลี่ยนตามตัวกลาง</div>
+</div>
+<div class="q">
+<b>ข้อ 2 (คำนวณ):</b> ใช้ค่าการทดลองนี้ v<sub>ลึก</sub>=10.0 cm/s, v<sub>ตื้น</sub>=5.0 cm/s และความถี่ปัจจุบันจากสไลเดอร์ <b id="fNow">1.0</b> Hz จงหาความยาวคลื่นในน้ำลึกและในน้ำตื้น <button id="q2show" style="margin-left:8px">เฉลย</button>
+<div class="formula-line hidden" id="q2ans" style="margin-top:6px">
+<span class="formula-box">λ<sub>ลึก</sub> = v<sub>ลึก</sub>/f = <b id="lamDeep">—</b> cm</span>
+<span class="formula-box">λ<sub>ตื้น</sub> = v<sub>ตื้น</sub>/f = <b id="lamShallow">—</b> cm</span>
+</div>
+<div class="note">* ใช้สูตร v = f λ และปัดทศนิยม 1 ตำแหน่ง</div>
+</div>
+</div>
+</div>
+<div class="canvas-wrap">
+<canvas id="cv"></canvas>
+<div class="badge" id="info">—</div>
+<button class="btn-view hidden" id="missionShowFab">แสดงภารกิจ</button>
+<div aria-modal="true" class="mission-overlay hidden" id="missionOverlay" role="dialog">
+<div class="mission-backdrop" id="missionBackdrop"></div>
+<div class="mission-panel" id="missionPanel">
+<button class="btn-view" id="missionHide" style="position:absolute;top:10px;right:12px;border-radius:999px;padding:6px 8px;background:#ffffff">
+<svg fill="none" height="18" stroke="#111827" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24" width="18">
+<path d="M17.94 17.94A10.94 10.94 0 0 1 12 20C7 20 2.73 16.11 1 12c.73-1.73 1.8-3.29 3.06-4.64"></path>
+<path d="M22.54 11.88A10.94 10.94 0 0 0 12 4c-1.61 0-3.15.32-4.56.88"></path>
+<line x1="1" x2="23" y1="1" y2="23"></line>
+</svg>
+</button>
+<h3 id="missionTitle">🎯 ภารกิจ</h3>
+<p id="missionText">—</p>
+<div class="mission-mini" id="missionHint"></div>
+<div class="mission-choices" id="missionChoices" style="display:none"></div>
+<div class="mission-row">
+<button id="missionNext">ภารกิจถัดไป</button>
+<button class="btn-reset" id="missionExit">ออกโหมดภารกิจ</button>
+</div>
+<div class="mission-mini" id="missionStatus"></div>
+</div>
+</div>
+</div>
+<!-- Mobile control bar (elements moved here on small screens) -->
+<div class="mobile-bar" id="mobileBar">
+<div class="row freqRow" id="mobileFreqMount"></div>
+<div class="row buttons" id="mobileBtnMount"></div>
+</div>
+<!-- Formula Modal -->
+<div aria-modal="true" class="hidden" id="formulaModal" role="dialog">
+<div id="formulaBackdrop"></div>
+<div id="formulaSheet">
+<button aria-label="ปิด" id="formulaClose">❌</button>
+<div id="formulaContent"></div>
+</div>
+</div>
+<div class="footer">
+<div class="hint">มุมมองด้านข้าง: เส้นคลื่น | มุมมองด้านบน: แถบสลับสว่าง-มืด — ศึกษาเพิ่มเติมที่ <a class="brand" href="https://www.facebook.com/resolvephysics" target="_blank">เพจคลายปมฟิสิกส์</a></div>
+</div>
+<script>
+(() => {
+  const canvas = document.getElementById('cv');
+  const ctx = canvas.getContext('2d');
+  const dpr = Math.max(1, window.devicePixelRatio || 1);
+
+  const isMobileUI = () => window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 900;
+
+  let view = 'side'; // 'side' | 'top'
+  const btnView = document.getElementById('toggleView');
+
+  const formulaBtn = document.getElementById('formulaBtn');
+  const formulaCard = document.getElementById('formulaCard');
+  const formulaModal = document.getElementById('formulaModal');
+  const formulaBackdrop = document.getElementById('formulaBackdrop');
+  const formulaClose = document.getElementById('formulaClose');
+  const formulaContent = document.getElementById('formulaContent');
+  const mobileBar = document.getElementById('mobileBar');
+  const mobileFreqMount = document.getElementById('mobileFreqMount');
+  const mobileBtnMount = document.getElementById('mobileBtnMount');
+
+  const resetBtn = document.getElementById('reset');
+  const playBtn = document.getElementById('play');
+  const exerciseBtn = document.getElementById('exerciseBtn');
+  const exercisePanel = document.getElementById('exercisePanel');
+  const q1show = document.getElementById('q1show');
+  const q1ans = document.getElementById('q1ans');
+  const fNow = document.getElementById('fNow');
+  const lamDeepEl = document.getElementById('lamDeep');
+
+  function updateLambdas(){
+    if(!lamDeepEl || !lamShallowEl) return;
+    const lamDeep = (vDeep / f);     // cm
+    const lamShallow = (vShallow / f); // cm
+    lamDeepEl.textContent = lamDeep.toFixed(1);
+    lamShallowEl.textContent = lamShallow.toFixed(1);
+  }
+  const lamShallowEl = document.getElementById('lamShallow');
+
+  const freqNum = document.getElementById('freqNum');
+  const freqMinus = document.getElementById('freqMinus');
+  const freqPlus = document.getElementById('freqPlus');
+  const freqVal = document.getElementById('freqVal').querySelector('b');
+  const info = document.getElementById('info');
+
+  
+  // ===== Mission Mode (Auto-check, overlay is transparent and does NOT blur canvas) =====
+  const missionBtn = document.getElementById('missionBtn');
+  
+  const missionOverlay = document.getElementById('missionOverlay');
+  const missionBackdrop = document.getElementById('missionBackdrop');
+  const missionTitle = document.getElementById('missionTitle');
+  const missionText = document.getElementById('missionText');
+  const missionHint = document.getElementById('missionHint');
+  const missionChoices = document.getElementById('missionChoices');
+  const missionNext = document.getElementById('missionNext');
+  const missionHide = document.getElementById('missionHide');
+  const missionExit = document.getElementById('missionExit');
+  const missionStatus = document.getElementById('missionStatus');
+  const missionShowFab = document.getElementById('missionShowFab');
+
+  const missionPanel = document.getElementById('missionPanel');
+
+  // ===== Draggable mission panel =====
+  let mpDragging = false;
+  let mpOffX = 0, mpOffY = 0;
+
+  function mpClamp(v, lo, hi){ return Math.max(lo, Math.min(hi, v)); }
+
+  function mpApplyPos(left, top){
+    if(!missionPanel) return;
+    missionPanel.style.position = 'fixed';
+    missionPanel.style.left = left + 'px';
+    missionPanel.style.top  = top + 'px';
+    missionPanel.style.transform = 'none';
+    missionPanel.dataset.freePos = '1';
+    try{
+      localStorage.setItem('resolve_missionPanel_pos', JSON.stringify({left, top}));
+    }catch(e){}
+  }
+
+  function mpRestorePos(){
+    if(!missionPanel) return;
+    try{
+      const raw = localStorage.getItem('resolve_missionPanel_pos');
+      if(!raw) return;
+      const pos = JSON.parse(raw);
+      if(!pos || typeof pos.left !== 'number' || typeof pos.top !== 'number') return;
+      mpApplyPos(pos.left, pos.top);
+    }catch(e){}
+  }
+  mpRestorePos();
+
+  function mpStartDrag(ev){
+    if(!missionPanel) return;
+    // only drag when overlay is visible
+    if(missionOverlay && missionOverlay.classList.contains('hidden')) return;
+
+    const rect = missionPanel.getBoundingClientRect();
+    // first time: lock into fixed coords where it currently is
+    if(missionPanel.dataset.freePos !== '1'){
+      mpApplyPos(rect.left, rect.top);
+    }
+    mpDragging = true;
+    mpOffX = ev.clientX - rect.left;
+    mpOffY = ev.clientY - rect.top;
+    try{ missionPanel.setPointerCapture(ev.pointerId); }catch(e){}
+  }
+
+  function mpMoveDrag(ev){
+    if(!mpDragging || !missionPanel) return;
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const rect = missionPanel.getBoundingClientRect();
+    const w = rect.width, h = rect.height;
+
+    let left = ev.clientX - mpOffX;
+    let top  = ev.clientY - mpOffY;
+
+    left = mpClamp(left, 8, vw - w - 8);
+    top  = mpClamp(top, 8, vh - h - 8);
+
+    mpApplyPos(left, top);
+  }
+
+  function mpEndDrag(){
+    mpDragging = false;
+  }
+
+  if(missionTitle){
+    missionTitle.addEventListener('pointerdown', mpStartDrag);
+  }
+  window.addEventListener('pointermove', mpMoveDrag);
+  window.addEventListener('pointerup', mpEndDrag);
+  window.addEventListener('pointercancel', mpEndDrag);
+
+
+  let isMission = false;
+  let missionIndex = 0;
+  let missionPassed = false;
+
+  function showFab(show){
+    if(!missionShowFab) return;
+    missionShowFab.classList.toggle('hidden', !show);
+  }
+  function openMission(){
+    if(!missionOverlay) return;
+    missionOverlay.classList.remove('hidden');
+    showFab(false);
+  }
+  function closeMission(keepFab){
+    if(!missionOverlay) return;
+    missionOverlay.classList.add('hidden');
+    showFab(!!keepFab && isMission);
+  }
+  
+  function isMobile(){
+    return window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
+  }
+
+  function setMissionStatus(msg, ok){
+    if(!missionStatus) return;
+    missionStatus.innerHTML = ok
+      ? `<span class="mission-good">✅ ${msg}</span>`
+      : `<span class="mission-warn">⏳ ${msg}</span>`;
+  }
+
+  const missions = [
+    {
+      title: "🎯 ภารกิจที่ 1: ปรับความถี่",
+      text: "ปรับความถี่ f ให้ได้อย่างน้อย 1 ครั้งจน f ≥ 1.8 Hz แล้วสังเกตว่า λ ลึก และ λ ตื้น เปลี่ยนอย่างไร",
+      hint: "ทิป: กดปรับความถี่",
+      check: ()=> f >= 1.8
+    },
+    {
+      title: "🎯 ภารกิจที่ 2: ย้ายเขตน้ำตื้น",
+      text: "ลากเส้นเขตน้ำตื้น (เส้นประ) ไปทางซ้ายให้มากขึ้นจนเกินเกณฑ์ แล้วสังเกตเมื่อบริเวณที่เคยเป็นน้ำลึกเปลี่ยนเป็นน้ำตื้น λ เปลี่ยนไปอย่างไร",
+      hint: "ทิป: จับใกล้เส้นประแล้วลาก",
+      check: ()=> (typeof blockLeft==='number' && blockLeft <= W*0.45)
+    },
+    {
+      title: "🎯 ภารกิจที่ 3: ทำนายสัดส่วน",
+      text: "เมื่อ f คงที่ และ vตื้น = 5.0 cm/s, vลึก = 10.0 cm/s แล้วสัดส่วน λตื้น / λลึก เท่ากับเท่าไร?",
+      hint: "ทิป: ใช้แนวคิด v = fλ (f คงที่)",
+      choices: [
+        {label:"1/2", ok:true},
+        {label:"2", ok:false},
+        {label:"1", ok:false},
+        {label:"1/4", ok:false},
+      ],
+      check: ()=> missionPassed
+    }
+  ];
+
+  function showMission(){
+    const m = missions[missionIndex];
+    missionPassed = false;
+
+    if(missionTitle) missionTitle.textContent = m.title;
+    if(missionText) missionText.textContent = m.text;
+    if(missionHint) missionHint.textContent = m.hint || "";
+
+    if(missionChoices){
+      missionChoices.innerHTML = "";
+      const hasChoices = Array.isArray(m.choices) && m.choices.length;
+      missionChoices.style.display = hasChoices ? "grid" : "none";
+
+      if(hasChoices){
+        m.choices.forEach(ch=>{
+          const el = document.createElement('div');
+          el.className = 'mission-choice';
+          el.textContent = ch.label;
+          el.addEventListener('click', ()=>{
+            if(ch.ok){
+              missionPassed = true;
+              setMissionStatus("ตอบถูกแล้ว! กด ‘ภารกิจถัดไป’ ได้เลย", true);
+            }else{
+              missionPassed = false;
+              setMissionStatus("ยังไม่ถูก ลองคิดจาก v = fλ และ f คงที่", false);
+            }
+          });
+          missionChoices.appendChild(el);
+        });
+      }
+    }
+    setMissionStatus("ทำตามเงื่อนไขให้ผ่านก่อน แล้วค่อยกด ‘ภารกิจถัดไป’", false);
+  }
+
+  function checkMissionAuto(){
+    if(!isMission) return;
+    const m = missions[missionIndex];
+    if(m && typeof m.check === 'function' && m.check()){
+      missionPassed = true;
+      setMissionStatus("ผ่านเงื่อนไขแล้ว กด ‘ภารกิจถัดไป’ ได้เลย", true);
+    }
+  }
+  setInterval(checkMissionAuto, 300);
+
+  if(missionBtn){
+    missionBtn.addEventListener('click', ()=>{
+      isMission = true;
+      missionIndex = 0;
+      openMission();
+      showMission();
+    });
+
+    // mobile: ensure tap opens immediately
+    missionBtn.addEventListener('touchstart', (e)=>{ e.preventDefault(); isMission = true; missionIndex = 0; openMission(); showMission(); });
+
+    // Auto-show mission on mobile (so it 'แสดงได้แน่นอน')
+    if(window.matchMedia('(max-width:768px)').matches){
+      /* no auto-open on load (mobile) */
+    }
+
+  }
+    if(missionExit){
+    missionExit.addEventListener('click', ()=>{
+      isMission = false;
+      closeMission(false);
+    });
+  }
+  if(missionHide){
+    missionHide.addEventListener('click', ()=>{
+      // Mobile: minimize (show FAB). Desktop: just close overlay.
+      if(isMobile()) closeMission(true);
+      else closeMission(false);
+    });
+  }
+  if(missionShowFab){
+    missionShowFab.addEventListener('click', ()=>{
+      if(!isMission) isMission = true;
+      openMission();
+      showMission();
+    });
+  }
+  
+  if(missionNext){
+    missionNext.addEventListener('click', ()=>{
+      // allow next only when current mission passed
+      if(!missionPassed){
+        setMissionStatus("ผ่านเงื่อนไขแล้ว กด ‘ภารกิจถัดไป’ ได้เลย", false);
+        return;
+      }
+      missionIndex++;
+      missionPassed = false;
+
+      if(missionIndex >= missions.length){
+        if(missionTitle) missionTitle.textContent = "🎉 สำเร็จครบทุกภารกิจ";
+        if(missionText) missionText.textContent = "ยอดมาก! คุณผ่านครบทุกภารกิจแล้ว";
+        if(missionHint) missionHint.textContent = "";
+        if(missionChoices) missionChoices.style.display = "none";
+        setMissionStatus("กดไอคอนหลับตาเพื่อซ่อนภารกิจ หรือกดออกโหมดภารกิจ", true);
+        return;
+      }
+      showMission();
+    });
+  }
+
+if(missionBackdrop){
+    // click outside = hide (not exit)
+    missionBackdrop.addEventListener('click', ()=> closeMission(true));
+  }
+// Parameters (cm, s)
+  let f = 1.0;
+  function setFreq(val){
+    // clamp to allowed range 1.0–2.0
+    const v = Math.max(1.0, Math.min(2.0, Number(val)));
+    f = Number.isFinite(v) ? v : 1.0;
+    // update UI
+    if(freqNum) freqNum.value = f.toFixed(1);
+    if(freqVal) freqVal.innerHTML = `f = <b>${f.toFixed(1)}</b> Hz`;
+    // update mobile cloned controls (on small screens buttons/inputs are cloned)
+    try{
+      if(window.__resolveMobileFreqNum) window.__resolveMobileFreqNum.value = f.toFixed(1);
+      if(window.__resolveMobileFreqValB) window.__resolveMobileFreqValB.textContent = f.toFixed(1);
+    }catch(e){}
+    // recompute readouts if exist
+    if(typeof updateLambdas === 'function') updateLambdas();
+  }
+ // 1.0–2.0 Hz (1 decimal)
+  const vShallowBase = 5.0;  // cm/s
+  const vDeepBase = 10.0;    // cm/s
+  let vShallow = vShallowBase;
+  let vDeep = vDeepBase;
+  const A = 16;              // px (amplitude fixed)
+  const LAMBDA_SCALE = 10;   // wavelength ×10 (visual only)
+  let paused = true;
+
+  // Geometry
+  let W = 1200, H = 520;
+  let waterY; let blockLeft; let blockWidth;
+  let draggingBlock = false; let dragDx = 0;
+
+  function resize(){
+    const rect = canvas.getBoundingClientRect();
+    const isMobileNow = isMobileUI();
+    W = Math.floor(rect.width);
+    H = Math.floor(rect.height);
+    // On small screens, never force desktop minimums (prevents squashed coords on some phones)
+    if(!isMobileNow){ W = Math.max(800, W); H = Math.max(380, H); }
+canvas.width = Math.floor(W * dpr);
+    canvas.height = Math.floor(H * dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    waterY = Math.floor(H*0.45);
+    if(typeof blockLeft!== 'number') {
+      blockLeft = Math.floor(W*(isMobileNow ? 0.50 : 0.58));
+    } else if(isMobileNow) {
+      // If coming from a different layout, keep boundary within visible tank and prefer centered start
+      const minL = Math.floor(W*0.10); const maxL = W - 60;
+      if(blockLeft < minL || blockLeft > maxL) blockLeft = Math.floor(W*0.50);
+    }
+
+    blockWidth = (W - 12) - blockLeft; // extend to right edge
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  // Controls
+  function updateExercise(){
+    fNow.textContent = f.toFixed(1);
+    const lamDeep = (vDeep / f);      // cm
+    const lamShallow = (vShallow / f);// cm
+    lamDeepEl.textContent = lamDeep.toFixed(1);
+    lamShallowEl.textContent = lamShallow.toFixed(1);
+  }
+
+  freqNum.addEventListener('change', ()=>{ setFreq(parseFloat(freqNum.value||'1.0')); });
+  freqMinus.addEventListener('click', ()=>{ setFreq(parseFloat((f-0.1).toFixed(1))); });
+  freqPlus.addEventListener('click', ()=>{ setFreq(parseFloat((f+0.1).toFixed(1))); });
+  resetBtn.addEventListener('click', () => {
+    setFreq(1.0);
+    view = 'side'; btnView.textContent = 'มุมมอง: ด้านข้าง';
+    /* keep play state */
+    playBtn.textContent = paused ? 'เล่น' : 'หยุด';
+    updateExercise();
+    resize();
+      if(isMission){ missionIndex = 0; missionPassed = false; showMission(); }
+  });
+  btnView.addEventListener('click', () => {
+    view = (view === 'side') ? 'top' : 'side';
+    btnView.textContent = 'มุมมอง: ' + (view === 'side' ? 'ด้านข้าง' : 'ด้านบน');
+  });
+  function syncPlayLabel(){
+    if(!playBtn) return;
+    const label = paused ? 'เล่น' : 'หยุด';
+    playBtn.textContent = label;
+    try{
+      const mp = window.__resolveMobilePlayBtn;
+      if(mp) mp.textContent = label;
+    }catch(e){}
+  }
+  function togglePlay(e){ if(e) e.preventDefault(); paused = !paused; syncPlayLabel(); }
+  playBtn.addEventListener('click', togglePlay);
+  playBtn.addEventListener('touchstart', togglePlay, {passive:false});
+  syncPlayLabel();
+
+  exerciseBtn.addEventListener('click', ()=>{
+    exercisePanel.classList.toggle('hidden');
+  });
+  q1show.addEventListener('click', ()=>{ q1ans.style.display = (q1ans.style.display==='block'? 'none':'block'); });
+  const q2show = document.getElementById('q2show');
+  const q2ans = document.getElementById('q2ans');
+  if(q2show && q2ans){
+    q2show.addEventListener('click', ()=>{ q2ans.classList.toggle('hidden'); });
+  }
+
+  // Formula modal wiring
+  function openFormula(){
+    if(!formulaCard) return;
+    formulaContent.innerHTML = '';
+    const fc = formulaCard.cloneNode(true);
+    // remove ids inside cloned content to avoid duplicates
+    fc.removeAttribute('id');
+    fc.querySelectorAll('[id]').forEach(el=>el.removeAttribute('id'));
+    formulaContent.appendChild(fc);
+    // ensure visible inside modal
+    const cloned = formulaContent.querySelector('.card');
+    if(cloned){ cloned.classList.remove('hidden'); }
+    formulaModal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeFormula(){
+    formulaModal.classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+  if(formulaBtn){ formulaBtn.addEventListener('click', openFormula); }
+  formulaBackdrop.addEventListener('click', closeFormula);
+  formulaClose.addEventListener('click', closeFormula);
+  window.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && !formulaModal.classList.contains('hidden')) closeFormula(); });
+
+  // Mobile: move freq slider row + button row under simulation
+  function setupMobileBar(){
+    const isMobile = isMobileUI();
+    if(!isMobile){ mobileBar.style.display='none'; return; }
+    mobileBar.style.display='flex';
+
+    // Move slider row (label+range+value) to mobile mount
+    const freqRow = document.getElementById('desktopFreqRow');
+    const btnRow  = document.getElementById('desktopBtnRow');
+    if(freqRow && btnRow){
+      // Use clones to keep desktop layout intact while header rows hidden on mobile
+      mobileFreqMount.innerHTML = '';
+      mobileBtnMount.innerHTML  = '';
+
+      const freqClone = freqRow.cloneNode(true);
+      const btnClone  = btnRow.cloneNode(true);
+
+      // Make sure hidden styles not applied
+      freqClone.style.display = 'flex';
+      btnClone.style.display  = 'flex';
+      // Clean grid-column styles for mobile
+      freqClone.style.gridColumn = '';
+      btnClone.style.gridColumn  = '';
+      btnClone.style.justifyContent = 'space-between';
+      btnClone.querySelectorAll('button').forEach(b=>{ b.style.flex='1'; });
+
+      // Capture clone elements (still have ids at this moment)
+      const cPlay = btnClone.querySelector('#play');
+      const cView = btnClone.querySelector('#toggleView');
+      const cFormula = btnClone.querySelector('#formulaBtn');
+      const cEx = btnClone.querySelector('#exerciseBtn');
+      const cReset = btnClone.querySelector('#reset');
+      const cMission = btnClone.querySelector('#missionBtn');
+      // Frequency controls (number + ±) in this lab
+      const cFreqMinus = freqClone.querySelector('#freqMinus');
+      const cFreqNum   = freqClone.querySelector('#freqNum');
+      const cFreqPlus  = freqClone.querySelector('#freqPlus');
+      const cFreqVal   = freqClone.querySelector('#freqVal b');
+      // expose mobile frequency mirrors (so setFreq can update them without relying on input events)
+      window.__resolveMobileFreqNum = cFreqNum || null;
+      window.__resolveMobileFreqValB = cFreqVal || null;
+
+      // Remove ALL ids inside clones to avoid duplicate ids in DOM
+      freqClone.removeAttribute('id');
+      btnClone.removeAttribute('id');
+      freqClone.querySelectorAll('[id]').forEach(el=>el.removeAttribute('id'));
+      btnClone.querySelectorAll('[id]').forEach(el=>el.removeAttribute('id'));
+
+      mobileFreqMount.appendChild(freqClone);
+      mobileBtnMount.appendChild(btnClone);
+
+      // Proxy buttons -> original controls
+      if(cPlay && playBtn){
+        window.__resolveMobilePlayBtn = cPlay;
+        // Use pointerdown only to avoid double-toggle (touchstart+click) on mobile
+        cPlay.addEventListener('pointerdown', (e)=>{
+          e.preventDefault();
+          playBtn.dispatchEvent(new MouseEvent('click',{bubbles:true}));
+        }, {passive:false});
+        // keep label synced
+        cPlay.textContent = playBtn.textContent;
+      }
+      if(cView && btnView) cView.addEventListener('click', ()=>btnView.click());
+      if(cFormula && formulaBtn) cFormula.addEventListener('click', ()=>formulaBtn.click());
+      if(cEx && exerciseBtn) cEx.addEventListener('click', ()=>exerciseBtn.click());
+      if(cReset && resetBtn) cReset.addEventListener('click', ()=>resetBtn.click());
+      if(cMission && missionBtn){
+        cMission.addEventListener('pointerdown', (e)=>{
+          e.preventDefault();
+          missionBtn.dispatchEvent(new MouseEvent('click',{bubbles:true}));
+        }, {passive:false});
+      }
+
+      // Proxy frequency controls (mobile clones) -> original controls
+      if(cFreqNum && freqNum){
+        // init
+        cFreqNum.value = freqNum.value;
+        if(cFreqVal) cFreqVal.textContent = freqVal.textContent;
+        // typing / step changes
+        cFreqNum.addEventListener('input', ()=>{ freqNum.value = cFreqNum.value; freqNum.dispatchEvent(new Event('input')); });
+        cFreqNum.addEventListener('change', ()=>{ freqNum.value = cFreqNum.value; freqNum.dispatchEvent(new Event('input')); });
+        // keep in sync when desktop changes
+        freqNum.addEventListener('input', ()=>{ cFreqNum.value = freqNum.value; if(cFreqVal) cFreqVal.textContent = freqVal.textContent; });
+      }
+      if(cFreqMinus && freqMinus){
+        cFreqMinus.addEventListener('pointerdown', (e)=>{
+          e.preventDefault();
+          freqMinus.dispatchEvent(new MouseEvent('click',{bubbles:true}));
+        }, {passive:false});
+      }
+      if(cFreqPlus && freqPlus){
+        cFreqPlus.addEventListener('pointerdown', (e)=>{
+          e.preventDefault();
+          freqPlus.dispatchEvent(new MouseEvent('click',{bubbles:true}));
+        }, {passive:false});
+      }
+    }
+  }
+  setupMobileBar();
+  try{ syncPlayLabel(); }catch(e){}
+  window.addEventListener('resize', ()=>{ setupMobileBar(); try{ syncPlayLabel(); }catch(e){} });
+
+  // Drag shallow block (grab near left edge)
+  canvas.addEventListener('pointerdown', (e)=>{
+    const x = e.offsetX, y = e.offsetY; const bottomY = Math.floor(H*0.88);
+    if(y>waterY && y<bottomY && Math.abs(x - blockLeft) < (isMobileUI() ? 44 : 14)){ draggingBlock=true; dragDx=x-blockLeft; try{ e.preventDefault(); }catch(_){} canvas.setPointerCapture(e.pointerId); }
+  });
+  canvas.addEventListener('pointermove', (e)=>{
+    if(!draggingBlock) return; try{ e.preventDefault(); }catch(_){} let x = e.offsetX - dragDx;
+    const isMob = isMobileUI();
+    const minLeft = Math.floor(W*(isMob ? 0.10 : 0.20)); const maxLeft = W - (isMob ? 60 : 80);
+    blockLeft = Math.max(minLeft, Math.min(maxLeft, x)); blockWidth = (W - 12) - blockLeft;
+  });
+  canvas.addEventListener('pointerup', ()=> draggingBlock=false);
+  canvas.addEventListener('pointercancel', ()=> draggingBlock=false);
+
+  // Helpers
+  function lambda(v){ return (v / f) * LAMBDA_SCALE; }    // scaled λ (cm) for rendering
+  function kFromLambda(l){ return 2*Math.PI / l; }
+  function bottomY(){ return Math.floor(H*0.88); }
+  function blockTopY(){ return bottomY() - Math.floor(H*0.25); }
+
+  function drawTank(t){
+    // frame
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#cbd5e1';
+    ctx.strokeRect(10.5, 10.5, W-21, H-21);
+
+    // Air/background: white
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(12, 12, W-24, H-24);
+
+    // Geometry helpers
+    const by = bottomY();
+
+    // Shallow "floor block" in shallow region: black rectangle
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(blockLeft, blockTopY(), blockWidth, by - blockTopY());
+
+    // Bottom-most base (tank floor) must be black
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(12, by, W-24, (H-12) - by);
+
+    // boundary line (draggable)
+    ctx.setLineDash([6,6]);
+    ctx.strokeStyle = '#94a3b8';
+    ctx.beginPath();
+    ctx.moveTo(blockLeft, waterY-28);
+    ctx.lineTo(blockLeft, by);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // source icon (left boundary oscillator)
+    const xs = 12; // left edge
+    const l1 = lambda(vDeep);
+    const k1 = kFromLambda(l1);
+    const omega = 2*Math.PI*f;
+
+    // wave displacement at left boundary
+    const ySurf = waterY + A*Math.sin(k1*xs - omega*t);
+
+    // blue source circle follows wave (side view only)
+    if(view === 'side'){
+      ctx.fillStyle = '#0b5aa9';
+      ctx.beginPath();
+      ctx.arc(xs, ySurf, 8, 0, Math.PI*2);
+      ctx.fill();
+    }
+
+    // static label (does NOT move)
+    ctx.font = '14px system-ui, Inter, sans-serif';
+    ctx.fillStyle = '#0b5aa9';
+    ctx.fillText('แหล่งกำเนิดคลื่น', xs + 16, waterY - 36);
+
+  }
+
+
+  
+  function drawArrow(x1,y1,x2,y2,c){ ctx.strokeStyle=c; ctx.fillStyle=c; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); const ang=Math.atan2(y2-y1,x2-x1), ah=8, aw=5; ctx.beginPath(); ctx.moveTo(x2,y2); ctx.lineTo(x2 - ah*Math.cos(ang) + aw*Math.sin(ang), y2 - ah*Math.sin(ang) - aw*Math.cos(ang)); ctx.lineTo(x2 - ah*Math.cos(ang) - aw*Math.sin(ang), y2 - ah*Math.sin(ang) + aw*Math.cos(ang)); ctx.closePath(); ctx.fill(); }
+
+  // draw 'v' with subscript text (Thai) on canvas
+  function drawVLabelWithSub(x, y, subText, color){
+    const prevFill = ctx.fillStyle; const prevFont = ctx.font;
+    if(color) ctx.fillStyle = color;
+    ctx.fillText('v', x, y);
+    const w = ctx.measureText('v').width;
+    const sizeMatch = /([0-9]+)px/.exec(prevFont); const basePx = sizeMatch? parseInt(sizeMatch[1],10) : 14;
+    ctx.font = prevFont.replace(/[0-9]+px/, Math.max(10, Math.round(basePx*0.78)) + 'px');
+    ctx.fillText(subText, x + w + 1, y + Math.max(3, Math.round(basePx*0.28)));
+    ctx.font = prevFont; ctx.fillStyle = prevFill;
+  }
+
+  function drawLambdaBracketSide(k, lam, regionStart, y, regionEnd, label){
+    function crestNearest(x0){ const n=Math.round((k*x0 - Math.PI/2)/(2*Math.PI)); return (Math.PI/2 + 2*Math.PI*n)/k; }
+    let x1 = crestNearest(regionStart + 40); if(x1 < regionStart + 20) x1 += (2*Math.PI)/k; let x2 = x1 + lam; if(x2>regionEnd-20){ x2 = regionEnd-20; x1 = x2 - lam; }
+    ctx.strokeStyle = '#64748b'; ctx.fillStyle = '#64748b'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x1,y); ctx.lineTo(x2,y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x1,y-6); ctx.lineTo(x1,y+6); ctx.moveTo(x2,y-6); ctx.lineTo(x2,y+6); ctx.stroke(); ctx.font = '14px system-ui, Inter, sans-serif'; ctx.fillText(`${label} = ${lam.toFixed(1)}`, (x1+x2)/2 - 30, y-8);
+  }
+
+  function drawWaveSide(t){
+    const xb=blockLeft, baseY=waterY; const v1=vDeep, v2=vShallow; const l1=lambda(v1), l2=lambda(v2); const k1=kFromLambda(l1), k2=kFromLambda(l2); const omega=2*Math.PI*f;
+    // Fill water under the wave (no white under the curve)
+    const by = bottomY();
+    const step = Math.max(1, Math.floor(W/800));
+
+    // Left (deep) region fill
+    ctx.beginPath();
+    for(let x=12; x<=xb; x+=step){
+      const phi = (k1*x - omega*t);
+      const y = baseY + A*Math.sin(phi);
+      if(x===12) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.lineTo(xb, by); ctx.lineTo(12, by); ctx.closePath();
+    ctx.fillStyle = 'rgba(191,227,255,0.85)';
+    ctx.fill();
+
+    // Right (shallow) region fill
+    ctx.beginPath();
+    for(let x=xb; x<=W-12; x+=step){
+      const phi = (k1*xb + k2*(x-xb) - omega*t);
+      const y = baseY + A*Math.sin(phi);
+      if(x===xb) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.lineTo(W-12, by); ctx.lineTo(xb, by); ctx.closePath();
+    ctx.fillStyle = 'rgba(191,227,255,0.85)';
+    ctx.fill();
+
+    // Wave line on top
+    ctx.lineWidth=2; ctx.strokeStyle= getComputedStyle(document.documentElement).getPropertyValue('--wave').trim() || '#0f68c9'; ctx.beginPath();
+    for(let x=12; x<=W-12; x+=step){
+      const phi = (x<xb) ? (k1*x - omega*t) : (k1*xb + k2*(x-xb) - omega*t);
+      const y = baseY + A*Math.sin(phi);
+      if(x===12) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+
+    // arrows & wavelength markers
+    const arrowY = baseY - 50; drawArrow(140, arrowY, 140 + 80*(v1/vDeepBase), arrowY, '#1e40af'); ctx.font='14px system-ui, Inter, sans-serif'; ctx.fillStyle='#1f2937'; drawVLabelWithSub(140, arrowY-8, 'ลึก'); drawArrow(xb+40, arrowY, xb+40 + 80*(v2/vDeepBase), arrowY, '#1e40af'); ctx.font='14px system-ui, Inter, sans-serif'; ctx.fillStyle='#1f2937'; drawVLabelWithSub(xb+40, arrowY-8, 'ตื้น');
+    drawLambdaBracketSide(k1, l1, 180, baseY+36, xb-30, 'λ ลึก'); drawLambdaBracketSide(k2, l2, xb+60, baseY+36, W-60, 'λ ตื้น');
+
+    info.innerHTML = `λ<sub>ลึก</sub>=${l1.toFixed(1)} cm , λ<sub>ตื้น</sub>=${l2.toFixed(1)} cm , v<sub>ลึก</sub>=${v1.toFixed(1)} cm/s , v<sub>ตื้น</sub>=${v2.toFixed(1)} cm/s`;
+  }
+
+  function drawWaveTop(t){
+    const xb=blockLeft; const v1=vDeep, v2=vShallow; const l1=lambda(v1), l2=lambda(v2); const k1=kFromLambda(l1), k2=kFromLambda(l2); const omega=2*Math.PI*f;
+    // background
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(12, 12, W-24, H-24);
+    // Fill water area with one blue tone
+    ctx.fillStyle = '#bfe3ff'; ctx.fillRect(12, 12, W-24, waterY-12);
+    // block visible
+    ctx.fillStyle = '#000000'; ctx.fillRect(blockLeft, bottomY()-Math.floor(H*0.25), blockWidth, Math.floor(H*0.25));
+    // bands
+    const bandStep=2; for(let x=12; x<=W-12; x+=bandStep){ const phi = (x<xb) ? (k1*x - omega*t) : (k1*xb + k2*(x-xb) - omega*t); const s = 0.5*(1+Math.cos(phi)); const a = 0.15 + 0.7*s; ctx.fillStyle = `rgba(15,104,201,${a.toFixed(3)})`; ctx.fillRect(x, 12, bandStep, waterY-12); }
+    const arrowY = waterY - 40; drawArrow(140, arrowY, 140 + 80*(v1/vDeepBase), arrowY, '#1e40af'); ctx.fillStyle='#1f2937'; ctx.font='14px system-ui, Inter, sans-serif'; drawVLabelWithSub(140, arrowY-8, 'ลึก'); drawArrow(xb+40, arrowY, xb+40 + 80*(v2/vDeepBase), arrowY, '#1e40af'); ctx.font='14px system-ui, Inter, sans-serif'; ctx.fillStyle='#1f2937'; drawVLabelWithSub(xb+40, arrowY-8, 'ตื้น');
+    drawLambdaBracketSide(k1, l1, 180, waterY+20, xb-30, 'λ ลึก'); drawLambdaBracketSide(k2, l2, xb+60, waterY+20, W-60, 'λ ตื้น');
+
+    info.innerHTML = `λ<sub>ลึก</sub>=${l1.toFixed(1)} cm , λ<sub>ตื้น</sub>=${l2.toFixed(1)} cm , v<sub>ลึก</sub>=${v1.toFixed(1)} cm/s , v<sub>ตื้น</sub>=${v2.toFixed(1)} cm/s`;
+  }
+
+  // Animation
+  let t0 = performance.now(); let time = 0;
+  function tick(now){ const dt=(now - t0)/1000; t0 = now; if(!paused) time += dt; const t = time; ctx.clearRect(0,0,W,H); drawTank(t); if(view==='side') drawWaveSide(t); else drawWaveTop(t); requestAnimationFrame(tick); }
+  updateExercise();
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>

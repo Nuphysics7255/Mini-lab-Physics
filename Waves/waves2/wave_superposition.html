@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>การรวมกันของคลื่นบนเชือก (Superposition) — ปรับคลื่นได้</title>
+  <style>
+    :root{
+      --bg:#f4f6ff;
+      --panel:#ffffff;
+      --ink:#0f172a;
+      --accent:#0ea5e9;
+      --accent2:#fb923c;
+      --muted:#64748b;
+      --greenDeep:#065f46;
+      --brown:#92400e;
+    }
+    body{
+      margin:0;
+      background:var(--bg);
+      font-family:system-ui,"Noto Sans Thai",sans-serif;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:10px;
+      padding:10px 6px 40px;
+    }
+    h2{
+      margin:4px 0 0;
+      text-align:center;
+      color:var(--ink);
+    }
+    #wrap{
+      background:var(--panel);
+      border:1px solid #dbeafe;
+      border-radius:14px;
+      padding:10px;
+      box-shadow:0 12px 25px rgba(15,23,42,.08);
+      width:min(100%,980px);
+    }
+    canvas{
+      width:100%;
+      max-width:960px;
+      background:#fff;
+      border:1px solid #e2e8f0;
+      border-radius:10px;
+      display:block;
+      touch-action:none;
+    }
+    #btns{
+      margin-top:8px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:6px;
+    }
+    button{
+      background:linear-gradient(120deg,#0ea5e9,#38bdf8);
+      border:none;
+      color:#fff;
+      padding:6px 14px;
+      border-radius:999px;
+      font-size:14px;
+      cursor:pointer;
+      box-shadow:0 4px 14px rgba(14,165,233,.28);
+    }
+    button:active{ transform:translateY(1px); }
+    .link-box{
+      margin-top:10px;
+      background:#eff6ff;
+      border:1px solid #dbeafe;
+      border-radius:10px;
+      padding:6px 10px;
+      font-size:14px;
+    }
+    .link-box a{
+      color:#0ea5e9;
+      font-weight:600;
+      text-decoration:none;
+    }
+    .link-box a:hover{ text-decoration:underline; }
+
+    /* control panel */
+    #controls{
+      margin-top:10px;
+      background:#fff7ed;
+      border:1px solid #ffedd5;
+      border-radius:10px;
+      padding:8px 10px 4px;
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+      gap:6px 12px;
+      font-size:13px;
+    }
+    #controls label{
+      display:block;
+      font-weight:600;
+      margin-bottom:4px;
+    }
+    #wave1Label{
+      color:var(--greenDeep);
+    }
+    #wave2Label{
+      color:var(--brown);
+    }
+    #speedLabel{
+      color:var(--ink);
+    }
+    #controls input[type="range"]{
+      width:100%;
+    }
+    #controls select{
+      width:100%;
+      padding:4px 6px;
+      border-radius:6px;
+      border:1px solid #fecba1;
+      background:#fff;
+    }
+
+    /* modal */
+    #modal{
+      position:fixed;
+      inset:0;
+      background:rgba(15,23,42,.35);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index:50;
+      padding:12px;
+    }
+    #modalBox{
+      position:relative;
+      background:#fff;
+      border-radius:16px;
+      max-width:700px;
+      width:100%;
+      max-height:90vh;
+      overflow-y:auto;
+      box-shadow:0 16px 40px rgba(15,23,42,.2);
+      border:3px solid #0ea5e9;
+      padding:16px 16px 20px;
+    }
+    #modal h3{
+      margin-top:0;
+      color:var(--ink);
+    }
+    #closeModal{
+      position:absolute;
+      top:10px;
+      right:10px;
+      background:#ef4444;
+      margin-top:0;
+      padding:6px 12px;
+      border-radius:999px;
+      box-shadow:0 6px 18px rgba(239,68,68,.25);
+    }
+    .badge{
+      display:inline-block;
+      background:#e0f2fe;
+      color:#0369a1;
+      padding:2px 10px;
+      border-radius:999px;
+      font-size:12px;
+      margin-bottom:6px;
+    }
+    @media (max-width:560px){
+  #btns{flex-direction:row;flex-wrap:wrap;gap:6px;}
+  #playBtn,#resetBtn{width:calc(50% - 3px);text-align:center;}
+  #explainBtn{width:100%;text-align:center;}
+}
+  </style>
+  <!-- MathJax -->
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['\\(','\\)'], ['$', '$']] }
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+</head>
+<body>
+  <h2>การรวมกันของคลื่นบนเชือก (Superposition)</h2>
+  <div id="wrap">
+    <canvas id="cv" width="920" height="280"></canvas>
+    <div id="btns">
+      <button id="playBtn">หยุด</button>
+      <button id="resetBtn" style="background:linear-gradient(120deg,#94a3b8,#cbd5e1);color:#0f172a;box-shadow:0 4px 14px rgba(100,116,139,.25)">รีเซ็ต</button>
+      <button id="explainBtn" style="background:linear-gradient(120deg,#f97316,#fb923c)">อธิบายหลักการ</button>
+    </div>
+
+    <div id="controls">
+      <div>
+        <label id="wave1Label">คลื่นทางซ้าย → ขวา (wave 1)</label>
+        แอมพลิจูด: <span id="a1Show">40</span> cm (1 cm = 1 px)
+        <input type="range" id="a1" min="0" max="70" value="40" />
+        ทิศยอด:
+        <select id="dir1">
+          <option value="1">หัวตั้ง (ขึ้น)</option>
+          <option value="-1">หัวลง (ลง)</option>
+        </select>
+      </div>
+      <div>
+        <label id="wave2Label">คลื่นทางขวา → ซ้าย (wave 2)</label>
+        แอมพลิจูด: <span id="a2Show">40</span> cm (1 cm = 1 px)
+        <input type="range" id="a2" min="0" max="70" value="40" />
+        ทิศยอด:
+        <select id="dir2">
+          <option value="1">หัวตั้ง (ขึ้น)</option>
+          <option value="-1">หัวลง (ลง)</option>
+        </select>
+      </div>
+      <div>
+        <label id="speedLabel">ความเร็วของคลื่น (ช้า → เร็ว): <span id="speedShow">1.4</span></label>
+        <input type="range" id="speed" min="0.3" max="2.5" step="0.1" value="1.4" />
+      </div>
+    </div>
+
+    <div class="link-box">
+      ศึกษาเพิ่มเติมที่เพจ <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">คลายปมฟิสิกส์</a>
+    </div>
+  </div>
+
+  <!-- modal -->
+  <div id="modal">
+    <div id="modalBox">
+      <span class="badge">ทฤษฎี</span>
+      <h3>หลักการรวมกันของคลื่น (Wave Superposition)</h3>
+      <p>
+        เมื่อมีคลื่นสองขบวนเดินทางมาถึงจุดเดียวกันในเวลาเดียวกัน การกระจัดรวมของจุดนั้นจะเท่ากับผลบวกเชิงตัวเลขของการกระจัดจากแต่ละคลื่น
+      </p>
+      <p>
+        \[
+          y_{\text{รวม}}(x,t) = y_1(x,t) + y_2(x,t)
+        \]
+      </p>
+      <p>
+        ถ้าสองคลื่นเป็นสันเท่ากันมาซ้อนกัน (เฟสตรงกัน) ก็จะได้คลื่นที่สูงขึ้น เรียกว่า “การแทรกสอดเสริม” เช่น
+      </p>
+      <p>
+        \[
+          y_1 = A,\quad y_2 = A \;\Rightarrow\; y_{\text{รวม}} = 2A
+        \]
+      </p>
+      <p>
+        แต่ถ้าคลื่นหนึ่งเป็นสัน อีกคลื่นเป็นท้องที่มีขนาดเท่ากัน (เฟสต่างกัน \(180^\circ\)) จะหักล้างกันพอดี
+      </p>
+      <p>
+        \[
+          y_1 = A,\quad y_2 = -A \;\Rightarrow\; y_{\text{รวม}} = 0
+        \]
+      </p>
+      <p>
+        หลังจากซ้อนกันแล้ว คลื่นแต่ละตัวจะเคลื่อนที่ต่อไปในรูปร่างเดิม แสดงว่าคลื่นไม่ได้ทำลายกัน แต่ซ้อนกันชั่วคราวเท่านั้น
+      </p>
+      <button id="closeModal">ปิด</button>
+    </div>
+  </div>
+
+  <script>
+    const cv=document.getElementById('cv');
+    const ctx=cv.getContext('2d');
+    const W=cv.width,H=cv.height,midY=160;
+    let pulseHalfWidth=55,speed=1.4,t=0,playing=true;
+    const a1Input=document.getElementById('a1'),a2Input=document.getElementById('a2');
+    const a1Show=document.getElementById('a1Show'),a2Show=document.getElementById('a2Show');
+    const dir1Sel=document.getElementById('dir1'),dir2Sel=document.getElementById('dir2');
+    const speedInput=document.getElementById('speed'),speedShow=document.getElementById('speedShow');
+
+    // --- Mobile-only tweaks requested ---
+    const isMobile = window.matchMedia && window.matchMedia('(max-width:560px)').matches;
+    const waveLabelOffset = isMobile ? 25 : 0;      // move wave 1/2 labels up by 25px on mobile
+    const labelFontPx = isMobile ? 16 : 13;         // 13px -> 16px on mobile (+3px)
+    const arrowTextFontPx = isMobile ? 15 : 12;     // 12px -> 15px on mobile (+3px)
+
+
+    function pulseShape(dx){const w=pulseHalfWidth;return Math.abs(dx)>w?0:(1-Math.abs(dx)/w);}
+    function drawGrid(){ctx.save();ctx.strokeStyle='#e2e8f0';ctx.lineWidth=1;
+      for(let x=0;x<=W;x+=20){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+      for(let y=0;y<=H;y+=20){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+      ctx.restore();}
+    function drawBaseRope(){ctx.save();ctx.strokeStyle='#94a3b8';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(0,midY);ctx.lineTo(W,midY);ctx.stroke();ctx.restore();}
+    function drawArrow(x1,y1,x2,y2,color,text){const h=10,a=Math.atan2(y2-y1,x2-x1);
+      ctx.save();ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(x2,y2);
+      ctx.lineTo(x2-h*Math.cos(a-Math.PI/6),y2-h*Math.sin(a-Math.PI/6));
+      ctx.lineTo(x2-h*Math.cos(a+Math.PI/6),y2-h*Math.sin(a+Math.PI/6));
+      ctx.closePath();ctx.fill();if(text){ctx.font=`${arrowTextFontPx}px system-ui,sans-serif`;const tx=x2+(h+8)*Math.cos(a);const ty=y2+(h+8)*Math.sin(a)-2;ctx.fillText(text,tx,ty);}ctx.restore();}
+
+    function animate(){
+      ctx.clearRect(0,0,W,H);drawGrid();drawBaseRope();
+      let centerLeft=40+t*speed,centerRight=W-40-t*speed;
+      if(centerLeft-pulseHalfWidth>W||centerRight+pulseHalfWidth<0){t=0;centerLeft=40;centerRight=W-40;}
+      const A1=parseFloat(a1Input.value),A2=parseFloat(a2Input.value);
+      const s1=parseInt(dir1Sel.value,10),s2=parseInt(dir2Sel.value,10);
+      ctx.save();ctx.lineWidth=3;ctx.strokeStyle='#0ea5e9';ctx.beginPath();
+      for(let x=0;x<=W;x+=2){const y1=A1*pulseShape(x-centerLeft)*s1,y2=A2*pulseShape(x-centerRight)*s2,yT=midY-(y1+y2);
+        if(x===0)ctx.moveTo(x,yT);else ctx.lineTo(x,yT);}ctx.stroke();ctx.restore();
+      const overlapNow=Math.abs(centerLeft-centerRight)<(pulseHalfWidth*2);
+      if(overlapNow){
+        ctx.save();ctx.setLineDash([6,4]);ctx.lineWidth=2;ctx.strokeStyle='rgba(34,197,94,0.5)';
+        ctx.beginPath();for(let x=0;x<=W;x+=2){const y1=A1*pulseShape(x-centerLeft)*s1,y=midY-y1;if(x===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.stroke();ctx.restore();
+        ctx.save();ctx.setLineDash([6,4]);ctx.lineWidth=2;ctx.strokeStyle='rgba(180,83,9,0.45)';
+        ctx.beginPath();for(let x=0;x<=W;x+=2){const y2=A2*pulseShape(x-centerRight)*s2,y=midY-y2;if(x===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.stroke();ctx.restore();
+      }
+      if(centerLeft>=-20&&centerLeft<=W+20){
+        const y1c=midY-(A1*s1);
+        const dxFwd1=40, dyUp=-20;
+        ctx.save();
+        ctx.fillStyle='#0f766e';
+        ctx.font=`${labelFontPx}px system-ui,sans-serif`;
+        ctx.fillText("wave 1",centerLeft-20+dxFwd1,y1c-28-waveLabelOffset+dyUp);
+        drawArrow(centerLeft-22+dxFwd1,y1c-20+dyUp,centerLeft+18+dxFwd1,y1c-20+dyUp,'#0f766e','v');
+        ctx.restore();
+      }
+      if(centerRight>=-20&&centerRight<=W+20){
+        const y2c=midY-(A2*s2);
+        const dxFwd2=-40, dyUp=-20; // forward for wave2 is to the left
+        ctx.save();
+        ctx.fillStyle='#b45309';
+        ctx.font=`${labelFontPx}px system-ui,sans-serif`;
+        ctx.fillText("wave 2",centerRight-20+dxFwd2,y2c-28-waveLabelOffset+dyUp);
+        drawArrow(centerRight+22+dxFwd2,y2c-20+dyUp,centerRight-18+dxFwd2,y2c-20+dyUp,'#b45309','v');
+        ctx.restore();
+      }
+      if(playing)t+=1;requestAnimationFrame(animate);}
+    animate();
+    document.getElementById('playBtn').addEventListener('click',(e)=>{playing=!playing;e.target.textContent=playing?"หยุด":"เล่น";});
+    document.getElementById('resetBtn').addEventListener('click',()=>{t=0;playing=true;document.getElementById('playBtn').textContent='หยุด';});
+    const modal=document.getElementById('modal');
+    document.getElementById('explainBtn').addEventListener('click',()=>{modal.style.display='flex';if(window.MathJax&&window.MathJax.typeset){window.MathJax.typeset();}});
+    document.getElementById('closeModal').addEventListener('click',()=>modal.style.display='none');
+    modal.addEventListener('click',e=>{if(e.target===modal)modal.style.display='none';});
+    a1Input.addEventListener('input',()=>a1Show.textContent=a1Input.value);
+    a2Input.addEventListener('input',()=>a2Show.textContent=a2Input.value);
+    speedInput.addEventListener('input',()=>{speed=parseFloat(speedInput.value);speedShow.textContent=speedInput.value;});
+  </script>
+</body>
+</html>

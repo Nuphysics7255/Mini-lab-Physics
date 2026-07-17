@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+
+<html lang="th">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1, viewport-fit=cover" name="viewport"/>
+<title>คลื่นวงกลมจากแหล่งกำเนิดบนเส้นตรง — Ripple Tank</title>
+<style>
+  :root{
+    --ink:#0f172a; --muted:#64748b; --line:#e5e7eb; --bg:#ffffff;
+    --water1:#dbeafe; --water2:#bfdbfe; --accent:#2563eb; --btn:#1d4ed8;
+    --chip:#eff6ff;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{margin:0; font-family: system-ui, Inter, 'Noto Sans Thai', sans-serif; color:var(--ink); background:var(--bg)}
+  header{padding:10px 14px; border-bottom:1px solid var(--line); display:grid; grid-template-columns:1fr auto; gap:10px; align-items:center}
+  header h1{font-size:18px; margin:0; color:var(--accent)}
+  .wrap{display:grid; grid-template-columns: 360px 1fr; gap:14px; height:calc(100% - 62px); padding:12px}
+  .panel{border:1px solid var(--line); border-radius:14px; padding:12px; display:grid; gap:10px; align-content:start}
+  label{font-size:14px}
+  input[type="range"],input[type="number"]{width:100%}
+  button{appearance:none; border:0; padding:8px 12px; border-radius:10px; cursor:pointer; font-weight:600}
+  .btn{background:var(--btn); color:#fff}
+  .btn.secondary{background:#0ea5e9; color:#fff}
+  .btn.ghost{background:#f1f5f9; color:#0f172a}
+  canvas{width:100%; height:100%; background: linear-gradient(180deg, var(--water1), var(--water2)); border:1px solid var(--line); border-radius:14px}
+  footer{padding:8px 14px; border-top:1px solid var(--line); font-size:13px; color:var(--muted)}
+  a{color:#1d4ed8; text-decoration:none}
+  dialog{border:0; border-radius:16px; width:min(640px,90vw)}
+  dialog::backdrop{background:rgba(0,0,0,0.35)}
+  .modal{padding:16px}
+  .modal h2{margin-top:0}
+  .close{float:right; background:#f1f5f9; border:0; border-radius:8px; padding:4px 8px; cursor:pointer}
+
+
+.brand{font-size:13px; color:var(--muted); margin-top:2px}
+.chips{display:flex; flex-wrap:wrap; gap:10px; justify-content:flex-end; align-items:center; font-size:13px; color:var(--muted)}
+.chips span{background:var(--chip); border:1px solid var(--line); padding:4px 8px; border-radius:999px}
+.controlsBar{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px}
+  .controlsBar #principleBtn{grid-column:1 / -1}
+
+  /* stepper for number of sources */
+  .stepper{display:flex; gap:8px; align-items:stretch}
+  .stepper input[type="number"]{flex:1; text-align:center; font-weight:700}
+  .stepBtn{
+    width:44px; min-width:44px;
+    border:1px solid var(--line);
+    background:#f8fafc;
+    border-radius:12px;
+    font-size:20px;
+    font-weight:800;
+    cursor:pointer;
+  }
+  .stepBtn:active{transform:scale(0.98)}
+  /* button colors */
+  .btn.play{background:#1d4ed8; color:#fff}
+  .btn.reset{background:#e5e7eb; color:#0f172a}
+  .btn.principle{background:#fed7aa; color:#7c2d12}
+  /* principle modal colorful */
+  #principleModal .modal{padding:18px}
+  #principleModal .pHero{
+    background:linear-gradient(135deg,#fff7ed,#ffedd5);
+    border:1px solid #fdba74;
+    border-radius:16px;
+    padding:14px 14px 10px;
+    margin:10px 0 12px;
+  }
+  #principleModal .pBadge{
+    display:inline-block;
+    background:#ffedd5;
+    border:1px solid #fdba74;
+    color:#7c2d12;
+    font-weight:700;
+    padding:4px 10px;
+    border-radius:999px;
+    font-size:13px;
+    margin-bottom:8px;
+  }
+  #principleModal .pCard{
+    background:#ffffff;
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:14px;
+    box-shadow:0 10px 24px rgba(15,23,42,0.06);
+  }
+  #principleModal .pNote{
+    margin-top:12px;
+    background:#eff6ff;
+    border:1px solid #93c5fd;
+    color:#1e3a8a;
+    border-radius:14px;
+    padding:12px 14px;
+    font-weight:600;
+  }
+
+@media (max-width: 768px){
+  header{grid-template-columns:1fr; gap:8px}
+  header h1{font-size:17px}
+  .chips{justify-content:flex-start}
+  .wrap{
+    grid-template-columns:1fr;
+    height:auto;
+    padding:10px;
+    gap:10px;
+    padding-bottom:92px; /* space for fixed bottom controls */
+  }
+  aside.panel{order:1}
+  main.panel{order:2; padding:10px}
+  canvas{height:80vh !important; max-height:80vh; min-height:280px}
+  /* controls fixed at bottom */
+  .controlsBar{
+    display:flex;
+      gap:8px;
+      position:fixed;
+    left:0; right:0; bottom:0;
+    background:#fff;
+    border-top:1px solid var(--line);
+    padding:10px 12px calc(10px + env(safe-area-inset-bottom));
+    margin:0;
+    z-index:50;
+    box-shadow:0 -6px 18px rgba(15,23,42,0.08);
+  }
+  .controlsBar .btn{flex:1; min-width:0}
+  /* make number input friendlier on mobile */
+  input[type="number"]{padding:10px; font-size:16px}
+}
+</style>
+</head>
+<body>
+<header>
+<div>
+<h1 style="color:#2563eb">คลื่นวงกลมจากแหล่งกำเนิดแบบจุด บนเส้นตรง</h1>
+<div class="brand">Ripple Tank • แสดงผลการซ้อนทับจริง</div>
+</div>
+<div class="chips">
+<span>v = <span id="vLabel">180</span> cm/s</span>
+<span>λ = <span id="lambdaLabel">—</span> cm</span>
+<span>ω = <span id="omegaLabel">—</span> rad/s</span>
+</div>
+</header>
+<div class="wrap">
+<aside class="panel">
+
+
+<label>ความยาวเส้น (px) <strong id="lenVal">520</strong></label>
+<input id="lineLen" max="720" min="120" step="1" type="range" value="520"/>
+<label>ตำแหน่งเส้น (แกนตั้ง) <strong id="yVal">50%</strong></label>
+<input id="lineY" max="95" min="5" step="1" type="range" value="50"/>
+<label>ความเร็วคลื่น v (cm/s) <strong id="vVal">180</strong></label>
+<input id="speed" max="300" min="60" step="1" type="range" value="180"/>
+<label>ความถี่คลื่น f (Hz) <strong id="fVal">1.0</strong></label>
+<input id="freq" max="10.00" min="0.20" step="0.01" type="range" value="1.00"/><label>จำนวนจุดบนเส้นตรง <strong id="nVal">5</strong></label><div class="stepper"><button class="stepBtn" id="nMinus" type="button">−</button><input aria-label="จำนวนจุดบนเส้นตรง" id="nSrc" inputmode="numeric" max="50" min="1" pattern="[0-9]*" type="number" value="5"/><button class="stepBtn" id="nPlus" type="button">+</button></div>
+<div class="controlsBar">
+<button class="btn play" id="playBtn">⏸ หยุด</button>
+<button class="btn reset" id="resetBtn">↺ รีเซ็ต</button>
+<button class="btn principle" id="principleBtn">📘 หลักการสำคัญ</button>
+</div>
+</aside>
+<main class="panel">
+<canvas height="540" id="view" width="960"></canvas>
+</main>
+</div>
+<footer>
+    ศึกษาเพิ่มเติมได้ที่เพจ <a href="https://www.facebook.com/resolvephysics" target="_blank">คลายปมฟิสิกส์</a>
+</footer>
+<dialog id="principleModal"><div class="modal">
+<button class="close" data-close="">ปิด</button><div class="pHero"><div class="pBadge">หลักการของฮอยเกนส์ (Huygens' principle)</div><h2>📘 หลักการสำคัญ: หลักการของฮอยเกนส์</h2></div><div class="pCard"><p>หลักการของฮอยเกนส์กล่าวว่า <em>ทุกจุดบนหน้าคลื่นเป็นแหล่งกำเนิดคลื่นวงกลมเล็ก ๆ</em> และหน้าคลื่นใหม่เกิดจากเส้นสัมผัสของคลื่นย่อยเหล่านี้</p><p>ในแบบจำลองนี้ เราจะเห็นจุดแหล่งกำเนิดบนเส้นตรงแต่ละจุดปล่อยคลื่นวงกลมออกมาต่อเนื่อง และเมื่อซ้อนทับกันก็จะเกิดหน้าคลื่นใหม่ตามแนวสัมผัส</p></div><div class="pNote">ไอเดียสำคัญ: จุดทุกจุดบนหน้าคลื่นทำตัวเป็นแหล่งกำเนิดคลื่นย่อย และหน้าคลื่นใหม่คือเส้นสัมผัสของคลื่นย่อยทั้งหมด</div>
+
+
+
+</div></dialog>
+<script>
+
+    const canvas = document.getElementById('view');
+    const ctx = canvas.getContext('2d');
+    // --- Responsive canvas sizing (prevents stretching on mobile) ---
+    function resizeCanvas(){
+      const rect = canvas.getBoundingClientRect();
+      const dpr = Math.max(1, window.devicePixelRatio || 1);
+      // Keep CSS size controlled by CSS; set internal resolution to match
+      canvas.width  = Math.max(1, Math.round(rect.width  * dpr));
+      canvas.height = Math.max(1, Math.round(rect.height * dpr));
+      // Draw in CSS pixels
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    // Resize now and whenever layout changes
+    window.addEventListener('resize', resizeCanvas);
+    try{
+      const ro = new ResizeObserver(()=>resizeCanvas());
+      ro.observe(canvas);
+    }catch(_e){}
+
+
+    const ui = {
+      nSrc: document.getElementById('nSrc'),
+      nMinus: document.getElementById('nMinus'),
+      nPlus: document.getElementById('nPlus'),
+      nVal: document.getElementById('nVal'),
+      freq: document.getElementById('freq'),
+      fVal: document.getElementById('fVal'),
+      lineLen: document.getElementById('lineLen'),
+      lenVal: document.getElementById('lenVal'),
+      lineY: document.getElementById('lineY'),
+      yVal: document.getElementById('yVal'),
+      speed: document.getElementById('speed'),
+      vVal: document.getElementById('vVal'),
+      vLabel: document.getElementById('vLabel'),
+      lambdaLabel: document.getElementById('lambdaLabel'),
+      omegaLabel: document.getElementById('omegaLabel'),
+      playBtn: document.getElementById('playBtn'),
+      resetBtn: document.getElementById('resetBtn'),
+      principleBtn: document.getElementById('principleBtn')
+    };
+
+    const modalP = document.getElementById('principleModal');
+    ui.principleBtn.onclick = ()=> modalP.showModal();
+    modalP.addEventListener('click', e=>{ if(e.target.hasAttribute?.('data-close')||e.target===modalP) modalP.close(); });
+
+    let t0 = performance.now();
+    let running = true;
+
+    const state = {
+      N: parseInt(ui.nSrc.value),
+      f: parseFloat(ui.freq.value),
+      v: parseFloat(ui.speed.value),
+      L: parseFloat(ui.lineLen.value),
+      yP: parseFloat(ui.lineY.value)/100
+    };
+
+    function updateBadges(){
+      state.N = parseInt(ui.nSrc.value);
+      state.f = parseFloat(ui.freq.value);
+      state.L = parseFloat(ui.lineLen.value);
+      state.yP = parseFloat(ui.lineY.value)/100;
+      state.v = parseFloat(ui.speed.value);
+      ui.nVal.textContent = state.N;
+      ui.fVal.textContent = state.f.toFixed(2);
+      ui.lenVal.textContent = state.L.toFixed(0);
+      ui.yVal.textContent = (state.yP*100).toFixed(0)+"%";
+      ui.vVal.textContent = state.v.toFixed(0);
+      ui.vLabel.textContent = state.v.toFixed(0);
+      const lambda = state.v / Math.max(0.01, state.f);
+      const omega = 2*Math.PI*state.f;
+      ui.lambdaLabel.textContent = lambda.toFixed(1);
+      ui.omegaLabel.textContent = omega.toFixed(2);
+    }
+
+    ui.nSrc.oninput = updateBadges;
+    ui.freq.oninput = updateBadges;
+    ui.lineLen.oninput = updateBadges;
+    ui.lineY.oninput = updateBadges;
+    ui.speed.oninput = updateBadges;
+
+    // +/- stepper for N (mobile friendly)
+    function clamp(v, lo, hi){ return Math.max(lo, Math.min(hi, v)); }
+    ui.nMinus?.addEventListener('click', ()=>{
+      const lo = parseInt(ui.nSrc.min||'1'); const hi = parseInt(ui.nSrc.max||'50');
+      ui.nSrc.value = clamp(parseInt(ui.nSrc.value||'1') - 1, lo, hi);
+      updateBadges();
+    });
+    ui.nPlus?.addEventListener('click', ()=>{
+      const lo = parseInt(ui.nSrc.min||'1'); const hi = parseInt(ui.nSrc.max||'50');
+      ui.nSrc.value = clamp(parseInt(ui.nSrc.value||'1') + 1, lo, hi);
+      updateBadges();
+    });
+
+
+    ui.playBtn.onclick = ()=>{
+      running = !running;
+      ui.playBtn.textContent = running ? '⏸ หยุด' : '▶ เล่น';
+      if(running) requestAnimationFrame(loop);
+    };
+
+    ui.resetBtn.onclick = ()=>{
+      ui.nSrc.value = 5; ui.freq.value=1.00; ui.lineLen.value=520; ui.lineY.value=50; ui.speed.value=180;
+      state.N = 5; state.f=1; state.L=520; state.yP=0.5; state.v=180;
+      updateBadges();
+    };
+
+    function loop(ts){
+      if(!running) return;
+      const elapsed = (ts - t0)/1000;
+      const dpr = Math.max(1, window.devicePixelRatio || 1);
+      const w = canvas.width / dpr, h = canvas.height / dpr;
+      ctx.clearRect(0,0,w,h);
+
+      const x0 = (w - state.L)/2;
+      const dx = state.L/(state.N-1 || 1);
+      const y0 = state.yP*h;
+
+      for(let i=0;i<state.N;i++){
+        const sx = (state.N===1 ? w/2 : (x0 + i*dx));
+        const sy = y0;
+        ctx.beginPath();
+        ctx.arc(sx, sy, 4, 0, 2*Math.PI);
+        ctx.fillStyle = 'black';
+        ctx.fill();
+
+        const period = 1/state.f;
+        const nWaves = Math.floor(elapsed/period);
+        for(let k=0;k<5;k++){
+          const tEmit = (nWaves-k)*period;
+          const age = elapsed - tEmit;
+          if(age<0) continue;
+          const r = state.v * age;
+          if(r<w/1.2){
+            ctx.beginPath();
+            ctx.arc(sx, sy, r, 0, 2*Math.PI);
+            ctx.strokeStyle = 'rgba(30,64,175,'+(0.5-0.1*k)+')';
+            ctx.stroke();
+          }
+        }
+      }
+
+      requestAnimationFrame(loop);
+    }
+
+    updateBadges();
+    resizeCanvas();
+    requestAnimationFrame(loop);
+  
+</script>
+</body>
+</html>

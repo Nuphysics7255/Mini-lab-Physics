@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>การทดลอง: ความเร็วคลื่นในเส้นเชือก — Interactive</title>
+
+<!-- MathJax (MathJax, not KaTeX) -->
+<script>
+  window.MathJax = {
+    tex: { inlineMath: [['\\(','\\)'],['$','$']] },
+    svg: { fontCache: 'global' }
+  };
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+
+<style>
+  :root{
+    --ink:#0f172a; --muted:#64748b; --accent:#2563eb; --line:#e5e7eb; --bg:#ffffff;
+    --green:#16a34a;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial,sans-serif}
+
+  header{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--line);padding:10px 14px;z-index:5}
+  header h1{font-size:18px;margin:0 0 4px 0}
+  header p{margin:0;color:var(--muted);font-size:12px}
+
+  .wrap{display:grid;grid-template-columns:360px 1fr;gap:14px;min-height:calc(100% - 70px);padding:12px}
+  @media (max-width: 980px){
+    .wrap{grid-template-columns:1fr; }
+    /* Mobile: show simulation first, controls below */
+    .stage{order:1}
+    .panel{order:2}
+  }
+
+  .panel{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:10px}
+  .row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}
+  .row label{font-size:13px}
+  .row input[type="number"]{width:140px;max-width:42vw;padding:7px 9px;border:1px solid var(--line);border-radius:10px}
+  .row input[type="range"]{width:100%}
+
+  .modeRow{display:flex;gap:14px;align-items:center;justify-content:flex-start;flex-wrap:wrap}
+  .modeRow label{display:flex;gap:6px;align-items:center;font-size:13px}
+
+  /* Frequency stepper */
+  .stepper{display:flex;align-items:center;gap:8px}
+  .stepper button{
+    width:34px;height:34px;border-radius:10px;border:1px solid var(--line);background:#fff;
+    font-weight:900;cursor:pointer;line-height:1;
+  }
+  .stepper input{width:92px;text-align:right}
+
+  /* Buttons: 2 per row */
+  .btnGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
+  button{
+    border:1px solid var(--line);
+    background:#fff;
+    padding:10px 10px;
+    border-radius:14px;
+    cursor:pointer;
+    font-weight:800;
+    font-size:14px;
+  }
+  button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  button[aria-pressed="true"]{outline:2px solid var(--accent)}
+  .checkRow{display:flex;align-items:center;gap:8px;margin-top:-2px}
+  .checkRow input{transform:translateY(1px)}
+  .checkRow label{font-size:13px;color:#0f172a}
+  .velLabel{color:var(--green);font-weight:900}
+
+  /* Readout card split: left formula / right values */
+  .readout{
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:10px 10px;
+    background:#f8fafc;
+  }
+  .readoutGrid{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap:12px;
+    align-items:start;
+  }
+  @media (max-width: 520px){
+    .readoutGrid{grid-template-columns:1fr}
+  }
+  .cardTitle{font-weight:900;font-size:13px;color:#0f172a;margin:0 0 6px 0}
+  .formulaBox{
+    background:#ffffff;
+    border:1px dashed var(--line);
+    border-radius:14px;
+    padding:10px;
+    min-height:84px;
+  }
+  .valsBox{
+    background:#ffffff;
+    border:1px dashed var(--line);
+    border-radius:14px;
+    padding:10px;
+  }
+  .valsTable{width:100%;border-collapse:collapse;font-size:13px}
+  .valsTable td{padding:4px 0;vertical-align:top}
+  .valsTable td:first-child{color:#0f172a;font-weight:800;width:26px}
+  .valsTable td:nth-child(2){text-align:right;font-variant-numeric:tabular-nums}
+  .valsTable td:last-child{color:var(--muted);padding-left:8px;white-space:nowrap}
+  .valsTable .Trow td:nth-child(2),
+  .valsTable .Vrow td:nth-child(2){font-weight:900;color:#0f172a}
+  .valsTable .Trow td:first-child{color:#b91c1c}
+  .divider{height:1px;background:var(--line);margin:8px 0}
+
+  .stage{position:relative;border:1px solid var(--line);border-radius:14px;overflow:hidden;min-height:520px}
+  .canvasWrap{position:relative; width:100%; height:100%;}
+
+  @media (max-width: 980px){
+    .stage{min-height:auto; display:flex; flex-direction:column;}
+    /* Make the simulation shorter on mobile (70% of viewport height) */
+    .canvasWrap{height:80vh; min-height:0; flex:0 0 auto;}
+  }
+  canvas{width:100%;height:100%;display:block;background:linear-gradient(#fff,#fbfdff)}
+
+  .legend{
+    position:absolute;left:10px;top:10px;background:#ffffffcc;border:1px solid var(--line);
+    border-radius:10px;padding:6px 8px;font-size:12px;z-index:2
+  }
+
+  
+  /* Settings block placed "on the stage" for mobile — but NOT overlapping the canvas */
+  .topSettings{
+    display:none;
+    position:relative;
+    margin:10px;
+    background:#ffffff;
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:10px;
+    z-index:4;
+  }
+  .topSettings .row{margin:8px 0}
+  .topSettings .row input[type="number"]{width:160px}
+  .topSettings .modeRow{justify-content:flex-start}
+  .topSettings .stepper input{width:100px}
+  .topSettings .stepper button{width:34px;height:34px}
+
+  @media (max-width: 980px){
+    .topSettings{display:block;}
+  }
+
+
+  /* Footer pinned to bottom of panel */
+  .panelFooter{margin-top:auto;font-size:12px;color:#64748b}
+  .panelFooter a{color:var(--accent);font-weight:900;text-decoration:none}
+  .panelFooter a:hover{text-decoration:underline}
+</style>
+</head>
+
+<body>
+<header>
+  <h1>การทดลอง: ความเร็วคลื่นในเส้นเชือก</h1>
+  <p>คำนวณ \(v=\sqrt{\dfrac{T}{\mu}}\) โดย \(\mu=\dfrac{m}{L}\) และจำลองคลื่นให้เห็นการสั่นของอนุภาค (จุดสีแดง)</p>
+</header>
+
+<div class="wrap">
+  <section class="panel" aria-label="ตัวควบคุม">
+    <div id="settingsBlock" aria-label="ตั้งค่า (ย้ายขึ้นบนจอทดลองในมือถือ)">
+    <div class="row" style="grid-template-columns:1fr;">
+      <div class="modeRow" aria-label="โหมด">
+        <!-- order: continuous LEFT, pulse RIGHT; default continuous checked -->
+        <label><input type="radio" name="mode" value="continuous" checked> คลื่นต่อเนื่อง</label>
+        <label><input type="radio" name="mode" value="pulse"> คลื่นดล</label>
+      </div>
+    </div>
+
+    <div class="row"><label>มวลเชือก \(m\) (kg)</label><input id="m" type="number" step="0.01" min="0.01" value="0.20"></div>
+    <div class="row"><label>ความยาวเชือก \(L\) (m)</label><input id="L" type="number" step="0.1" min="0.5" value="5.0"></div>
+    <div class="row"><label>แรงตึงเชือก \(T\) (N)</label><input id="Tval" type="number" step="0.1" min="0.1" value="7.0"></div>
+
+    <div class="row" id="freqRow">
+      <label>ความถี่ \(f\) (Hz)</label>
+      <div class="stepper">
+        <button type="button" id="fMinus" aria-label="ลดความถี่">−</button>
+        <input id="f" type="number" min="0.1" max="20" step="0.1" value="5.0">
+        <button type="button" id="fPlus" aria-label="เพิ่มความถี่">+</button>
+      </div>
+    </div>
+
+    <div class="row"><label>แอมพลิจูด \(A\) (m)</label><input id="A" type="number" step="0.005" min="0.005" value="0.05"></div>
+    </div>
+
+    <div class="row"><label>จำนวนจุดสีแดง</label><input id="dots" type="range" min="15" max="100" step="1" value="35"></div>
+
+    <div class="row"><label>ความกว้างหน้าต่างมอง</label><input id="vw" type="range" min="1" max="6" step="0.5" value="1.5"></div>
+
+    <div class="btnGrid" aria-label="ปุ่มควบคุม">
+      <button class="primary" id="togglePlay">เล่น/หยุด</button>
+      <button id="slowmo" aria-pressed="false">สโลว์โมชั่น</button>
+      <button id="viewBtn" aria-pressed="false">หน้าต่างมองอนุภาค</button>
+      <button id="reset">รีเซต</button>
+    </div>
+
+    <!-- checkbox under view button -->
+    <div class="checkRow">
+      <input id="showVel" type="checkbox" checked>
+      <label for="showVel" class="velLabel">แสดงเวกเตอร์ความเร็วในหน้าต่าง</label>
+    </div>
+
+    <div class="readout" id="readout" aria-label="สรุปค่าและสมการ">
+      <div class="readoutGrid">
+        <div>
+          <p class="cardTitle">สมการ</p>
+          <div class="formulaBox" id="formulaBox">—</div>
+        </div>
+        <div>
+          <p class="cardTitle">ค่าที่คำนวณได้</p>
+          <div class="valsBox" id="valsBox">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panelFooter">
+      ศึกษาเพิ่มเติมได้ที่ <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">เพจ คลายปมฟิสิกส์</a>
+    </div>
+  </section>
+
+  <section class="stage" aria-label="เวทีจำลอง">
+    <div id="settingsHostStage" class="topSettings" aria-label="ตั้งค่าบนจอทดลอง (มือถือ)"></div>
+    
+    <div id="canvasWrap" class="canvasWrap" aria-label="พื้นที่จอทดลอง">
+      <div class="legend">
+      <div><span style="display:inline-block;width:10px;height:10px;background:#ef4444;border-radius:50%;margin-right:6px"></span> จุดอนุภาคเชือก</div>
+    
+      <canvas id="cv" width="1200" height="520" aria-label="แคนวาสคลื่น"></canvas>
+    </div>
+</section>
+</div>
+
+<script>
+(function(){
+  const cv = document.getElementById('cv');
+  const ctx = cv.getContext('2d');
+
+  const toggleBtn = document.getElementById('togglePlay');
+  const resetBtn  = document.getElementById('reset');
+  const slowBtn   = document.getElementById('slowmo');
+  const viewBtn   = document.getElementById('viewBtn');
+  const showVelEl = document.getElementById('showVel');
+
+  const formulaBox = document.getElementById('formulaBox');
+  const valsBox = document.getElementById('valsBox');
+  const freqRow = document.getElementById('freqRow');
+
+  const mEl = document.getElementById('m');
+  const LEl = document.getElementById('L');
+  const TEl = document.getElementById('Tval');
+  const fEl = document.getElementById('f');
+  const fMinus = document.getElementById('fMinus');
+  const fPlus  = document.getElementById('fPlus');
+  const AEl = document.getElementById('A');
+  const dotsEl = document.getElementById('dots');
+  const vwEl = document.getElementById('vw');
+  const modeEls = [...document.querySelectorAll('input[name="mode"]')];
+
+  let playing = false;
+  let t = 0;
+  let slow = false;
+  let pulseStartTime = -999;
+
+  // HiDPI scale
+  let DPR = 1;
+
+  // viewfinder state
+  let showView = false;
+  let focusX = 0.2;
+  let dragging = false;
+
+  function params(){
+    const m = Math.max(0.0001, parseFloat(mEl.value));
+    const L = Math.max(0.1, parseFloat(LEl.value));
+    const T = Math.max(0.0001, parseFloat(TEl.value));
+    const mu = m / L;
+    const v = Math.sqrt(T / mu);
+    const f = Math.max(0.1, parseFloat(fEl.value || '5'));
+    const A = Math.max(0.0001, parseFloat(AEl.value));
+    const N = parseInt(dotsEl.value);
+    const vw = Math.max(1, parseFloat(vwEl.value||'1.5')); // window width factor
+    const mode = modeEls.find(r=>r.checked).value;
+    const lambda = mode === 'continuous' ? (v / f) : NaN;
+    return {m,L,T,mu,v,f,A,N,vw,mode,lambda};
+  }
+
+  function setUIByMode(){
+    const {mode} = params();
+    freqRow.style.display = (mode === 'continuous') ? '' : 'none';
+  }
+
+  function clamp(num, min, max){ return Math.max(min, Math.min(max, num)); }
+
+  // stepper handlers
+  function stepF(delta){
+    const cur = parseFloat(fEl.value || '5');
+    const next = clamp(cur + delta, parseFloat(fEl.min||'0.1'), parseFloat(fEl.max||'20'));
+    fEl.value = next.toFixed(1);
+    updateReadout(true);
+  }
+  fPlus.addEventListener('click', ()=>stepF(+0.1));
+  fMinus.addEventListener('click', ()=>stepF(-0.1));
+  fEl.addEventListener('keydown', (e)=>{
+    if(e.key === 'ArrowUp'){ e.preventDefault(); stepF(+0.1); }
+    if(e.key === 'ArrowDown'){ e.preventDefault(); stepF(-0.1); }
+  });
+
+  modeEls.forEach(el=>el.addEventListener('change', ()=>{ setUIByMode(); updateReadout(true); }));
+
+  function updateReadout(typeset=false){
+    const {m,L,T,mu,v,f,mode,lambda} = params();
+
+    // Left: formula (MathJax)
+    let fhtml = '';
+    fhtml += `\\(\\mu=\\dfrac{m}{L}\\)`;
+    fhtml += `<br>\\(v=\\sqrt{\\dfrac{T}{\\mu}}\\)`;
+    if(mode==='continuous'){
+      fhtml += `<br>\\(\\lambda=\\dfrac{v}{f}\\)`;
+    } else {
+      fhtml += `<br><span style="color:#64748b;font-size:12px">โหมดคลื่นดล: ไม่คำนวณ \\(\\lambda\\)</span>`;
+    }
+    formulaBox.innerHTML = fhtml;
+
+    // Right: computed values
+    const row = (sym, val, unit, cls='') =>
+      `<tr class="${cls}"><td>${sym}</td><td>${val}</td><td>${unit||''}</td></tr>`;
+
+    let vhtml = `<table class="valsTable" aria-label="ค่าคำนวณ">`;
+    vhtml += row('m', m.toFixed(3), 'kg');
+    vhtml += row('L', L.toFixed(2), 'm');
+    vhtml += row('μ', mu.toFixed(4), 'kg/m');
+    vhtml += row('T', T.toFixed(2), 'N', 'Trow');
+    vhtml += row('v', v.toFixed(2), 'm/s', 'Vrow');
+    if(mode==='continuous'){
+      vhtml += row('f', f.toFixed(2), 'Hz');
+      vhtml += row('λ', lambda.toFixed(2), 'm');
+    }
+    vhtml += `</table>`;
+    valsBox.innerHTML = vhtml;
+
+    // Typeset MathJax
+    if(typeset && window.MathJax && MathJax.typesetPromise){
+      MathJax.typesetClear([formulaBox]);
+      MathJax.typesetPromise([formulaBox]).catch(()=>{});
+    }
+  }
+
+  function worldToCanvas(x, y, L, A){
+    const W = cv.width / DPR, H = cv.height / DPR;
+    const marginX = 40;
+    const marginY = 80 + getTopPad();
+    const w = W - marginX*2, h = H - marginY*2;
+    const cx = marginX + (x/L) * w;
+    const yRange = Math.max(0.6*A, 0.05*L);
+    const cy = marginY + h/2 - (y / (yRange||1)) * (h/2);
+    return [cx, cy, {marginX, marginY, w, h, yRange}];
+  }
+
+  function getVFRect(){
+    const {L,A,N,vw} = params();
+    const geo = worldToCanvas(0,0,L,A)[2];
+    const {marginX,marginY,w,h,yRange} = geo;
+    const H = cv.height / DPR;
+    const dx = w / (Math.max(2, N-1));
+    const vfCx = marginX + clamp(focusX,0,1) * w;
+    const boxW = Math.max(28, dx * vw);
+    const halfH = (1.35 * A / (yRange||1)) * (h/2);
+    const cx = vfCx, cy = marginY + h/2;
+    const left = cx - boxW/2, top = cy - halfH, right = cx + boxW/2, bottom = cy + halfH;
+    return {left, top, right, bottom, cx, cy, boxW, halfH};
+  }
+
+  function drawArrow(x, y, len, dirUp){
+    // Correct sharp arrow head aligned with velocity direction
+    const sign = dirUp ? -1 : 1;
+    const yTip = y + sign * len;
+
+    // shaft
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x, yTip);
+    ctx.stroke();
+
+    // sharp triangular head (tip at yTip)
+    const headLen = 12;
+    const halfW = 4;
+    ctx.beginPath();
+    ctx.moveTo(x, yTip);                          // tip
+    ctx.lineTo(x-halfW, yTip - sign*headLen);     // left base
+    ctx.lineTo(x+halfW, yTip - sign*headLen);     // right base
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  function draw(){
+    const {L,v,f,A,N,mode,lambda,m} = params();
+    ctx.clearRect(0,0,cv.width,cv.height);
+
+    const [x0, yBase0] = worldToCanvas(0,0,L,A);
+    const [x1, yBase1] = worldToCanvas(L,0,L,A);
+
+    // baseline
+    ctx.strokeStyle = '#cbd5e1';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(x0,yBase0); ctx.lineTo(x1,yBase1); ctx.stroke();
+
+    // particle positions & velocities
+    const positions = [];
+    const omega = 2*Math.PI*f;
+    const lambdaEff = (mode==='continuous') ? (lambda || (v/Math.max(0.0001,f))) : (v/Math.max(0.0001,f));
+    const k = 2*Math.PI/(lambdaEff || 1);
+
+    for(let i=0;i<N;i++){
+      const x = i*(L/(N-1));
+      let y=0, vy=0;
+      if(mode==='continuous'){
+        const phase = k*x - omega*t;
+        y = A * Math.sin(phase);
+        vy = -A * omega * Math.cos(phase); // true SHM for each particle
+      } else {
+        // traveling gaussian pulse
+        const sigma = 0.12*L;
+        const xcenter = 0.18*L + v*(t - pulseStartTime);
+        const dx = (x - xcenter);
+        const envelope = Math.exp(-(dx*dx)/(2*sigma*sigma));
+        y = A * envelope;
+        // dy/dt = y * (dx * v / sigma^2)
+        vy = y * (dx * v / (sigma*sigma));
+      }
+      positions.push({x,y,vy});
+    }
+
+    // viewfinder dim
+    if(showView){
+      const r = getVFRect();
+      ctx.save();
+      ctx.fillStyle = 'rgba(200,200,200,0.35)';
+      ctx.fillRect(0,0,cv.width,cv.height);
+      ctx.clearRect(r.left, r.top, r.right - r.left, r.bottom - r.top);
+      ctx.strokeStyle = '#2563eb';
+      ctx.setLineDash([6,4]);
+      ctx.lineWidth = 2;
+      ctx.strokeRect(r.left, r.top, r.right - r.left, r.bottom - r.top);
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
+
+    // rope thickness depends on m
+    const baseWidth = 2.5;
+    const thickness = baseWidth + m*2;
+
+    // rope path
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = thickness;
+    ctx.beginPath();
+    positions.forEach((p,idx)=>{
+      const [cx,cy] = worldToCanvas(p.x,p.y,L,A);
+      if(idx===0) ctx.moveTo(cx,cy); else ctx.lineTo(cx,cy);
+    });
+    ctx.stroke();
+
+    // dots
+    positions.forEach((p)=>{
+      const [cx,cy] = worldToCanvas(p.x,p.y,L,A);
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath(); ctx.arc(cx,cy,3.2,0,Math.PI*2); ctx.fill();
+    });
+
+    // Hand icon at left end FOLLOWING the left-end displacement
+    const leftP = positions[0];
+    const [hx, hy] = worldToCanvas(leftP.x, leftP.y, L, A);
+
+    // draw a short "grip rope" segment behind hand for illusion
+    ctx.save();
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = thickness;
+    ctx.beginPath();
+    ctx.moveTo(hx-14, hy);
+    ctx.lineTo(hx, hy);
+    ctx.stroke();
+    ctx.restore();
+
+    // hand (grip) icon
+    ctx.save();
+    ctx.font = '28px serif';
+    ctx.fillStyle = '#0f172a';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('✊', hx-10, hy);  // grip touching rope end
+    ctx.restore();
+
+    // fixed label under the hand (left side), placed below max displacement so hand never overlaps text
+    ctx.save();
+    ctx.fillStyle = '#0f172a';
+    ctx.font = '12px system-ui, -apple-system, Segoe UI, Roboto';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+
+    // Baseline position at x=0, y=0 (center line)
+    const [bx, by0, g0] = worldToCanvas(0, 0, L, A);
+    // Place text below the maximum displacement band: by0 + (A/yRange)*(h/2) + padding
+    const maxDispPix = (Math.abs(A) / (g0.yRange||1)) * (g0.h/2);
+    const labelX = (hx-10) - 15; // shifted right total +20px
+    const labelY = by0 + maxDispPix + 18; // below displacement so hand won't cover it
+    ctx.fillText('แหล่งกำเนิดคลื่น', labelX, labelY);
+    ctx.restore();
+
+    // Velocity vectors inside view window only (green) with true SHM scaling
+    if(showView && showVelEl.checked){
+      const r = getVFRect();
+      const vmax = (mode==='continuous') ? Math.max(1e-9, A*omega) : Math.max(1e-9, A*omega); // use Aω scale also for pulse visual consistency
+      const maxPix = 34; // make it clearly visible
+      const minFrac = 0.06; // below this don't show
+
+      ctx.save();
+      ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--green').trim() || '#16a34a';
+      ctx.fillStyle = ctx.strokeStyle;
+      ctx.lineWidth = 3;
+
+      positions.forEach((p)=>{
+        const [cx,cy] = worldToCanvas(p.x,p.y,L,A);
+        if(cx<r.left || cx>r.right || cy<r.top || cy>r.bottom) return;
+
+        const frac = Math.abs(p.vy)/vmax;   // 0..~1
+        if(frac < minFrac) return;          // at/near turning points -> hide
+        const len = maxPix * clamp(frac, 0, 1);
+        drawArrow(cx, cy, len, p.vy>0);
+      });
+
+      ctx.restore();
+    }
+  }
+
+  function resize(){
+    DPR = Math.min(2, window.devicePixelRatio || 1);
+    const wrap = document.getElementById('canvasWrap');
+    // Mobile: force simulation area to 70% of viewport height
+    if(window.matchMedia('(max-width: 980px)').matches && wrap){
+      wrap.style.height = Math.round(window.innerHeight * 0.80) + 'px';
+    } else if(wrap){
+      wrap.style.height = '';
+    }
+    const r = wrap.getBoundingClientRect();
+    cv.width  = Math.floor(r.width * DPR);
+    cv.height = Math.floor((r.height-2) * DPR);
+    cv.style.width  = r.width + 'px';
+    cv.style.height = (r.height-2) + 'px';
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    updateLegendPosition();
+    draw();
+  }
+  window.addEventListener('resize', resize);
+
+  // Move only the setting controls (mode, m, L, T, f, A) onto the stage on mobile.
+  const settingsBlock = document.getElementById('settingsBlock');
+  const settingsHostStage = document.getElementById('settingsHostStage');
+
+
+  function isMobileView(){ return window.matchMedia('(max-width: 980px)').matches; }
+
+  function getTopPad(){ return 0; }
+
+  function updateLegendPosition(){
+    const legend = document.querySelector('.legend');
+    if(legend) legend.style.top = '10px';
+  }
+  function relocateSettings(){
+    const isMobile = window.matchMedia('(max-width: 980px)').matches;
+    if(isMobile){
+      if(settingsBlock && settingsHostStage && settingsBlock.parentElement !== settingsHostStage){
+        settingsHostStage.appendChild(settingsBlock);
+      }
+    }else{
+      // move back into panel (top)
+      const panel = document.querySelector('.panel');
+      if(settingsBlock && panel && settingsBlock.parentElement !== panel){
+        panel.insertBefore(settingsBlock, panel.firstChild);
+      }
+    }
+    updateLegendPosition();
+    draw();
+  }
+  window.addEventListener('resize', relocateSettings);
+
+  let last = performance.now();
+  function tick(ts){
+    const dt = Math.min(0.05, (ts - last)/1000);
+    last = ts;
+    if(playing){
+      const speed = slow ? 0.1 : 1.0;
+      t += dt * speed;
+    }
+    draw();
+    requestAnimationFrame(tick);
+  }
+
+  toggleBtn.addEventListener('click', ()=>{
+    const was = playing; playing = !playing;
+    const {mode} = params();
+    if(!was && playing && mode==='pulse'){
+      pulseStartTime = t;
+    }
+  });
+
+  resetBtn.addEventListener('click', ()=>{
+    t = 0;
+    playing = false;
+    pulseStartTime = -999;
+    updateReadout(true);
+    draw();
+  });
+
+  slowBtn.addEventListener('click', ()=>{
+    slow = !slow;
+    slowBtn.setAttribute('aria-pressed', slow ? 'true' : 'false');
+  });
+
+  viewBtn.addEventListener('click', ()=>{
+    showView = !showView;
+    viewBtn.setAttribute('aria-pressed', showView ? 'true' : 'false');
+    vwEl.disabled = !showView;
+    vwEl.style.opacity = showView ? '1' : '0.45';
+    // ensure canvas is properly sized (especially on mobile)
+    resize();
+  });
+
+  [mEl,LEl,TEl,fEl,AEl,dotsEl,vwEl,showVelEl].forEach(el=>{
+    el.addEventListener('input', ()=>updateReadout(true));
+    el.addEventListener('change', ()=>updateReadout(true));
+  });
+
+  function clientXToCanvasX(ev){
+    const rect = cv.getBoundingClientRect();
+    return ((ev.clientX - rect.left) * (cv.width / rect.width)) / DPR;
+  }
+  function clientYToCanvasY(ev){
+    const rect = cv.getBoundingClientRect();
+    return ((ev.clientY - rect.top) * (cv.height / rect.height)) / DPR;
+  }
+  function isInsideVF(x,y){
+    if(!showView) return false;
+    const r = getVFRect();
+    return (x>=r.left && x<=r.right && y>=r.top && y<=r.bottom);
+  }
+
+  cv.addEventListener('mousedown', (e)=>{
+    if(!showView) return;
+    const x = clientXToCanvasX(e), y = clientYToCanvasY(e);
+    if(isInsideVF(x,y)) { dragging = true; e.preventDefault(); }
+  });
+  window.addEventListener('mousemove', (e)=>{
+    if(showView && !dragging){
+      const x = clientXToCanvasX(e), y = clientYToCanvasY(e);
+      cv.style.cursor = isInsideVF(x,y) ? 'grab' : 'default';
+    }
+    if(!dragging) return;
+    const x = clientXToCanvasX(e);
+    const {L,A} = params();
+    const geo = worldToCanvas(0,0,L,A)[2];
+    focusX = (x - geo.marginX)/geo.w;
+    focusX = clamp(focusX, 0, 1);
+  });
+  window.addEventListener('mouseup', ()=>{ dragging=false; });
+
+  // touch
+  cv.addEventListener('touchstart', (e)=>{
+    if(!showView) return;
+    const t0 = e.touches[0];
+    const rect = cv.getBoundingClientRect();
+    const x = ((t0.clientX - rect.left) * (cv.width / rect.width)) / DPR;
+    const y = ((t0.clientY - rect.top)  * (cv.height / rect.height)) / DPR;
+    if(isInsideVF(x,y)) dragging = true;
+  }, {passive:true});
+
+  window.addEventListener('touchmove', (e)=>{
+    if(!dragging) return;
+    const t0 = e.touches[0];
+    const rect = cv.getBoundingClientRect();
+    const x = ((t0.clientX - rect.left) * (cv.width / rect.width)) / DPR;
+    const {L,A} = params();
+    const geo = worldToCanvas(0,0,L,A)[2];
+    focusX = (x - geo.marginX)/geo.w;
+    focusX = clamp(focusX, 0, 1);
+  }, {passive:true});
+
+  window.addEventListener('touchend', ()=>{ dragging=false; });
+
+  // init
+  setUIByMode();
+  updateReadout(true);
+  vwEl.disabled = true;
+  relocateSettings();
+  vwEl.style.opacity = '0.45';
+  resize();
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>

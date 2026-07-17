@@ -1,0 +1,1710 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>คลื่นเชือกตามขวาง — เฟเซอร์ + y(t) + อธิบาย</title>
+  <style>
+    :root{
+      --bg:#ffffff;
+      --ink:#111827;           /* ข้อความดำ */
+      --muted:#6b7280;
+      --line:#e5e7eb;
+      --accent:#2563eb;        /* หัวข้อสีน้ำเงิน */
+      --danger:#dc2626;        /* จุดเน้นสีแดง */
+
+      --btnBlue:#2ea8ff;       /* เล่น/หยุด */
+      --btnGray:#9ca3af;       /* รีเซ็ต */
+      --btnOrange:#f8caa7;     /* อธิบาย (โทนส้มอ่อน) */
+      --btnGreen:#c7f2c7;      /* แบบฝึกหัด (เขียวอ่อน) */
+
+      --shadow: 0 10px 30px rgba(0,0,0,.08);
+      --radius:18px;
+
+      --explainBorder:#f6c7a6; /* กรอบส้ม */
+      --explainInner:#eaf2fb;  /* เทาอ่อนอมฟ้า */
+    }
+
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Thai", sans-serif;
+      background:var(--bg);
+      color:var(--ink);
+    }
+
+    .wrap{
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 10px 10px calc(10px + env(safe-area-inset-bottom));
+      padding-top: calc(10px + env(safe-area-inset-top));
+    }
+
+    h1{
+      margin:0 0 8px 0;
+      font-size: 18px;
+      color: var(--accent);
+      letter-spacing:.2px;
+      font-weight: 900;
+    }
+
+    .card{
+      background: #f8fafc;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      margin-bottom: 8px;
+    }
+
+    .cardHeader{
+      padding: 8px 10px;
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:10px;
+      border-bottom:1px solid var(--line);
+      background:#fff;
+    }
+
+    .cardTitle{
+      font-weight: 900;
+      font-size: 14px;
+      color: var(--accent);
+    }
+
+    .small{
+      font-size:12px;
+      color:var(--muted);
+      line-height:1.45;
+    }
+
+    .canvasBox{ padding: 8px 10px 10px 10px; }
+
+    canvas{
+      width:100%;
+      height:auto;
+      display:block;
+      border-radius: 14px;
+      background:#fff;
+      border:1px solid var(--line);
+    }
+
+    /* lock canvas display heights to prevent resize feedback */
+    #sim{ height: 300px; }
+    #timeGraph{ height: 96px; }
+
+    .kpiRow{
+      display:grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      gap: 6px;
+      padding: 8px 10px 10px;
+    }
+    @media (max-width: 900px){
+      .kpiRow{ grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 520px){
+      .kpiRow{ grid-template-columns: 1fr; }
+    }
+
+    .kpi{
+      background:#fff;
+      border:1px solid var(--line);
+      border-radius: 14px;
+      padding: 10px;
+    }
+    .kpi .t{ font-size:12px; color: var(--muted); }
+    .kpi .v{ font-size:13px; font-weight:900; margin-top:4px; }
+
+    .controlsWrap{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      padding: 8px 10px 10px;
+    }
+    @media (max-width: 900px){
+      .controlsWrap{ grid-template-columns: 1fr; }
+    }
+    .ctrl{
+      background:#fff;
+      border:1px solid var(--line);
+      border-radius: 14px;
+      padding: 10px 10px 8px;
+    }
+    .ctrl label{
+      display:flex;
+      justify-content:space-between;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .ctrl input[type="range"]{ width:100%; }
+
+    .link{ color: var(--accent); font-weight:900; text-decoration:none; }
+    .footerLink{
+      margin-top:10px;
+      text-align:center;
+      font-size:13px;
+    }
+
+    /* Fixed bottom toolbar (all devices) */
+    .bottomBar{
+      position: fixed;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: calc(10px + env(safe-area-inset-bottom));
+      z-index: 70;
+      display:flex;
+      gap:10px;
+      padding:10px;
+      border-radius: 18px;
+      background: rgba(255,255,255,.86);
+      border:1px solid rgba(0,0,0,.08);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(8px);
+    }
+    .sqBtn{
+      width: 52px;
+      height: 52px;
+      border-radius: 14px;
+      border:1px solid rgba(0,0,0,.08);
+      box-shadow: 0 6px 14px rgba(0,0,0,.08);
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      align-items:center;
+      gap:4px;
+      font-weight:900;
+      cursor:pointer;
+      user-select:none;
+    }
+    .sqBtn .ico{ font-size:18px; line-height:1; }
+    .sqBtn .txt{ font-size:10px; line-height:1; }
+    .sqBtn.blue{ background: var(--btnBlue); color:#fff; border-color: rgba(0,0,0,.0); }
+    .sqBtn.gray{ background: var(--btnGray); color:#111827; border-color: rgba(0,0,0,.0); }
+    .sqBtn.orange{ background: var(--btnOrange); color:#111827; border-color: rgba(0,0,0,.0); }
+    .sqBtn.green{ background: var(--btnGreen); color:#111827; border-color: rgba(0,0,0,.0); }
+
+    /* close button */
+    .closeX{
+      position: fixed;
+      right: 12px;
+      top: calc(10px + env(safe-area-inset-top));
+      z-index: 80;
+      width: 44px; height: 44px;
+      border-radius: 14px;
+      background: #fff;
+      border:1px solid rgba(0,0,0,.12);
+      box-shadow: var(--shadow);
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight: 900;
+    }
+
+    /* Explain modal */
+    .modal{
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.38);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding: 14px;
+      z-index: 90;
+    }
+    .modalInner{
+      max-width: 980px;
+      width: 100%;
+      max-height: calc(100vh - 28px);
+      overflow:auto;
+      background:#fff;
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+      border:1px solid rgba(0,0,0,.12);
+    }
+
+    .modalTop{
+      position: sticky;
+      top: 0;
+      background:#fff;
+      border-bottom:1px solid var(--line);
+      padding: 8px 10px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+    }
+    .modalTop .title{
+      font-weight: 900;
+      color: var(--accent);
+    }
+    .modalTop .x{
+      width: 42px; height: 42px;
+      border-radius: 14px;
+      border:1px solid rgba(0,0,0,.12);
+      background:#fff;
+      cursor:pointer;
+      font-weight:900;
+    }
+
+    .explainBody{
+      padding: 12px;
+      background: #fff7ed; /* โทนส้มอ่อน */
+    }
+    .explainBox{
+      border: 2px solid var(--explainBorder); /* กรอบส้ม */
+      background: var(--explainInner);        /* ในกรอบเทาอมฟ้า */
+      border-radius: 18px;
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+    .explainBox h3{
+      margin:0 0 6px 0;
+      font-size: 16px;
+      color: var(--accent); /* หัวข้อสีน้ำเงิน */
+    }
+    .explainBox p{
+      margin: 6px 0;
+      color: var(--ink);
+      line-height: 1.6;
+      font-size: 14px;
+    }
+    .hi{ color: var(--danger); font-weight: 900; } /* จุดเน้นสีแดง */
+    .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+
+    /* Ensure content not hidden behind bottom bar */
+    .padBottom{ height: 78px; }
+
+    /* numeric steppers (replace sliders) */
+    .stepper{
+      display:flex;
+      gap:8px;
+      align-items:center;
+    }
+    .numInp{
+      width: 120px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(0,0,0,.12);
+      font-weight: 900;
+      font-size: 14px;
+      color: #111827;
+      background:#fff;
+      text-align:center;
+    }
+    .stepBtn{
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      border: 1px solid rgba(0,0,0,.10);
+      background: #fff;
+      cursor:pointer;
+      font-weight: 900;
+      font-size: 18px;
+      line-height: 1;
+    }
+    .stepBtn:active{ transform: translateY(1px); }
+
+    .kpiRow{ display:none !important; }
+  .ctrl.timeWindowCtrl{ display:none !important; }
+
+  .canvasBox{ position:relative; }
+  #simHud{
+    position:absolute;
+    left: 22px;
+    top: 18px;
+    font-size: 13px;
+    line-height: 1.25;
+    color: rgba(17,24,39,0.92);
+    pointer-events:none;
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+    text-shadow: 0 1px 0 rgba(255,255,255,0.85);
+  }
+  #simHud .hudLine{ margin: 2px 0; }
+  #simHud .hudKey{ font-weight: 900; }
+  .kpiCard{ display:none !important; }
+
+  .timeWindowCtrl, 
+  .ctrl:has(span:contains("ช่วงเวลาในกราฟ")) {
+    display:none !important;
+  }
+
+    /* Quiz modal (มาตรฐานเพจ: โทนเขียวอ่อน + ปุ่มตรวจคำตอบลอย) */
+    .quizBody{
+      padding: 12px;
+      background: #f3fff3; /* เขียวอ่อนมาก */
+      min-height: 100vh;
+    }
+    .quizInnerFull{
+      width: 100%;
+      height: 100%;
+      max-width: 100vw;
+      max-height: 100vh;
+      border-radius: 0;
+    }
+    .quizTop{
+      position: sticky;
+      top: 0;
+      background: #e6ffe6;
+      border-bottom:1px solid var(--line);
+      padding: 10px 12px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      z-index: 2;
+    }
+    .quizTop .title{
+      font-weight: 900;
+      color: var(--accent);
+      font-size: 16px;
+    }
+    .quizTop .sub{
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .quizTop .x{
+      width: 44px; height: 44px;
+      border-radius: 14px;
+      border:1px solid rgba(0,0,0,.12);
+      background:#fff;
+      cursor:pointer;
+      font-weight:900;
+    }
+    .qCard{
+      background:#fff;
+      border:1px solid rgba(0,0,0,.10);
+      border-radius: 16px;
+      padding: 12px;
+      margin: 10px 0;
+      box-shadow: 0 8px 20px rgba(0,0,0,.05);
+    }
+    .qTitle{
+      font-weight: 900;
+      color: #111827;
+      margin-bottom: 10px;
+      line-height: 1.55;
+    }
+    .choices{
+      display:grid;
+      gap:8px;
+    }
+    .choice{
+      display:flex;
+      gap:10px;
+      align-items:flex-start;
+      padding: 10px 10px;
+      border-radius: 14px;
+      border: 1px solid rgba(0,0,0,.10);
+      background: #ffffff;
+      cursor:pointer;
+      user-select:none;
+    }
+    .choice input{ margin-top: 3px; transform: scale(1.15); }
+    .choice .lab{
+      line-height:1.55;
+      color:#111827;
+      font-size: 14px;
+    }
+    .letter{
+      font-weight: 900;
+      width: 22px;
+      display:inline-block;
+      color:#111827;
+    }
+    .solution{
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 14px;
+      border: 1px solid rgba(0,0,0,.10);
+      background: #f8fafc;
+      display:none;
+    }
+    .solHead{
+      font-weight: 900;
+      margin-bottom: 8px;
+    }
+    .ansRed{ color: var(--danger); font-weight: 900; }
+    .quizBottom{
+      position: fixed;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: calc(10px + env(safe-area-inset-bottom));
+      z-index: 95;
+      width: min(980px, calc(100vw - 20px));
+      background: rgba(255,255,255,.88);
+      backdrop-filter: blur(8px);
+      border:1px solid rgba(0,0,0,.10);
+      box-shadow: var(--shadow);
+      border-radius: 18px;
+      padding: 10px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+    }
+    .scoreBox{
+      font-weight: 900;
+      color: #111827;
+      font-size: 14px;
+    }
+    .checkBtn{
+      border: none;
+      cursor:pointer;
+      border-radius: 16px;
+      padding: 12px 16px;
+      font-weight: 900;
+      background: #bbf7d0; /* เขียวอ่อน */
+      color:#111827;
+      box-shadow: 0 8px 18px rgba(0,0,0,.10);
+    }
+    .quizPadBottom{ height: 86px; }
+
+
+    /* --- FIX: MathJax readability in Quiz (bigger & wraps) --- */
+    #quizModal .qTitle{ font-size: 16px; }
+    #quizModal .choice .lab{ font-size: 15px; }
+    #quizModal .solution{ font-size: 15px; line-height: 1.7; }
+    /* MathJax v3 outputs <mjx-container> */
+    #quizModal mjx-container{ font-size: 1.18em !important; }
+    #quizModal .solution mjx-container{ font-size: 1.22em !important; }
+    /* prevent math from shrinking on small screens */
+    @media (max-width: 560px){
+      #quizModal .qTitle{ font-size: 17px; }
+      #quizModal .choice .lab{ font-size: 16px; }
+      #quizModal .solution{ font-size: 16px; }
+      #quizModal mjx-container{ font-size: 1.22em !important; }
+    }
+
+  </style>
+
+
+
+  <!-- MathJax (MathJax only) -->
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['\\(','\\)'], ['$', '$']],
+        displayMath: [['\\[','\\]']],
+        processEscapes: true
+      },
+      svg: { fontCache: 'global', scale: 1.05 },
+      options: { enableMenu: false }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+</head>
+
+<body>
+  <div class="closeX" title="ปิด">❌</div>
+
+  <div class="wrap">
+    <h1>คลื่นเชือกตามขวาง — เฟเซอร์ + คลื่น + กราฟ \(y(t)\)</h1>
+
+    <div class="card">
+      <div class="cardHeader">
+        <div>
+          <div class="cardTitle">จอการทดลอง (แนวตั้ง)</div>
+          <div class="small">
+            แตะ/คลิกบนคลื่นเพื่อเลือกตำแหน่ง \(x_0\) • เฟเซอร์ซ้าย • คลื่นขวา • เส้นฟ้าจางเชื่อมถึงอนุภาคที่เลือก
+          </div>
+        </div>
+        <div class="small" id="statusText">สถานะ: กำลังเล่น</div>
+      </div>
+
+      <div class="canvasBox">
+
+        <div id="simHud" aria-hidden="true">
+          <div class="hudLine"><span class="hudKey">A</span> = <span id="hudA">5.0</span> cm</div>
+          <div class="hudLine"><span class="hudKey">มุมเฟส</span> = <span id="hudPhi">0</span>°</div>
+          <div class="hudLine"><span class="hudKey">y</span> = <span id="hudY">0.00</span> cm</div>
+        </div>
+        <canvas id="sim" width="980" height="300"></canvas>
+        <div style="height:10px"></div>
+        <canvas id="timeGraph" width="980" height="80"></canvas>
+        <div class="small" style="margin-top:6px;"><span style="font-weight:900;color:#111827;">กราฟ \(y(t)\)</span> ที่ตำแหน่ง \(x_0\) <span style="color:#dc2626;font-weight:900;">(ไม่ใช่ภาพคลื่นเคลื่อนที่)</span> • <span style="font-weight:900;color:#2563eb;">จุดขวาสุดคือ “ปัจจุบัน”</span>
+        </div>
+        <div class="small" style="margin-top:6px;">
+          เงาแนว \(y\) ของเฟเซอร์ = การกระจัดของอนุภาค ณ \(x_0\) • ลูกศรเขียวคือ \(y\) จากแนวสมดุล • ปรับ <span class="hi">Slow</span> เพื่อทำให้การหมุน/การสั่นช้าลง
+        </div>
+      </div>
+
+      <div class="kpiRow">
+        <div class="kpi">
+          <div class="t">ตำแหน่งที่เลือก</div>
+          <div class="v"><span id="x0Text">0.50</span> m</div>
+        </div>
+        <div class="kpi">
+          <div class="t">มุมเฟส ณ จุดนั้น</div>
+          <div class="v"><span id="phiText">0</span>°</div>
+        </div>
+        <div class="kpi">
+          <div class="t">การกระจัด ณ จุดนั้น</div>
+          <div class="v"><span id="yText">0.00</span> cm</div>
+        </div>
+        <div class="kpi">
+          <div class="t">Slow (ตัวคูณเวลา)</div>
+          <div class="v"><span id="slowText">0.20</span>×</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="cardHeader">
+        <div class="cardTitle">แผงตั้งค่า</div>
+        <div class="small">สมการคลื่น: \(y(x,t)=A\sin(kx\mp\omega t+\phi_0)\), \(k=\dfrac{2\pi}{\lambda}\), \(\omega=2\pi f\)</div>
+      </div>
+
+      <div class="controlsWrap">
+        <div class="ctrl">
+          <label><span>แอมพลิจูด \(A\)</span><span style="font-weight:900;color:#111827;"><span id="Aval">5.0</span> cm</span></label>
+          
+          <div class="stepper" data-target="A">
+            <button class="stepBtn" data-action="dec" aria-label="ลดค่า">−</button>
+            <input id="A" class="numInp" type="number" inputmode="decimal"
+                   step="0.1" min="0.5" max="6.0" value="5.0" />
+            <button class="stepBtn" data-action="inc" aria-label="เพิ่มค่า">+</button>
+          </div>
+    
+        </div>
+
+        <div class="ctrl">
+          <label><span>ความยาวคลื่น \(\lambda\)</span><span style="font-weight:900;color:#111827;"><span id="lamVal">0.50</span> m</span></label>
+          
+          <div class="stepper" data-target="lam">
+            <button class="stepBtn" data-action="dec" aria-label="ลดค่า">−</button>
+            <input id="lam" class="numInp" type="number" inputmode="decimal" step="0.01" min="0.50" max="10.00" value="0.50" />
+            <button class="stepBtn" data-action="inc" aria-label="เพิ่มค่า">+</button>
+          </div>
+    
+        </div>
+
+        <div class="ctrl">
+          <label><span>ความถี่ \(f\)</span><span style="font-weight:900;color:#111827;"><span id="fVal">2.0</span> Hz</span></label>
+          
+          <div class="stepper" data-target="f">
+            <button class="stepBtn" data-action="dec" aria-label="ลดค่า">−</button>
+            <input id="f" class="numInp" type="number" inputmode="decimal"
+                   step="0.1" min="0.4" max="5.0" value="2.0" />
+            <button class="stepBtn" data-action="inc" aria-label="เพิ่มค่า">+</button>
+          </div>
+    
+        </div>
+
+        <div class="ctrl">
+          <label><span>เฟสตั้งต้น \(\phi_0\)</span><span style="font-weight:900;color:#111827;"><span id="phi0Val">0</span>°</span></label>
+          
+          <div class="stepper" data-target="phi0">
+            <button class="stepBtn" data-action="dec" aria-label="ลดค่า">−</button>
+            <input id="phi0" class="numInp" type="number" inputmode="decimal"
+                   step="1" min="-180" max="180" value="0" />
+            <button class="stepBtn" data-action="inc" aria-label="เพิ่มค่า">+</button>
+          </div>
+    
+        </div>
+
+        <div class="ctrl">
+          <label><span>จำนวนเม็ดสีบนเชือก</span><span style="font-weight:900;color:#111827;"><span id="NVal">70</span></span></label>
+          
+          <div class="stepper" data-target="N">
+            <button class="stepBtn" data-action="dec" aria-label="ลดค่า">−</button>
+            <input id="N" class="numInp" type="number" inputmode="decimal"
+                   step="1" min="30" max="140" value="70" />
+            <button class="stepBtn" data-action="inc" aria-label="เพิ่มค่า">+</button>
+          </div>
+    
+        </div>
+
+        <!-- fixed y(t) window (hidden): always 2.0 s -->
+        <input id="W" type="hidden" value="2.0" />
+        <span id="WVal" style="display:none">2.0</span>
+
+        <div class="ctrl">
+          <label><span>เลือกตำแหน่ง \(x_0\)</span><span style="font-weight:900;color:#111827;"><span id="xSliderVal">0.50</span> m</span></label>
+          
+          <div class="stepper" data-target="xSlider">
+            <button class="stepBtn" data-action="dec" aria-label="ลดค่า">−</button>
+            <input id="xSlider" class="numInp" type="number" inputmode="decimal"
+                   step="0.01" min="0" max="1" value="0.50" />
+            <button class="stepBtn" data-action="inc" aria-label="เพิ่มค่า">+</button>
+          </div>
+    
+          <div class="small" style="margin-top:8px;">ปรับได้ทั้งสไลเดอร์ หรือ แตะ/คลิกบนเชือก</div>
+        </div>
+
+        <div class="ctrl">
+          <label><span>Slow (ทำให้ช้าลง/เร็วขึ้น)</span><span style="font-weight:900;color:#111827;"><span id="slowVal">0.20</span>×</span></label>
+          
+          <div class="stepper" data-target="slow">
+            <button class="stepBtn" data-action="dec" aria-label="ลดค่า">−</button>
+            <input id="slow" class="numInp" type="number" inputmode="decimal"
+                   step="0.01" min="0.10" max="2.00" value="0.20" />
+            <button class="stepBtn" data-action="inc" aria-label="เพิ่มค่า">+</button>
+          </div>
+    
+          <div class="small" style="margin-top:8px;">ค่า <span class="hi">0.20×</span> = ช้ามาก • <span class="hi">2.00×</span> = เร็วขึ้น</div>
+        </div>
+
+        <div class="ctrl">
+          <label><span>ทิศทางคลื่น</span><span style="font-weight:900;color:#111827;" id="dirText">ไปทาง +x</span></label>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <div id="dirPlus" style="padding:8px 12px;border-radius:999px;border:1px solid rgba(0,0,0,.08);background:#e0f2fe;font-weight:900;cursor:pointer;">➡️ +x</div>
+            <div id="dirMinus" style="padding:8px 12px;border-radius:999px;border:1px solid rgba(0,0,0,.08);background:#fff;font-weight:900;cursor:pointer;">⬅️ −x</div>
+          </div>
+          <div class="small" style="margin-top:8px;">
+            +x: \(y=A\sin(kx-\omega t+\phi_0)\) • −x: \(y=A\sin(kx+\omega t+\phi_0)\)
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footerLink">
+      ศึกษาเพิ่มเติมที่ <a class="link" href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">เพจ คลายปมฟิสิกส์</a>
+    </div>
+
+    <div class="padBottom"></div>
+  </div>
+
+  <div class="bottomBar" id="bottomBar">
+    <div class="sqBtn blue" id="btnPlay"><div class="ico" id="playIco">⏸</div><div class="txt" id="playTxt">หยุด</div></div>
+    <div class="sqBtn gray" id="btnReset"><div class="ico">🔄</div><div class="txt">รีเซ็ต</div></div>
+    <div class="sqBtn orange" id="btnExplain"><div class="ico">💡</div><div class="txt">อธิบาย</div></div>
+    <div class="sqBtn green" id="btnQuiz"><div class="ico">📝</div><div class="txt">แบบฝึกหัด</div></div>
+  </div>
+
+
+  <div class="modal" id="quizModal">
+    <div class="modalInner quizInnerFull">
+      <div class="quizTop">
+        <div>
+          <div class="title">📝 แบบฝึกหัด — สมการคลื่น & มุมเฟส</div>
+          <div class="sub">เลือกคำตอบ A–E แล้วกด “ตรวจคำตอบ” เพื่อดูคะแนน + เฉลยละเอียด (จะแสดงเฉลยเฉพาะข้อที่ตอบแล้ว)</div>
+        </div>
+        <button class="x" id="quizClose">❌</button>
+      </div>
+      <div class="quizBody" id="quizBody"></div>
+      <div class="quizPadBottom"></div>
+    </div>
+    <div class="quizBottom">
+      <div class="scoreBox" id="scoreBox">คะแนน: — / 10</div>
+      <button class="checkBtn" id="btnCheck">ตรวจคำตอบ</button>
+    </div>
+  </div>
+
+
+  <div class="modal" id="modal">
+    <div class="modalInner">
+      <div class="modalTop">
+        <div class="title">💡 อธิบาย — สมการคลื่น, ทิศ +x/−x, มุมเฟส, และเฟเซอร์</div>
+        <button class="x" id="modalClose">❌</button>
+      </div>
+
+      <div class="explainBody">
+        <div class="explainBox">
+          <h3>1) สมการคลื่นคืออะไร?</h3>
+          <p>
+            สมการคลื่นเป็น “สมการ” ที่บอกว่า <span class="hi">การกระจัด</span> ของจุดบนเชือก (อนุภาคตัวกลาง) เปลี่ยนตาม <span class="hi">ตำแหน่ง \(x\)</span> และ <span class="hi">เวลา \(t\)</span> อย่างไร
+          </p>
+          <p class="mono">\[
+            y(x,t)=A\sin(kx\mp \omega t+\phi_0)
+          \]</p>
+        </div>
+
+        <div class="explainBox">
+          <h3>2) ตัวแปรแต่ละตัวหมายถึงอะไร?</h3>
+          <p>
+            • \(y(x,t)\) = การกระจัดของเชือก (ขึ้น–ลง) ที่ตำแหน่ง \(x\) เวลา \(t\) <br/>
+            • \(A\) = แอมพลิจูด (ค่าสูงสุดของการกระจัด) <br/>
+            • \(\lambda\) = ความยาวคลื่น <br/>
+            • \(k=\dfrac{2\pi}{\lambda}\) = เลขคลื่น (บอกความถี่เชิงพื้นที่) <br/>
+            • \(f\) = ความถี่ (Hz) และ \(\omega=2\pi f\) = ความถี่เชิงมุม <br/>
+            • \(\phi_0\) = เฟสตั้งต้น (ค่ามุมเริ่มต้น)
+          </p>
+        </div>
+
+        <div class="explainBox">
+          <h3>3) คลื่นไปทาง +x หรือ −x ดูจากอะไร?</h3>
+          <p>
+            ถ้าคลื่น “วิ่งไปทาง +x” จะอยู่ในรูป <span class="hi">\(kx-\omega t\)</span>
+          </p>
+          <p class="mono">\[
+            y(x,t)=A\sin(kx-\omega t+\phi_0)\quad(\text{ไปทาง }+x)
+          \]</p>
+          <p>
+            ถ้าคลื่น “วิ่งไปทาง −x” จะอยู่ในรูป <span class="hi">\(kx+\omega t\)</span>
+          </p>
+          <p class="mono">\[
+            y(x,t)=A\sin(kx+\omega t+\phi_0)\quad(\text{ไปทาง }-x)
+          \]</p>
+          <p>
+            เหตุผลสั้น ๆ: รูปทั่วไปของคลื่นเดินทางคือ \(f(x-vt)\) (ไปทาง +x) และ \(f(x+vt)\) (ไปทาง −x)
+          </p>
+        </div>
+
+        <div class="explainBox">
+          <h3>4) “มุมเฟส” คืออะไร?</h3>
+          <p>
+            เฟสคือมุมในวงไซน์ที่กำหนดสถานะการสั่น ณ จุดนั้น:
+          </p>
+          <p class="mono">\[
+            \phi(x,t)=kx\mp\omega t+\phi_0
+          \]</p>
+          <p>
+            ที่ตำแหน่งคงที่ \(x_0\) เราจะได้สัญญาณเวลา:
+          </p>
+          <p class="mono">\[
+            y(t)=A\sin(\phi(x_0,t))
+          \]</p>
+        </div>
+
+        <div class="explainBox">
+          <h3>5) เฟเซอร์หมุนอย่างไร? ทำไม +x กับ −x ต่างกัน?</h3>
+          <p>
+            ในภาพ เฟเซอร์คือเวกเตอร์รัศมี \(A\) ที่ “หมุน” ด้วยมุมเฟส \(\phi\) และเราอ่านการกระจัดจาก
+            <span class="hi">เงาแกน \(y\)</span>:
+          </p>
+          <p class="mono">\[
+            y=A\sin(\phi)
+          \]</p>
+
+          <p>
+            ถ้าคลื่นไปทาง <span class="hi">+x</span> เรามี \(\phi=kx_0-\omega t+\phi_0\) ⇒
+            \(\dfrac{d\phi}{dt}=-\omega\) (มุมลดลงตามเวลา) จึงมองเป็นการหมุน <span class="hi">ตามเข็มนาฬิกา</span>
+          </p>
+
+          <p>
+            ถ้าคลื่นไปทาง <span class="hi">−x</span> เรามี \(\phi=kx_0+\omega t+\phi_0\) ⇒
+            \(\dfrac{d\phi}{dt}=+\omega\) (มุมเพิ่มขึ้นตามเวลา) จึงมองเป็นการหมุน <span class="hi">ทวนเข็มนาฬิกา</span>
+          </p>
+
+          <p>
+            หมายเหตุ: “ทิศการหมุน” เป็นผลจากเครื่องหมายหน้า \(\omega t\) ในการนิยามเฟส (มาตรฐานคณิตศาสตร์: มุมเพิ่ม = ทวนเข็ม)
+          </p>
+        </div>
+
+        <div class="explainBox">
+          <h3>6) เชื่อมภาพ 3 อย่างเข้าด้วยกัน (เฟเซอร์ → อนุภาคบนเชือก → กราฟ \(y(t)\))</h3>
+          <p>
+            • หัวเฟเซอร์ให้มุม \(\phi\) <br/>
+            • เงาแกน \(y\) ของเฟเซอร์ = การกระจัด \(y\) ของอนุภาคที่ตำแหน่ง \(x_0\) <br/>
+            • กราฟด้านล่างคือ \(y(t)\) ของจุดเดียวกัน (เหมือนวาง “เซนเซอร์” ที่ \(x_0\))
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const TAU = Math.PI*2;
+  const clamp = (x,a,b)=>Math.max(a,Math.min(b,x));
+  const rad2deg = r=>r*180/Math.PI;
+  const deg2rad = d=>d*Math.PI/180;
+
+  const el = id => document.getElementById(id);
+
+  const sim = el('sim'), ctx = sim.getContext('2d');
+  const tg  = el('timeGraph'), tctx = tg.getContext('2d');
+
+  const A = el('A'), lam = el('lam'), f = el('f'), phi0 = el('phi0'), N = el('N'), W = el('W'), xSlider = el('xSlider'), slow = el('slow');
+
+  const Aval = el('Aval'), lamVal = el('lamVal'), fVal = el('fVal'), phi0Val = el('phi0Val'), NVal = el('NVal'), WVal = el('WVal'), xSliderVal = el('xSliderVal'), slowVal = el('slowVal');
+  const x0Text = el('x0Text'), phiText = el('phiText'), yText = el('yText'), statusText = el('statusText'), slowText = el('slowText');
+
+  const btnPlay = el('btnPlay'), btnReset = el('btnReset'), btnExplain = el('btnExplain');
+  const btnQuiz = el('btnQuiz');
+  const quizModal = el('quizModal');
+  const quizClose = el('quizClose');
+  const quizBody = el('quizBody');
+  const btnCheck = el('btnCheck');
+  const scoreBox = el('scoreBox');
+
+  const playIco = el('playIco'), playTxt = el('playTxt');
+
+  const modal = el('modal'), modalClose = el('modalClose');
+  const closeX = document.querySelector('.closeX');
+
+  const dirPlus = el('dirPlus'), dirMinus = el('dirMinus'), dirText = el('dirText');
+
+  let dir = +1; // +1 => +x uses (kx - wt), -1 => -x uses (kx + wt)
+  const L = 1.0;
+
+  let A_cm = parseFloat(A.value);
+  let lam_m = parseFloat(lam.value);
+  let f_hz  = parseFloat(f.value);
+  let phi0_deg = parseFloat(phi0.value);
+  let Np = parseInt(N.value,10);
+  let win_s = 2.0; if(W) W.value = '2.0';
+  let x0 = parseFloat(xSlider.value);
+  let slowMul = parseFloat(slow.value);
+
+  let running = false;
+  let t = 0;
+  let lastTS = null;
+
+  let series = []; // legacy (unused)
+  // --- y(t) oscilloscope system (graph only) ---
+  let oscStarted = false;
+  let oscRunning = false;
+  let histCan = null, histCtx = null, tmpCan = null, tmpCtx = null;
+  let paperOffset = 0;
+  let prevYpx = null;
+  let oscShiftRemainder = 0; // fractional px carry to keep paper+curve perfectly synced (crisp)
+
+  function resetSeries(){ series = []; }
+
+  function k(){ return TAU/lam_m; }
+  function w(){ return TAU*f_hz; }
+
+  function phaseAt(x,tt){
+    const ph = k()*x + (dir===+1 ? -w()*tt : +w()*tt) + deg2rad(phi0_deg);
+    return ((ph + Math.PI) % TAU) - Math.PI;
+  }
+
+  function resizeCanvasToDisplaySize(c){
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    const rect = c.getBoundingClientRect();
+    const w = Math.round(rect.width * dpr);
+    const h = Math.round(rect.height * dpr);
+    if(c.width!==w || c.height!==h){ c.width=w; c.height=h; return true; }
+    return false;
+  }
+
+  function syncUI(){
+    A_cm = parseFloat(A.value);
+    lam_m = parseFloat(lam.value);
+    f_hz  = parseFloat(f.value);
+    phi0_deg = parseFloat(phi0.value);
+    Np = parseInt(N.value,10);
+    win_s = 2.0;
+    x0 = parseFloat(xSlider.value);
+    slowMul = parseFloat(slow.value);
+
+    Aval.textContent = A_cm.toFixed(1);
+    lamVal.textContent = lam_m.toFixed(2);
+    fVal.textContent = f_hz.toFixed(1);
+    phi0Val.textContent = phi0_deg.toFixed(0);
+    NVal.textContent = String(Np);
+    if(WVal) if(WVal) if(WVal) if(WVal) WVal.textContent = win_s.toFixed(1);
+    xSliderVal.textContent = x0.toFixed(2);
+    slowVal.textContent = slowMul.toFixed(2);
+
+    if(x0Text) x0Text.textContent = x0.toFixed(2);
+    if(slowText) slowText.textContent = slowMul.toFixed(2);
+  }
+
+  function setDir(d){
+    dir = d;
+    dirText.textContent = (dir===+1) ? 'ไปทาง +x' : 'ไปทาง −x';
+    dirPlus.style.background = (dir===+1) ? '#e0f2fe' : '#fff';
+    dirMinus.style.background = (dir===-1) ? '#e0f2fe' : '#fff';
+  }
+  dirPlus.addEventListener('click',()=>setDir(+1));
+  dirMinus.addEventListener('click',()=>setDir(-1));
+  setDir(+1);
+
+  function setRunning(on){
+    running = !!on;
+    oscRunning = running;
+    statusText.textContent = (!oscStarted && !running) ? 'สถานะ: พร้อมเล่น (▶️)' : `สถานะ: ${running ? 'กำลังเล่น' : 'หยุดภาพ (⏸)'}`;
+    playIco.textContent = running ? '⏸' : '▶️';
+    playTxt.textContent = running ? 'หยุด' : 'เล่น';
+  }
+  function toggleRun(){
+    if(!oscStarted){
+      oscStarted = true;
+      t = 0;
+      lastTS = null;
+      paperOffset = 0;
+      prevYpx = null;
+      oscShiftRemainder = 0;
+      initOscBuffers();
+      clearOsc();
+    }
+    setRunning(!running);
+  }
+
+  function yAt(tt){
+    return A_cm * Math.sin( phaseAt(x0, tt) );
+  }
+
+  function pushSeriesAt(tt){
+    series.push({ t: tt, y_cm: yAt(tt) });
+  }
+
+  function rebuildSeries(){
+    series = [];
+    const dt = 1/60; // smooth initial curve
+    const tMin = t - win_s;
+    for(let tt = tMin; tt <= t + 1e-9; tt += dt){
+      pushSeriesAt(tt);
+    }
+  }
+
+  function pushSeries(){
+    pushSeriesAt(t);
+    const tMin = t - (win_s + 0.6);
+    while(series.length && series[0].t < tMin) series.shift();
+  }
+
+  let _paramKey = '';
+  function paramKey(){
+    return [
+      dir,
+      A_cm.toFixed(3),
+      lam_m.toFixed(4),
+      f_hz.toFixed(3),
+      phi0_deg.toFixed(2),
+      x0.toFixed(4),
+      win_s.toFixed(2)
+    ].join('|');
+  }
+
+  function resetAll(){
+    t = 0;
+    lastTS = null;
+    series = [];
+    _paramKey = paramKey();
+
+    oscStarted = false;
+    paperOffset = 0;
+    prevYpx = null;
+    oscShiftRemainder = 0;
+    setRunning(false);
+
+    initOscBuffers();
+    clearOsc();
+  }
+
+  btnPlay.addEventListener('click', toggleRun);
+  btnReset.addEventListener('click', resetAll);
+  btnExplain.addEventListener('click', ()=>openModal(true));
+
+  function openModal(open){
+    modal.style.display = open ? 'flex' : 'none';
+    if(open && window.MathJax && window.MathJax.typesetPromise){
+      window.MathJax.typesetPromise();
+    }
+  }
+  modalClose.addEventListener('click',()=>openModal(false));
+  modal.addEventListener('click',(e)=>{ if(e.target===modal) openModal(false); });
+  // ---------------- Quiz (แบบฝึกหัด 10 ข้อ • 5 ตัวเลือก A–E) ----------------
+    const LETTERS = ['A','B','C','D','E'];
+
+  // ใช้ String.raw เพื่อรักษา backslash ของ LaTeX ให้ครบ (ไม่กลายเป็น (omega), (mathrm{m}) ฯลฯ)
+  const quiz = [
+    {
+      q: String.raw`1) สมการคลื่นเดินทางบนเชือกเขียนเป็น \(y(x,t)=A\sin(kx-\omega t+\phi_0)\) ข้อใดถูกต้องที่สุด?`,
+      choices: [
+        String.raw`\(A\) คือความยาวคลื่น`,
+        String.raw`\(k\) มีหน่วยเป็น \(\mathrm{m}\)`,
+        String.raw`\(\omega\) มีหน่วยเป็น \(\mathrm{rad/s}\)`,
+        String.raw`\(\phi_0\) มีหน่วยเป็น \(\mathrm{s}\)`,
+        String.raw`\(y\) มีหน่วยเป็น \(\mathrm{m/s}\)`
+      ],
+      ans: 'C',
+      sol: String.raw`แนวคิด: \(\omega=2\pi f\) ดังนั้น \(\omega\) มีหน่วยเป็น \(\mathrm{rad/s}\).<br/><br/>
+ตรวจตัวเลือกอื่น: \(A\) คือแอมพลิจูด (หน่วยเป็น \(\mathrm{m}\)), \(k=\frac{2\pi}{\lambda}\) หน่วยเป็น \(\mathrm{rad/m}\) (หรือ \(1/\mathrm{m}\)), \(\phi_0\) เป็น “มุมเฟส” (หน่วยเป็น \(\mathrm{rad}\) หรือ \(^\circ\)), และ \(y\) คือการกระจัด (หน่วยเป็น \(\mathrm{m}\)).`
+    },
+    {
+      q: String.raw`2) ถ้าเขียนคลื่นเป็น \(y=A\sin(kx+\omega t+\phi_0)\) คลื่นวิ่งไปทิศใด?`,
+      choices: [
+        String.raw`ไปทาง \(+x\)`,
+        String.raw`ไปทาง \(-x\)`,
+        String.raw`ไม่เคลื่อนที่ เป็นคลื่นนิ่ง`,
+        String.raw`ทิศทางขึ้นกับค่า \(A\)`,
+        String.raw`ทิศทางขึ้นกับค่า \(\phi_0\)`
+      ],
+      ans: 'B',
+      sol: String.raw`จำรูปแบบ: \(f(x-vt)\) วิ่งไปทาง \(+x\) และ \(f(x+vt)\) วิ่งไปทาง \(-x\).<br/>
+เมื่ออยู่ในรูป \(kx+\omega t\) (เครื่องหมาย “บวก”) เทียบได้กับ \(x+vt\) ⇒ คลื่นวิ่งไปทาง \(-x\).`
+    },
+    {
+      q: String.raw`3) คลื่นตามสมการ \(y=A\sin(kx-\omega t+\phi_0)\) ถ้าต้องการให้ “จำนวนลูกคลื่นที่เห็นในช่วงความยาว 1 เมตร” เพิ่มขึ้น ควรปรับปริมาณใดให้มากขึ้น?`,
+      choices: [
+        String.raw`\(A\)`,
+        String.raw`\(k\)`,
+        String.raw`\(\omega\)`,
+        String.raw`\(\phi_0\)`,
+        String.raw`\(t\)`
+      ],
+      ans: 'B',
+      sol: String.raw`แนวคิด: \(k\) เป็นตัวบอก “ความถี่เชิงพื้นที่” (ความถี่ตามแนว \(x\)) หรือจำนวนรอบของคลื่นต่อระยะทาง ดังนั้นยิ่ง \(k\) มาก รูปคลื่นตามแนว \(x\) จะถี่ขึ้น ทำให้ใน 1 เมตรเห็นลูกคลื่นมากขึ้น.`
+    },
+    {
+      q: String.raw`4) ถ้าเพิ่ม \(\phi_0\) อย่างเดียว (โดย \(A,k,\omega\) คงเดิม) ผลที่ถูกต้องคือข้อใด?`,
+      choices: [
+        String.raw`แอมพลิจูดเพิ่มขึ้น`,
+        String.raw`คลื่นวิ่งเร็วขึ้น`,
+        String.raw`กราฟถูก “เลื่อนเฟส” (เลื่อนตำแหน่ง/เวลา) แต่รูปคลื่นเดิม`,
+        String.raw`ความยาวคลื่นเปลี่ยน`,
+        String.raw`ความถี่เปลี่ยน`
+      ],
+      ans: 'C',
+      sol: String.raw`\(\phi_0\) คือ “เฟสตั้งต้น” เปลี่ยนแล้วทำให้กราฟเลื่อน (phase shift) แต่ไม่ทำให้ \(A,\lambda,f\) เปลี่ยน.`
+    },
+    {
+      q: String.raw`5) ที่ตำแหน่งคงที่ \(x=x_0\) กราฟ \(y(t)\) เป็นไซน์ที่มีความถี่เท่ากับข้อใด?`,
+      choices: [
+        String.raw`\(\omega\)`,
+        String.raw`\(\dfrac{\omega}{2\pi}\)`,
+        String.raw`\(\dfrac{k}{2\pi}\)`,
+        String.raw`\(\dfrac{A}{2\pi}\)`,
+        String.raw`\(\phi_0\)`
+      ],
+      ans: 'B',
+      sol: String.raw`เมื่อ \(x\) คงที่ จะได้ \(y(t)=A\sin(\text{ค่าคงที่}-\omega t)\) จึงมีความถี่เชิงมุม \(\omega\) และความถี่ปกติ \(f=\dfrac{\omega}{2\pi}\).`
+    },
+
+    // --- คำนวณพื้นฐาน (5 ข้อ) ---
+    {
+      q: String.raw`6) ให้ \(y=A\sin(kx-\omega t)\), โดย \(A=0.50\,\mathrm{m}\). ค่าการกระจัดมากที่สุดของจุดบนเชือกคือเท่าใด?`,
+      choices: [
+        String.raw`\(0.25\,\mathrm{m}\)`,
+        String.raw`\(0.50\,\mathrm{m}\)`,
+        String.raw`\(1.00\,\mathrm{m}\)`,
+        String.raw`\(2\pi\,\mathrm{m}\)`,
+        String.raw`ขึ้นกับ \(x,t\) ไม่แน่นอน`
+      ],
+      ans: 'B',
+      sol: String.raw`แอมพลิจูด \(A\) คือ “ค่าสูงสุดของการกระจัด” ดังนั้น \(y_{\max}=A=0.50\,\mathrm{m}\).`
+    },
+    {
+      q: String.raw`7) ถ้าความยาวคลื่น \(\lambda=0.80\,\mathrm{m}\) จงหาเลขคลื่น \(k\) (ปัดเป็น 2 ตำแหน่ง)`,
+      choices: [
+        String.raw`\(k=2.51\,\mathrm{rad/m}\)`,
+        String.raw`\(k=7.85\,\mathrm{rad/m}\)`,
+        String.raw`\(k=0.80\,\mathrm{rad/m}\)`,
+        String.raw`\(k=0.40\,\mathrm{rad/m}\)`,
+        String.raw`\(k=6.28\,\mathrm{rad/m}\)`
+      ],
+      ans: 'B',
+      sol: String.raw`คำนวณ: แทนค่าตามนิยามของเลขคลื่น จะได้ \(k\approx7.85\,\mathrm{rad/m}\).`
+    },
+    {
+      q: String.raw`8) ถ้าความถี่ \(f=5.0\,\mathrm{Hz}\) จงหา \(\omega=2\pi f\) (ปัดเป็น 2 ตำแหน่ง)`,
+      choices: [
+        String.raw`\(\omega=10.00\,\mathrm{rad/s}\)`,
+        String.raw`\(\omega=31.42\,\mathrm{rad/s}\)`,
+        String.raw`\(\omega=3.14\,\mathrm{rad/s}\)`,
+        String.raw`\(\omega=15.71\,\mathrm{rad/s}\)`,
+        String.raw`\(\omega=62.83\,\mathrm{rad/s}\)`
+      ],
+      ans: 'B',
+      sol: String.raw`\(\omega=2\pi f=2\pi(5.0)=10\pi\approx31.42\,\mathrm{rad/s}\).`
+    },
+    {
+      q: String.raw`9) ให้คลื่น \(y=A\sin(kx-\omega t)\) โดย \(\lambda=0.50\,\mathrm{m}\) และ \(f=4.0\,\mathrm{Hz}\). อัตราเร็วคลื่น \(v\) เท่ากับข้อใด?`,
+      choices: [
+        String.raw`\(v=0.125\,\mathrm{m/s}\)`,
+        String.raw`\(v=2.0\,\mathrm{m/s}\)`,
+        String.raw`\(v=4.5\,\mathrm{m/s}\)`,
+        String.raw`\(v=8.0\,\mathrm{m/s}\)`,
+        String.raw`\(v=25\,\mathrm{m/s}\)`
+      ],
+      ans: 'B',
+      sol: String.raw`ใช้ความสัมพันธ์ \(v=f\lambda\).<br/>
+ดังนั้น \(v=4.0\times0.50=2.0\,\mathrm{m/s}\).`
+    },
+    {
+      q: String.raw`10) ให้ \(y=A\sin(kx-\omega t+\phi_0)\). ถ้า \(\phi_0=\dfrac{\pi}{2}\) จงบอกค่า “มุมเฟสตั้งต้น” ในหน่วยองศา`,
+      choices: [
+        String.raw`\(45^\circ\)`,
+        String.raw`\(60^\circ\)`,
+        String.raw`\(90^\circ\)`,
+        String.raw`\(180^\circ\)`,
+        String.raw`\(270^\circ\)`
+      ],
+      ans: 'C',
+      sol: String.raw`\(\dfrac{\pi}{2}\,\mathrm{rad}\) เท่ากับ \(90^\circ\) (เพราะ \(\pi\,\mathrm{rad}=180^\circ\)).`
+    }
+  ];
+
+  function openQuiz(open){
+    quizModal.style.display = open ? 'flex' : 'none';
+    if(open){
+      // reset score display but keep selected answers
+      if(window.MathJax && window.MathJax.typesetPromise){
+        window.MathJax.typesetPromise();
+      }
+    }
+  }
+
+  function renderQuiz(){
+    if(!quizBody) return;
+    const parts = [];
+    quiz.forEach((it, qi)=>{
+      const qNo = qi + 1;
+      parts.push(`<div class="qCard" id="qCard${qi}">`);
+      parts.push(`<div class="qTitle">${it.q}</div>`);
+      parts.push(`<div class="choices">`);
+      it.choices.forEach((c, ci)=>{
+        const L = LETTERS[ci];
+        parts.push(`
+          <label class="choice">
+            <input type="radio" name="q${qi}" value="${L}" />
+            <div class="lab"><span class="letter">${L}.</span> ${c}</div>
+          </label>
+        `);
+      });
+      parts.push(`</div>`);
+      parts.push(`<div class="solution" id="sol${qi}">
+        <div class="solHead">เฉลย: <span class="ansRed" id="ans${qi}">—</span></div>
+        <div class="solBody" id="solBody${qi}"></div>
+      </div>`);
+      parts.push(`</div>`);
+    });
+    quizBody.innerHTML = parts.join('');
+    if(window.MathJax && window.MathJax.typesetPromise){
+      window.MathJax.typesetPromise();
+    }
+  }
+
+  function checkAnswers(){
+    let score = 0;
+    quiz.forEach((it, qi)=>{
+      const chosen = document.querySelector(`input[name="q${qi}"]:checked`);
+      const solBox = document.getElementById(`sol${qi}`);
+      const ansSpan = document.getElementById(`ans${qi}`);
+      const solBody = document.getElementById(`solBody${qi}`);
+      if(!chosen){
+        // มาตรฐานเพจ: แสดงเฉลยเฉพาะข้อที่ตอบแล้ว
+        if(solBox) solBox.style.display = 'none';
+        return;
+      }
+      const pick = chosen.value;
+      const correct = (pick === it.ans);
+      if(correct) score += 1;
+
+      if(solBox) solBox.style.display = 'block';
+      if(ansSpan) ansSpan.innerHTML = `ตัวเลือก <span class="ansRed">${it.ans}</span> ${correct ? '✅' : '❌'}`;
+      if(solBody) solBody.innerHTML = `
+        <div style="margin:6px 0; font-weight:900;">คุณเลือก: ${pick} ${correct ? '' : `• คำตอบที่ถูกคือ <span class="ansRed">${it.ans}</span>`}</div>
+        <div style="line-height:1.7;">${it.sol}</div>
+      `;
+    });
+
+    if(scoreBox) scoreBox.textContent = `คะแนน: ${score} / 10`;
+
+    if(window.MathJax && window.MathJax.typesetPromise){
+      window.MathJax.typesetPromise();
+    }
+  }
+
+  if(btnQuiz){
+    btnQuiz.addEventListener('click', ()=>{
+      if(!quizBody || quizBody.innerHTML.trim()==='') renderQuiz();
+      openQuiz(true);
+    });
+  }
+  if(quizClose) quizClose.addEventListener('click', ()=>openQuiz(false));
+  if(quizModal) quizModal.addEventListener('click', (e)=>{ if(e.target===quizModal) openQuiz(false); });
+  if(btnCheck) btnCheck.addEventListener('click', checkAnswers);
+
+
+  closeX.addEventListener('click', ()=>{
+    document.body.style.opacity='0';
+    document.body.style.pointerEvents='none';
+    setTimeout(()=>{ document.body.innerHTML=''; },250);
+  });
+
+  // Pick x0 by clicking wave region (bottom of portrait canvas)
+  function setX0FromClient(clientX, clientY){
+    const rect = sim.getBoundingClientRect();
+    const u = clamp((clientX - rect.left)/rect.width, 0, 1);
+    const v = clamp((clientY - rect.top)/rect.height, 0, 1);
+    const split = 0.45;
+    if(v < split) return;
+    x0 = u * L;
+    xSlider.value = String(x0);
+    syncUI();
+  }
+    let draggingX0 = false;
+  sim.addEventListener('pointerdown',(e)=>{
+    sim.setPointerCapture(e.pointerId);
+    draggingX0 = true;
+    setX0FromClient(e.clientX, e.clientY);
+  });
+  sim.addEventListener('pointermove',(e)=>{
+    if(draggingX0) setX0FromClient(e.clientX, e.clientY);
+  });
+  sim.addEventListener('pointerup',()=>{ draggingX0=false; });
+  sim.addEventListener('pointercancel',()=>{ draggingX0=false; });
+
+  [A,lam,f,phi0,N,W,xSlider,slow].forEach(inp=>inp.addEventListener('input',()=>syncUI()));
+  // Stepper buttons (+ / -)
+  document.querySelectorAll('.stepper').forEach(box=>{
+    const targetId = box.getAttribute('data-target');
+    const inp = document.getElementById(targetId);
+    const btns = box.querySelectorAll('.stepBtn');
+    btns.forEach(b=>{
+      b.addEventListener('click', ()=>{
+        const step = parseFloat(inp.step || '1');
+        const minv = (inp.min !== '' ? parseFloat(inp.min) : -Infinity);
+        const maxv = (inp.max !== '' ? parseFloat(inp.max) : +Infinity);
+        const cur = parseFloat(inp.value || '0');
+        const next = (b.getAttribute('data-action')==='inc') ? (cur + step) : (cur - step);
+        // avoid float drift
+        const fixed = Math.round(next / step) * step;
+        inp.value = String(Math.min(maxv, Math.max(minv, fixed)));
+        syncUI();
+      });
+    });
+  });
+
+
+  function drawSim(){
+    const Wc = sim.width, Hc = sim.height;
+    ctx.clearRect(0,0,Wc,Hc);
+
+    const pad = Math.round(Math.min(Wc,Hc)*0.08);
+
+    // --- Left/Right layout (phasor left, wave right) ---
+    const splitU = 0.32;                 // fraction for phasor area
+    const xSplit = Math.round(Wc*splitU);
+
+    // subtle grid
+    ctx.strokeStyle = 'rgba(0,0,0,.04)';
+    ctx.lineWidth = 1;
+    const step = Math.max(26, Math.round(Wc/22));
+    for(let x=pad; x<=Wc-pad; x+=step){
+      ctx.beginPath(); ctx.moveTo(x, pad); ctx.lineTo(x, Hc-pad); ctx.stroke();
+    }
+    for(let y=pad; y<=Hc-pad; y+=step){
+      ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(Wc-pad, y); ctx.stroke();
+    }
+
+    // divider
+    ctx.fillStyle = 'rgba(0,0,0,.03)';
+    ctx.fillRect(xSplit, pad, 2, Hc-2*pad);
+
+    // ---- Scale: reduce drawing size 50% (as in v3) ----
+    const baseAmpPxMax = Math.round(Hc*0.34);     // baseline amplitude px at A=6cm
+    const pxPerCm = (baseAmpPxMax / 6.0) * 0.5;   // scale 50%
+    const Apx = A_cm * pxPerCm;
+
+    // ---------------- Phasor (LEFT) ----------------
+    const phCX = Math.round(pad + (xSplit - pad)*0.48);
+    const phCY = Math.round(Hc*0.55); // align with wave midline (same yMid as wave)
+
+    // radius equals amplitude (scaled). keep readable minimum.
+    const R = Math.max(18, Math.round(Apx));
+
+    // circle
+    ctx.strokeStyle = 'rgba(0,0,0,.15)';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(phCX, phCY, R, 0, TAU); ctx.stroke();
+
+    // axes
+    ctx.strokeStyle = 'rgba(0,0,0,.08)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(phCX-R, phCY); ctx.lineTo(phCX+R, phCY);
+    ctx.moveTo(phCX, phCY-R); ctx.lineTo(phCX, phCY+R);
+    ctx.stroke();
+
+    const phi = phaseAt(x0,t);
+    const vx = phCX + R*Math.cos(phi);
+    const vy = phCY - R*Math.sin(phi);
+
+    // vector
+    ctx.strokeStyle = 'rgba(37,99,235,.95)';
+    ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(phCX, phCY); ctx.lineTo(vx, vy); ctx.stroke();
+
+    // arrow head
+    const ang = Math.atan2(phCY-vy, vx-phCX);
+    ctx.fillStyle = 'rgba(37,99,235,.95)';
+    ctx.beginPath();
+    ctx.moveTo(vx,vy);
+    ctx.lineTo(vx - 12*Math.cos(ang-0.35), vy + 12*Math.sin(ang-0.35));
+    ctx.lineTo(vx - 12*Math.cos(ang+0.35), vy + 12*Math.sin(ang+0.35));
+    ctx.closePath();
+    ctx.fill();
+
+    // y-projection (phasor shadow)
+    ctx.strokeStyle = 'rgba(16,185,129,.85)';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([8,6]);
+    ctx.beginPath();
+    ctx.moveTo(vx, vy);
+    ctx.lineTo(vx, phCY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // labels
+    ctx.fillStyle = '#374151';
+    ctx.font = `${Math.round(Math.min(Wc,Hc)*0.045)}px system-ui, sans-serif`;
+    // (removed Im/Re labels)
+
+    // ---------------- Wave (RIGHT) ----------------
+    const xW0 = xSplit + pad;
+    const xW1 = Wc - pad;
+    const ropeLenPx = xW1 - xW0;
+
+    const yMid = Math.round(Hc*0.55);
+
+    // equilibrium line
+    ctx.strokeStyle = '#d1d5db';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(xW0, yMid); ctx.lineTo(xW1, yMid); ctx.stroke();
+
+    // rope curve
+    ctx.strokeStyle = '#111827';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    const seg = 360;
+    for(let i=0;i<=seg;i++){
+      const u = i/seg;
+      const x = xW0 + u*ropeLenPx;
+      const xm = u*L;
+      const y = yMid - Apx * Math.sin( phaseAt(xm,t) );
+      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+
+    // beads
+    for(let i=0;i<Np;i++){
+      const u = i/(Np-1);
+      const xm = u*L;
+      const x = xW0 + u*ropeLenPx;
+      const y = yMid - Apx*Math.sin(phaseAt(xm,t));
+      const hue = 210 + 70*Math.sin(u*TAU);
+      ctx.fillStyle = `hsl(${hue} 85% 50%)`;
+      ctx.beginPath();
+      ctx.arc(x, y, Math.max(3, Math.round(Math.min(Wc,Hc)*0.012)), 0, TAU);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,.15)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+
+    // selected particle
+    const u0 = x0/L;
+    const xSel = xW0 + u0*ropeLenPx;
+    const ySel = yMid - Apx*Math.sin(phaseAt(x0,t));
+
+    // guide line
+    ctx.strokeStyle = 'rgba(37,99,235,.55)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([8,6]);
+    ctx.beginPath(); ctx.moveTo(xSel, pad); ctx.lineTo(xSel, Hc-pad); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // marker
+    ctx.fillStyle = '#2563eb';
+    ctx.beginPath(); ctx.arc(xSel, ySel, Math.max(5, Math.round(Math.min(Wc,Hc)*0.016)), 0, TAU); ctx.fill();
+
+    // displacement arrow y
+    ctx.strokeStyle = 'rgba(16,185,129,.9)';
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(xSel, yMid); ctx.lineTo(xSel, ySel); ctx.stroke();
+
+    const ah = 10;
+    const sgn = (ySel < yMid) ? -1 : +1;
+    ctx.fillStyle = 'rgba(16,185,129,.9)';
+    ctx.beginPath();
+    ctx.moveTo(xSel, ySel);
+    ctx.lineTo(xSel - 6, ySel - sgn*ah);
+    ctx.lineTo(xSel + 6, ySel - sgn*ah);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = '#065f46';
+    ctx.font = `${Math.round(Math.min(Wc,Hc)*0.05)}px system-ui, sans-serif`;
+    ctx.fillText('y', xSel + 10, Math.round((yMid+ySel)/2));
+
+    // light-blue connection line from phasor tip to particle
+    ctx.strokeStyle = 'rgba(46,168,255,.45)';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([10,8]);
+    ctx.beginPath(); ctx.moveTo(vx, vy); ctx.lineTo(xSel, ySel); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // readouts
+    const y_cm = A_cm*Math.sin(phi);
+    const phiDeg = rad2deg(phi);
+    const phiShow = (phiDeg < 0 ? (phiDeg+360) : phiDeg);
+
+    // Realtime HUD (always update every frame)
+    const hudA = document.getElementById('hudA');
+    const hudPhi = document.getElementById('hudPhi');
+    const hudY = document.getElementById('hudY');
+    if(hudA) hudA.textContent = A_cm.toFixed(1);
+    if(hudPhi) hudPhi.textContent = phiShow.toFixed(0);
+    if(hudY) hudY.textContent = y_cm.toFixed(2);
+
+    phiText.textContent = phiShow.toFixed(0);
+    yText.textContent = y_cm.toFixed(2);
+
+    // caption x0
+    ctx.fillStyle = '#0f172a';
+    ctx.font = `${Math.round(Math.min(Wc,Hc)*0.05)}px system-ui, sans-serif`;
+    const cap = `x₀ = ${x0.toFixed(2)} m`;
+    const tw = ctx.measureText(cap).width;
+    ctx.fillText(cap, clamp(xSel - tw/2, xW0, xW1 - tw), pad + Math.round((Hc-2*pad)*0.12));
+  }
+
+
+  function initOscBuffers(){
+    if(!histCan){
+      histCan = document.createElement('canvas');
+      tmpCan = document.createElement('canvas');
+      histCtx = histCan.getContext('2d');
+      tmpCtx = tmpCan.getContext('2d');
+      histCtx.imageSmoothingEnabled = false;
+      tmpCtx.imageSmoothingEnabled = false;
+    }
+    if(histCan.width !== tg.width || histCan.height !== tg.height){
+      histCan.width = tg.width; histCan.height = tg.height;
+      tmpCan.width = tg.width;  tmpCan.height = tg.height;
+    }
+  }
+
+  function clearOsc(){
+    if(!histCtx) return;
+    histCtx.clearRect(0,0,histCan.width,histCan.height);
+  }
+
+  function drawGraphPaper(x0, x1, y0, y1){
+    const minor = 22, major = 110;
+    const offMinor = ((paperOffset % minor) + minor) % minor;
+    const offMajor = ((paperOffset % major) + major) % major;
+
+    // minor grid
+    tctx.lineWidth = 1;
+    tctx.strokeStyle = 'rgba(59,130,246,0.10)';
+    for(let x = x0 - offMinor; x <= x1; x += minor){
+      tctx.beginPath(); tctx.moveTo(x,y0); tctx.lineTo(x,y1); tctx.stroke();
+    }
+    for(let y = y0; y <= y1; y += minor){
+      tctx.beginPath(); tctx.moveTo(x0,y); tctx.lineTo(x1,y); tctx.stroke();
+    }
+
+    // major grid
+    tctx.strokeStyle = 'rgba(59,130,246,0.18)';
+    for(let x = x0 - offMajor; x <= x1; x += major){
+      tctx.beginPath(); tctx.moveTo(x,y0); tctx.lineTo(x,y1); tctx.stroke();
+    }
+    for(let y = y0; y <= y1; y += major){
+      tctx.beginPath(); tctx.moveTo(x0,y); tctx.lineTo(x1,y); tctx.stroke();
+    }
+  }
+
+  function drawTimeGraph(){
+    const Wc = tg.width, Hc = tg.height;
+    tctx.clearRect(0,0,Wc,Hc);
+    tctx.imageSmoothingEnabled = false;
+
+    const padL = Math.round(Wc*0.10);
+    const padR = Math.round(Wc*0.05);
+    const padT = Math.round(Hc*0.18);
+    const padB = Math.round(Hc*0.30);
+
+    const x0p = padL, x1p = Wc - padR;
+    const y0p = padT, y1p = Hc - padB;
+    const yMid = (y0p + y1p)/2;
+
+    // paper always (graph only)
+    drawGraphPaper(x0p, x1p, y0p, y1p);
+
+    // axes
+    tctx.lineWidth = 2;
+    tctx.strokeStyle = 'rgba(0,0,0,0.16)';
+    tctx.beginPath(); tctx.moveTo(x0p, yMid); tctx.lineTo(x1p, yMid); tctx.stroke();
+    tctx.beginPath(); tctx.moveTo(x0p, y0p); tctx.lineTo(x0p, y1p); tctx.stroke();
+
+    // labels
+    tctx.fillStyle = '#374151';
+    tctx.font = `${Math.round(Math.min(Wc,Hc)*0.18)}px system-ui, sans-serif`;
+    tctx.fillText('t', x1p + 6, y1p + 6);
+    tctx.fillText('y', x0p - 16, y0p - 10);
+
+    tctx.font = `${Math.round(Math.min(Wc,Hc)*0.14)}px system-ui, sans-serif`;
+    tctx.fillText(`−${win_s.toFixed(1)} s`, x0p, Hc - Math.round(padB*0.35));
+    tctx.fillText(`0 s`, x1p - 18, Hc - Math.round(padB*0.35));
+
+        // labels (current + this is a graph)
+    const isMobile = window.matchMedia('(max-width: 720px)').matches;
+    const minWH = Math.min(Wc,Hc);
+    const mobileDx = isMobile ? 10 : 0; // shift left on mobile
+    const mobileDf = isMobile ? 12 : 0; // mobile: make "ปัจจุบัน" same size as "วาดกราฟ"
+
+    tctx.fillStyle = '#2563eb';
+    tctx.font = `${Math.max(10, Math.round(minWH*0.16) - mobileDf)}px system-ui, sans-serif`;
+    tctx.fillText('ปัจจุบัน', x1p - 72 - mobileDx, y0p - 6 + (isMobile ? 5 : 0));
+
+    tctx.fillStyle = '#111827';
+    tctx.font = `${Math.max(9, Math.round(minWH*0.13) - mobileDf)}px system-ui, sans-serif`;
+    tctx.fillText('วาดกราฟ y–t', x1p - 110 - mobileDx, y0p + 14);
+
+    if(!oscStarted){
+      return; // no curve, no pencil
+    }
+
+    initOscBuffers();
+    tctx.drawImage(histCan, 0, 0);
+
+    // pencil at right edge (moves up/down) and rotates by slope
+    const yNow_cm = yAt(t);
+    const pxPerCm = ((y1p - y0p) * 0.5) / (A_cm || 1);
+    const yNow = yMid - yNow_cm * pxPerCm;
+    const xNow = x1p;
+
+    let ang = 0;
+    try{
+      const k = 2*Math.PI/(lam_m || 1e-6);
+      const w = 2*Math.PI*(f_hz || 0);
+      const sign = dirSign;
+      const phi = k*x0_m + sign*w*t + phi0;
+      const dy_dt_cm = (A_cm)*(sign*w)*Math.cos(phi);
+      const scale = 0.018 * (win_s || 2);
+      ang = Math.atan(dy_dt_cm * scale);
+      const lim = Math.PI*0.75;
+      if(ang>lim) ang=lim; if(ang<-lim) ang=-lim;
+    }catch(e){}
+
+    // draw pencil line-art, tip anchored to point
+    const s = Math.max(18, Math.round(Math.min(Wc,Hc)*0.14));
+    const bw = s*1.25;
+    const tipX = bw*0.48 + s*0.42;
+
+    tctx.save();
+    tctx.translate(xNow, yNow);
+    tctx.rotate(ang);
+    tctx.translate(-tipX, 0);
+
+    tctx.lineWidth = 2;
+    tctx.strokeStyle = 'rgba(17,24,39,0.95)';
+
+    // body
+    tctx.beginPath();
+    tctx.moveTo(-bw*0.55, -s*0.16);
+    tctx.lineTo(bw*0.48, -s*0.16);
+    tctx.lineTo(bw*0.62, 0);
+    tctx.lineTo(bw*0.48, s*0.16);
+    tctx.lineTo(-bw*0.55, s*0.16);
+    tctx.closePath();
+    tctx.stroke();
+
+    // tip
+    tctx.beginPath();
+    tctx.moveTo(bw*0.48, -s*0.16);
+    tctx.lineTo(bw*0.48 + s*0.42, 0);
+    tctx.lineTo(bw*0.48, s*0.16);
+    tctx.closePath();
+    tctx.stroke();
+
+    // cap
+    tctx.beginPath();
+    tctx.moveTo(-bw*0.15, -s*0.16);
+    tctx.lineTo(-bw*0.15, s*0.16);
+    tctx.stroke();
+
+    tctx.restore();
+
+    // current dot
+    tctx.fillStyle = 'rgba(37,99,235,.95)';
+    tctx.beginPath(); tctx.arc(xNow, yNow, 4.5, 0, TAU); tctx.fill();
+  }
+
+  syncUI();
+  resetAll();
+// --- Stable canvas sizing (avoid gradual grow/shrink) ---
+  function setupCanvases(){
+    resizeCanvasToDisplaySize(sim);
+    resizeCanvasToDisplaySize(tg);
+  }
+
+  // run once after layout
+  setupCanvases();
+
+  // resize on window changes (including zoom)
+  let _resizeRaf = null;
+  window.addEventListener('resize', ()=>{
+    if(_resizeRaf) cancelAnimationFrame(_resizeRaf);
+    _resizeRaf = requestAnimationFrame(()=>{ setupCanvases(); _resizeRaf=null; });
+  });
+
+  // observe container width changes (fonts/loading/sidebar etc.)
+  try{
+    const ro = new ResizeObserver(()=>setupCanvases());
+    ro.observe(sim);
+    ro.observe(tg);
+  }catch(e){}
+
+  function frame(ts){
+    if(lastTS==null) lastTS=ts;
+    const dt = (ts-lastTS)/1000;
+    lastTS=ts;
+    if(running){
+      t += clamp(dt,0,0.05) * slowMul;
+      // oscilloscope: shift paper+curve left and draw new segment at pencil tip
+      if(oscStarted && oscRunning){
+        initOscBuffers();
+        const Wc = tg.width, Hc = tg.height;
+        const padL = Math.round(Wc*0.10), padR = Math.round(Wc*0.05);
+        const padT = Math.round(Hc*0.18), padB = Math.round(Hc*0.30);
+        const x0p = padL, x1p = Wc - padR;
+        const y0p = padT, y1p = Hc - padB;
+        const yMid = (y0p + y1p)/2;
+
+        const pxPerSec = (x1p - x0p) / (win_s || 1);
+        const dxFloat = pxPerSec * dt * slowMul;
+        oscShiftRemainder += dxFloat;
+        const dx = Math.floor(oscShiftRemainder);
+        oscShiftRemainder -= dx;
+        if(dx === 0){
+          // still draw the live point without shifting to keep motion smooth
+        }
+        paperOffset += dx; // integer px shift keeps paper + curve perfectly locked (no smear)
+
+        // shift history left (integer px) — crisp
+        if(dx !== 0){
+          tmpCtx.clearRect(0,0,tmpCan.width,tmpCan.height);
+          tmpCtx.drawImage(histCan, -dx, 0);
+          histCtx.clearRect(0,0,histCan.width,histCan.height);
+          histCtx.drawImage(tmpCan, 0, 0);
+        }
+
+        // compute new point and draw segment
+        const yNow_cm = yAt(t);
+        const pxPerCm = ((y1p - y0p) * 0.5) / (A_cm || 1);
+        const yNow = yMid - yNow_cm * pxPerCm;
+        const xNow = x1p;
+
+        histCtx.lineWidth = 2.5;
+        histCtx.strokeStyle = 'rgb(37,99,235)';
+        histCtx.lineCap = 'round';
+        histCtx.lineJoin = 'round';
+
+        if(prevYpx === null) prevYpx = yNow;
+        histCtx.beginPath();
+        histCtx.moveTo(xNow - (dx !== 0 ? dx : 1), prevYpx);
+        histCtx.lineTo(xNow, yNow);
+        histCtx.stroke();
+        prevYpx = yNow;
+      }
+    }
+    pushSeries();
+    drawSim();
+    drawTimeGraph();
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  window.addEventListener('keydown',(e)=>{
+    if(e.code==='Space'){ e.preventDefault(); toggleRun(); }
+    if(e.key==='r'||e.key==='R'){ resetAll(); }
+    if(e.key==='Escape'){ openModal(false); }
+  });
+})();
+</script>
+</body>
+</html>

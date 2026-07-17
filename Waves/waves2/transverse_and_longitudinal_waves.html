@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>คลื่นขวาง vs คลื่นตามยาว — เปรียบเทียบแบบอินเตอร์แอคทีฟ</title>
+<style>
+  :root{
+    --ink:#0f172a; --muted:#64748b; --line:#e5e7eb; --bg:#ffffff;
+    --accent:#2563eb; --accent-2:#22c55e; --accent-3:#8b5cf6; --warn:#ef4444;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; touch-action:manipulation}
+  html,body{height:100%}
+  body{margin:0; font-family:system-ui, Inter, 'Noto Sans Thai', sans-serif; color:var(--ink); background:var(--bg)}
+  header{padding:12px 16px; border-bottom:1px solid var(--line); display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:space-between}
+  h1{margin:0; font-size:18px; color:var(--accent)}
+  .controls{display:flex; flex-wrap:wrap; gap:8px; align-items:center}
+  .btn{padding:8px 12px; border:1px solid var(--line); background:#fff; border-radius:999px; cursor:pointer}
+  .btn[aria-pressed="true"]{background:var(--accent); color:#fff; border-color:var(--accent)}
+  .pill{display:flex; align-items:center; gap:8px; padding:6px 10px; border:1px solid var(--line); border-radius:999px; background:#fff}
+  .grid{display:grid; grid-template-columns:1fr; gap:12px; padding:12px}
+  @media(min-width:900px){ .grid{grid-template-columns:repeat(2,1fr)} }
+  .card{border:1px solid var(--line); border-radius:16px; overflow:hidden; background:#fff; box-shadow:0 1px 0 rgba(0,0,0,0.02)}
+  .card header{display:flex; gap:8px; align-items:center; justify-content:space-between; padding:10px 12px; border:0; border-bottom:1px solid var(--line)}
+  .card h2{margin:0; font-size:16px}
+  .canvas-wrap{position:relative; background:linear-gradient(#ffffff, #fafafa)}
+  canvas{display:block; width:100%; height:260px}
+  .legend{padding:10px 12px; font-size:13px; color:var(--muted); display:flex; flex-wrap:wrap; gap:10px}
+  .tag{display:inline-flex; align-items:center; gap:6px; padding:4px 8px; border:1px solid var(--line); border-radius:999px; background:#fff; font-size:12px}
+  .dot{width:10px; height:10px; border-radius:50%}
+  .link{color:var(--accent); text-decoration:none}
+  .footer{padding:10px 12px; text-align:center; font-size:14px; border-top:1px solid var(--line); background:#fff}
+
+/* --- Mobile bottom floating controls --- */
+.mobile-bar{display:none}
+@media(max-width:700px){
+  header{gap:6px}
+  header h1{font-size:14px; line-height:1.25}
+  .controls{display:none} /* hide top controls on mobile */
+  .grid{padding-bottom:86px} /* room for bottom bar */
+  canvas{height:230px} /* slightly shorter to avoid stretching feeling */
+  .mobile-bar{
+    display:flex;
+    position:fixed;
+    left:0; right:0; bottom:0;
+    padding:10px 10px calc(10px + env(safe-area-inset-bottom));
+    gap:8px;
+    align-items:center;
+    background:rgba(255,255,255,0.92);
+    border-top:1px solid var(--line);
+    backdrop-filter:saturate(1.2) blur(10px);
+    z-index:50;
+    overflow-x:auto;
+  }
+  .mobile-bar .btn{
+    white-space:nowrap;
+    padding:10px 12px;
+  }
+  .mini{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    padding:8px 10px;
+    border:1px solid var(--line);
+    border-radius:999px;
+    background:#fff;
+    white-space:nowrap;
+  }
+  .mini label{font-size:12px; color:var(--muted)}
+  .mini input[type="range"]{width:120px}
+}
+</style>
+</head>
+<body>
+  <header>
+    <h1>การเปรียบเทียบ <strong>คลื่นขวาง</strong> และ <strong>คลื่นตามยาว (เสียง)</strong> — สังเกตทิศการเคลื่อนที่ของคลื่น & การสั่นของอนุภาค</h1>
+    <div class="controls">
+      <button id="playBtn" class="btn" aria-pressed="false">▶️ เล่น</button>
+      <div class="pill"><label>แอมพลิจูด <input id="amp" type="range" min="5" max="45" value="25"></label></div>
+      <div class="pill"><label>ความถี่ (Hz) <input id="freq" type="range" min="0.2" max="2.0" step="0.1" value="0.8"></label></div>
+      <div class="pill"><label>ความยาวคลื่น (px) <input id="lambda" type="range" min="120" max="460" step="10" value="300"></label></div>
+      <button id="resetBtn" class="btn">รีเซ็ต</button>
+    </div>
+  </header>
+
+  <section class="grid">
+    <!-- Transverse: wave on a string -->
+    <article class="card" id="card-string">
+      <header>
+        <h2>คลื่นขวาง — เส้นเชือก (อนุภาคสั่นตั้งฉากกับทิศคลื่น)</h2>
+      </header>
+      <div class="canvas-wrap">
+        <canvas id="cvString" width="900" height="260" aria-label="Transverse wave on a string"></canvas>
+      </div>
+      <div class="legend">
+        <span class="tag"><span class="dot" style="background:#06b6d4"></span> อนุภาคบนเชือก (ฟ้า)</span>
+        <span class="tag"><span class="dot" style="background:#2563eb"></span> เชือก</span>      </div>
+    </article>
+
+    <!-- Longitudinal: sound wave only -->
+    <article class="card" id="card-sound">
+      <header>
+        <h2>คลื่นตามยาว — คลื่นเสียงในอากาศ (อนุภาคสั่นขนานกับทิศคลื่น)</h2>
+      </header>
+      <div class="canvas-wrap">
+        <canvas id="cvSound" width="900" height="260" aria-label="Longitudinal sound wave"></canvas>
+      </div>
+      <div class="legend">
+        <span class="tag"><span class="dot" style="background:#ef4444"></span> อนุภาคอากาศ (แดง)</span>
+        <span class="tag"><span class="dot" style="background:#8b5cf6"></span> ไฮไลต์บริเวณอัดแน่น</span>      </div>
+    </article>
+  </section>
+
+  <div class="footer">
+    ศึกษาเพิ่มเติมที่ <a class="link" href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">เพจคลายปมฟิสิกส์</a>
+  </div>
+
+
+<!-- Mobile bottom floating controls (Play / Reset / Frequency / Wavelength) -->
+<div class="mobile-bar" id="mobileBar" aria-label="แถบควบคุมล่าง (มือถือ)">
+  <button id="playBtnM" class="btn" aria-pressed="false">▶️ เล่น</button>
+  <button id="resetBtnM" class="btn">🔄 รีเซ็ต</button>
+  <div class="mini"><label>ความถี่ (Hz) <input id="freqM" type="range" min="0.2" max="2.0" step="0.1" value="0.8"></label></div>
+  <div class="mini"><label>แอมพลิจูด <input id="ampM" type="range" min="5" max="45" value="25"></label></div>
+  <div class="mini"><label>ความยาวคลื่น (px) <input id="lambdaM" type="range" min="120" max="460" step="10" value="300"></label></div>
+</div>
+
+<script>
+(() => {
+  const playBtn = document.getElementById('playBtn');
+  const ampEl = document.getElementById('amp');
+  const freqEl = document.getElementById('freq');
+  const lamEl = document.getElementById('lambda');
+  const resetBtn = document.getElementById('resetBtn');
+
+  // Mobile bottom bar controls (may be hidden on desktop)
+  const playBtnM = document.getElementById('playBtnM');
+  const resetBtnM = document.getElementById('resetBtnM');
+  const freqElM = document.getElementById('freqM');
+  const ampElM  = document.getElementById('ampM');
+  const lamElM  = document.getElementById('lambdaM');
+
+  let playing = false; let t0 = 0; let t = 0; let rafId = null;
+
+  const state = { A: +ampEl.value, f: +freqEl.value, lambda: +lamEl.value };
+
+  // mirror initial values to mobile controls
+  if(freqElM) freqElM.value = freqEl.value;
+  if(ampElM)  ampElM.value  = ampEl.value;
+  if(lamElM)  lamElM.value  = lamEl.value;
+
+  const omega = () => 2*Math.PI*state.f;
+  const k = () => 2*Math.PI/state.lambda;
+
+  const cvs = {
+    string: document.getElementById('cvString'),
+    sound:  document.getElementById('cvSound')
+  };
+  const ctx = {
+    string: cvs.string.getContext('2d'),
+    sound:  cvs.sound.getContext('2d')
+  };
+
+// --- HiDPI / responsive canvas: keep text & shapes crisp (prevents "stretched" look on mobile) ---
+function resizeCanvas(canvas, context){
+  const rect = canvas.getBoundingClientRect();
+  const dpr = Math.max(1, window.devicePixelRatio || 1);
+  // logical size in CSS pixels
+  canvas._w = rect.width;
+  canvas._h = rect.height;
+  // backing store in device pixels
+  const bw = Math.max(1, Math.round(rect.width * dpr));
+  const bh = Math.max(1, Math.round(rect.height * dpr));
+  if(canvas.width !== bw || canvas.height !== bh){
+    canvas.width = bw;
+    canvas.height = bh;
+  }
+  // draw using CSS pixel coordinates
+  context.setTransform(dpr,0,0,dpr,0,0);
+}
+
+function resizeAll(){
+  resizeCanvas(cvs.string, ctx.string);
+  resizeCanvas(cvs.sound,  ctx.sound);
+  drawOnce();
+}
+
+  function clear(c){ c.clearRect(0,0,c.canvas._w || c.canvas.width, c.canvas._h || c.canvas.height); }
+
+  // --- Arrow helpers ---
+  function drawArrowOneWay(c, x1,y1, x2,y2, head=10){
+    const ang = Math.atan2(y2-y1, x2-x1);
+    c.beginPath(); c.moveTo(x1,y1); c.lineTo(x2,y2); c.stroke();
+    // head at end (points toward x2,y2)
+    c.beginPath();
+    c.moveTo(x2,y2);
+    c.lineTo(x2 - head*Math.cos(ang - Math.PI/6), y2 - head*Math.sin(ang - Math.PI/6));
+    c.lineTo(x2 - head*Math.cos(ang + Math.PI/6), y2 - head*Math.sin(ang + Math.PI/6));
+    c.closePath(); c.fill();
+  }
+  function drawDoubleArrow(c, x1,y1, x2,y2, head=10){
+    // line
+    c.beginPath(); c.moveTo(x1,y1); c.lineTo(x2,y2); c.stroke();
+    // head at end toward (x2,y2)
+    let ang = Math.atan2(y2-y1, x2-x1);
+    c.beginPath();
+    c.moveTo(x2,y2);
+    c.lineTo(x2 - head*Math.cos(ang - Math.PI/6), y2 - head*Math.sin(ang - Math.PI/6));
+    c.lineTo(x2 - head*Math.cos(ang + Math.PI/6), y2 - head*Math.sin(ang + Math.PI/6));
+    c.closePath(); c.fill();
+    // head at start toward (x1,y1), i.e., opposite direction
+    ang += Math.PI; // flip
+    c.beginPath();
+    c.moveTo(x1,y1);
+    c.lineTo(x1 - head*Math.cos(ang - Math.PI/6), y1 - head*Math.sin(ang - Math.PI/6));
+    c.lineTo(x1 - head*Math.cos(ang + Math.PI/6), y1 - head*Math.sin(ang + Math.PI/6));
+    c.closePath(); c.fill();
+  }
+
+  // ---------- Transverse: string ----------
+  function renderString(time){
+    const c = ctx.string; const W = (c.canvas._w || c.canvas.width); const H = (c.canvas._h || c.canvas.height); clear(c);
+    const mid = H*0.55; c.lineWidth = 2; c.strokeStyle = '#2563eb';
+
+    // Propagation arrow → with label
+    c.save(); c.strokeStyle = '#0f172a'; c.fillStyle = '#0f172a';
+    drawArrowOneWay(c, 20, 24, Math.min(W-20, 160), 24);
+    c.font = '12px Inter, system-ui, sans-serif'; c.textBaseline = 'middle';
+    c.fillText('ทิศการเคลื่อนที่ของคลื่น', 170, 24);
+    c.restore();
+
+    // Oscillation direction ↕ (true double-headed) with label
+    c.save(); c.strokeStyle = '#0f172a'; c.fillStyle = '#0f172a';
+    drawDoubleArrow(c, W-40, mid-28, W-40, mid+28);
+    c.font = '12px Inter, system-ui, sans-serif'; c.textAlign = 'right'; c.textBaseline = 'middle';
+    c.fillText('ทิศการสั่นของอนุภาค', W-50, mid);
+    c.restore();
+
+    // rope path y(x,t) = A sin(kx - wt)
+    const A = state.A; const kk = k(); const ww = omega();
+    c.beginPath();
+    for(let x=0; x<=W; x+=2){
+      const y = mid + A*Math.sin(kk*x - ww*time);
+      if(x===0) c.moveTo(x,y); else c.lineTo(x,y);
+    }
+    c.stroke();
+
+    // particles along string (cyan)
+    const step = 60; c.fillStyle = '#06b6d4';
+    for(let x=40; x<=W-40; x+=step){
+      const y = mid + A*Math.sin(kk*x - ww*time);
+      c.beginPath(); c.arc(x, y, 5, 0, Math.PI*2); c.fill();
+    }
+  }
+
+  // ---------- Longitudinal: sound ----------
+  function renderSound(time){
+    const c = ctx.sound; const W = (c.canvas._w || c.canvas.width); const H = (c.canvas._h || c.canvas.height); clear(c);
+    const mid = H*0.55; const A = Math.min(state.A, 35); const kk = k(); const ww = omega();
+
+    // Propagation arrow → with label
+    c.save(); c.strokeStyle = '#0f172a'; c.fillStyle = '#0f172a';
+    drawArrowOneWay(c, 20, 24, Math.min(W-20, 160), 24);
+    c.font = '12px Inter, system-ui, sans-serif'; c.textBaseline = 'middle';
+    c.fillText('ทิศการเคลื่อนที่ของคลื่น', 170, 24);
+    c.restore();
+
+    // Oscillation direction ↔ with label
+    c.save(); c.strokeStyle = '#0f172a'; c.fillStyle = '#0f172a';
+    drawDoubleArrow(c, W-120, mid-50, W-40, mid-50);
+    c.font = '12px Inter, system-ui, sans-serif'; c.textAlign = 'right'; c.textBaseline = 'bottom';
+    c.fillText('ทิศการสั่นของอนุภาค', W-50, mid-54);
+    c.restore();
+
+    // density field for highlight (purple bands on compressions)
+    for(let x=0; x<W; x++){
+      const phase = kk*x - ww*time;
+      const dens = (Math.cos(phase)+1)/2; // 0..1
+      const alpha = 0.10 + 0.20*dens;
+      c.fillStyle = `rgba(139,92,246,${alpha.toFixed(3)})`;
+      c.fillRect(x, mid-48, 1, 96);
+    }
+
+    // particles distributed with displacement u(x,t) horizontally around mid row
+    c.fillStyle = '#ef4444';
+    const rows = 5; const cols = 36; const spacingX = (W-80)/cols; const spacingY = 16;
+    for(let r=0;r<rows;r++){
+      for(let i=0;i<=cols;i++){
+        const x = 40 + i*spacingX;
+        const u = (A*0.6)*Math.sin(kk*x - ww*time); // smaller swing
+        const xP = x + u;
+        const y = mid + (r - (rows-1)/2)*spacingY;
+        c.beginPath(); c.arc(xP, y, 3.2, 0, Math.PI*2); c.fill();
+      }
+    }
+  }
+
+  function frame(ts){
+    if(!playing){ return; }
+    if(!t0) t0 = ts; const dt = (ts - t0)/1000; t = dt; // seconds
+    renderString(t); renderSound(t);
+    rafId = requestAnimationFrame(frame);
+  }
+
+  function drawOnce(){ renderString(t); renderSound(t); }
+
+  // events
+
+function syncPlayButtons(){
+  if(playBtn){
+    playBtn.setAttribute('aria-pressed', String(playing));
+    playBtn.textContent = playing ? '⏸️ หยุด' : '▶️ เล่น';
+  }
+  if(playBtnM){
+    playBtnM.setAttribute('aria-pressed', String(playing));
+    playBtnM.textContent = playing ? '⏸️ หยุด' : '▶️ เล่น';
+  }
+}
+
+function togglePlay(){
+  playing = !playing;
+  syncPlayButtons();
+  if(playing){ t0 = performance.now(); rafId = requestAnimationFrame(frame); }
+  else { cancelAnimationFrame(rafId); drawOnce(); }
+}
+
+playBtn.addEventListener('click', togglePlay);
+if(playBtnM) playBtnM.addEventListener('click', togglePlay);
+
+
+// Sliders
+function setAmp(val){
+  ampEl.value = val;
+  if(ampElM) ampElM.value = val;
+  state.A = +val; drawOnce();
+}
+
+function setFreq(val){
+  freqEl.value = val;
+  if(freqElM) freqElM.value = val;
+  state.f = +val; drawOnce();
+}
+function setLambda(val){
+  lamEl.value = val;
+  if(lamElM) lamElM.value = val;
+  state.lambda = +val; drawOnce();
+}
+
+ampEl.addEventListener('input', () => setAmp(ampEl.value));
+
+freqEl.addEventListener('input', () => setFreq(freqEl.value));
+lamEl.addEventListener('input', () => setLambda(lamEl.value));
+
+if(freqElM) freqElM.addEventListener('input', () => setFreq(freqElM.value));
+if(ampElM)  ampElM.addEventListener('input', () => setAmp(ampElM.value));
+if(lamElM)  lamElM.addEventListener('input', () => setLambda(lamElM.value));
+
+
+function doReset(){
+  ampEl.value = 25; freqEl.value = 0.8; lamEl.value = 300;
+  if(freqElM) freqElM.value = freqEl.value;
+  if(ampElM)  ampElM.value  = ampEl.value;
+  if(lamElM)  lamElM.value  = lamEl.value;
+
+  state.A = +ampEl.value; state.f = +freqEl.value; state.lambda = +lamEl.value;
+  t0 = 0; t = 0; drawOnce();
+}
+
+resetBtn.addEventListener('click', doReset);
+if(resetBtnM) resetBtnM.addEventListener('click', doReset);
+
+// responsive: resize canvases on load & on window resize
+window.addEventListener('resize', () => {
+  // avoid heavy thrash
+  clearTimeout(window.__rszT);
+  window.__rszT = setTimeout(resizeAll, 80);
+});
+
+// initial layout & draw
+resizeAll();
+syncPlayButtons();
+})();
+</script>
+</body>
+</html>

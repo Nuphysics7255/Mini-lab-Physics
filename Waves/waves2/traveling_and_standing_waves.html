@@ -1,0 +1,1932 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <title>คลื่นนิ่งบนเส้นเชือก — เปรียบเทียบคลื่นเคลื่อนที่ & การเกิดคลื่นนิ่ง</title>
+  <style>
+    :root{
+      --bg:#ffffff;
+      --ink:#1f2937;
+      --muted:#6b7280;
+      --line:#e5e7eb;
+
+      /* มาตรฐานเพจ (สีความหมายคงที่) */
+      --btn-play:#3b82f6;      /* ฟ้า */
+      --btn-reset:#9ca3af;     /* เทา */
+      --btn-formula:#f8d9a6;   /* ส้มอ่อน */
+      --btn-quiz:#d7f5d2;      /* เขียวอ่อน */
+
+      --card:#ffffff;
+      --shadow: 0 8px 22px rgba(0,0,0,.10);
+      --radius:16px;
+
+      --node:#ef4444;     /* แดง */
+      --anti:#22c55e;     /* เขียว */
+    }
+
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Thai", "Noto Sans", Arial, sans-serif;
+      color:var(--ink);
+      background:var(--bg);
+    }
+
+    .wrap{
+      max-width:1100px;
+      margin:0 auto;
+      padding: 16px 14px 18px;
+    }
+
+    h1{
+      margin: 6px 0 10px;
+      font-size: clamp(18px, 2.2vw, 26px);
+      color:#2563eb; /* หัวข้อสีน้ำเงิน */
+      letter-spacing:.2px;
+    }
+
+    .toolbar{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+      margin: 10px 0 12px;
+    }
+
+    .btn{
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      padding:10px 14px;
+      border-radius: 999px;
+      border:1px solid rgba(0,0,0,.08);
+      box-shadow: 0 6px 16px rgba(0,0,0,.08);
+      cursor:pointer;
+      user-select:none;
+      font-weight:700;
+      font-size: 14px;
+      background:#fff;
+      color:#111827;
+      transition: transform .05s ease;
+    }
+    .btn:active{transform: translateY(1px)}
+    .btn .ico{font-size:16px; line-height:1}
+    .btn.play{background:var(--btn-play); color:#fff}
+    .btn.reset{background:var(--btn-reset); color:#fff}
+    .btn.formula{background:var(--btn-formula)}
+    .btn.quiz{background:var(--btn-quiz)}
+    .seg{
+      margin-left:auto;
+      display:flex;
+      background:#f3f4f6;
+      border:1px solid rgba(0,0,0,.06);
+      border-radius:999px;
+      padding:4px;
+      gap:4px;
+      flex-wrap:wrap;
+    }
+    .seg button{
+      border:none;
+      background:transparent;
+      padding:8px 12px;
+      border-radius:999px;
+      cursor:pointer;
+      font-weight:800;
+      color:#374151;
+      font-size:13px;
+      white-space:nowrap;
+    }
+    .seg button.active{
+      background:#fff;
+      box-shadow: 0 6px 16px rgba(0,0,0,.08);
+      color:#111827;
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:12px;
+    }
+
+    .card{
+      background:var(--card);
+      border:1px solid rgba(0,0,0,.08);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+
+    .cardHead{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      padding:10px 12px;
+      background:#fafafa;
+      border-bottom:1px solid rgba(0,0,0,.06);
+    }
+    .cardHead .title{
+      font-weight:900;
+      font-size:14px;
+      color:#111827;
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid rgba(0,0,0,.08);
+      background:#fff;
+      font-size:12px;
+      color:#374151;
+    }
+
+    .canvasWrap{
+      padding:10px 10px 12px;
+    }
+    canvas{
+      width:100%;
+      height: 260px;
+      background:#ffffff;
+      border:1px solid rgba(0,0,0,.08);
+      border-radius: 14px;
+      display:block;
+      touch-action: none;
+    }
+
+    .controls{
+      padding: 10px 12px 12px;
+      border-top:1px solid rgba(0,0,0,.06);
+      background:#fff;
+      display:grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap:10px;
+    }
+    .ctrl{
+      grid-column: span 6;
+      padding:10px;
+      border:1px solid rgba(0,0,0,.06);
+      border-radius: 14px;
+      background:#fbfbfb;
+    }
+    .ctrl label{
+      display:flex;
+      justify-content:space-between;
+      align-items:baseline;
+      font-weight:800;
+      font-size:12px;
+      color:#111827;
+      margin-bottom:8px;
+    }
+    .ctrl .hint{font-weight:700; color:var(--muted); font-size:12px}
+    .row{
+      display:flex;
+      gap:8px;
+      align-items:center;
+    }
+    .num{
+      width: 98px;
+      padding:8px 10px;
+      border-radius:12px;
+      border:1px solid rgba(0,0,0,.14);
+      background:#fff;
+      font-weight:800;
+      font-size:14px;
+    }
+    .step{
+      display:inline-flex;
+      gap:8px;
+    }
+    .miniBtn{
+      padding:8px 10px;
+      border-radius:12px;
+      border:1px solid rgba(0,0,0,.14);
+      background:#fff;
+      cursor:pointer;
+      font-weight:900;
+      user-select:none;
+      min-width:40px;
+      text-align:center;
+    }
+    .miniBtn:active{transform: translateY(1px)}
+    .chkRow{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-items:center;
+      margin-top: 4px;
+    }
+    .chk{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      padding:8px 10px;
+      border-radius:999px;
+      border:1px solid rgba(0,0,0,.08);
+      background:#fff;
+      font-weight:800;
+      font-size:12px;
+      cursor:pointer;
+      user-select:none;
+    }
+    .chk input{accent-color:#2563eb}
+    .legend{
+      display:flex;
+      gap:12px;
+      align-items:center;
+      flex-wrap:wrap;
+      padding: 0 12px 12px;
+    }
+    .dot{
+      width:10px; height:10px; border-radius:99px; display:inline-block;
+    }
+    .dot.node{background:var(--node)}
+    .dot.anti{background:var(--anti)}
+    .legend span{
+      display:inline-flex;
+      gap:8px;
+      align-items:center;
+      font-weight:800;
+      font-size:12px;
+      color:#374151;
+      padding:6px 10px;
+      background:#fff;
+      border:1px solid rgba(0,0,0,.08);
+      border-radius:999px;
+    }
+
+    .footer{
+      margin-top: 12px;
+      padding: 10px 2px 0;
+      font-size: 13px;
+      color:#2563eb;
+      font-weight:800;
+      text-align:center;
+    }
+    .footer a{color:#2563eb; text-decoration:underline}
+
+    /* ---------- Modals (สูตรสำคัญ/แบบฝึกหัด/เครื่องคิดเลข) ---------- */
+    .modal{
+      position:fixed;
+      inset:0;
+      background: rgba(0,0,0,.45);
+      display:none;
+      z-index:50;
+      padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom) 0;
+    }
+    .modal.show{display:flex}
+    .modal .panel{
+      width:100%;
+      height:100%;
+      margin:auto;
+      border-radius: 0;
+      box-shadow: 0 22px 60px rgba(0,0,0,.32);
+      overflow:hidden;
+      border:1px solid rgba(255,255,255,.18);
+      background:#fff;
+      position:relative;
+      display:flex;
+      flex-direction:column;
+    }
+    .modal .topbar{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      justify-content:space-between;
+      padding: 10px 12px;
+      position:sticky;
+      top:0;
+      z-index:3;
+      border-bottom:1px solid rgba(0,0,0,.06);
+    }
+    .topbar.formula{background: #fff3dd;} /* หน้าอ่าน/อธิบาย = ส้มอ่อน */
+    .topbar.quiz{background: #f4fff3;}     /* หน้าแบบฝึก = เขียวอ่อนมาก */
+    .topbar .left{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    .pillBtn{
+      display:inline-flex;
+      gap:10px;
+      align-items:center;
+      padding:10px 14px;
+      border-radius:999px;
+      border:1px solid rgba(0,0,0,.10);
+      box-shadow: 0 6px 16px rgba(0,0,0,.08);
+      cursor:pointer;
+      font-weight:900;
+      background:#fff;
+      user-select:none;
+      font-size:13px;
+    }
+    .pillBtn .ico{font-size:16px}
+    .pillBtn.formula{background: var(--btn-formula)}
+    .pillBtn.quiz{background: var(--btn-quiz)}
+    .pillBtn.calc{background: #ffffff}
+    .closeX{
+      position:fixed;
+      top: calc(env(safe-area-inset-top) + 10px);
+      right: 12px;
+      z-index: 60;
+      width: 44px;
+      height: 44px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.35);
+      background: rgba(0,0,0,.55);
+      color:#fff;
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size: 22px;
+      box-shadow: 0 10px 24px rgba(0,0,0,.28);
+      user-select:none;
+    }
+    .modal .content{
+      padding: 14px 14px 120px;
+      line-height:1.65;
+    }
+
+    .formulaPage{
+      background: #fff8ea;
+      border-radius: 14px;
+      border:1px solid rgba(0,0,0,.06);
+      padding: 12px 12px;
+    }
+    .formulaBox{
+      background:#fff;
+      border:1px solid rgba(0,0,0,.10);
+      border-radius: 14px;
+      padding: 12px 12px;
+      margin: 10px 0;
+    }
+    .formulaBox h3{
+      margin:0 0 6px;
+      font-size: 15px;
+      color:#1f2937;
+    }
+    .small{color:var(--muted); font-weight:700; font-size: 13px}
+
+    /* แบบฝึกหัด */
+    .quizHeader{
+      background: #eaffea;
+      border:1px solid rgba(0,0,0,.08);
+      border-radius: 14px;
+      padding: 10px 12px;
+      margin-bottom: 12px;
+      font-weight:900;
+      display:flex;
+      gap:10px;
+      align-items:center;
+      color:#14532d;
+    }
+    .quizHeader .ico{font-size:18px}
+    .quizTopic{
+      background:#d7f5d2;
+      border:1px solid rgba(0,0,0,.08);
+      border-radius: 14px;
+      padding: 10px 12px;
+      font-weight:900;
+      margin: 10px 0 14px;
+      color:#14532d;
+    }
+    .qCard{
+      background:#fff;
+      border:1px solid rgba(0,0,0,.08);
+      border-radius: 14px;
+      padding: 12px 12px;
+      margin: 12px 0;
+    }
+    .qCard .qTitle{
+      font-weight:900;
+      margin-bottom: 8px;
+    }
+    .opt{
+      display:grid;
+      gap:8px;
+      margin-top: 10px;
+    }
+    .opt label{
+      display:flex;
+      gap:10px;
+      align-items:flex-start;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border:1px solid rgba(0,0,0,.08);
+      cursor:pointer;
+      background:#fbfbfb;
+      font-weight:800;
+    }
+    .opt input{margin-top:2px; accent-color:#2563eb}
+    .ans{
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border:1px solid rgba(0,0,0,.08);
+      background:#f9fafb;
+      display:none;
+    }
+    .ans.show{display:block}
+    .ans .correct{
+      font-weight:900;
+      color:#b91c1c;
+    }
+    .checkBar{
+      position:fixed;
+      left: 12px;
+      right: 12px;
+      bottom: calc(env(safe-area-inset-bottom) + 12px);
+      z-index: 65;
+      display:none;
+      justify-content:center;
+      pointer-events:none;
+    }
+    .checkBar.show{display:flex}
+    .checkBtn{
+      pointer-events:auto;
+      width:min(520px, 100%);
+      padding: 12px 14px;
+      border-radius: 999px;
+      border:1px solid rgba(0,0,0,.10);
+      box-shadow: 0 14px 30px rgba(0,0,0,.18);
+      font-weight:1000;
+      background: var(--btn-quiz);
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:10px;
+    }
+    .scorePill{
+      display:inline-flex;
+      gap:10px;
+      align-items:center;
+      padding: 8px 12px;
+      border-radius:999px;
+      border:1px solid rgba(0,0,0,.10);
+      background:#fff;
+      box-shadow: 0 10px 22px rgba(0,0,0,.10);
+      font-weight:1000;
+      margin-left: 8px;
+    }
+
+    /* เครื่องคิดเลขลอย */
+    .calcOverlay{
+      position:fixed;
+      inset:0;
+      background: rgba(0,0,0,.40);
+      display:none;
+      z-index: 80;
+      padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom) 0;
+    }
+    .calcOverlay.show{display:flex}
+    .calc{
+      margin:auto;
+      width:min(420px, 100%);
+      border-radius: 18px;
+      background:#fff;
+      box-shadow: 0 22px 60px rgba(0,0,0,.30);
+      overflow:hidden;
+      border:1px solid rgba(0,0,0,.10);
+    }
+    .calcTop{
+      padding: 10px 12px;
+      background:#f3f4f6;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      font-weight:1000;
+    }
+    .calcTop button{
+      border:none;
+      background:#111827;
+      color:#fff;
+      border-radius:999px;
+      padding:8px 12px;
+      cursor:pointer;
+      font-weight:1000;
+    }
+    .calcScreen{
+      padding: 12px;
+      border-top:1px solid rgba(0,0,0,.06);
+      border-bottom:1px solid rgba(0,0,0,.06);
+      min-height: 68px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-weight:900;
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+    }
+    .calcExpr{color:#374151; font-size:13px; word-break:break-all}
+    .calcVal{font-size:22px; color:#111827; word-break:break-all}
+    .calcKeys{
+      display:grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      padding: 12px;
+      background:#fff;
+    }
+    .k{
+      padding: 12px 10px;
+      border-radius: 14px;
+      border:1px solid rgba(0,0,0,.10);
+      background:#fafafa;
+      cursor:pointer;
+      font-weight:1000;
+      user-select:none;
+      text-align:center;
+    }
+    .k.op{background:#eef2ff}
+    .k.eq{background:#dbeafe}
+    .k.dng{background:#fee2e2}
+    .k:active{transform: translateY(1px)}
+
+    /* ---------- Responsive ---------- */
+    @media (min-width: 860px){
+      .grid.compare{
+        grid-template-columns: 1fr 1fr;
+      }
+      canvas{height: 280px;}
+      .ctrl{grid-column: span 4;}
+      .ctrl.wide{grid-column: span 12;}
+    }
+    
+    @media (max-width: 520px){
+      /* ปุ่มหลักลอยด้านล่าง + แถวละ 2 ปุ่ม */
+      .toolbar{
+        position: fixed;
+        left: 10px;
+        right: 10px;
+        bottom: calc(env(safe-area-inset-bottom) + 10px);
+        z-index: 40;
+        background: rgba(255,255,255,.96);
+        backdrop-filter: blur(6px);
+        border: 1px solid rgba(0,0,0,.08);
+        border-radius: 18px;
+        padding: 10px;
+        box-shadow: 0 18px 34px rgba(0,0,0,.18);
+        gap:10px;
+      }
+      .btn{
+        width: calc(50% - 5px);
+        justify-content:center;
+      }
+      .seg{
+        width:100%;
+        margin-left:0;
+        justify-content:center;
+      }
+      /* กันปุ่มล่างบัง footer/เนื้อหา */
+      .wrap{
+        padding-bottom: 110px;
+      }
+    }
+
+    @media (max-width: 520px){
+      canvas{height: 230px;}
+      .btn{width:100%; justify-content:center}
+      .seg{width:100%; justify-content:center; margin-left:0}
+      .ctrl{grid-column: span 12;}
+      .num{width: 100px;}
+      .wrap{padding-bottom: 8px;}
+    }
+  
+    /* ทำให้ Modal เลื่อนขึ้นลงได้ + กันไม่ให้ถูกบัง (มือถือ) */
+    .modal{
+      overflow: hidden;
+    }
+    .modal .panel{
+      
+      display:flex;
+      flex-direction:column;
+    }
+    .modal .content{
+      overflow:auto;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: calc(140px + env(safe-area-inset-bottom));
+    }
+
+  
+    /* Fallback สมการ (กรณี MathJax โหลดไม่ได้/ออฟไลน์) */
+    .mj{display:none;}
+    .noMj{display:inline;}
+    html.mjx .mj{display:inline;}
+    html.mjx .noMj{display:none;}
+
+  
+    /* ลดความสูง topbar แบบฝึกหัด (มือถือ) */
+    @media (max-width: 520px){
+      .topbar.quiz{ padding: 8px 10px; }
+      .topbar .left{ flex-wrap: nowrap; }
+      .pillBtn{ padding: 9px 12px; }
+    }
+
+  
+    @media (max-width: 520px){
+      /* บังคับให้ปุ่มหลักแถวละ 2 ปุ่ม (override กฎเดิม) */
+      .toolbar .btn{
+        width: calc(50% - 5px) !important;
+      }
+    }
+
+  
+    /* ปุ่มซ่อน/แสดงแถบปุ่ม (เฉพาะมือถือ) */
+    .mobileToggle{display:none;}
+    
+
+  
+    /* ปุ่มซ่อน/แสดงแถบปุ่ม (เฉพาะมือถือ) — วางเหนือแถบปุ่ม และลากย้ายได้ */
+    .mobileToggle{display:none;}
+    @media (max-width: 520px){
+      .mobileToggle{
+        display:flex;
+        position:fixed;
+        left: 10px;
+        top: 10px; /* JS จะจัดตำแหน่งให้ */
+        z-index: 46;
+        padding: 10px 12px;
+        border-radius: 999px;
+        border:1px solid rgba(0,0,0,.10);
+        background: rgba(255,255,255,.96);
+        backdrop-filter: blur(6px);
+        box-shadow: 0 14px 28px rgba(0,0,0,.18);
+        font-weight:1000;
+        cursor:grab;
+        user-select:none;
+        gap:8px;
+        align-items:center;
+        touch-action:none;
+      }
+      .mobileToggle:active{cursor:grabbing;}
+      body.toolbarHidden .toolbar{
+        transform: translateY(140%);
+      }
+      .toolbar{
+        transition: transform .22s ease;
+      }
+      body.toolbarHidden .wrap{
+        padding-bottom: 20px;
+      }
+    }
+
+  </style>
+
+  <!-- MathJax (ตามที่พี่ต้องการ: ใช้ MathJax) -->
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['\\(','\\)'], ['$', '$']] },
+      svg: { fontCache: 'global' }
+    };
+    window.MathJax.startup = window.MathJax.startup || {};
+    window.MathJax.startup.pageReady = () => { document.documentElement.classList.add('mjx'); return MathJax.startup.defaultPageReady(); };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+</head>
+
+<body>
+  <div class="wrap">
+    <h1>คลื่นนิ่งบนเส้นเชือก — เปรียบเทียบคลื่นเคลื่อนที่ & การเกิดคลื่นนิ่ง</h1>
+
+    <!-- แถบปุ่มตาม “มาตรฐานเพจ” -->
+    <div class="toolbar" id="mainToolbar">
+      <div class="btn play" id="btnPlay"><span class="ico">▶️</span><span id="playTxt">เล่น</span></div>
+      <div class="btn reset" id="btnReset"><span class="ico">🔄</span>รีเซ็ต</div>
+      <div class="btn formula" id="btnFormula"><span class="ico">Σ</span>สูตรสำคัญ</div>
+      <div class="btn quiz" id="btnQuiz"><span class="ico">📝</span>แบบฝึกหัด</div>
+
+      <div class="seg" role="tablist" aria-label="โหมดการทดลอง">
+        <button class="active" id="tabCompare" role="tab" aria-selected="true">โหมดเปรียบเทียบ</button>
+        <button id="tabStanding" role="tab" aria-selected="false">โหมดการเกิดคลื่นนิ่ง</button>
+      </div>
+    </div>
+
+    <div id="mobileToggle" class="mobileToggle" aria-label="ซ่อนหรือแสดงปุ่มควบคุม">▾ ซ่อนปุ่ม</div>
+
+    <!-- โหมดเปรียบเทียบ -->
+    <div class="grid compare" id="panelCompare">
+      <div class="card">
+        <div class="cardHead">
+          <div class="title">คลื่นเดินทาง (Traveling Wave)</div>
+          <div class="pill" id="travelInfo">\(y(x,t)=A\sin(kx-\omega t)\)</div>
+        </div>
+        <div class="canvasWrap">
+          <canvas id="cvTravel" width="900" height="320" aria-label="คลื่นเดินทาง"></canvas>
+        </div>
+        <div class="controls">
+          <div class="ctrl">
+            <label>แอมพลิจูด \(A\) <span class="hint"><span id="A1v"></span> px</span></label>
+            <div class="row">
+              <div class="step">
+                <div class="miniBtn" data-step="A1" data-dir="-">−</div>
+                <input class="num" id="A1" type="number" min="5" max="90" step="1" value="20"/>
+                <div class="miniBtn" data-step="A1" data-dir="+">+</div>
+              </div>
+            </div>
+          </div>
+          <div class="ctrl">
+            <label>ความถี่ \(f\) <span class="hint"><span id="f1v"></span> Hz</span></label>
+            <div class="row">
+              <div class="step">
+                <div class="miniBtn" data-step="f1" data-dir="-">−</div>
+                <input class="num" id="f1" type="number" min="1" max="30" step="1" value="1"/>
+                <div class="miniBtn" data-step="f1" data-dir="+">+</div>
+              </div>
+            </div>
+          </div>
+          <div class="ctrl">
+            <label>อัตราเร็วคลื่น \(v\) <span class="hint"><span id="v1v"></span> (หน่วยสมมติ)</span></label>
+            <div class="row">
+              <div class="step">
+                <div class="miniBtn" data-step="v1" data-dir="-">−</div>
+                <input class="num" id="v1" type="number" min="50" max="400" step="10" value="220"/>
+                <div class="miniBtn" data-step="v1" data-dir="+">+</div>
+              </div>
+            </div>
+          </div>
+          <div class="ctrl">
+            <label>ความยาวเชือก \(L\) <span class="hint"><span id="L1v"></span> px</span></label>
+            <div class="row">
+              <div class="step">
+                <div class="miniBtn" data-step="L1" data-dir="-">−</div>
+                <input class="num" id="L1" type="number" min="300" max="900" step="20" value="720"/>
+                <div class="miniBtn" data-step="L1" data-dir="+">+</div>
+              </div>
+            </div>
+          </div>
+          <div class="ctrl wide">
+            <label>สรุปค่าที่คำนวณได้ <span class="hint">จาก \(v=f\lambda\)</span></label>
+            <div class="chkRow">
+              <div class="pill"> \(\lambda=\)<span id="lambda1">—</span></div>
+              <div class="pill"> \(k=\frac{2\pi}{\lambda}=\)<span id="k1">—</span></div>
+              <div class="pill"> \(\omega=2\pi f=\)<span id="w1">—</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="legend">
+          <span><span class="dot node"></span> Node = จุดแดง</span>
+          <span><span class="dot anti"></span> Antinode = จุดเขียว</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="cardHead">
+          <div class="title">คลื่นนิ่ง (Standing Wave)</div>
+          <div class="pill" id="standInfo">\(y(x,t)=2A\sin(kx)\cos(\omega t)\)</div>
+        </div>
+        <div class="canvasWrap">
+          <canvas id="cvStand" width="900" height="320" aria-label="คลื่นนิ่ง"></canvas>
+        </div>
+        <div class="controls">
+          <div class="ctrl">
+            <label>แอมพลิจูดของคลื่นย่อย \(A\) <span class="hint"><span id="A2v"></span> px</span></label>
+            <div class="row">
+              <div class="step">
+                <div class="miniBtn" data-step="A2" data-dir="-">−</div>
+                <input class="num" id="A2" type="number" min="5" max="70" step="1" value="20"/>
+                <div class="miniBtn" data-step="A2" data-dir="+">+</div>
+              </div>
+            </div>
+          </div>
+          <div class="ctrl">
+            <label>ฮาร์โมนิก \(n\) <span class="hint">โหมดสั่น</span></label>
+            <div class="row">
+              <div class="step">
+                <div class="miniBtn" data-step="n2" data-dir="-">−</div>
+                <input class="num" id="n2" type="number" min="1" max="8" step="1" value="2"/>
+                <div class="miniBtn" data-step="n2" data-dir="+">+</div>
+              </div>
+              <span class="pill">ปลายตรึง–ตรึง</span>
+            </div>
+          </div>
+          <div class="ctrl">
+            <label>อัตราเร็วคลื่น \(v\) <span class="hint"><span id="v2v"></span></span></label>
+            <div class="row">
+              <div class="step">
+                <div class="miniBtn" data-step="v2" data-dir="-">−</div>
+                <input class="num" id="v2" type="number" min="50" max="400" step="10" value="220"/>
+                <div class="miniBtn" data-step="v2" data-dir="+">+</div>
+              </div>
+            </div>
+          </div>
+          <div class="ctrl">
+            <label>ความยาวเชือก \(L\) <span class="hint"><span id="L2v"></span> px</span></label>
+            <div class="row">
+              <div class="step">
+                <div class="miniBtn" data-step="L2" data-dir="-">−</div>
+                <input class="num" id="L2" type="number" min="300" max="900" step="20" value="720"/>
+                <div class="miniBtn" data-step="L2" data-dir="+">+</div>
+              </div>
+            </div>
+          </div>
+          <div class="ctrl wide">
+            <label>สรุป (เรโซแนนซ์ปลายตรึง–ตรึง) <span class="hint">\(\lambda_n=\frac{2L}{n}\), \(f_n=\frac{nv}{2L}\)</span></label>
+            <div class="chkRow">
+              <div class="pill">\(\lambda_n=\)<span id="lambda2">—</span></div>
+              <div class="pill">\(f_n=\)<span id="f2calc">—</span></div>
+              <div class="pill">Node: <span id="nodeCount">—</span></div>
+              <div class="pill">Antinode: <span id="antiCount">—</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="legend">
+          <span><span class="dot node"></span> Node = จุดแดง</span>
+          <span><span class="dot anti"></span> Antinode = จุดเขียว</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- โหมดการเกิดคลื่นนิ่ง -->
+    <div class="grid" id="panelStanding" style="display:none">
+      <div class="card">
+        <div class="cardHead">
+          <div class="title">การเกิดคลื่นนิ่ง: คลื่นสวนทางกัน + คลื่นรวม</div>
+          <div class="pill">ติ๊กเพื่อแสดง/ซ่อนคลื่นย่อย และคลื่นรวม</div>
+        </div>
+
+        <div class="canvasWrap">
+          <canvas id="cvForm" width="1000" height="340" aria-label="การเกิดคลื่นนิ่ง"></canvas>
+        </div>
+
+        <div class="controls">
+          <div class="ctrl">
+            <label>แอมพลิจูด \(A\) <span class="hint"><span id="Afv"></span> px</span></label>
+            <div class="row">
+              <div class="step">
+                <div class="miniBtn" data-step="Af" data-dir="-">−</div>
+                <input class="num" id="Af" type="number" min="5" max="70" step="1" value="26"/>
+                <div class="miniBtn" data-step="Af" data-dir="+">+</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="ctrl">
+            <label>ความถี่ \(f\) <span class="hint"><span id="ffv"></span> Hz</span></label>
+            <div class="row">
+              <div class="step">
+                <div class="miniBtn" data-step="ff" data-dir="-">−</div>
+                <input class="num" id="ff" type="number" min="1" max="30" step="1" value="1"/>
+                <div class="miniBtn" data-step="ff" data-dir="+">+</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="ctrl">
+            <label>อัตราเร็วคลื่น \(v\) <span class="hint"><span id="vfv"></span></span></label>
+            <div class="row">
+              <div class="step">
+                <div class="miniBtn" data-step="vf" data-dir="-">−</div>
+                <input class="num" id="vf" type="number" min="50" max="400" step="10" value="220"/>
+                <div class="miniBtn" data-step="vf" data-dir="+">+</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="ctrl">
+            <label>ความยาวเชือก \(L\) <span class="hint"><span id="Lfv"></span> px</span></label>
+            <div class="row">
+              <div class="step">
+                <div class="miniBtn" data-step="Lf" data-dir="-">−</div>
+                <input class="num" id="Lf" type="number" min="300" max="900" step="20" value="760"/>
+                <div class="miniBtn" data-step="Lf" data-dir="+">+</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="ctrl wide">
+            <label>การแสดงผล <span class="hint">ตามที่พี่สั่ง: ช่องติ๊กคลื่นรวม + ซ่อนคลื่นย่อย</span></label>
+            <div class="chkRow">
+              <label class="chk"><input id="showResult" type="checkbox" checked/> แสดงคลื่นรวม</label>
+              <label class="chk"><input id="hideParts" type="checkbox"/> ซ่อนคลื่นย่อย</label>
+              <label class="chk"><input id="showMarkers" type="checkbox" checked/> แสดง Node/Antinode</label>
+            </div>
+            <div class="chkRow">
+              <div class="pill"> \(\lambda=\)<span id="lambdaf">—</span></div>
+              <div class="pill"> \(k=\)<span id="kf">—</span></div>
+              <div class="pill"> \(\omega=\)<span id="wf">—</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="legend">
+          <span><span class="dot node"></span> Node = จุดแดง</span>
+          <span><span class="dot anti"></span> Antinode = จุดเขียว</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      ศึกษาเพิ่มเติมที่ <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">เพจคลายปมฟิสิกส์</a>
+    </div>
+  </div>
+
+  <!-- ---------- สูตรสำคัญ (อธิบายหลักการ) ---------- -->
+  <div class="modal" id="modalFormula" aria-hidden="true">
+    <div class="closeX" data-close="formula" title="ปิด">❌</div>
+    <div class="panel">
+      <div class="topbar formula">
+        <div class="left">
+          <div class="pillBtn quiz" id="toQuizFromFormula"><span class="ico">📝</span>ไปหน้าแบบฝึกหัด</div>
+        </div>
+        
+      </div>
+      <div class="content">
+        <div class="formulaPage">
+          <div class="formulaBox">
+            <h3>1) คลื่นเดินทาง (Traveling Waves) คืออะไร?</h3>
+            <div class="small">
+              คลื่นเดินทาง คือ “รูปคลื่น” ที่เลื่อนไปตามตำแหน่ง (เดินทางไปทางซ้ายหรือขวา) โดยพลังงานถูกส่งต่อไปตามสื่อกลาง
+              แต่อนุภาคของสื่อกลาง “สั่นอยู่ใกล้ตำแหน่งสมดุล” ไม่ได้เดินทางไปไกลแบบเดียวกับรูปคลื่น
+            </div>
+            <div class="formulaBox">
+              <div class="small">สมการมาตรฐานของคลื่นเดินทางไปทางขวา</div>
+              <div>\[
+                y(x,t)=A\sin(kx-\omega t + \phi)
+              \]</div>
+              <div class="small">
+                ตัวแปรสำคัญ:
+                <ul>
+                  <li>\(y\) = การกระจัดของเชือก ณ ตำแหน่ง \(x\) และเวลา \(t\)</li>
+                  <li>\(A\) = แอมพลิจูด (ค่าสูงสุดของการกระจัด)</li>
+                  <li>\(k=\frac{2\pi}{\lambda}\) = เลขคลื่น (บอกความถี่เชิงตำแหน่ง)</li>
+                  <li>\(\omega = 2\pi f\) = ความถี่เชิงมุม</li>
+                  <li>\(\phi\) = เฟสเริ่มต้น (กำหนด “เริ่มต้น” ของคลื่น)</li>
+                  <li>\(\lambda\) = ความยาวคลื่น, \(f\)=ความถี่, และมีความสัมพันธ์ \(v=f\lambda\)</li>
+                </ul>
+              </div>
+              <div class="small">
+                ความหมายของเครื่องหมาย “−” ใน \((kx-\omega t)\): เมื่อ \(t\) เพิ่มขึ้น ค่าเฟสคงเดิมจะเกิดที่ \(x\) มากขึ้น ⇒ รูปคลื่น “เลื่อนไปทาง +x” (ไปทางขวา)<br/>
+                ถ้าเป็น \(kx+\omega t\) ⇒ คลื่นเลื่อนไปทางซ้าย
+              </div>
+            </div>
+          </div>
+
+          <div class="formulaBox">
+            <h3>2) คลื่นนิ่ง (Standing Waves) คืออะไร?</h3>
+            <div class="small">
+              คลื่นนิ่ง คือรูปแบบการสั่นที่ “ไม่เลื่อนไปไหน” แต่มีตำแหน่งบางจุดที่สั่นแรงมาก (Antinode) และบางจุดที่ไม่สั่นเลย (Node)
+              มักเกิดจากคลื่นสองขบวน “ความถี่และแอมพลิจูดเท่ากัน” เดินทางสวนทางกันบนเส้นเชือกเดียวกัน
+            </div>
+            <div class="formulaBox">
+              <div class="small">นิยามตำแหน่งสำคัญ</div>
+              <ul class="small">
+                <li><b>Node (ปม)</b> = จุดที่สั่นเป็นศูนย์ตลอดเวลา (ในแล็บนี้ทำเป็น <b style="color:#ef4444">จุดแดง</b>)</li>
+                <li><b>Antinode (ปฏิบัพ)</b> = จุดที่สั่นมากสุด (ทำเป็น <b style="color:#22c55e">จุดเขียว</b>)</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="formulaBox">
+            <h3>3) การรวมสมการจนได้สมการคลื่นนิ่ง (ละเอียดแบบพื้นฐานน้อย)</h3>
+
+            <div class="small">
+              สมมติให้มีคลื่น 2 ขบวน มี \(A, k, \omega\) เท่ากัน แต่เดินทางสวนทางกัน:
+            </div>
+
+            <div class="formulaBox">
+              <div class="small"><b>คลื่นไปทางขวา</b></div>
+              <div>\[
+                y_1(x,t)=A\sin(kx-\omega t)
+              \]</div>
+
+              <div class="small"><b>คลื่นไปทางซ้าย</b></div>
+              <div>\[
+                y_2(x,t)=A\sin(kx+\omega t)
+              \]</div>
+
+              <div class="small">
+                ทำไมเครื่องหมาย “+” หรือ “−” จึงต่างกัน?<br/>
+                - ถ้าเป็น \((kx-\omega t)\) ⇒ คลื่นเลื่อนไปทางขวา<br/>
+                - ถ้าเป็น \((kx+\omega t)\) ⇒ คลื่นเลื่อนไปทางซ้าย
+              </div>
+            </div>
+
+            <div class="small">
+              หลักการซ้อนทับ (Superposition): <b>การกระจัดรวม</b> คือผลบวกของการกระจัดแต่ละคลื่น
+            </div>
+
+            <div class="formulaBox">
+              <div>\[
+                y(x,t)=y_1+y_2
+              \]</div>
+              <div>\[
+                y(x,t)=A\sin(kx-\omega t)+A\sin(kx+\omega t)
+              \]</div>
+              <div class="small">ดึง \(A\) ออก:</div>
+              <div>\[
+                y(x,t)=A\left[\sin(kx-\omega t)+\sin(kx+\omega t)\right]
+              \]</div>
+
+              <div class="small">
+                ใช้เอกลักษณ์ตรีโกณมิติ (ไม่ต้องท่องก็ได้ แค่รู้ว่า “รวมซายน์ 2 ตัว” จะกลายเป็น “ผลคูณ”):
+                \[
+                  \sin(\alpha)+\sin(\beta)=2\sin\left(\frac{\alpha+\beta}{2}\right)\cos\left(\frac{\alpha-\beta}{2}\right)
+                \]
+              </div>
+
+              <div class="small">
+                ให้ \(\alpha = kx-\omega t\), \(\beta = kx+\omega t\)
+              </div>
+
+              <div class="formulaBox">
+                <div class="small">คำนวณทีละขั้น (เพื่อไม่ให้ล้นจอมือถือ)</div>
+                <div>\[
+                  \frac{\alpha+\beta}{2}=\frac{(kx-\omega t)+(kx+\omega t)}{2}
+                \]</div>
+                <div>\[
+                  \frac{\alpha+\beta}{2}=\frac{2kx}{2}=kx
+                \]</div>
+
+                <div>\[
+                  \frac{\alpha-\beta}{2}=\frac{(kx-\omega t)-(kx+\omega t)}{2}
+                \]</div>
+                <div>\[
+                  \frac{\alpha-\beta}{2}=\frac{-2\omega t}{2}=-\omega t
+                \]</div>
+              </div>
+
+              <div class="small">
+                แทนกลับเข้าเอกลักษณ์:
+              </div>
+              <div>\[
+                \sin(kx-\omega t)+\sin(kx+\omega t)=2\sin(kx)\cos(-\omega t)
+              \]</div>
+              <div class="small">
+                และเพราะ \(\cos(-\omega t)=\cos(\omega t)\) (โคไซน์เป็นฟังก์ชันสมมาตร)
+              </div>
+
+              <div class="formulaBox">
+                <div class="small"><b>ได้สมการคลื่นนิ่ง</b></div>
+                <div>\[
+                  y(x,t)=2A\sin(kx)\cos(\omega t)
+                \]</div>
+              </div>
+
+              <div class="small">
+                สังเกตความหมาย: <br/>
+                - ส่วนที่ขึ้นกับตำแหน่ง \(x\): \(\sin(kx)\) ⇒ ทำให้เกิด <b>ปม/ปฏิบัพอยู่ตำแหน่งเดิม</b><br/>
+                - ส่วนที่ขึ้นกับเวลา \(t\): \(\cos(\omega t)\) ⇒ ทำให้ทั้งรูปสั่น “ขึ้น-ลงพร้อมกัน” (แต่ขนาดขึ้นกับตำแหน่ง)
+              </div>
+            </div>
+          </div>
+
+          <div class="formulaBox">
+            <h3>4) เงื่อนไขเรโซแนนซ์ของเชือกปลายตรึง–ตรึง</h3>
+            <div class="small">
+              ถ้าปลายทั้งสองเป็น “ปม” (ตรึง) ⇒ ตำแหน่งปลายต้องมี \(y=0\) เสมอ
+              จึงได้เงื่อนไขความยาวคลื่น:
+            </div>
+            <div class="formulaBox">
+              <div>\[
+                L=\frac{n\lambda}{2}
+              \]</div>
+              <div>\[
+                \lambda_n=\frac{2L}{n}
+              \]</div>
+              <div class="small">
+                และเพราะ \(v=f\lambda\) ⇒
+              </div>
+              <div>\[
+                f_n=\frac{nv}{2L}
+              \]</div>
+              <div class="small">
+                โดย \(n=1,2,3,\dots\) คือฮาร์โมนิก (จำนวน “ลูพ” ที่เห็นบนเชือก)
+              </div>
+            </div>
+          </div>
+
+          <div class="formulaBox">
+            <h3>วิธีสังเกตให้เร็ว (ใช้สอนในห้องได้เลย)</h3>
+            <ul class="small">
+              <li>คลื่นเดินทาง: “ลวดลายเลื่อนไป” (เห็นสันคลื่นวิ่งผ่านตำแหน่งเดิม)</li>
+              <li>คลื่นนิ่ง: “ลวดลายไม่เลื่อน” แต่มีจุดที่ไม่สั่น (Node) สลับกับจุดที่สั่นแรง (Antinode)</li>
+              <li>จำนวน Node = \(n+1\) (รวมปลายทั้งสอง), จำนวน Antinode = \(n\) (กรณีปลายตรึง–ตรึง)</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ---------- แบบฝึกหัด ---------- -->
+  <div class="modal" id="modalQuiz" aria-hidden="true">
+    <div class="closeX" data-close="quiz" title="ปิด">❌</div>
+    <div class="panel">
+      <div class="topbar quiz">
+        <div class="left">
+          <div class="pillBtn formula" id="toFormulaFromQuiz"><span class="ico">Σ</span>ไปหน้าสูตรสำคัญ</div>
+</div>
+        
+      </div>
+
+      <div class="content">
+        <div class="quizHeader"><span class="ico">📝</span>แบบฝึกหัด</div>
+        <div class="quizTopic">
+          หัวข้อแบบฝึกหัด: คลื่นเดินทาง vs คลื่นนิ่ง (Node/Antinode และสมการ)
+          <div class="small" style="margin-top:6px">
+            เลือกคำตอบ A–E แล้วกด “ตรวจคำตอบ” เพื่อดูคะแนน + เฉลยละเอียดในแต่ละข้อ
+          </div>
+        </div>
+
+        <div id="quizArea"></div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="checkBar" id="checkBar">
+    <div class="checkBtn" id="btnCheck"><span>ตรวจคำตอบ</span> <span class="scorePill" id="scorePill" style="display:none"></span></div>
+  </div>
+
+  <!-- ---------- เครื่องคิดเลขวิทยาศาสตร์ (ลอย) ---------- -->
+  <div class="calcOverlay" id="calcOverlay" aria-hidden="true">
+    <div class="calc">
+      <div class="calcTop">
+        <div>🧮 เครื่องคิดเลขวิทยาศาสตร์</div>
+        <button id="calcClose">ปิด</button>
+      </div>
+      <div class="calcScreen">
+        <div class="calcExpr" id="calcExpr"> </div>
+        <div class="calcVal" id="calcVal">0</div>
+      </div>
+      <div class="calcKeys" id="calcKeys"></div>
+    </div>
+  </div>
+
+<script>
+(function(){
+  const $ = (q)=>document.querySelector(q);
+  const $$ = (q)=>Array.from(document.querySelectorAll(q));
+  const clamp = (v, a, b)=>Math.max(a, Math.min(b, v));
+
+  // ---------- Tabs ----------
+  const panelCompare = $("#panelCompare");
+  const panelStanding = $("#panelStanding");
+  const tabCompare = $("#tabCompare");
+  const tabStanding = $("#tabStanding");
+
+  function setTab(which){
+    const isCompare = which === "compare";
+    panelCompare.style.display = isCompare ? "" : "none";
+    panelStanding.style.display = isCompare ? "none" : "";
+    tabCompare.classList.toggle("active", isCompare);
+    tabStanding.classList.toggle("active", !isCompare);
+    tabCompare.setAttribute("aria-selected", isCompare ? "true" : "false");
+    tabStanding.setAttribute("aria-selected", !isCompare ? "true" : "false");
+    activeMode = isCompare ? "compare" : "standing";
+  }
+  tabCompare.addEventListener("click", ()=>setTab("compare"));
+  tabStanding.addEventListener("click", ()=>setTab("standing"));
+
+  // ---------- Play / Reset ----------
+  let running = true;
+  let t0 = performance.now();
+  let t = 0;
+
+  const btnPlay = $("#btnPlay");
+  const playTxt = $("#playTxt");
+  btnPlay.addEventListener("click", ()=>{
+    running = !running;
+    if(running){
+      t0 = performance.now() - t*1000;
+      playTxt.textContent = "หยุด";
+      btnPlay.querySelector(".ico").textContent = "⏸";
+    }else{
+      playTxt.textContent = "เล่น";
+      btnPlay.querySelector(".ico").textContent = "▶️";
+    }
+  });
+
+  function resetAll(){
+    // Defaults
+    $("#A1").value = 20;
+    $("#f1").value = 1;
+    $("#v1").value = 220;
+    $("#L1").value = 720;
+
+    $("#A2").value = 20;
+    $("#n2").value = 2;
+    $("#v2").value = 220;
+    $("#L2").value = 720;
+
+    $("#Af").value = 26;
+    $("#ff").value = 1;
+    $("#vf").value = 220;
+    $("#Lf").value = 760;
+    $("#showResult").checked = true;
+    $("#hideParts").checked = false;
+    $("#showMarkers").checked = true;
+
+    t = 0;
+    t0 = performance.now();
+    running = true;
+    playTxt.textContent = "หยุด";
+    btnPlay.querySelector(".ico").textContent = "⏸";
+
+    updateAllReadouts();
+  }
+  $("#btnReset").addEventListener("click", resetAll);
+
+  // ---------- Steppers (+/-) ----------
+  $$(".miniBtn").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      const id = b.dataset.step;
+      const dir = b.dataset.dir;
+      const input = $("#"+id);
+      if(!input) return;
+      const step = Number(input.step || 1);
+      let v = Number(input.value || 0);
+      v += (dir === "+") ? step : -step;
+      if(input.min !== "") v = Math.max(Number(input.min), v);
+      if(input.max !== "") v = Math.min(Number(input.max), v);
+      input.value = v;
+      updateAllReadouts();
+    });
+  });
+
+  // ---------- Controls update ----------
+  const inputs = ["A1","f1","v1","L1","A2","n2","v2","L2","Af","ff","vf","Lf","showResult","hideParts","showMarkers"];
+  inputs.forEach(id=>{
+    const el = $("#"+id);
+    if(!el) return;
+    el.addEventListener("input", updateAllReadouts);
+    el.addEventListener("change", updateAllReadouts);
+  });
+
+  function fmt(n, digits=2){
+    if(!isFinite(n)) return "—";
+    const p = Math.pow(10,digits);
+    return (Math.round(n*p)/p).toString();
+  }
+
+  function updateAllReadouts(){
+    // Compare: traveling
+    const A1 = Number($("#A1").value);
+    const f1 = Number($("#f1").value);
+    const v1 = Number($("#v1").value);
+    const L1 = Number($("#L1").value);
+    $("#A1v").textContent = A1;
+    $("#f1v").textContent = f1;
+    $("#v1v").textContent = v1;
+    $("#L1v").textContent = L1;
+
+    const lambda1 = v1 / f1;
+    const k1 = 2*Math.PI / lambda1;
+    const w1 = 2*Math.PI * f1;
+    $("#lambda1").textContent = fmt(lambda1,1);
+    $("#k1").textContent = fmt(k1,3);
+    $("#w1").textContent = fmt(w1,2);
+
+    // Compare: standing (resonance fixed-fixed)
+    const A2 = Number($("#A2").value);
+    const n2 = clamp(Number($("#n2").value),1,8);
+    const v2 = Number($("#v2").value);
+    const L2 = Number($("#L2").value);
+    $("#A2v").textContent = A2;
+    $("#v2v").textContent = v2;
+    $("#L2v").textContent = L2;
+
+    const lambda2 = 2*L2/n2;
+    const f2 = n2*v2/(2*L2);
+    $("#lambda2").textContent = fmt(lambda2,1);
+    $("#f2calc").textContent = fmt(f2,3);
+    $("#nodeCount").textContent = (n2+1).toString();
+    $("#antiCount").textContent = n2.toString();
+
+    // Formation
+    const Af = Number($("#Af").value);
+    const ff = Number($("#ff").value);
+    const vf = Number($("#vf").value);
+    const Lf = Number($("#Lf").value);
+    $("#Afv").textContent = Af;
+    $("#ffv").textContent = ff;
+    $("#vfv").textContent = vf;
+    $("#Lfv").textContent = Lf;
+
+    const lambdaf = vf/ff;
+    const kf = 2*Math.PI / lambdaf;
+    const wf = 2*Math.PI*ff;
+    $("#lambdaf").textContent = fmt(lambdaf,1);
+    $("#kf").textContent = fmt(kf,3);
+    $("#wf").textContent = fmt(wf,2);
+
+    // keep n2 input clamped
+    $("#n2").value = n2;
+
+    // trigger MathJax typeset (light)
+    if(window.MathJax && window.MathJax.typesetPromise){
+      window.MathJax.typesetPromise([document.body]).catch(()=>{});
+    }
+  }
+
+  // ---------- Canvas helpers ----------
+  function setupCanvas(canvas){
+    const ctx = canvas.getContext("2d");
+    function resize(){
+      // match device pixels
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      const w = Math.max(2, Math.floor(rect.width * dpr));
+      const h = Math.max(2, Math.floor(rect.height * dpr));
+      if(canvas.width !== w || canvas.height !== h){
+        canvas.width = w; canvas.height = h;
+      }
+    }
+    window.addEventListener("resize", resize);
+    resize();
+    return {ctx, resize};
+  }
+
+  const travel = setupCanvas($("#cvTravel"));
+  const stand = setupCanvas($("#cvStand"));
+  const form = setupCanvas($("#cvForm"));
+
+  function drawRope(ctx, W, H){
+    ctx.save();
+    ctx.strokeStyle = "rgba(0,0,0,.10)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(24, H/2);
+    ctx.lineTo(W-24, H/2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawFixedEnds(ctx, W, H){
+    ctx.save();
+    ctx.strokeStyle = "rgba(0,0,0,.22)";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(24, H/2-30);
+    ctx.lineTo(24, H/2+30);
+    ctx.moveTo(W-24, H/2-30);
+    ctx.lineTo(W-24, H/2+30);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawWave(ctx, W, H, fnY, color="rgba(37,99,235,.95)", lw=2.5){
+    const left = 24, right = W-24;
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lw;
+    ctx.beginPath();
+    const N = 900;
+    for(let i=0;i<=N;i++){
+      const u = i/N;
+      const x = left + (right-left)*u;
+      const y = fnY(u);
+      if(i===0) ctx.moveTo(x,y);
+      else ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawMarkersFixedFixed(ctx, W, H, Lpx, n, show=true){
+    if(!show) return;
+    const left = 24, right = W-24;
+    const ropeW = right-left;
+    const scale = ropeW / Lpx;
+
+    // Nodes: x = m*L/n, m=0..n
+    // Antinodes: x = (m+0.5)*L/n, m=0..n-1
+    const y0 = H/2;
+
+    ctx.save();
+    // Node
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--node").trim();
+    for(let m=0;m<=n;m++){
+      const x = left + (m*Lpx/n)*scale;
+      ctx.beginPath();
+      ctx.arc(x, y0, 6, 0, Math.PI*2);
+      ctx.fill();
+    }
+    // Antinode
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--anti").trim();
+    for(let m=0;m<n;m++){
+      const x = left + ((m+0.5)*Lpx/n)*scale;
+      ctx.beginPath();
+      ctx.arc(x, y0, 6, 0, Math.PI*2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // ---------- Animation ----------
+  let activeMode = "compare";
+
+  function tick(){
+    if(running){
+      t = (performance.now() - t0)/1000;
+    }
+
+    // traveling
+    travel.resize();
+    {
+      const ctx = travel.ctx;
+      const W = $("#cvTravel").width, H = $("#cvTravel").height;
+      ctx.clearRect(0,0,W,H);
+      drawRope(ctx,W,H);
+
+      const A = Number($("#A1").value);
+      const f = Number($("#f1").value);
+      const v = Number($("#v1").value);
+      const L = Number($("#L1").value);
+      const lambda = v/f;
+      const k = 2*Math.PI/lambda;
+      const w = 2*Math.PI*f;
+
+      // map x: 0..L => screen left..right
+      const left = 24, right=W-24;
+      const ropeW = right-left;
+      const scale = ropeW/L;
+
+      drawWave(ctx, W, H, (u)=>{
+        const x = u*L;
+        const y = H/2 - A*Math.sin(k*x - w*t);
+        return y;
+      }, "rgba(37,99,235,.95)", 2.8);
+
+      // faint direction arrow
+      ctx.save();
+      ctx.strokeStyle = "rgba(37,99,235,.55)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(W-150, 54);
+      ctx.lineTo(W-58, 54);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(W-58, 54);
+      ctx.lineTo(W-70, 48);
+      ctx.lineTo(W-70, 60);
+      ctx.closePath();
+      ctx.fillStyle = "rgba(37,99,235,.55)";
+      ctx.fill();
+      ctx.font = `${Math.max(12, Math.round(H*0.045))}px ui-sans-serif, system-ui`;
+      ctx.fillStyle = "rgba(17,24,39,.70)";
+      ctx.fillText("ทิศการเดินทาง", W-260, 60);
+      ctx.restore();
+    }
+
+    // standing (resonant pattern fixed-fixed)
+    stand.resize();
+    {
+      const ctx = stand.ctx;
+      const W = $("#cvStand").width, H = $("#cvStand").height;
+      ctx.clearRect(0,0,W,H);
+      drawRope(ctx,W,H);
+      drawFixedEnds(ctx,W,H);
+
+      const A = Number($("#A2").value);
+      const n = clamp(Number($("#n2").value),1,8);
+      const v = Number($("#v2").value);
+      const L = Number($("#L2").value);
+
+      const lambda = 2*L/n;
+      const k = 2*Math.PI/lambda; // = n*pi/L
+      const f = n*v/(2*L);
+      const w = 2*Math.PI*f;
+
+      drawWave(ctx, W, H, (u)=>{
+        const x = u*L;
+        const y = H/2 - (2*A*Math.sin(k*x)*Math.cos(w*t));
+        return y;
+      }, "rgba(16,185,129,.95)", 3.0);
+
+      drawMarkersFixedFixed(ctx,W,H,L,n,true);
+    }
+
+    // formation mode
+    form.resize();
+    {
+      const ctx = form.ctx;
+      const W = $("#cvForm").width, H = $("#cvForm").height;
+      ctx.clearRect(0,0,W,H);
+      drawRope(ctx,W,H);
+      drawFixedEnds(ctx,W,H);
+
+      const A = Number($("#Af").value);
+      const f = Number($("#ff").value);
+      const v = Number($("#vf").value);
+      const L = Number($("#Lf").value);
+      const lambda = v/f;
+      const k = 2*Math.PI/lambda;
+      const w = 2*Math.PI*f;
+
+      const showResult = $("#showResult").checked;
+      const hideParts = $("#hideParts").checked;
+      const showMarkers = $("#showMarkers").checked;
+
+      // components
+      if(!hideParts){
+        drawWave(ctx, W, H, (u)=>{
+          const x = u*L;
+          return H/2 - A*Math.sin(k*x - w*t);
+        }, "rgba(37,99,235,.65)", 2.2);
+
+        drawWave(ctx, W, H, (u)=>{
+          const x = u*L;
+          return H/2 - A*Math.sin(k*x + w*t);
+        }, "rgba(245,158,11,.65)", 2.2);
+      }
+
+      if(showResult){
+        drawWave(ctx, W, H, (u)=>{
+          const x = u*L;
+          const y = A*Math.sin(k*x - w*t) + A*Math.sin(k*x + w*t);
+          return H/2 - y;
+        }, "rgba(17,24,39,.92)", 3.2);
+      }
+
+      // markers (approx using nearest n from k and L if looks like resonance)
+      if(showMarkers){
+        // estimate n ~ 2L/lambda
+        const nEst = clamp(Math.round(2*L/lambda), 1, 10);
+        drawMarkersFixedFixed(ctx,W,H,L,nEst,true);
+      }
+
+      // labels
+      ctx.save();
+      const baseFs = Math.max(12, Math.round(H*0.045));
+      const fs = (window.innerWidth <= 520) ? Math.max(10, baseFs-5) : baseFs; // มือถือย่อ 5px
+      ctx.font = `${fs}px ui-sans-serif, system-ui`;
+      ctx.fillStyle = "rgba(17,24,39,.78)";
+
+      function coloredLabel(x, y, parts){
+        let cx = x;
+        parts.forEach(([text, color])=>{
+          ctx.fillStyle = color;
+          ctx.fillText(text, cx, y);
+          cx += ctx.measureText(text).width;
+        });
+      }
+
+      coloredLabel(28, 36, [
+        ["คลื่นย่อย 1 (", "rgba(17,24,39,.78)"],
+        ["ฟ้า", "rgba(37,99,235,.95)"],
+        ["): ไปทางขวา", "rgba(17,24,39,.78)"]
+      ]);
+
+      coloredLabel(28, 58, [
+        ["คลื่นย่อย 2 (", "rgba(17,24,39,.78)"],
+        ["ส้ม", "rgba(245,158,11,.95)"],
+        ["): ไปทางซ้าย", "rgba(17,24,39,.78)"]
+      ]);
+
+      coloredLabel(28, 80, [
+        ["คลื่นรวม (", "rgba(17,24,39,.78)"],
+        ["ดำ", "rgba(17,24,39,.92)"],
+        ["): ผลบวกแบบ superposition", "rgba(17,24,39,.78)"]
+      ]);
+
+      ctx.restore();
+    }
+
+    requestAnimationFrame(tick);
+  }
+
+  // ---------- Formula & Quiz modals ----------
+  const modalFormula = $("#modalFormula");
+  const modalQuiz = $("#modalQuiz");
+  const checkBar = $("#checkBar");
+
+  function openModal(which){
+    if(which==="formula"){
+      modalFormula.classList.add("show");
+      modalFormula.setAttribute("aria-hidden","false");
+      checkBar.classList.remove("show");
+    }
+    if(which==="quiz"){
+      modalQuiz.classList.add("show");
+      modalQuiz.setAttribute("aria-hidden","false");
+      checkBar.classList.add("show");
+      // typeset quiz if needed
+      if(window.MathJax && window.MathJax.typesetPromise){
+        window.MathJax.typesetPromise([modalQuiz]).catch(()=>{});
+      }
+    }
+    document.body.style.overflow = "hidden";
+  }
+  function closeModal(which){
+    if(which==="formula"){
+      modalFormula.classList.remove("show");
+      modalFormula.setAttribute("aria-hidden","true");
+    }
+    if(which==="quiz"){
+      modalQuiz.classList.remove("show");
+      modalQuiz.setAttribute("aria-hidden","true");
+      checkBar.classList.remove("show");
+    }
+    if(!modalFormula.classList.contains("show") && !modalQuiz.classList.contains("show")){
+      document.body.style.overflow = "";
+    }
+  }
+
+  $("#btnFormula").addEventListener("click", ()=>openModal("formula"));
+  $("#btnQuiz").addEventListener("click", ()=>openModal("quiz"));
+  $$(".closeX").forEach(x=>{
+    x.addEventListener("click", ()=>{
+      const w = x.dataset.close;
+      closeModal(w);
+    });
+  });
+  $("#toQuizFromFormula").addEventListener("click", ()=>{
+    closeModal("formula");
+    openModal("quiz");
+  });
+  $("#toFormulaFromQuiz").addEventListener("click", ()=>{
+    closeModal("quiz");
+    openModal("formula");
+  });
+
+  // close on backdrop click
+  [modalFormula, modalQuiz].forEach(m=>{
+    m.addEventListener("click", (e)=>{
+      if(e.target === m){
+        closeModal(m.id==="modalFormula" ? "formula" : "quiz");
+      }
+    });
+  });
+
+  // ---------- Quiz data (A–E ตามมาตรฐานใหม่) ----------
+  const quiz = [
+    {
+      id:"q1",
+      title:"ข้อ 1) ข้อใดอธิบาย “คลื่นเดินทาง” ได้ถูกต้องที่สุด",
+      options:[
+        ["A","รูปคลื่นเลื่อนไปตามตำแหน่ง และพลังงานถูกส่งต่อไปตามสื่อกลาง"],
+        ["B","รูปคลื่นไม่เลื่อน แต่มีปมและปฏิบัพอยู่ตำแหน่งคงที่"],
+        ["C","อนุภาคของสื่อกลางเดินทางไปพร้อมกับคลื่นตลอดเส้นทาง"],
+        ["D","เกิดจากคลื่นสองขบวนสวนทางกันเท่านั้นเสมอ"],
+        ["E","ต้องเกิดเฉพาะในเชือกปลายตรึงเท่านั้น"]
+      ],
+      correct:"A",
+      explain:`แนวคิดหลัก: คลื่นเดินทางคือ “รูปคลื่น” ที่เลื่อนไปตามตำแหน่ง และพลังงานถูกส่งต่อไปตามสื่อกลาง
+แต่อนุภาคของสื่อกลางเพียงสั่นรอบตำแหน่งสมดุล ไม่ได้เดินทางไกลไปกับคลื่น`
+    },
+    {
+      id:"q2",
+      title:"ข้อ 2) ในคลื่นนิ่ง จุดสีแดง (Node) หมายถึงอะไร?",
+      options:[
+        ["A","จุดที่มีการกระจัดมากที่สุดตลอดเวลา"],
+        ["B","จุดที่มีการกระจัดเป็นศูนย์ตลอดเวลา"],
+        ["C","จุดที่คลื่นรวมมีความเร็วมากที่สุด"],
+        ["D","จุดที่พลังงานสูงสุดเสมอ"],
+        ["E","จุดที่เกิดเฉพาะที่ปลายเชือกเท่านั้น"]
+      ],
+      correct:"B",
+      explain:`Node (ปม) คือจุดที่สั่นเป็นศูนย์ตลอดเวลา
+ในแล็บนี้ทำเป็นจุดแดงเพื่อให้สังเกตง่าย`
+    },
+    {
+      id:"q3",
+      title:`ข้อ 3) ให้ y₁ = A sin(kx − ωt) และ y₂ = A sin(kx + ωt) จงเลือกสมการคลื่นรวมที่ถูกต้อง`,
+      options:[
+        ["A","y = 2A cos(kx) sin(ωt)"],
+        ["B","y = 2A sin(kx) cos(ωt)"],
+        ["C","y = A sin(kx − ωt)"],
+        ["D","y = A sin(kx + ωt)"],
+        ["E","y = A sin(kx) cos(ωt)"]
+      ],
+      correct:"B",
+      explain:`ใช้หลักซ้อนทับ \(y=y_1+y_2\) และเอกลักษณ์
+\\(\\sin(\\alpha)+\\sin(\\beta)=2\\sin\\left(\\frac{\\alpha+\\beta}{2}\\right)\\cos\\left(\\frac{\\alpha-\\beta}{2}\\right)\\)
+จะได้ผลลัพธ์เป็น \\(y=2A\\sin(kx)\\cos(\\omega t)\\) ซึ่งเป็นสมการคลื่นนิ่ง`
+    }
+  ];
+
+  function renderQuiz(){
+    const area = $("#quizArea");
+    area.innerHTML = "";
+    quiz.forEach((q, idx)=>{
+      const card = document.createElement("div");
+      card.className = "qCard";
+      card.innerHTML = `
+        <div class="qTitle">${q.title}</div>
+        <div class="opt">
+          ${q.options.map(([key, text])=>`
+            <label>
+              <input type="radio" name="${q.id}" value="${key}"/>
+              <div><b>${key}.</b> <span>${text}</span></div>
+            </label>
+          `).join("")}
+        </div>
+        <div class="ans" id="ans_${q.id}">
+          <div><span class="correct">เฉลยที่ถูก: ${q.correct}</span></div>
+          <div class="small" style="margin-top:6px">${q.explain}</div>
+        </div>
+      `;
+      area.appendChild(card);
+    });
+
+    // typeset
+    if(window.MathJax && window.MathJax.typesetPromise){
+      window.MathJax.typesetPromise([area]).catch(()=>{});
+    }
+  }
+
+  function showAnswersOnlyIfAnswered(){
+    quiz.forEach(q=>{
+      const picked = document.querySelector(`input[name="${q.id}"]:checked`);
+      const ansBox = $("#ans_"+q.id);
+      if(picked){
+        ansBox.classList.add("show");
+      }else{
+        ansBox.classList.remove("show");
+      }
+    });
+  }
+
+  function grade(){
+    let score = 0;
+    quiz.forEach(q=>{
+      const picked = document.querySelector(`input[name="${q.id}"]:checked`);
+      if(picked && picked.value === q.correct) score++;
+    });
+    return score;
+  }
+
+  $("#btnCheck").addEventListener("click", ()=>{
+    showAnswersOnlyIfAnswered();
+    const s = grade();
+    const pill = $("#scorePill");
+    pill.style.display = "inline-flex";
+    pill.textContent = `คะแนน: ${s}/${quiz.length}`;
+    if(window.MathJax && window.MathJax.typesetPromise){
+      window.MathJax.typesetPromise([modalQuiz]).catch(()=>{});
+    }
+  });
+
+  // ---------- Mobile toolbar hide/show + draggable (เฉพาะมือถือ) ----------
+  const mobileToggle = document.getElementById("mobileToggle");
+  const mainToolbar = document.getElementById("mainToolbar");
+
+  function isMobile(){ return window.matchMedia && window.matchMedia("(max-width: 520px)").matches; }
+
+  function syncToggleText(){
+    if(!mobileToggle) return;
+    const hidden = document.body.classList.contains("toolbarHidden");
+    mobileToggle.textContent = hidden ? "▴ แสดงปุ่ม" : "▾ ซ่อนปุ่ม";
+  }
+
+  // วางปุ่มซ่อนปุ่มไว้เหนือแถบปุ่มหลัก (ใกล้ปุ่มรีเซ็ต)
+  function placeToggleNearToolbar(){
+    if(!mobileToggle || !mainToolbar || !isMobile()) return;
+
+    // ถ้ามีตำแหน่งที่ลากไว้ ให้ใช้ก่อน
+    const saved = localStorage.getItem("rw_toggle_pos");
+    if(saved){
+      try{
+        const {x,y} = JSON.parse(saved);
+        if(Number.isFinite(x) && Number.isFinite(y)){
+          mobileToggle.style.left = x + "px";
+          mobileToggle.style.top  = y + "px";
+          return;
+        }
+      }catch(e){}
+    }
+
+    const tb = mainToolbar.getBoundingClientRect();
+    const vvTop = window.visualViewport ? window.visualViewport.offsetTop : 0;
+    const safeTop = 8 + vvTop;
+
+    const x = Math.max(10, tb.left);
+    const y = Math.max(safeTop, tb.top - mobileToggle.offsetHeight - 8);
+    mobileToggle.style.left = Math.round(x) + "px";
+    mobileToggle.style.top  = Math.round(y) + "px";
+  }
+
+  // Drag + Tap toggle (แยก tap กับ drag ด้วย threshold)
+  function enableDragAndTap(){
+    if(!mobileToggle) return;
+
+    let isDown = false;
+    let dragged = false;
+    let startPt = {x:0,y:0};
+    let offset = {x:0,y:0};
+    let activePointerId = null;
+    const THRESH = 8; // px
+
+    function pt(ev){
+      if(ev.touches && ev.touches[0]) return {x: ev.touches[0].clientX, y: ev.touches[0].clientY};
+      return {x: ev.clientX, y: ev.clientY};
+    }
+
+    function clampToViewport(x,y){
+      const w = mobileToggle.offsetWidth;
+      const h = mobileToggle.offsetHeight;
+
+      const vvTop = window.visualViewport ? window.visualViewport.offsetTop : 0;
+      const vvBottomInset = window.visualViewport ? (window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop) : 0;
+
+      const minX = 8;
+      const minY = 8 + vvTop;
+      const maxX = window.innerWidth - w - 8;
+      const maxY = window.innerHeight - h - 8 - vvBottomInset;
+
+      return {
+        x: Math.max(minX, Math.min(maxX, x)),
+        y: Math.max(minY, Math.min(maxY, y))
+      };
+    }
+
+    const down = (ev)=>{
+      if(!isMobile()) return;
+      isDown = true;
+      dragged = false;
+
+      const p = pt(ev);
+      startPt = {x:p.x, y:p.y};
+
+      const r = mobileToggle.getBoundingClientRect();
+      offset = {x: p.x - r.left, y: p.y - r.top};
+
+      if(ev.pointerId != null){
+        activePointerId = ev.pointerId;
+        try{ mobileToggle.setPointerCapture(ev.pointerId); }catch(e){}
+      }
+      ev.preventDefault();
+    };
+
+    const move = (ev)=>{
+      if(!isDown) return;
+      if(ev.pointerId != null && activePointerId != null && ev.pointerId !== activePointerId) return;
+
+      const p = pt(ev);
+      const dist = Math.hypot(p.x - startPt.x, p.y - startPt.y);
+      if(dist > THRESH) dragged = true;
+
+      if(dragged){
+        let x = p.x - offset.x;
+        let y = p.y - offset.y;
+        const c = clampToViewport(x,y);
+        mobileToggle.style.left = Math.round(c.x) + "px";
+        mobileToggle.style.top  = Math.round(c.y) + "px";
+      }
+      ev.preventDefault();
+    };
+
+    const up = (ev)=>{
+      if(!isDown) return;
+      if(ev.pointerId != null && activePointerId != null && ev.pointerId !== activePointerId) return;
+
+      isDown = false;
+
+      // ถ้า "ไม่ได้ลาก" ให้ถือว่าเป็นการกด (toggle)
+      if(!dragged){
+        document.body.classList.toggle("toolbarHidden");
+        syncToggleText();
+      }else{
+        // ถ้าลาก ให้บันทึกตำแหน่ง
+        const r = mobileToggle.getBoundingClientRect();
+        localStorage.setItem("rw_toggle_pos", JSON.stringify({x: Math.round(r.left), y: Math.round(r.top)}));
+      }
+
+      activePointerId = null;
+      ev.preventDefault();
+    };
+
+    mobileToggle.addEventListener("pointerdown", down);
+    window.addEventListener("pointermove", move, {passive:false});
+    window.addEventListener("pointerup", up, {passive:false});
+
+    // fallback touch
+    mobileToggle.addEventListener("touchstart", down, {passive:false});
+    window.addEventListener("touchmove", move, {passive:false});
+    window.addEventListener("touchend", up, {passive:false});
+  }
+
+  if(mobileToggle){
+    syncToggleText();
+    enableDragAndTap();
+    setTimeout(placeToggleNearToolbar, 50);
+    window.addEventListener("resize", ()=>setTimeout(placeToggleNearToolbar, 50));
+    if(window.visualViewport){
+      window.visualViewport.addEventListener("resize", ()=>setTimeout(placeToggleNearToolbar, 50));
+      window.visualViewport.addEventListener("scroll", ()=>setTimeout(placeToggleNearToolbar, 50));
+    }
+  }
+
+  // ---------- init ----------
+
+
+  renderQuiz();
+  resetAll();
+  updateAllReadouts();
+
+  // default play state: running => show "หยุด"
+  playTxt.textContent = "หยุด";
+  btnPlay.querySelector(".ico").textContent = "⏸";
+
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>

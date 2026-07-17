@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>การสะท้อนของคลื่นในเส้นเชือก — ปลายอิสระ / ปลายตรึง</title>
+<style>
+  :root{--ink:#0f172a;--muted:#64748b;--line:#93c5fd;--bg:#ffffff;--accent:#2563eb;--ok:#16a34a;--panel:#f0f9ff;--card:#ffffff;--shadow:0 10px 30px rgba(2,6,23,.08);--reset:#e5e7eb;--explain:#fed7aa;--quiz:#bbf7d0;--quizBorder:#86efac;--btnText:#0f172a}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{margin:0;font-family:system-ui,Inter,'Noto Sans Thai',sans-serif;color:var(--ink);background:var(--bg)}
+  header{padding:12px 16px;border-bottom:1px solid var(--line);display:grid;gap:10px}
+  h1{margin:0;font-size:18px;color:var(--accent)}
+  .grid{display:grid;gap:10px}
+  .controls{display:grid;grid-template-columns:repeat(12,1fr);gap:8px}
+  .ctrl{grid-column:span 12;background:transparent;border:0;border-radius:12px;padding:6px 0;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .ctrl label{font-size:14px;color:var(--muted)}
+  .ctrl .value{min-width:60px;text-align:center;font-variant-numeric:tabular-nums}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .seg button{padding:6px 10px;border:0;background:#fff;cursor:pointer;font-size:14px}
+  .seg button[aria-pressed="true"]{background:var(--accent);color:#fff}
+  .btn{appearance:none;border:1px solid var(--line);background:#fff;padding:8px 14px;border-radius:10px;cursor:pointer;font-weight:600}
+  .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .wrap{padding:12px 16px}
+  canvas{width:100%;height:360px;display:block;background:transparent;border:0;border-radius:0;position:relative;z-index:2}
+  .legend{font-size:13px;color:var(--muted);display:flex;gap:14px;flex-wrap:wrap}
+  .badge{border:1px solid var(--line);background:#fff;padding:2px 8px;border-radius:999px;font-size:12px}
+  .stage{position:relative;border:1px solid var(--line);border-radius:14px;background:linear-gradient(#ffffff 0%,#fbfdff 100%);overflow:hidden}
+  .pole{position:absolute;right:22px;top:0;bottom:0;width:6px;z-index:1;background:repeating-linear-gradient(180deg,#cbd5e1 0 6px,#e2e8f0 6px 12px);border-left:1px solid #94a3b8;border-right:1px solid #94a3b8;border-radius:3px}
+  .midline{position:absolute;left:0;right:0;height:1px;background:#cbd5e1;z-index:1}
+  .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(15,23,42,.35);backdrop-filter:blur(2px);z-index:1000}
+  .modal[open]{display:flex}
+  /* IMPORTANT: ใช้ layout แบบ header+content แยกกัน เพื่อให้ปุ่มปิด/แถบล่างไม่โดนตัดในมือถือ */
+  .sheet{width:min(920px,96vw);max-height:90vh;overflow:hidden;background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);z-index:1001;display:flex;flex-direction:column}
+  .sheet header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;position:sticky;top:0;background:#fff;border-bottom:1px solid var(--line);flex:0 0 auto;z-index:5}
+  .sheet h2{margin:0;font-size:18px}
+  .sheet .content{padding:16px;line-height:1.65;overflow:auto;flex:1 1 auto;-webkit-overflow-scrolling:touch}
+  .chip{display:inline-block;padding:2px 8px;border-radius:999px;border:1px solid var(--line);font-size:12px;background:#eef2ff;color:#3730a3}
+  .note{padding:10px 12px;background:#ecfeff;border:1px solid #bae6fd;border-radius:12px}
+  .q{margin:12px 0;padding:14px;border:1px solid var(--line);border-radius:12px;background:#f0f9ff}
+  .q h4{margin:0 0 8px 0;font-size:14px}
+  .opt{display:block;margin:6px 0}
+  .score{font-weight:700;color:#0f766e}
+  .btn.ghost{background:#f8fafc}
+
+  /* สีปุ่มตามที่ขอ */
+  #btnReset{background:var(--reset);border-color:#cbd5e1;color:#111}
+  #btnExplain{background:var(--explain);border-color:#fdba74;color:#111}
+  #btnQuiz{background:var(--quiz);border-color:var(--quizBorder);color:#064e3b}
+
+  /* กล่องควบคุมไม่ต้องผูกกับการ์ดสีฟ้า */
+  .controls{align-items:start}
+  header{border-bottom:1px solid var(--line);background:#fff}
+
+  /* มือถือ: ปุ่มหลักลอยอยู่ด้านล่าง */
+  @media (max-width: 640px){
+    .wrap{padding-top:0; padding-bottom:110px;}
+    header{padding-bottom:12px;} /* มือถือ: ไม่เว้นช่องว่างใต้หัว */
+    .controls{gap:6px}
+    .ctrl.actions{
+      position:fixed; left:10px; right:10px; bottom:10px;
+      z-index:1200;
+      padding:10px;
+      background:rgba(255,255,255,.92);
+      border:1px solid var(--line);
+      border-radius:14px;
+      box-shadow:0 12px 28px rgba(2,6,23,.12);
+      justify-content:space-between;
+    }
+    .ctrl.actions .btn{flex:1; min-width:0; padding:10px 8px; border-radius:12px}
+    .ctrl.actions .btn + .btn{margin-left:8px}
+    .pole{right:2px;} /* มือถือ: ขยับเสาไปทางขวาให้ซ้อนทับห่วงสีดำ */
+    #midline{display:none;} /* มือถือ: ซ่อนเส้นสีเทาใต้เชือก */
+    canvas{height:300px;}
+  }
+
+
+  @media (min-width: 721px){
+/* ===== Fullscreen Explain/Quiz (ขยายเต็มหน้า) ===== */
+  #dlgExplain .sheet, #dlgQuiz .sheet{
+    width:100vw;
+    height:100vh;
+    max-height:100vh;
+    border-radius:0;
+    border-left:0;border-right:0;border-bottom:0;
+  }
+  #dlgExplain .sheet header, #dlgQuiz .sheet header{
+    background:linear-gradient(180deg,#ffffff 0%,#f8fafc 100%);
+  }
+  #dlgExplain .sheet .content, #dlgQuiz .sheet .content{
+    padding:18px 18px 26px;
+    background:linear-gradient(180deg,#ffffff 0%,#fbfdff 100%);
+  }
+
+  }
+
+/* อธิบายหลักการ: จัดให้อ่านง่าย + สีสัน */
+  #dlgExplain .sheet h2{color:var(--accent)}
+  #dlgExplain .sheet h3{
+    margin:18px 0 8px;
+    color:#0b3b8a;
+    font-size:16px;
+  }
+  #dlgExplain .sheet ul{padding-left:20px}
+  #dlgExplain .sheet li{margin:6px 0}
+  #dlgExplain .sheet code{
+    background:#eef2ff;
+    border:1px solid #c7d2fe;
+    padding:0 6px;
+    border-radius:8px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+  }
+  .callout{
+    padding:12px 14px;
+    border-radius:14px;
+    border:1px solid #bae6fd;
+    background:linear-gradient(180deg,#ecfeff 0%,#f0f9ff 100%);
+    box-shadow:0 10px 22px rgba(2,6,23,.06);
+    margin:12px 0;
+  }
+  .callout .title{
+    display:flex;align-items:center;gap:8px;
+    font-weight:800;color:#075985;margin-bottom:6px;
+  }
+  .miniGrid{
+    display:grid;gap:10px;
+    grid-template-columns:repeat(2, minmax(0,1fr));
+    margin:10px 0 4px;
+  }
+  .miniCard{
+    border:1px solid var(--line);
+    border-radius:14px;
+    background:#fff;
+    padding:12px 12px;
+  }
+  .miniCard b{color:#0f172a}
+  .miniCard .tag{display:inline-block;margin-top:6px;font-size:12px;border-radius:999px;padding:2px 8px;border:1px solid var(--line);background:#f1f5f9;color:#334155}
+
+  /* แบบฝึกหัด: สีพื้น + กรอบอ่านง่าย */
+  #dlgQuiz .sheet h2{color:#065f46}
+  #dlgQuiz .sheet .content{
+    background:linear-gradient(180deg,#ffffff 0%,#f7fff7 100%);
+  }
+  #dlgQuiz .q{
+    background:#f0fdf4;
+    border-color:var(--quizBorder);
+  }
+  #dlgQuiz details summary{cursor:pointer}
+
+  /* ===== มือถือ: เมื่อเปิดหน้าอธิบาย/แบบฝึกหัด ให้ซ่อนแถบปุ่มลอยด้านล่าง ===== */
+  body.modal-open .ctrl.actions{display:none !important;}
+  @media (max-width: 640px){
+    body.modal-open .wrap{padding-bottom:12px !important;}
+  }
+
+
+  /* --- Mobile full-screen + safe-area (fix address-bar / notch cropping) --- */
+  html,body{height:100%; margin:0}
+  /* ใช้ --vh แก้ปัญหา 100vh/100dvh บนบางมือถือ (address bar กินพื้นที่) */
+  body{min-height:calc(var(--vh, 1vh) * 100)}
+  .modal{padding:calc(16px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left))}
+  .sheet{max-height:calc((var(--vh, 1vh) * 100) - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom))}
+  .sheet header{position:sticky; top:0; z-index:5; background:linear-gradient(#fff, rgba(255,255,255,.92)); backdrop-filter:blur(6px)}
+  /* make sure content isn't hidden behind mobile browser bars */
+  .sheet .content{padding-bottom:calc(24px + env(safe-area-inset-bottom))}
+  /* keep close button reachable */
+  .sheet header .btn{white-space:nowrap}
+
+  /* Quiz: keep "ตรวจคำตอบ" always visible on mobile */
+  #dlgQuiz form > div:last-child{
+    position:sticky;
+    bottom:0;
+    padding:12px 0 calc(12px + env(safe-area-inset-bottom));
+    background:linear-gradient(rgba(255,255,255,0), rgba(255,255,255,.92) 25%, rgba(255,255,255,.98));
+    backdrop-filter:blur(6px);
+  }
+
+  @media (max-width: 720px){
+    /* มือถือแนวตั้ง/แนวนอน: ไม่บังคับเต็มจอ ให้เว้นขอบบน-ล่างเพื่อไม่ให้โดนแถบเบราว์เซอร์บัง */
+    .modal{
+      align-items:center;
+      justify-content:center;
+      padding:calc(12px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right))
+              calc(12px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left));
+    }
+    .sheet{
+      width:100%;
+      height:calc((var(--vh, 1vh) * 100) - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+      max-height:calc((var(--vh, 1vh) * 100) - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+      border-radius:16px;
+      border:1px solid var(--line);
+    }
+    .sheet header{
+      padding-top:12px;
+      padding-right:12px;
+      padding-left:12px;
+    }
+    .sheet .content{
+      padding-left:16px;
+      padding-right:16px;
+      padding-bottom:calc(28px + env(safe-area-inset-bottom));
+    }
+  }
+
+</style>
+</head>
+<body>
+  <header>
+    <h1>การสะท้อนของคลื่นในเส้นเชือก — เลือกปลายอิสระ / ปลายตรึง</h1>
+    <div class="grid">
+      <div class="controls">
+        <div class="ctrl" style="grid-column: span 5">
+          <label>โหมดปลายเชือก:</label>
+          <div class="seg" role="tablist" aria-label="boundary mode">
+            <button id="btnFree" role="tab" aria-pressed="true">ปลายอิสระ</button>
+            <button id="btnFixed" role="tab" aria-pressed="false">ปลายตรึง</button>
+          </div>
+          <span id="modeHint" class="badge">ปลายอิสระ: สะท้อน <b>ไม่กลับเฟส</b></span>
+        </div>
+        <div class="ctrl" style="grid-column: span 5">
+          <label for="speed">ความเร็วการเล่น (v):</label>
+          <input id="speed" type="range" min="0.1" max="1.5" step="0.01" value="1.00" />
+          <div class="value"><span id="speedVal">1.00</span>×</div>
+        </div>
+        <div class="ctrl actions" style="grid-column: span 2; justify-content:center; gap:8px">
+          <button id="play" class="btn primary" aria-pressed="false">▶ เล่น</button>
+          <button id="btnReset" class="btn">รีเซ็ต</button>
+          <button id="btnExplain" class="btn">อธิบายหลักการ</button>
+          <button id="btnQuiz" class="btn">แบบฝึกหัด</button>
+        </div>
+      </div>
+      <div class="legend">
+        <span class="badge">ศึกษาเพิ่มเติมที่ <a class="link" href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">เพจคลายปมฟิสิกส์</a></span>
+      </div>
+    </div>
+  </header>
+
+  <!-- โมดัล: อธิบายหลักการ -->
+  <dialog id="dlgExplain" class="modal" aria-labelledby="exTitle">
+    <div class="sheet" role="document">
+      <header>
+        <h2 id="exTitle">อธิบายหลักการ: การสะท้อนของคลื่นในเส้นเชือก</h2>
+        <button id="closeExplain" class="btn ghost">ปิด</button>
+      </header>
+      <div class="content">
+        <p>เมื่อพัลส์คลื่นเดินทางไปชนปลายเชือก ลักษณะคลื่นสะท้อนขึ้นกับ <span class="chip">เงื่อนไขขอบเขต</span> ที่ปลายนั้น ๆ</p>
+        <ul>
+          <li><b>ปลายอิสระ (free end)</b> — ปลายขยับขึ้นลงได้ ⇒ เทียบกับ <i>ความชันที่ปลายเป็นศูนย์</i> ⇒ คลื่นสะท้อน <b>ไม่กลับเฟส</b> (<code>r = +1</code>).</li>
+          <li><b>ปลายตรึง (fixed end)</b> — ปลายถูกผูกแน่น ⇒ <i>การกระจัดที่ปลายเป็นศูนย์</i> ⇒ คลื่นสะท้อน <b>กลับเฟส</b> (<code>r = −1</code>).</li>
+        </ul>
+
+        <div class="callout">
+          <div class="title">🧠 สรุปให้จำเร็ว</div>
+          <div class="miniGrid">
+            <div class="miniCard">
+              <b>ปลายอิสระ</b><br/>
+              สะท้อน <b>ไม่กลับเฟส</b> ⇒ <code>r=+1</code>
+              <div class="tag">สัน → สัน</div>
+            </div>
+            <div class="miniCard">
+              <b>ปลายตรึง</b><br/>
+              สะท้อน <b>กลับเฟส</b> ⇒ <code>r=-1</code>
+              <div class="tag">สัน → ท้อง</div>
+            </div>
+          </div>
+          <div style="color:#334155;font-size:13px;margin-top:6px">
+            เทคนิคจำ: <b>ตรึง = ตีกลับ</b> (กลับเฟส) / <b>อิสระ = อารมณ์ดี</b> (ไม่กลับเฟส)
+          </div>
+        </div>
+
+        
+        <h3>ความหมายของตัวแปร r</h3>
+        <p>
+          <b>r</b> คือ <b>สัมประสิทธิ์การสะท้อน (reflection coefficient)</b>
+          ใช้บอกความสัมพันธ์ของเฟสระหว่างคลื่นสะท้อนกับคลื่นตกกระทบ
+        </p>
+        <ul>
+          <li><b>r = +1</b> &rarr; คลื่นสะท้อน <b>ไม่กลับเฟส</b> (ปลายอิสระ)</li>
+          <li><b>r = −1</b> &rarr; คลื่นสะท้อน <b>กลับเฟส</b> (ปลายตรึง)</li>
+        </ul>
+
+        <h3>เหตุผลเชิงฟิสิกส์: แรงกระชากที่ปลายเชือก</h3>
+        <p>
+          <b>ปลายตรึง</b> ปลายเชือกถูกยึดแน่น การกระจัดที่ปลายต้องเป็นศูนย์เสมอ
+          เมื่อคลื่นมาถึง ปลายไม่สามารถขยับได้ จึงเกิด <b>แรงกระชากย้อนกลับ</b>
+          ทำให้การกระจัดใกล้ปลายต้องหันกลับทิศ คลื่นสะท้อนจึง <b>กลับเฟส</b>
+        </p>
+        <p>
+          <b>ปลายอิสระ</b> ปลายเชือกสามารถขยับขึ้นลงได้
+          เมื่อคลื่นมาถึง ปลายยอมเคลื่อนที่ตาม ไม่มีแรงกระชากรุนแรงย้อนกลับ
+          การกระจัดจึงยังคงทิศเดิม คลื่นสะท้อน <b>ไม่กลับเฟส</b>
+        </p>
+      
+
+       
+      </div>
+    </div>
+  </dialog>
+
+  <!-- โมดัล: แบบฝึกหัด -->
+  <dialog id="dlgQuiz" class="modal" aria-labelledby="qzTitle">
+    <div class="sheet" role="document">
+      <header>
+        <h2 id="qzTitle">แบบฝึกหัด: คลื่นสะท้อนที่ปลายเชือก</h2>
+        <button id="closeQuiz" class="btn ghost">ปิด</button>
+      </header>
+      <div class="content">
+        <form id="quizForm">
+          <div class="q">
+            <h4>1) ปล่อยพัลส์ “สันคลื่น” ไปชนปลายอิสระ ผลสะท้อนจะเป็นอย่างไร?</h4>
+            <label class="opt"><input type="radio" name="q1" value="a"/> กลับเฟสเป็นท้อง</label>
+            <label class="opt"><input type="radio" name="q1" value="b"/> ไม่กลับเฟสยังเป็นสัน</label>
+            <label class="opt"><input type="radio" name="q1" value="c"/> ดับสนิทไม่มีคลื่นสะท้อน</label>
+            <details style="margin-top:6px"><summary>เฉลย & คำอธิบาย</summary>ปลายอิสระ <code>r=+1</code> จึงไม่กลับเฟส</details>
+          </div>
+          <div class="q">
+            <h4>2) ปล่อยพัลส์ “ท้องคลื่น” ไปชนปลายตรึง ผลสะท้อนจะเป็นอย่างไร?</h4>
+            <label class="opt"><input type="radio" name="q2" value="a"/> ไม่กลับเฟสยังเป็นท้อง</label>
+            <label class="opt"><input type="radio" name="q2" value="b"/> กลับเฟสเป็นสัน</label>
+            <label class="opt"><input type="radio" name="q2" value="c"/> แอมพลิจูดมากขึ้นเป็นสองเท่า</label>
+            <details style="margin-top:6px"><summary>เฉลย & คำอธิบาย</summary>ปลายตรึง <code>r=-1</code> จึงกลับเฟส</details>
+          </div>
+          <div class="q">
+            <h4>3) โหมดปลายอิสระ หลังชนปลายทันทีควรเห็นอะไรใกล้ปลาย?</h4>
+            <label class="opt"><input type="radio" name="q3" value="a"/> ยอดสูงขึ้น (เสริมกัน)</label>
+            <label class="opt"><input type="radio" name="q3" value="b"/> ยอดต่ำลง (หักล้างกัน)</label>
+            <label class="opt"><input type="radio" name="q3" value="c"/> คงเดิม</label>
+            <details style="margin-top:6px"><summary>เฉลย & คำอธิบาย</summary>ที่ปลายอิสระ <code>r=+1</code> พัลส์เดินทางกับสะท้อนเฟสเดียวกัน จึงเสริมกันชั่วขณะ</details>
+          </div>
+          <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap">
+            <button type="button" id="btnSubmit" class="btn primary">ตรวจคำตอบ</button>
+            <span id="score" class="score"></span>
+          </div>
+        </form>
+      </div>
+    </div>
+  </dialog>
+
+  <div class="wrap">
+    <div class="stage">
+      <div class="pole" aria-hidden="true"></div>
+      <div id="midline" class="midline"></div>
+      <canvas id="cv" width="1200" height="360" aria-label="สตริงบนเส้นเชือก"></canvas>
+    </div>
+  </div>
+
+<script>
+(function(){
+  // ===== แก้ปัญหาแถบบน/ล่างมือถือทำให้ปุ่ม (fixed/sticky) โดนตัด =====
+  // สร้างหน่วย vh ที่อิงจากความสูงจริงของ viewport (window.innerHeight)
+  function setVh(){
+    const vh = window.innerHeight * 0.01;
+    document.documentElement.style.setProperty('--vh', `${vh}px`);
+  }
+  setVh();
+  window.addEventListener('resize', setVh, {passive:true});
+  window.addEventListener('orientationchange', setVh, {passive:true});
+
+  const cv = document.getElementById('cv');
+  const ctx = cv.getContext('2d');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('btnReset');
+  const speed = document.getElementById('speed');
+  const speedVal = document.getElementById('speedVal');
+  const btnFree = document.getElementById('btnFree');
+  const btnFixed = document.getElementById('btnFixed');
+  const modeHint = document.getElementById('modeHint');
+  const legendRefl = document.getElementById('legendRefl');
+
+  const dlgExplain = document.getElementById('dlgExplain');
+  const dlgQuiz = document.getElementById('dlgQuiz');
+  const closeExplain = document.getElementById('closeExplain');
+  const closeQuiz = document.getElementById('closeQuiz');
+  const btnExplain = document.getElementById('btnExplain');
+  const btnQuiz = document.getElementById('btnQuiz');
+  const btnSubmit = document.getElementById('btnSubmit');
+  const scoreEl = document.getElementById('score');
+
+  let mode = 'free';
+  let running = false;
+  let ended = false;  // จบการจำลอง
+  let t = 0;          // เวลาจำลอง
+  let last = 0;       // เวลาเฟรมก่อนหน้า
+
+  const A = 50;      // แอมพลิจูด
+  const sigma = 80;  // ความกว้างพัลส์
+  const x0 = -2*sigma;
+  const L = cv.width - 24; // ตำแหน่งเสา
+  const y0 = cv.height/2;  // แนวสมดุล
+
+  function layout(){ document.getElementById('midline').style.top = (y0|0)+'px'; }
+  layout();
+
+  function setMode(m){
+    mode = m;
+    const free = (m==='free');
+    btnFree.setAttribute('aria-pressed', free);
+    btnFixed.setAttribute('aria-pressed', !free);
+    modeHint.innerHTML = free ? 'ปลายอิสระ: สะท้อน <b>ไม่กลับเฟส</b>' : 'ปลายตรึง: สะท้อน <b>กลับเฟส</b>';
+    if(legendRefl) legendRefl.textContent = free ? 'ไม่กลับเฟส' : 'กลับเฟส';
+  }
+  btnFree.addEventListener('click', ()=> setMode('free'));
+  btnFixed.addEventListener('click', ()=> setMode('fixed'));
+
+  function togglePlay(){
+    if(!running){
+      if(ended){ t = 0; ended = false; }
+      running = true;
+      last = performance.now();
+      playBtn.textContent = '⏸ หยุด';
+      dlgExplain.removeAttribute('open');
+      dlgQuiz.removeAttribute('open');
+      document.body.classList.remove('modal-open');
+      requestAnimationFrame(loop);
+    }else{
+      running = false; // หยุดค้างภาพไว้
+      playBtn.textContent = '▶ เล่น';
+    }
+  }
+  playBtn.addEventListener('click', togglePlay);
+
+  resetBtn.addEventListener('click', ()=>{
+    running = false; ended = false; t = 0; playBtn.textContent = '▶ เล่น';
+    drawFrame(0);
+  });
+
+  speed.addEventListener('input', ()=>{ speedVal.textContent = Number(speed.value).toFixed(2); });
+
+  function gaussian(x,c){ return Math.exp(-((x-c)*(x-c))/(2*sigma*sigma)); }
+
+  function drawFrame(time){
+    ctx.clearRect(0,0,cv.width,cv.height);
+    ctx.save(); ctx.strokeStyle='#e2e8f0'; ctx.beginPath(); ctx.moveTo(0,y0+0.5); ctx.lineTo(cv.width,y0+0.5); ctx.stroke(); ctx.restore();
+
+    const v = 240; // px/s
+    const c1 = x0 + v*time;     // ศูนย์พัลส์เดินหน้า
+    const c2 = 2*L - c1;        // ศูนย์พัลส์สะท้อน
+    const r  = (mode==='free')? +1 : -1;
+
+    // วาดเส้นเชือก
+    ctx.beginPath();
+    const N=420;
+    for(let i=0;i<=N;i++){
+      const x=(i/N)*L;
+      let y=0;
+      if(c1 < L + 3*sigma) y += A*gaussian(x,c1);
+      if(c2 > -3*sigma)    y += r*A*gaussian(x,c2);
+      let Y = y0 - y;
+      if(i===N && mode==='fixed') Y = y0; // ปลายตรึงนิ่ง
+      if(i===0) ctx.moveTo(x,Y); else ctx.lineTo(x,Y);
+    }
+    ctx.strokeStyle='#2563eb'; ctx.lineWidth=3; ctx.lineJoin='round'; ctx.lineCap='round'; ctx.stroke();
+
+    // สัญลักษณ์ปลาย
+    if(mode==='free'){
+      let y=0; if(c1 < L + 3*sigma) y += A*gaussian(L,c1); if(c2 > -3*sigma) y += r*A*gaussian(L,c2);
+      ctx.beginPath(); ctx.arc(L, y0 - y, 8 * 1.3, 0, Math.PI*2); ctx.strokeStyle='#111'; ctx.lineWidth=2; ctx.stroke();
+    }else{
+      ctx.beginPath(); ctx.arc(L, y0, 6 * 1.3, 0, Math.PI*2); ctx.fillStyle='#111'; ctx.fill();
+    }
+
+    // เส้นประหลังเสา
+    ctx.beginPath(); ctx.moveTo(L,y0); ctx.lineTo(cv.width,y0); ctx.setLineDash([6,6]); ctx.strokeStyle='#94a3b8'; ctx.stroke(); ctx.setLineDash([]);
+  }
+
+  function loop(now){
+    if(!running) return;
+    const dt = Math.min(0.05,(now-last)/1000) * Number(speed.value); last = now; t += dt;
+    drawFrame(t);
+
+    const v=240; const c1=x0+v*t; const c2=2*L-c1;
+    if(c2 < -3*sigma){ running=false; ended=true; playBtn.textContent='▶ เล่นอีกครั้ง'; return; }
+    requestAnimationFrame(loop);
+  }
+
+  // โมดัล
+  document.getElementById('btnExplain').addEventListener('click', ()=>{ document.body.classList.add('modal-open'); dlgExplain.setAttribute('open',''); });
+  document.getElementById('btnQuiz').addEventListener('click', ()=>{ scoreEl.textContent=''; document.body.classList.add('modal-open'); dlgQuiz.setAttribute('open',''); });
+  closeExplain.addEventListener('click', ()=>{ dlgExplain.removeAttribute('open'); document.body.classList.remove('modal-open'); });
+  closeQuiz.addEventListener('click', ()=>{ dlgQuiz.removeAttribute('open'); document.body.classList.remove('modal-open'); });
+  dlgExplain.addEventListener('click', e=>{ if(e.target===dlgExplain){ dlgExplain.removeAttribute('open'); document.body.classList.remove('modal-open'); } });
+  dlgQuiz.addEventListener('click', e=>{ if(e.target===dlgQuiz){ dlgQuiz.removeAttribute('open'); document.body.classList.remove('modal-open'); } });
+
+  btnSubmit.addEventListener('click', ()=>{
+    const ans={q1:'b',q2:'b',q3:'a'}; let s=0; const data=new FormData(document.getElementById('quizForm'));
+    for(const k of Object.keys(ans)) if(data.get(k)===ans[k]) s++;
+    scoreEl.textContent=`คะแนน: ${s}/3`;
+  });
+
+  // เฟรมเริ่มต้น
+  drawFrame(0);
+})();
+</script>
+</body>
+</html>

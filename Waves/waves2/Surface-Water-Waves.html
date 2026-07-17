@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>คลื่นน้ำ: คลื่นจริง + อนุภาคซ้อนทับ (ตรวจความสัมพันธ์)</title>
+<style>
+:root{
+  --bg:#000;
+  --text:#eaeaea;
+  --blue:#3aa0ff;
+  --btn-play:#3aa0ff;
+  --btn-reset:#bfbfbf;
+  --btn-view:#ffffff;
+  --btn-principle:#ffd9a6; /* ส้มอ่อน */
+  --btn-quiz:#cfeec0;      /* เขียวอ่อน */
+  --water1:#2aa9ff;
+  --water2:#0b4d9b;
+  --cyan:#18e3ff;
+}
+body{ margin:0; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif; }
+header{ text-align:center; padding:10px 12px 6px; font-size:22px; font-weight:800; color:var(--blue); }
+.wrap{ max-width:1020px; margin:0 auto; padding:0 10px 14px; }
+canvas{ width:100%; height:auto; display:block; background:#000; border-radius:14px; touch-action:none; }
+.panel{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:center; padding:10px 0 6px; }
+button{
+  border:none; cursor:pointer; padding:10px 14px; border-radius:12px; font-weight:800;
+  box-shadow:0 6px 14px rgba(0,0,0,.35); user-select:none;
+}
+#playBtn{ background:var(--btn-play); color:#fff; }
+#resetBtn{ background:var(--btn-reset); color:#111; }
+#viewBtn{ background:var(--btn-view); color:#0b1b2b; border:2px solid var(--blue); }
+.chip{ background:#111; border:1px solid #2a2a2a; padding:8px 12px; border-radius:12px; display:flex; gap:10px; align-items:center; }
+.chip label{ font-size:14px; color:#ddd; }
+select{ accent-color:var(--blue); background:#0c0c0c; color:#eee; border:1px solid #2a2a2a; padding:7px 10px; border-radius:10px; }
+input[type="checkbox"]{ transform:scale(1.05); }
+.hint{ text-align:center; color:#bdbdbd; font-size:13px; margin-top:6px; line-height:1.35; }
+.footer{ text-align:center; padding-top:8px; font-size:13px; }
+.footer a{ color:var(--blue); text-decoration:none; font-weight:800; }
+@media (max-width:540px){
+  header{ font-size:18px; }
+  .panel{ gap:8px; }
+  button{ padding:10px 12px; }
+  .chip{ width:100%; justify-content:space-between; }
+  .chip label{ font-size:13px; }
+  select{ max-width:55vw; }
+}
+
+#principleBtn{ background:var(--btn-principle); color:#3b2a10; }
+#quizBtn{ background:var(--btn-quiz); color:#123018; }
+
+.modal{
+  position:fixed; inset:0;
+  background:rgba(0,0,0,0.78);
+  display:none;
+  z-index:9999;
+}
+.modal.show{ display:block; }
+.modal .sheet{
+  position:absolute; left:50%; top:50%;
+  transform:translate(-50%,-50%);
+  width:min(980px, calc(100vw - 22px));
+  /* ใช้ dvh เพื่อกันปัญหาแถบบน/ล่างของมือถือ + เว้น safe-area */
+  max-height:calc(100dvh - 22px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  overflow:auto;
+  background:#fff;
+  color:#111;
+  border-radius:18px;
+  box-shadow:0 18px 40px rgba(0,0,0,.45);
+  border:1px solid rgba(255,255,255,.35);
+}
+.modal .topbar{
+  position:sticky; top:0;
+  display:flex; align-items:center; justify-content:space-between;
+  gap:10px;
+  padding:12px 12px;
+  padding-right:86px; /* กันพื้นที่ให้ปุ่มปิดลอย */
+  background:linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,255,255,0.92));
+  border-bottom:1px solid #e7e7e7;
+  border-top-left-radius:18px;
+  border-top-right-radius:18px;
+  z-index:2;
+}
+.modal .title{
+  font-size:18px; font-weight:900;
+  color:#0b4d9b;
+  display:flex; align-items:center; gap:10px;
+}
+.modal .closeBtn{
+  /* ✅ ปุ่มปิดลอย: มองเห็นตลอด แม้เลื่อนในโมดัล (กัน safe-area มือถือ) */
+  position:fixed;
+  top:calc(12px + env(safe-area-inset-top));
+  right:calc(12px + env(safe-area-inset-right));
+  background:#fff;
+  border:2px solid #ddd;
+  color:#111;
+  padding:8px 12px;
+  border-radius:999px;
+  font-weight:900;
+  cursor:pointer;
+  box-shadow:0 8px 18px rgba(0,0,0,0.10);
+  z-index:10001;
+}
+.modal .content{ padding:14px 14px calc(22px + env(safe-area-inset-bottom) + 74px); }
+.box{
+  border-radius:16px;
+  padding:14px 14px;
+  border:1px solid #eee;
+  box-shadow:0 10px 24px rgba(0,0,0,.06);
+  background:#fff;
+}
+.box + .box{ margin-top:12px; }
+.box h3{
+  margin:0 0 8px;
+  font-size:18px;
+  color:#0b4d9b;
+}
+.box p, .box li{
+  font-size:15px;
+  line-height:1.55;
+  margin:0;
+}
+.box ul{ margin:8px 0 0 18px; padding:0; }
+
+.principleTheme .sheet{ background:#fff7ea; }
+.principleTheme .topbar{
+  background:linear-gradient(180deg, rgba(255,241,221,0.98), rgba(255,241,221,0.90));
+  border-bottom:1px solid rgba(220,165,80,.35);
+}
+.principleTheme .title{ color:#7a4a00; }
+.principleTheme .box{ border-color:rgba(220,165,80,.35); background:#fff; }
+
+.quizTheme .sheet{ background:#f5fff2; }
+.quizTheme .topbar{
+  background:linear-gradient(180deg, rgba(230,255,222,0.98), rgba(230,255,222,0.90));
+  border-bottom:1px solid rgba(90,160,90,.30);
+}
+.quizTheme .title{ color:#1a6a2e; }
+.quizTheme .box{ border-color:rgba(90,160,90,.25); background:#fff; }
+
+.quizHeader{
+  border-radius:16px;
+  border:1px solid rgba(90,160,90,.25);
+  background:#eaffdf;
+  padding:12px 12px;
+}
+.quizHeader h3{ margin:0; font-size:18px; color:#1a6a2e; }
+.quizHeader p{ margin:8px 0 0; color:#144a22; }
+
+.qCard{
+  border-radius:16px;
+  border:1px solid #e9e9e9;
+  background:#fff;
+  padding:12px 12px;
+  box-shadow:0 10px 22px rgba(0,0,0,.06);
+  margin-top:12px;
+}
+.qTitle{ font-weight:900; margin:0 0 10px; color:#0b4d9b; }
+.choices{ display:grid; gap:8px; }
+.choice{
+  display:flex; gap:10px; align-items:flex-start;
+  padding:10px 10px;
+  border:1px solid #e9e9e9;
+  border-radius:12px;
+  cursor:pointer;
+  user-select:none;
+}
+.choice input{ margin-top:3px; transform:scale(1.05); }
+.choice:hover{ background:#fafafa; }
+.choice .letter{
+  width:26px; height:26px; border-radius:10px;
+  display:flex; align-items:center; justify-content:center;
+  background:#f2f2f2; font-weight:900; color:#333;
+  flex:0 0 auto;
+}
+.explain{
+  margin-top:10px;
+  padding:10px 10px;
+  border-radius:12px;
+  border:1px solid #f0d2d2;
+  background:#fff6f6;
+  display:none;
+}
+.explain.show{ display:block; }
+.explain .ans{
+  font-weight:1000;
+  color:#d40000; /* เฉลยสีแดง */
+}
+.checkBar{
+  position:sticky;
+  bottom:0;
+  padding:12px 12px calc(12px + env(safe-area-inset-bottom));
+  background:linear-gradient(180deg, rgba(245,255,242,0), rgba(245,255,242,0.92) 35%, rgba(245,255,242,0.98));
+  border-top:1px solid rgba(90,160,90,.22);
+  z-index:3;
+}
+.checkBtn{
+  width:100%;
+  border:none;
+  background:var(--btn-quiz);
+  color:#123018;
+  padding:12px 14px;
+  border-radius:14px;
+  font-weight:1000;
+  cursor:pointer;
+  box-shadow:0 10px 22px rgba(0,0,0,.12);
+}
+.scoreBox{
+  margin-top:10px;
+  border-radius:14px;
+  border:1px solid rgba(90,160,90,.25);
+  background:#ffffff;
+  padding:10px 12px;
+  color:#123018;
+  display:none;
+}
+.scoreBox.show{ display:block; }
+.scoreBox b{ color:#0b4d9b; }
+
+@media (max-width:540px){
+  /* ✅ มือถือ: เว้นขอบบน/ล่างให้ไม่โดนแถบสถานะ/แถบล่าง และให้เลื่อนใน sheet ได้เต็ม */
+  .modal .sheet{
+    position:fixed;
+    left:7px;
+    right:7px;
+    top:calc(7px + env(safe-area-inset-top));
+    bottom:calc(7px + env(safe-area-inset-bottom));
+    width:auto;
+    max-height:none;
+    transform:none;
+  }
+  .modal .title{ font-size:16px; }
+  .qTitle{ font-size:15px; }
+}
+
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>คลื่นน้ำ: คลื่นจริง + อนุภาคซ้อนทับ (ตรวจความสัมพันธ์)</header>
+
+  <canvas id="cv" width="900" height="460"></canvas>
+
+  <div class="panel">
+    <button id="playBtn">▶️ เล่น</button>
+    <button id="resetBtn">🔄 รีเซ็ต</button>
+    <button id="viewBtn">🧪 โหมด: คลื่นน้ำ</button>
+    <button id="principleBtn">📘 อธิบายหลักการ</button>
+    <button id="quizBtn">📝 แบบฝึกหัด</button>
+
+    <div class="chip">
+      <label>โหมดการสั่น</label>
+      <select id="mode">
+        <option value="both" selected>รวม (วงกลม)</option>
+        <option value="trans">ตามขวาง</option>
+        <option value="long">ตามยาว</option>
+      </select>
+    </div>
+
+    <div class="chip">
+      <label><input id="showTracer" type="checkbox" checked> แสดงจุดตัวแทน (แดง)</label>
+    </div>
+  </div>
+
+  <div class="hint" id="hint">
+    เริ่มต้น: โหมด “คลื่นน้ำ” • กดปุ่มโหมดเพื่อสลับเป็น “อนุภาค” หรือ “ซ้อนทับ” (คลื่น + อนุภาคพร้อมกัน)
+  </div>
+
+  <div class="footer">
+    ศึกษาเพิ่มเติมที่ <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noreferrer">เพจคลายปมฟิสิกส์</a>
+  </div>
+</div>
+
+
+  <!-- ===== Modals ===== -->
+  <div id="principleModal" class="modal principleTheme" aria-hidden="true">
+    <div class="sheet" role="dialog" aria-modal="true" aria-label="อธิบายหลักการ">
+      <div class="topbar">
+        <div class="title">📘 อธิบายหลักการ: การเคลื่อนที่ของอนุภาคในคลื่นน้ำ</div>
+        <button class="closeBtn" data-close="principleModal">❌ ปิด</button>
+      </div>
+      <div class="content">
+        <div class="box">
+          <h3>1) คลื่นน้ำเป็น “คลื่นผสม”</h3>
+          <p>
+            คลื่นน้ำไม่ใช่คลื่นตามขวางล้วน และไม่ใช่คลื่นตามยาวล้วน แต่เป็น <b>คลื่นผสม</b>
+            คือมีทั้งการสั่นในแนวดิ่ง (ขึ้น–ลง) และการสั่นในแนวราบ (หน้า–หลัง) พร้อมกัน
+            ดังนั้น อนุภาคน้ำ <b>ไม่ได้วิ่งไปกับคลื่น</b> แต่เคลื่อนที่ “วนรอบตำแหน่งเดิม”
+          </p>
+        </div>
+
+        <div class="box">
+          <h3>2) น้ำลึก: วนเกือบเป็นวงกลม</h3>
+          <p>
+            ใกล้ผิวน้ำ อนุภาคจะเคลื่อนที่เป็นวงกลมหรือวงรีกว้าง ๆ (เกือบเป็นวงกลม) เมื่อคลื่นผ่านไป
+            อนุภาคจะกลับมาอยู่ใกล้ตำแหน่งเดิม
+          </p>
+        </div>
+
+        <div class="box">
+          <h3>3) ลึกลงไป: วงรีแบนลงเรื่อย ๆ</h3>
+          <p>
+            เมื่อความลึกเพิ่มขึ้น การเคลื่อนที่แนวดิ่งจะลดลง วงกลมจึงกลายเป็น <b>วงรีที่แบนลง</b> เรื่อย ๆ
+            สะท้อนว่าพลังงานคลื่นส่งลงไปด้านล่างได้น้อยลง
+          </p>
+        </div>
+
+        <div class="box">
+          <h3>4) ใกล้พื้น: ขยับน้อยลงเพราะความหนืด</h3>
+          <p>
+            บริเวณใกล้พื้น อนุภาคขยับขึ้น–ลงได้น้อยมาก (เกือบเป็นศูนย์) และอาจเหลือการขยับแนวราบเพียงเล็กน้อย
+            เพราะมี <b>ความหนืด</b> และแรงเสียดทาน/การหน่วงจากพื้น
+          </p>
+        </div>
+
+        <div class="box">
+          <h3>5) คลื่นซัดเข้าชายฝั่ง ทำไม “ยอดคลื่นล้ม”?</h3>
+          <p>
+            เมื่อคลื่นจากน้ำลึกเข้าสู่น้ำตื้น ส่วนล่างของคลื่นถูกหน่วงด้วยพื้นก่อน ทำให้ช้าลง
+            แต่ส่วนบนยังเร็วกว่า จึงเกิดการพับตัวไปข้างหน้าและแตกเป็น <b>คลื่นหัวแตก (breaking wave)</b>
+          </p>
+        </div>
+
+        <div class="box">
+          <p style="text-align:center; margin-top:6px;">
+            ศึกษาเพิ่มเติมที่ <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noreferrer" style="color:#0b4d9b; font-weight:1000; text-decoration:none;">เพจคลายปมฟิสิกส์</a>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="quizModal" class="modal quizTheme" aria-hidden="true">
+    <div class="sheet" role="dialog" aria-modal="true" aria-label="แบบฝึกหัด">
+      <div class="topbar">
+        <div class="title">📝 แบบฝึกหัด: อนุภาคในคลื่นน้ำ</div>
+        <button class="closeBtn" data-close="quizModal">❌ ปิด</button>
+      </div>
+
+      <div class="content">
+        <div class="quizHeader">
+          <h3>หัวข้อแบบฝึกหัด</h3>
+          <p>เลือกคำตอบ <b>A–D</b> แล้วกด “ตรวจคำตอบ” เพื่อดูคะแนน + เฉลยละเอียด (จะแสดงเฉพาะข้อที่เลือกคำตอบแล้ว)</p>
+        </div>
+
+        <div id="qWrap"></div>
+
+        <div class="checkBar">
+          <button id="checkBtn" class="checkBtn">✅ ตรวจคำตอบ</button>
+          <div id="scoreBox" class="scoreBox"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const cv = document.getElementById('cv');
+  const ctx = cv.getContext('2d');
+
+  const playBtn = document.getElementById('playBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const viewBtn = document.getElementById('viewBtn');
+  const principleBtn = document.getElementById('principleBtn');
+  const quizBtn = document.getElementById('quizBtn');
+  const principleModal = document.getElementById('principleModal');
+  const quizModal = document.getElementById('quizModal');
+  const hint = document.getElementById('hint');
+  const modeSel = document.getElementById('mode');
+  const showTracerChk = document.getElementById('showTracer');
+
+  // ----- Shared wave field (single source of truth) -----
+  const surfaceY0 = 150;
+  const depthPx = 260;
+  const A = 20;
+  const lambda = 180;
+  const k = 2*Math.PI/lambda;
+  const omega = 2*Math.PI/240;
+
+  let t = 0;
+  let running = false;
+
+  // view cycles: water -> particles -> overlay
+  const views = ["water", "particles", "overlay"];
+  let viewIndex = 0;
+
+  function phase(x){ return k*x - omega*t; }
+  function surfaceY(x){ return surfaceY0 + A*Math.sin(phase(x)); }
+
+  // ----- Particle field -----
+  const cols = 42, rows = 16;
+  const marginX = 40;
+  const spanX = cv.width - marginX*2;
+  const dx0 = spanX/(cols-1);
+  const dy0 = depthPx/(rows-1);
+
+  const particles = [];
+  for(let j=0;j<rows;j++){
+    for(let i=0;i<cols;i++){
+      const x0 = marginX + i*dx0;
+      const y0 = surfaceY0 + j*dy0;
+      particles.push({x0,y0,x:x0,y:Math.min(y0, surfaceY0 + depthPx - 4.2 - 0.5)});
+    }
+  }
+
+  // tracer: choose nearest particle (drag in particle/overlay modes)
+  let tracerIndex = Math.floor(cols*0.55);
+
+  const groundY = surfaceY0 + depthPx;      // เส้นพื้นดิน (ห้ามอนุภาคทะลุลงไปใต้เส้นนี้)
+  const pr = 4.2;                         // รัศมีอนุภาค (ใช้ตอนกันทะลุพื้น)
+
+  function clampToGround(y){
+    // กันไม่ให้อนุภาค “จมทะลุ” ลงใต้เส้นพื้นดิน
+    return Math.min(y, groundY - pr - 0.5);
+  }
+
+  function particleDisp(p){
+    const ph = phase(p.x0);
+    const mode = modeSel.value;
+
+    // depth factor: ผิวน้ำ=1, ใกล้พื้น=0
+    const z = (p.y0 - surfaceY0) / depthPx;
+    const depthFactor = Math.max(0, Math.min(1, 1 - z));
+
+    // ✅ ผิวน้ำ: วงกลม (ux, uy เต็ม)
+    // ✅ ลึกลงไป: วงรีแบนลง (uy ลดลงเรื่อย ๆ)
+    // ✅ ชิดพื้น: เกือบเป็นเส้นตรงแนวราบ (uy≈0) และ ux เหลือ 30% (ความหนืด)
+    const scaleX = 0.30 + 0.70 * depthFactor;         // ชิดพื้นเหลือ 30%
+    const scaleY = Math.pow(depthFactor, 1.35);       // ทำให้แบนลงไวขึ้นใกล้พื้น (วงรี → เส้นตรง)
+
+    let ux = 0, uy = 0;
+    const baseX = A * Math.cos(ph) * 0.9;
+    const baseY = A * Math.sin(ph) * 0.9;
+
+    if(mode==="both" || mode==="long") ux = baseX * scaleX;
+    if(mode==="both" || mode==="trans") uy = baseY * scaleY;
+
+    return {ux, uy};
+  }
+
+  // ----- Update -----
+  function update(){
+    if(!running) return;
+    t += 1;
+
+    const view = views[viewIndex];
+    if(view === "particles" || view === "overlay"){
+      for(const p of particles){
+        const d = particleDisp(p);
+        p.x = p.x0 + d.ux;
+        p.y = clampToGround(p.y0 + d.uy);
+      }
+    }
+  }
+
+  // ----- Draw helpers -----
+  function drawGround(){
+    // เส้นพื้นดินด้านล่าง (สีเทา)
+    ctx.save();
+    ctx.strokeStyle = 'rgba(200,200,200,0.55)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(18, groundY);
+    ctx.lineTo(cv.width-18, groundY);
+    ctx.stroke();
+
+    // เงาพื้นดินนิด ๆ ใต้เส้น (ให้รู้สึกเป็นขอบเขต)
+    const g = ctx.createLinearGradient(0, groundY, 0, groundY + 42);
+    g.addColorStop(0, 'rgba(200,200,200,0.10)');
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, groundY, cv.width, 42);
+    ctx.restore();
+  }
+
+  function drawVignette(){
+    const vg = ctx.createRadialGradient(cv.width*0.5, cv.height*0.22, 30, cv.width*0.5, cv.height*0.6, cv.width*0.9);
+    vg.addColorStop(0, 'rgba(255,255,255,0.06)');
+    vg.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = vg;
+    ctx.fillRect(0,0,cv.width,cv.height);
+  }
+
+  function drawWater(){
+    const grad = ctx.createLinearGradient(0, surfaceY0-30, 0, surfaceY0 + depthPx + 40);
+    grad.addColorStop(0,'rgba(42,169,255,0.65)');
+    grad.addColorStop(1,'rgba(11,77,155,0.92)');
+
+    ctx.beginPath();
+    ctx.moveTo(0, surfaceY(0));
+    for(let x=0; x<=cv.width; x+=6){
+      ctx.lineTo(x, surfaceY(x));
+    }
+    ctx.lineTo(cv.width, surfaceY0 + depthPx);
+    ctx.lineTo(0, surfaceY0 + depthPx);
+    ctx.closePath();
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // surface highlight
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.lineWidth = 2.2;
+    ctx.stroke();
+  }
+
+  function drawParticles(alpha=1.0){
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = '#18e3ff';
+    for(const p of particles){
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 4.2, 0, Math.PI*2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function drawTracer(){
+    if(!showTracerChk.checked) return;
+    const tr = particles[tracerIndex];
+    ctx.save();
+    ctx.fillStyle = '#ff2b2b';
+    ctx.beginPath();
+    ctx.arc(tr.x, tr.y, 7, 0, Math.PI*2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawCaption(text){
+    ctx.save();
+    ctx.fillStyle = 'rgba(255,255,255,0.82)';
+    ctx.font = '13px system-ui, -apple-system, Segoe UI, Arial';
+    ctx.fillText(text, 18, 26);
+    ctx.restore();
+  }
+
+  function draw(){
+    ctx.clearRect(0,0,cv.width,cv.height);
+    drawVignette();
+    drawGround();
+
+    const view = views[viewIndex];
+
+    if(view === "water"){
+      drawWater();
+      drawCaption('โหมดคลื่นน้ำ: ภาพผิวน้ำจริง');
+    } else if(view === "particles"){
+
+      drawParticles(1.0);
+      drawTracer();
+      drawCaption('โหมดอนุภาค: เม็ดสีฟ้า = อนุภาคน้ำ (เฟสเดียวกับคลื่น)');
+    } else {
+      // overlay
+      drawWater();
+      // particles on top (slightly transparent so see water)
+      drawParticles(0.9);
+      drawTracer();
+      drawCaption('โหมดซ้อนทับ: คลื่นน้ำ + อนุภาค (ตรวจความสัมพันธ์เฟส)');
+    }
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+
+  function frame(){
+    update();
+    requestAnimationFrame(frame);
+  }
+  frame();
+
+  // ----- Controls -----
+  function updateViewUI(){
+    const view = views[viewIndex];
+    if(view === "water"){
+      viewBtn.textContent = "🧪 โหมด: คลื่นน้ำ";
+      hint.innerHTML = 'ตอนนี้: <b>คลื่นน้ำ</b> • กดปุ่มโหมดเพื่อสลับเป็น <b>อนุภาค</b> หรือ <b>ซ้อนทับ</b>';
+    } else if(view === "particles"){
+      viewBtn.textContent = "🧪 โหมด: อนุภาค";
+      hint.innerHTML = 'ตอนนี้: <b>อนุภาค</b> • (ลากจุดแดงเพื่อเลือกอนุภาคใกล้ ๆ ได้) • กดปุ่มโหมดเพื่อไป <b>ซ้อนทับ</b>';
+    } else {
+      viewBtn.textContent = "🧪 โหมด: ซ้อนทับ";
+      hint.innerHTML = 'ตอนนี้: <b>ซ้อนทับ</b> • สังเกตว่า “สันคลื่น” ตรงกับการยกตัวของอนุภาคผิวน้ำ (เฟสเดียวกัน)';
+    }
+  }
+
+  playBtn.addEventListener('click', () => {
+    running = !running;
+    playBtn.textContent = running ? "⏸️ หยุด" : "▶️ เล่น";
+  });
+
+  resetBtn.addEventListener('click', () => {
+    t = 0;
+    running = false;
+    playBtn.textContent = "▶️ เล่น";
+    // reset particle positions to rest
+    for(const p of particles){ p.x = p.x0; p.y = clampToGround(p.y0); }
+    viewIndex = 0;
+    updateViewUI();
+  });
+
+  // ----- Modal helpers -----
+  function openModal(el){
+    if(!el) return;
+    el.classList.add('show');
+    el.setAttribute('aria-hidden','false');
+    // stop background scroll
+    document.body.style.overflow = 'hidden';
+  }
+  function closeModal(el){
+    if(!el) return;
+    el.classList.remove('show');
+    el.setAttribute('aria-hidden','true');
+    document.body.style.overflow = '';
+  }
+  // close by clicking backdrop
+  function bindBackdropClose(el){
+    el.addEventListener('mousedown', (ev) => {
+      if(ev.target === el) closeModal(el);
+    });
+    el.addEventListener('touchstart', (ev) => {
+      if(ev.target === el) closeModal(el);
+    }, {passive:true});
+  }
+  bindBackdropClose(principleModal);
+  bindBackdropClose(quizModal);
+
+  document.querySelectorAll('[data-close]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const id = btn.getAttribute('data-close');
+      closeModal(document.getElementById(id));
+    });
+  });
+
+  principleBtn.addEventListener('click', ()=> openModal(principleModal));
+  quizBtn.addEventListener('click', ()=> openModal(quizModal));
+
+  // ESC to close
+  window.addEventListener('keydown', (ev)=>{
+    if(ev.key === 'Escape'){
+      closeModal(principleModal);
+      closeModal(quizModal);
+    }
+  });
+
+  // ----- Quiz (6 ข้อ) -----
+  const questions = [
+    {
+      id:1,
+      text:"ถ้าคลื่นน้ำเป็นจังหวะสม่ำเสมอ กิ่งไม้ที่ลอยอยู่ห่างจากฝั่งจะเคลื่อนที่อย่างไร?",
+      choices:{
+        A:"เคลื่อนออกห่างจากฝั่งเรื่อย ๆ",
+        B:"เคลื่อนที่เข้าหาฝั่ง",
+        C:"สั่นขึ้น–ลงอยู่ใกล้ตำแหน่งเดิม",
+        D:"เคลื่อนที่ไปด้านข้างตลอดเวลา"
+      },
+      answer:"C",
+      explain:[
+        "แนวคิดสำคัญ: คลื่น “ส่งพลังงาน” แต่อนุภาคน้ำไม่ได้วิ่งตามคลื่นไปไกล",
+        "กิ่งไม้จึงสั่น/วนรอบตำแหน่งเดิม เมื่อคลื่นผ่านแล้วกลับมาใกล้ตำแหน่งเดิม"
+      ]
+    },
+    {
+      id:2,
+      text:"เมื่อมีคลื่นผิวน้ำ แผ่นโฟมที่ลอยอยู่ที่ผิวน้ำจะมีการเคลื่อนที่อย่างไร?",
+      choices:{
+        A:"อยู่นิ่ง ๆ เหมือนเดิม",
+        B:"กระเพื่อมขึ้นลงและอยู่กับที่เมื่อคลื่นผ่านไปแล้ว",
+        C:"เคลื่อนที่ตามคลื่น",
+        D:"ย้ายไปข้างหน้าแล้วถอยหลังไกลมาก"
+      },
+      answer:"B",
+      explain:[
+        "แผ่นโฟมเป็นตัวแทนอนุภาคผิวน้ำ: เคลื่อนที่ขึ้น–ลงเด่น และอาจมีแนวราบเล็กน้อย",
+        "หลังคลื่นผ่าน การกระจัดสุทธิใกล้ศูนย์ จึงยังอยู่ใกล้ตำแหน่งเดิม"
+      ]
+    },
+    {
+      id:3,
+      text:"เมื่อพิจารณาการเคลื่อนที่ของอนุภาคน้ำจากผิวน้ำลงสู่ก้นแหล่งน้ำ ข้อใดถูกต้องที่สุด?",
+      choices:{
+        A:"วงกลมจะใหญ่ขึ้นเรื่อย ๆ",
+        B:"วงรีจะแบนลงเรื่อย ๆ เมื่อยิ่งลึก",
+        C:"การเคลื่อนที่แนวดิ่งเพิ่มขึ้นเมื่อยิ่งลึก",
+        D:"อนุภาคเริ่มเคลื่อนที่เป็นเส้นตรงแนวดิ่ง"
+      },
+      answer:"B",
+      explain:[
+        "ยิ่งลึก พลังงานคลื่นส่งลงไปได้น้อยลง → แนวดิ่งลดลง",
+        "จึงเห็นการเคลื่อนที่จากวงกลม → วงรีแบน → เกือบเป็นเส้นตรงแนวราบใกล้พื้น"
+      ]
+    },
+    {
+      id:4,
+      text:"สาเหตุหลักที่ทำให้คลื่นซัดเข้าชายฝั่งแล้ว “ล้ม” (เกิดคลื่นหัวแตก) คือข้อใด?",
+      choices:{
+        A:"คลื่นสะท้อนจากฝั่ง",
+        B:"คลื่นชนกันเอง",
+        C:"ความเร็วคลื่นส่วนล่างลดลงก่อน ทำให้ยอดคลื่นพับตัว",
+        D:"ความหนืดของอากาศ"
+      },
+      answer:"C",
+      explain:[
+        "เมื่อน้ำตื้น ส่วนล่างถูกหน่วงด้วยพื้นก่อน → ช้าลง",
+        "ส่วนบนยังเร็วกว่า → คลื่นเอียงและพับตัวไปข้างหน้า จึงเกิดคลื่นหัวแตก"
+      ]
+    },
+    {
+      id:5,
+      text:"ข้อใดเรียงลำดับ “ความแรงของการเคลื่อนที่แนวดิ่ง” ของอนุภาคน้ำจากมากไปน้อยได้ถูกต้อง?",
+      choices:{
+        A:"ใกล้พื้น → กลางน้ำ → ผิวน้ำ",
+        B:"ผิวน้ำ → กลางน้ำ → ใกล้พื้น",
+        C:"กลางน้ำ → ผิวน้ำ → ใกล้พื้น",
+        D:"ผิวน้ำ → ใกล้พื้น → กลางน้ำ"
+      },
+      answer:"B",
+      explain:[
+        "ผิวน้ำ: แนวดิ่งชัดที่สุด",
+        "กลางน้ำ: แนวดิ่งลดลง",
+        "ใกล้พื้น: แนวดิ่งแทบเป็นศูนย์"
+      ]
+    },
+    {
+      id:6,
+      text:"คลื่นผิวน้ำเคลื่อนที่จากทะเลลึกเข้าสู่น้ำตื้นใกล้ชายฝั่ง ข้อใดอธิบายการเปลี่ยนแปลงได้ถูกต้องที่สุด?",
+      choices:{
+        A:"อนุภาคทุกระดับความลึกเคลื่อนที่เร็วขึ้นเท่ากัน",
+        B:"อนุภาคใกล้พื้นถูกหน่วงก่อน ทำให้ยอดคลื่นพับตัว",
+        C:"อนุภาคผิวน้ำหยุดเคลื่อนที่ก่อนส่วนล่าง",
+        D:"อนุภาคน้ำเริ่มเคลื่อนที่เป็นเส้นตรงไปทางฝั่ง"
+      },
+      answer:"B",
+      explain:[
+        "ส่วนล่างโดนพื้นหน่วงก่อน → ช้าลงก่อน",
+        "ส่วนบนยังเร็วกว่า → ยอดคลื่นพับไปข้างหน้า → แตกเป็นคลื่นหัวแตก"
+      ]
+    }
+  ];
+
+  const qWrap = document.getElementById('qWrap');
+  const checkBtn = document.getElementById('checkBtn');
+  const scoreBox = document.getElementById('scoreBox');
+
+  function renderQuiz(){
+    qWrap.innerHTML = '';
+    questions.forEach(q=>{
+      const card = document.createElement('div');
+      card.className = 'qCard';
+      card.dataset.qid = q.id;
+
+      const title = document.createElement('div');
+      title.className = 'qTitle';
+      title.textContent = `ข้อ ${q.id}  ${q.text}`;
+      card.appendChild(title);
+
+      const choices = document.createElement('div');
+      choices.className = 'choices';
+
+      ['A','B','C','D'].forEach(letter=>{
+        const row = document.createElement('label');
+        row.className = 'choice';
+
+        const input = document.createElement('input');
+        input.type = 'radio';
+        input.name = `q${q.id}`;
+        input.value = letter;
+
+        const badge = document.createElement('div');
+        badge.className = 'letter';
+        badge.textContent = letter;
+
+        const txt = document.createElement('div');
+        txt.textContent = q.choices[letter];
+
+        row.appendChild(input);
+        row.appendChild(badge);
+        row.appendChild(txt);
+
+        choices.appendChild(row);
+      });
+
+      card.appendChild(choices);
+
+      const exp = document.createElement('div');
+      exp.className = 'explain';
+      exp.innerHTML = `
+        <div><b class="ans">เฉลยคือช้อย ${q.answer}</b></div>
+        <ul style="margin:8px 0 0 18px;">
+          ${q.explain.map(s=>`<li>${s}</li>`).join('')}
+        </ul>
+      `;
+      card.appendChild(exp);
+
+      qWrap.appendChild(card);
+    });
+  }
+  renderQuiz();
+
+  function getSelected(letterName){
+    const el = document.querySelector(`input[name="${letterName}"]:checked`);
+    return el ? el.value : null;
+  }
+
+  checkBtn.addEventListener('click', ()=>{
+    let correct = 0;
+    let answered = 0;
+
+    questions.forEach(q=>{
+      const chosen = getSelected(`q${q.id}`);
+      const card = document.querySelector(`.qCard[data-qid="${q.id}"]`);
+      const exp = card.querySelector('.explain');
+
+      // แสดงเฉลยเฉพาะข้อที่เลือกคำตอบแล้ว
+      if(chosen){
+        answered++;
+        exp.classList.add('show');
+        if(chosen === q.answer) correct++;
+      }else{
+        exp.classList.remove('show');
+      }
+    });
+
+    const total = questions.length;
+    scoreBox.classList.add('show');
+    scoreBox.innerHTML = `
+      <b>คะแนน:</b> ${correct} / ${total}
+      <span style="opacity:.9;">(ตอบแล้ว ${answered} ข้อ)</span>
+      <div style="margin-top:6px; font-size:14px; opacity:.9;">
+        หมายเหตุ: เฉลยจะแสดงเฉพาะข้อที่เลือกคำตอบแล้วเท่านั้น
+      </div>
+    `;
+    // scroll a bit to show score on mobile
+    scoreBox.scrollIntoView({behavior:'smooth', block:'nearest'});
+  });
+
+  viewBtn.addEventListener('click', () => {
+    viewIndex = (viewIndex + 1) % views.length;
+    updateViewUI();
+  });
+
+  updateViewUI();
+
+  // ----- Interaction: move tracer by dragging in particle/overlay views -----
+  function getCanvasPos(clientX, clientY){
+    const r = cv.getBoundingClientRect();
+    const x = (clientX - r.left) * (cv.width / r.width);
+    const y = (clientY - r.top) * (cv.height / r.height);
+    return {x,y};
+  }
+
+  function pickNearest(x,y){
+    let best = tracerIndex;
+    let bestD = 1e18;
+    for(let i=0;i<particles.length;i++){
+      const p = particles[i];
+      const d = (p.x - x)*(p.x - x) + (p.y - y)*(p.y - y);
+      if(d < bestD){ bestD = d; best = i; }
+    }
+    tracerIndex = best;
+  }
+
+  function canDrag(){
+    const v = views[viewIndex];
+    return (v === "particles" || v === "overlay");
+  }
+
+  function hitTracer(x,y){
+    const tr = particles[tracerIndex];
+    return Math.hypot(x - tr.x, y - tr.y) < 7 + 10;
+  }
+
+  let dragging = false;
+
+  cv.addEventListener('mousedown', (ev) => {
+    if(!canDrag()) return;
+    const p = getCanvasPos(ev.clientX, ev.clientY);
+    if(hitTracer(p.x,p.y)){
+      dragging = true;
+    } else {
+      pickNearest(p.x,p.y);
+    }
+  });
+
+  window.addEventListener('mousemove', (ev) => {
+    if(!dragging) return;
+    const p = getCanvasPos(ev.clientX, ev.clientY);
+    pickNearest(p.x,p.y);
+  });
+
+  window.addEventListener('mouseup', () => dragging = false);
+
+  // Touch
+  cv.addEventListener('touchstart', (ev) => {
+    if(!canDrag()) return;
+    ev.preventDefault();
+    const t0 = ev.touches[0];
+    const p = getCanvasPos(t0.clientX, t0.clientY);
+    if(hitTracer(p.x,p.y)) dragging = true;
+    else pickNearest(p.x,p.y);
+  }, {passive:false});
+
+  cv.addEventListener('touchmove', (ev) => {
+    if(!dragging) return;
+    ev.preventDefault();
+    const t0 = ev.touches[0];
+    const p = getCanvasPos(t0.clientX, t0.clientY);
+    pickNearest(p.x,p.y);
+  }, {passive:false});
+
+  cv.addEventListener('touchend', (ev) => {
+    ev.preventDefault();
+    dragging = false;
+  }, {passive:false});
+
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>การแทรกสอดของคลื่น (2 แหล่ง) — HUD + Wavefronts + LaTeX</title>
+<style>
+  :root{
+    --ink:#0f172a; --muted:#64748b; --line:#e5e7eb; --bg:#ffffff;
+    --accent:#2563eb; --accent-soft:#eff6ff;
+
+    /* สีแนวตามสั่ง */
+    --fringe-green:#22c55e; /* เขียว (ใช้ทั้งบัพ/ปฏิบัพ ต่างกันที่เส้นเต็ม/ปะ) */
+
+    /* สีวงกลมสัน/ท้องคลื่น (ให้ต่างจากแนว) */
+    --front-solid:#64748b;  /* สัน: เทาเข้ม เส้นเต็ม */
+    --front-dash:#94a3b8;   /* ท้อง: เทาอ่อน เส้นปะ */
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{margin:0;font-family:system-ui,Inter,'Noto Sans Thai',sans-serif;color:var(--ink);background:var(--bg);display:flex;flex-direction:column}
+  header{padding:10px 14px;border-bottom:1px solid var(--line)}
+  header h1{font-size:18px;margin:0}
+
+  .stage{position:relative;flex:1 1 auto;min-height:0}
+  canvas{display:block;width:100%;height:100%;background:linear-gradient(#e0f2fe,#ffffff 40%)}
+
+  .hud{position:absolute;left:12px;right:12px;bottom:12px;
+       display:flex;gap:8px;flex-wrap:wrap;align-items:center;
+       background:rgba(255,255,255,.9);backdrop-filter:blur(6px);
+       border:1px solid var(--line);border-radius:12px;padding:8px 10px;
+       box-shadow:0 6px 24px rgba(0,0,0,.12)}
+  .row{display:flex;align-items:center;gap:6px}
+  .row label{font-size:12px;color:var(--muted)}
+  .row input[type="range"]{width:140px}
+  .row input[type="number"]{width:76px;padding:6px;border:1px solid var(--line);border-radius:8px}
+  .chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);padding:6px 10px;border-radius:999px;background:#fff;cursor:pointer;font-size:13px}
+  .chip input{accent-color:var(--accent)}
+  .pill{background:var(--accent-soft);color:#0b4aa0;border-radius:999px;padding:6px 10px;font-size:12px}
+  .counts{margin-left:auto;display:flex;gap:8px;align-items:center}
+
+  .btn{appearance:none;border:1px solid var(--line);background:#fff;padding:8px 12px;border-radius:10px;cursor:pointer;font-size:14px}
+  .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+  footer{flex:0 0 auto;border-top:1px solid var(--line);padding:8px 14px;color:#475569;font-size:12px}
+  a{color:#2563eb;text-decoration:none}
+
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;padding:16px;z-index:50}
+  .modal.open{display:flex}
+  .modal-panel{background:#fff;border-radius:16px;max-width:min(920px,92vw);width:100%;box-shadow:0 10px 40px rgba(0,0,0,.18);overflow:hidden}
+  .modal-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line)}
+  .modal-header h3{margin:0;font-size:16px}
+  .modal-body{padding:16px;line-height:1.7}
+  .modal-body p,.modal-body li{font-size:15px}
+  .modal-footer{padding:12px 16px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px}
+
+  /* Dropdown for fringes */
+  details.dd{position:relative}
+  details.dd>summary{list-style:none}
+  details.dd>summary::-webkit-details-marker{display:none}
+  .menu{position:absolute;top:100%;left:0;margin-top:6px;display:none;
+        background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 10px;
+        box-shadow:0 8px 24px rgba(0,0,0,.12);min-width:260px;z-index:20}
+  details.dd[open] .menu{display:block}
+  .menu label{display:flex;align-items:center;gap:8px;padding:6px 4px;font-size:13px;white-space:nowrap}
+
+  @media (max-width: 640px){
+    .row input[type="range"]{width:110px}
+    .row input[type="number"]{width:66px}
+  }
+
+  /* ===== Exercise modal beautify (มาตรฐานเพจ: เขียวอ่อน = ทำ/ฝึก) ===== */
+  #exerciseModal .modal-panel{max-width:min(980px,94vw)}
+  #exerciseModal .modal-body{
+    background:#f4fff6; /* เขียวอ่อนมาก ใกล้ขาว */
+  }
+  #exerciseModal .quiz-head{
+    display:flex;align-items:center;gap:10px;
+    background:#d7fbe3;border:1px solid #bfe9cb;
+    padding:10px 12px;border-radius:14px;margin:2px 0 12px;
+  }
+  #exerciseModal .quiz-head .icon{
+    width:34px;height:34px;border-radius:12px;
+    display:flex;align-items:center;justify-content:center;
+    background:#ffffff;border:1px solid #cfead9;
+    box-shadow:0 4px 14px rgba(0,0,0,.08);
+    flex:0 0 auto;
+  }
+  #exerciseModal .quiz-head .title{font-size:16px;margin:0}
+  #exerciseModal .quiz-head .desc{font-size:13px;color:#334155;margin:2px 0 0;line-height:1.5}
+
+  #exerciseModal .quiz-topic{
+    background:#ecfff2;border:1px solid #bfe9cb;
+    border-radius:14px;padding:10px 12px;margin:0 0 14px;
+  }
+  #exerciseModal .quiz-topic b{color:#14532d}
+  #exerciseModal .quiz-topic p{margin:6px 0 0;font-size:13px;color:#334155}
+
+  #exerciseModal ol{
+    list-style:none;padding:0;margin:0;
+    display:flex;flex-direction:column;gap:12px;
+    counter-reset:q;
+  }
+  #exerciseModal ol > li{
+    counter-increment:q;
+    background:#ffffff; /* กรอบโจทย์สีขาว */
+    border:1px solid #e5e7eb; /* เส้นเทาอ่อน 1px */
+    border-radius:14px;
+    padding:12px 12px 10px;
+    box-shadow:0 8px 22px rgba(0,0,0,.06);
+  }
+  #exerciseModal ol > li::before{
+    content:"ข้อ " counter(q);
+    display:inline-block;
+    font-weight:700;
+    color:#0f172a;
+    background:#f1f5f9;
+    border:1px solid #e2e8f0;
+    padding:4px 10px;border-radius:999px;
+    margin-bottom:10px;
+  }
+  #exerciseModal ol > li > b{display:inline-block;margin-top:6px}
+
+  #exerciseModal details{
+    margin-top:10px;
+    border-top:1px dashed #e2e8f0;
+    padding-top:10px;
+  }
+  #exerciseModal summary{
+    cursor:pointer;
+    user-select:none;
+    display:inline-flex;align-items:center;gap:8px;
+    background:#eef2ff;border:1px solid #dbeafe;
+    color:#1e3a8a;
+    padding:6px 10px;border-radius:999px;
+    font-weight:600;
+    font-size:13px;
+  }
+  #exerciseModal summary::marker{display:none}
+  #exerciseModal summary::before{content:"📝"}
+  #exerciseModal details[open] summary{background:#e0f2fe;border-color:#bae6fd}
+
+  #exerciseModal .modal-footer{background:#f4fff6}
+
+  /* มือถือ: เว้นระยะและขนาดตัวอักษรให้อ่านง่าย */
+  @media (max-width: 640px){
+    #exerciseModal .modal-body{padding:14px}
+    #exerciseModal ol > li{padding:12px}
+    #exerciseModal .quiz-head{padding:10px}
+  }
+
+
+  /* ===== Exercise modal: full-screen + scrollable (fix cannot scroll) ===== */
+  #exerciseModal.modal{padding:0}
+  #exerciseModal .modal-panel{
+    width:100vw;
+    max-width:100vw;
+    height:100vh;
+    border-radius:0;
+    display:flex;
+    flex-direction:column;
+  }
+  #exerciseModal .modal-header,
+  #exerciseModal .modal-footer{flex:0 0 auto}
+  #exerciseModal .modal-body{
+    flex:1 1 auto;
+    min-height:0;          /* critical for flex overflow */
+    overflow:auto;         /* allow scrolling inside */
+    -webkit-overflow-scrolling:touch;
+  }
+
+
+  /* ===== Mobile: move control panel below simulation + shrink simulation height ===== */
+  @media (max-width: 640px){
+    .stage{display:flex;flex-direction:column}
+    canvas{
+      flex:0 0 60vh;
+      height:60vh !important;
+    }
+    .hud{
+      position:static !important;
+      left:auto !important; right:auto !important; bottom:auto !important;
+      margin:10px 12px 12px;
+    }
+  }
+
+
+  /* ===== Formula modal: full-screen + scroll + orange theme (มาตรฐานเพจ: ส้ม=อ่าน/อธิบาย) ===== */
+  #formulaModal.modal{padding:0}
+  #formulaModal .modal-panel{
+    width:100vw;max-width:100vw;height:100vh;border-radius:0;
+    display:flex;flex-direction:column;
+  }
+  #formulaModal .modal-header,
+  #formulaModal .modal-footer{flex:0 0 auto}
+  #formulaModal .modal-body{
+    flex:1 1 auto;min-height:0;
+    overflow:auto;-webkit-overflow-scrolling:touch;
+    background:#fff7ed; /* ส้มอ่อนทั้งหน้า */
+  }
+  #formulaModal .intro{
+    background:#ffedd5;border:1px solid #fdba74;
+    border-radius:16px;padding:12px 12px;margin:0 0 14px;
+    box-shadow:0 8px 20px rgba(0,0,0,.06);
+  }
+  #formulaModal .intro h4{margin:0 0 6px;color:#1f2937}
+  #formulaModal .intro p{margin:6px 0;color:#334155;font-size:14px;line-height:1.65}
+  #formulaModal .case-grid{display:grid;grid-template-columns:1fr;gap:14px}
+  #formulaModal .case{
+    background:#ffffff;border:1px solid #fdba74;
+    border-radius:16px;padding:12px 12px;
+    box-shadow:0 10px 22px rgba(0,0,0,.07);
+  }
+  #formulaModal .case h4{
+    margin:0 0 8px;
+    font-size:16px;color:#0f172a;
+    display:flex;align-items:center;gap:8px;
+  }
+  #formulaModal .badge{
+    display:inline-flex;align-items:center;justify-content:center;
+    padding:4px 10px;border-radius:999px;
+    background:#ffedd5;border:1px solid #fdba74;
+    font-weight:800;color:#9a3412;font-size:13px;
+  }
+  #formulaModal .case ul{margin:8px 0 0;padding-left:18px}
+  #formulaModal .case li{margin:10px 0}
+  #formulaModal .eq{margin-top:6px;padding:8px 10px;border-radius:12px;background:#fff7ed;border:1px dashed #fed7aa}
+  #formulaModal .note{
+    margin-top:12px;
+    background:#fff;border:1px solid #e5e7eb;border-radius:14px;
+    padding:10px 12px;color:#334155;
+  }
+
+
+  /* ===== Proof modal: full-screen + scroll + orange theme + step cards ===== */
+  #proofModal.modal{padding:0}
+  #proofModal .modal-panel{
+    width:100vw;max-width:100vw;height:100vh;border-radius:0;
+    display:flex;flex-direction:column;
+  }
+  #proofModal .modal-header,
+  #proofModal .modal-footer{flex:0 0 auto}
+  #proofModal .modal-body{
+    flex:1 1 auto;min-height:0;
+    overflow:auto;-webkit-overflow-scrolling:touch;
+    background:#fff7ed;
+  }
+  #proofModal .step{
+    background:#fff;
+    border:1px solid #fdba74;
+    border-radius:16px;
+    padding:12px 12px;
+    margin:0 0 12px;
+    box-shadow:0 10px 22px rgba(0,0,0,.07);
+  }
+  #proofModal .step h4{
+    margin:0 0 8px;
+    font-size:15px;color:#0f172a;
+    display:flex;align-items:center;gap:8px;
+  }
+  #proofModal .step .tag{
+    display:inline-flex;align-items:center;justify-content:center;
+    padding:3px 9px;border-radius:999px;
+    background:#ffedd5;border:1px solid #fdba74;
+    font-weight:800;color:#9a3412;font-size:12px;
+  }
+  #proofModal .mathbox{
+    margin-top:8px;
+    padding:10px 10px;
+    border-radius:14px;
+    background:#fff7ed;
+    border:1px dashed #fed7aa;
+  }
+  #proofModal p, #proofModal li{font-size:14px;color:#334155;line-height:1.7}
+  #proofModal ul{margin:8px 0 0;padding-left:18px}
+
+</style>
+
+<!-- MathJax -->
+<script>
+  window.MathJax = { tex: {inlineMath: [['\\(','\\)'], ['$', '$']]} };
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<header>
+  <h1>การแทรกสอดของคลื่น (2 แหล่ง)</h1>
+</header>
+
+<div class="stage">
+  <canvas id="view"></canvas>
+
+  <div class="hud" id="hud">
+    <!-- ปุ่มเล่น/หยุด สีฟ้าอยู่ซ้ายสุด -->
+    <button id="playBtn" class="btn primary">⏸ หยุด</button>
+
+    <!-- เมนูดรอปดาวน์ควบคุมการแสดงแนวสีเขียว -->
+    <details class="dd">
+      <summary class="chip">⚙️ แนวสีเขียว ▾</summary>
+      <div class="menu">
+        <label><input type="checkbox" id="chkNodal" checked> แสดงแนวบัพ (เขียวเส้นปะ)</label>
+        <label><input type="checkbox" id="chkAnti"  checked> แสดงแนวปฏิบัพ (เขียวเส้นเต็ม)</label>
+      </div>
+    </details>
+
+    <label class="chip">
+      <input id="showFronts" type="checkbox" checked />
+      แสดงวงกลมสัน/ท้องคลื่น
+    </label>
+
+    <div class="row">
+      <label for="sepRange">d (cm)</label>
+      <input id="sepRange" type="range" min="2" max="50" step="0.1" value="10" />
+      <input id="sepNum" type="number" min="2" max="50" step="0.1" value="10" />
+    </div>
+    <div class="row">
+      <label for="freqRange">f (Hz)</label>
+      <input id="freqRange" type="range" min="0.2" max="20" step="0.01" value="2.0" />
+      <input id="freqNum" type="number" min="0.2" max="20" step="0.01" value="2.0" />
+    </div>
+    <div class="row">
+      <label for="speedRange">v (cm/s)</label>
+      <input id="speedRange" type="range" min="5" max="50" step="0.1" value="22" />
+      <input id="speedNum" type="number" min="5" max="50" step="0.1" value="22" />
+    </div>
+    <div class="row">
+      <label>เฟส</label>
+      <select id="phaseMode">
+        <option value="0">ตรงกัน (φ=0)</option>
+        <option value="PI">ตรงข้าม (φ=π)</option>
+      </select>
+    </div>
+
+    <span class="counts">
+      <span class="pill">λ = <b id="lambdaVal" class="stat">-</b> cm</span>
+      <span class="pill">แนวบัพ: <b id="nodalCount" class="stat">-</b></span>
+      <span class="pill">ปฏิบัพ: <b id="antiCount" class="stat">-</b></span>
+      <button id="formulaBtn" class="chip">📘 สูตรสำคัญ</button>
+      <button id="exerciseBtn" class="chip">🧪 แบบฝึกหัดพร้อมเฉลย</button>
+    </span>
+  </div>
+</div>
+
+<footer>
+  เคล็ดลับ: ปรับ f และ d เพื่อสังเกตจำนวนแนวบัพ/ปฏิบัพ (ตามอัตราส่วน <i>d/λ</i>) ·
+  ศึกษาเพิ่มเติมได้ที่เพจ <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">คลายปมฟิสิกส์</a>
+</footer>
+
+<!-- สูตรสำคัญ -->
+<div id="formulaModal" class="modal" aria-hidden="true">
+  <div class="modal-panel">
+    <div class="modal-header">
+      <h3>สรุปสูตรการแทรกสอดของคลื่น (2 แหล่ง)</h3>
+      <button id="proofBtn" class="btn" style="border-color:#fdba74;background:#ffedd5;color:#9a3412;font-weight:800">🧾 พิสูจน์สมการ</button>
+      <button class="btn" data-close="formulaModal">ปิด ✖</button>
+    </div>
+    <div class="modal-body">
+      <div class="intro">
+        <h4>การแทรกสอดของคลื่นเกิดจากอะไร?</h4>
+        <p>
+          เมื่อคลื่นจาก <b>2 แหล่งกำเนิด</b> เดินทางมาซ้อนกันที่จุดสังเกตเดียวกัน
+          การกระจัดของคลื่นจะ <b>รวมกันแบบซ้อนทับ (superposition)</b>
+          ทำให้บางตำแหน่งเกิดการ <b>เสริมกัน</b> (แอมพลิจูดมาก) และบางตำแหน่งเกิดการ <b>หักล้างกัน</b> (แอมพลิจูดน้อยหรือเป็นศูนย์)
+        </p>
+        <p>
+          สิ่งที่เราเห็นเป็น “ลวดลายแนวเส้น” ของจุดที่สั่นแรง (แนวปฏิบัพ) และจุดที่แทบไม่สั่น (แนวบัพ)
+          ซึ่งกำหนดโดย <b>ผลต่างทางเดิน</b> \(\Delta r = |S_1P - S_2P|\) และ “ความต่างเฟส” ของแหล่งกำเนิด
+        </p>
+      </div>
+
+      <div class="case-grid">
+        <div class="case">
+          <h4><span class="badge">เฟสตรงกัน</span> \(\phi=0\)</h4>
+          <ul>
+            <li>
+              <b>แนวปฏิบัพ (เสริมกัน)</b> — จุดสั่นแรง
+              <div class="eq">\(\Delta r = n\lambda\)</div>
+              <div class="eq">ถ้าอยู่ไกลพอ (มุมเล็ก) ใช้ได้ว่า \(\;d\sin\theta = n\lambda\)</div>
+              <div style="color:#64748b;font-size:13px;margin-top:6px">เมื่อ \(n=0,1,2,\dots\)</div>
+            </li>
+            <li>
+              <b>แนวบัพ (หักล้างกัน)</b> — จุดสั่นน้อย/เป็นศูนย์
+              <div class="eq">\(\Delta r = \left(n-\tfrac{1}{2}\right)\lambda\)</div>
+              <div class="eq">\(\;d\sin\theta = \left(n-\tfrac{1}{2}\right)\lambda\)</div>
+              <div style="color:#64748b;font-size:13px;margin-top:6px">เมื่อ \(n=1,2,3,\dots\)</div>
+            </li>
+          </ul>
+        </div>
+
+        <div class="case">
+          <h4><span class="badge">เฟสตรงข้าม</span> \(\phi=\pi\)</h4>
+          <ul>
+            <li>
+              <b>แนวปฏิบัพ (เสริมกัน)</b>
+              <div class="eq">\(\Delta r = \left(n-\tfrac{1}{2}\right)\lambda\)</div>
+              <div class="eq">\(\;d\sin\theta = \left(n-\tfrac{1}{2}\right)\lambda\)</div>
+              <div style="color:#64748b;font-size:13px;margin-top:6px">เมื่อ \(n=1,2,3,\dots\)</div>
+            </li>
+            <li>
+              <b>แนวบัพ (หักล้างกัน)</b>
+              <div class="eq">\(\Delta r = n\lambda\)</div>
+              <div class="eq">\(\;d\sin\theta = n\lambda\)</div>
+              <div style="color:#64748b;font-size:13px;margin-top:6px">เมื่อ \(n=0,1,2,\dots\)</div>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="note">
+        <b>สรุปที่ต้องจำ</b><br/>
+        \(\lambda=\dfrac{v}{f}\), โดย \(d\) คือระยะห่างแหล่งกำเนิด, \(\theta\) คือมุมเบนจากแนวกลาง, \(\Delta r = |S_1P-S_2P|\)
+      </div>
+</div>
+    <div class="modal-footer">
+      <button class="btn primary" data-close="formulaModal">เข้าใจแล้ว</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- พิสูจน์สมการ (ที่มาของสูตรแบบละเอียด) -->
+<div id="proofModal" class="modal" aria-hidden="true">
+  <div class="modal-panel">
+    <div class="modal-header">
+      <h3>พิสูจน์สมการ: ที่มาของสูตรการแทรกสอด</h3>
+      <button class="btn" data-close="proofModal">ปิด ✖</button>
+    </div>
+    <div class="modal-body">
+      <div class="step">
+        <h4><span class="tag">1</span> ตั้งจุดสังเกตและระยะทาง</h4>
+        <p>
+          มีแหล่งกำเนิด 2 แหล่ง \(S_1,S_2\) ให้คลื่นความถี่เดียวกันไปยังจุดสังเกต \(P\) โดยระยะทางคือ
+          \(r_1 = S_1P\) และ \(r_2 = S_2P\)
+        </p>
+      </div>
+
+      <div class="step">
+        <h4><span class="tag">2</span> เขียนการกระจัดของคลื่นแต่ละแหล่งที่จุด \(P\)</h4>
+        <div class="mathbox">
+          \[
+          y_1 = A\sin(\omega t - k r_1)
+          \]
+          \[
+          y_2 = A\sin(\omega t - k r_2 + \phi)
+          \]
+        </div>
+        <p>
+          โดย \(\omega = 2\pi f\), \(\;k=\dfrac{2\pi}{\lambda}\), และ \(\phi\) คือความต่างเฟสเริ่มต้น
+          (เฟสตรงกัน \(\phi=0\), เฟสตรงข้าม \(\phi=\pi\))
+        </p>
+      </div>
+
+      <div class="step">
+        <h4><span class="tag">3</span> ใช้กฎการซ้อนทับ: รวมการกระจัดที่จุดเดียวกัน</h4>
+        <div class="mathbox">
+          \[
+          y = y_1 + y_2
+          \]
+          \[
+          y = A\sin(\omega t - k r_1) + A\sin(\omega t - k r_2 + \phi)
+          \]
+        </div>
+        <p>นี่คือเหตุผลที่ต้องเน้นว่า “ที่จุดสังเกตเดียวกัน” เพราะเราบวกการกระจัดของ <b>ตำแหน่งเดียวกัน</b> เท่านั้น</p>
+      </div>
+
+      <div class="step">
+        <h4><span class="tag">4</span> รวมสมการด้วยเอกลักษณ์ตรีโกณมิติ</h4>
+        <p>ใช้สูตร</p>
+        <div class="mathbox">
+          \[
+          \sin a + \sin b = 2\sin\left(\frac{a+b}{2}\right)\cos\left(\frac{a-b}{2}\right)
+          \]
+        </div>
+        <p>ให้ \(a=\omega t - k r_1\), \(b=\omega t - k r_2 + \phi\) จะได้</p>
+        <div class="mathbox">
+          \[
+          y = 2A\cos\left(\frac{k(r_2-r_1)-\phi}{2}\right)
+          \sin\left(\omega t - \frac{k(r_1+r_2)}{2} + \frac{\phi}{2}\right)
+          \]
+        </div>
+      </div>
+
+      <div class="step">
+        <h4><span class="tag">5</span> แยก “แอมพลิจูดผลลัพธ์” และตั้งเงื่อนไขแนวเสริม/หักล้าง</h4>
+        <p>ส่วนที่กำหนดความแรงของการสั่นคือ</p>
+        <div class="mathbox">
+          \[
+          A_{\text{ผลลัพธ์}} = 2A\cos\left(\frac{k\Delta r-\phi}{2}\right),
+          \quad \Delta r = r_2-r_1
+          \]
+        </div>
+
+        <ul>
+          <li>
+            <b>ปฏิบัพ (เสริมกัน)</b>: \(\;|\cos(\frac{k\Delta r-\phi}{2})|=1\)
+            \(\Rightarrow k\Delta r-\phi = 2n\pi\)
+          </li>
+          <li>
+            <b>บัพ (หักล้างกัน)</b>: \(\;\cos(\frac{k\Delta r-\phi}{2})=0\)
+            \(\Rightarrow k\Delta r-\phi = (2n-1)\pi\)
+          </li>
+        </ul>
+
+        <p>แทน \(k=\dfrac{2\pi}{\lambda}\) จะได้เงื่อนไขของ \(\Delta r\) สำหรับแต่ละกรณี (ตาม \(\phi\))</p>
+      </div>
+
+      <div class="step">
+        <h4><span class="tag">6</span> เชื่อมกับสูตรที่ใช้ในโจทย์</h4>
+        <p>เมื่อจุดสังเกตอยู่ไกลพอ (มุมเล็ก) ผลต่างทางเดินประมาณได้ว่า</p>
+        <div class="mathbox">
+          \[
+          \Delta r \approx d\sin\theta
+          \]
+        </div>
+        <p>จึงได้สูตร \(d\sin\theta\) สำหรับแนวปฏิบัพ/แนวบัพตามกรณีเฟส</p>
+      </div>
+
+      <div class="step">
+        <h4><span class="tag">7</span> ทำไมบางเล่มเขียน \(\left(n+\tfrac12\right)\lambda\) แต่บางเล่มเขียน \(\left(n-\tfrac12\right)\lambda\)?</h4>
+        <p>
+          ประเด็นสำคัญคือ “ครึ่งคาบ” \(\tfrac12\lambda\) เหมือนกันเสมอ — เครื่องหมาย \(+\) หรือ \(-\) เกิดจากการ <b>ตั้งดัชนี (index)</b> ไม่เหมือนกัน
+        </p>
+        <div class="mathbox">
+          \[
+          \Delta r = \left(n+\frac12\right)\lambda \quad (n=0,1,2,\dots)
+          \]
+          \[
+          \text{ให้ } m=n+1 \;\Rightarrow\; m=1,2,3,\dots
+          \]
+          \[
+          \Delta r = \left((m-1)+\frac12\right)\lambda = \left(m-\frac12\right)\lambda
+          \]
+        </div>
+        <p>
+          ดังนั้น
+          \[
+          \boxed{\left(n+\tfrac12\right)\lambda\;(n=0,1,2,\dots)\;\equiv\;\left(m-\tfrac12\right)\lambda\;(m=1,2,3,\dots)}
+          \]
+          คือ “ชุดตำแหน่งเดียวกัน” ต่างกันแค่เริ่มนับคนละเลข
+        </p>
+        <p style="margin-top:8px">
+          <b>คำแนะนำกันสับสน:</b> เวลาเจอสูตรต่างรูป ให้ดูว่าเขากำหนด \(n\) เริ่มที่ 0 หรือ 1 และจำว่า “ต้องเป็นครึ่งคาบ” \(\tfrac12\lambda\) สำหรับกรณีนี้เสมอ
+        </p>
+      </div>
+
+      
+<div class="step">
+  <h4><span class="tag">8</span> สรุป “ทั้ง 2 กรณีเฟส” และเชื่อมกับหน้าสูตรสำคัญ (เพื่อไม่ให้นักเรียนงง)</h4>
+
+  <p><b>แนวคิดเดียวกันทั้งหมด</b>: ใช้ผลต่างทางเดิน \,\(\Delta r\) กับเฟสเริ่มต้น \,\(\phi\) ในเงื่อนไข</p>
+  <div class="mathbox">
+    \[
+    \text{ปฏิบัพ (เสริมกัน): }\; k\Delta r-\phi=2n\pi
+    \]
+    \[
+    \text{บัพ (หักล้าง): }\; k\Delta r-\phi=(2n+1)\pi
+    \]
+  </div>
+
+  <p style="margin-top:10px"><b>กรณี A: เฟสตรงกัน</b> \(\phi=0\)</p>
+  <ul>
+    <li>
+      <b>ปฏิบัพ (เสริมกัน)</b>:
+      <div class="mathbox">\(\Delta r = n\lambda\), \(n=0,1,2,\dots\)</div>
+      <div class="mathbox">ไกลพอ (มุมเล็ก): \(d\sin\theta = n\lambda\)</div>
+    </li>
+    <li>
+      <b>บัพ (หักล้าง)</b>:
+      <div class="mathbox">
+        แบบ “ให้ \(n\) เริ่มที่ 0”: \(\Delta r = \left(n+\tfrac12\right)\lambda\), \(n=0,1,2,\dots\)
+      </div>
+      <div class="mathbox">
+        แบบเดียวกับ <b>หน้าสูตรสำคัญ</b> (เขียนเป็นเครื่องหมายลบ): \(\Delta r = \left(n-\tfrac12\right)\lambda\), \(n=1,2,3,\dots\)
+      </div>
+      <p style="color:#64748b;font-size:13px;margin:6px 0 0">
+        สองบรรทัดนี้ “เหมือนกัน” เพราะเลื่อนดัชนี \(n\to n+1\) (ดูขั้นที่ 7)
+      </p>
+      <div class="mathbox">ไกลพอ (มุมเล็ก): \(d\sin\theta = \left(n-\tfrac12\right)\lambda\)</div>
+    </li>
+  </ul>
+
+  <p style="margin-top:10px"><b>กรณี B: เฟสตรงข้าม</b> \(\phi=\pi\)</p>
+  <ul>
+    <li>
+      <b>ปฏิบัพ (เสริมกัน)</b>:
+      <div class="mathbox">
+        แบบ “ให้ \(n\) เริ่มที่ 0”: \(\Delta r = \left(n+\tfrac12\right)\lambda\), \(n=0,1,2,\dots\)
+      </div>
+      <div class="mathbox">
+        แบบเดียวกับ <b>หน้าสูตรสำคัญ</b> (เขียนเป็นเครื่องหมายลบ): \(\Delta r = \left(n-\tfrac12\right)\lambda\), \(n=1,2,3,\dots\)
+      </div>
+      <p style="color:#64748b;font-size:13px;margin:6px 0 0">
+        เหมือนกันเช่นกัน (เลื่อนดัชนี \(n\to n+1\))
+      </p>
+      <div class="mathbox">ไกลพอ (มุมเล็ก): \(d\sin\theta = \left(n-\tfrac12\right)\lambda\)</div>
+    </li>
+    <li>
+      <b>บัพ (หักล้าง)</b>:
+      <div class="mathbox">\(\Delta r = n\lambda\), \(n=0,1,2,\dots\)</div>
+      <div class="mathbox">ไกลพอ (มุมเล็ก): \(d\sin\theta = n\lambda\)</div>
+    </li>
+  </ul>
+
+  <div class="note" style="margin-top:10px">
+    <b>สรุปจำง่าย</b>: เมื่อ \(\phi=\pi\) เงื่อนไข “ปฏิบัพ/บัพ” <b>สลับกัน</b> เมื่อเทียบกับ \(\phi=0\)<br/>
+    และถ้าเห็น \(+\tfrac12\) หรือ \(-\tfrac12\) ให้ดูว่าเขาให้ดัชนีเริ่มที่ 0 หรือ 1 — <b>เป็นชุดแนวเดียวกัน</b>
+  </div>
+</div>
+<div class="note" style="margin-top:8px">
+        <b>สรุป</b>: ต้นกำเนิดของสูตรทั้งหมดมาจาก “บวกการกระจัดที่จุดเดียวกัน” แล้วใช้ตรีโกณมิติรวมคลื่น
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn primary" data-close="proofModal">กลับไปหน้าสูตรสำคัญ</button>
+    </div>
+  </div>
+</div>
+
+<!-- แบบฝึกหัด (เพิ่มโจทย์ และตัดคำ "วิธีใหม่") -->
+<div id="exerciseModal" class="modal" aria-hidden="true">
+  <div class="modal-panel">
+    <div class="modal-header">
+      <h3>แบบฝึกหัด — พร้อมเฉลย</h3>
+      <button class="btn" data-close="exerciseModal">ปิด ✖</button>
+    </div>
+    <div class="modal-body">
+      <ol>
+        <li>
+          ถ้าเพิ่ม \(d\) (คง \(v,f\)) จำนวนแนวจะเปลี่ยนอย่างไร?
+          <details><summary>อธิบาย</summary>
+            \(\lambda=\dfrac{v}{f}\) คงเดิม \(\Rightarrow\) \(d/\lambda\) เพิ่ม \(\Rightarrow\) จำนวนแนวเพิ่ม
+          </details>
+        </li>
+
+        <li>
+          \(d=12\ \text{cm},\ v=30\ \text{cm/s},\ f=2.5\ \text{Hz}\) (เฟสตรงกัน):
+          <b>แนวปฏิบัพทั้งหมดกี่แนว?</b>
+          <details><summary>เฉลย</summary>
+            \(\lambda=\dfrac{v}{f}=\dfrac{30}{2.5}=12\ \text{cm}\)<br/>
+            \(d\sin90^\circ=n_{\max}\lambda \Rightarrow n_{\max}=\dfrac{d}{\lambda}=\dfrac{12}{12}=1\)<br/>
+            จำนวนแนวปฏิบัพทั้งหมด \(=2n_{\max}+1=3\) แนว
+          </details>
+        </li>
+
+        <li>
+          \(d=20\ \text{cm},\ v=40\ \text{cm/s},\ f=5\ \text{Hz}\) (เฟสตรงกัน):
+          <b>แนวบัพทั้งหมดกี่แนว?</b>
+          <details><summary>เฉลย</summary>
+            \(\lambda=\dfrac{v}{f}=\dfrac{40}{5}=8\ \text{cm}\)<br/>
+            \(d\sin90^\circ=(n_{\max}-0.5)\lambda \Rightarrow
+            n_{\max}=\dfrac{d}{\lambda}+0.5=\dfrac{20}{8}+0.5=3\)<br/>
+            จำนวนแนวบัพทั้งหมด \(=2n_{\max}=6\) แนว
+          </details>
+        </li>
+
+        <li>
+          \(d=18\ \text{cm},\ v=36\ \text{cm/s},\ f=3\ \text{Hz}\) (เฟสตรงข้าม \(\phi=\pi\)):
+          <b>แนวปฏิบัพทั้งหมดกี่แนว?</b>
+          <details><summary>เฉลย</summary>
+            \(\lambda=\dfrac{36}{3}=12\ \text{cm}\), \(d/\lambda=1.5\)<br/>
+            เฟสตรงข้าม → ปฏิบัพ: \(d\sin90^\circ=(n_{\max}-0.5)\lambda\)<br/>
+            \(n_{\max}=1.5+0.5=2\) ⇒ จำนวนแนวปฏิบัพ \(=2n_{\max}=4\) แนว
+          </details>
+        </li>
+
+        <li>
+          \(d=24\ \text{cm},\ v=48\ \text{cm/s},\ f=4\ \text{Hz}\) (เฟสตรงข้าม \(\phi=\pi\)):
+          <b>แนวบัพทั้งหมดกี่แนว?</b>
+          <details><summary>เฉลย</summary>
+            \(\lambda=\dfrac{48}{4}=12\ \text{cm}\), \(d/\lambda=2\)<br/>
+            เฟสตรงข้าม → บัพ: \(d\sin90^\circ=n_{\max}\lambda\)<br/>
+            \(n_{\max}=2\) ⇒ จำนวนแนวบัพ \(=2n_{\max}+1=5\) แนว
+          </details>
+        </li>
+      </ol>
+      <p>ศึกษาเพิ่มเติมได้ที่เพจ <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">คลายปมฟิสิกส์</a></p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn primary" data-close="exerciseModal">ปิด</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const canvas = document.getElementById('view');
+  const ctx = canvas.getContext('2d');
+  const DPR = Math.max(1, Math.min(2, window.devicePixelRatio||1));
+  const PX_PER_CM = 10;
+
+  // HUD elements
+  const sepRange = document.getElementById('sepRange'), sepNum = document.getElementById('sepNum');
+  const freqRange = document.getElementById('freqRange'), freqNum = document.getElementById('freqNum');
+  const speedRange = document.getElementById('speedRange'), speedNum = document.getElementById('speedNum');
+  const phaseMode = document.getElementById('phaseMode');
+  const playBtn = document.getElementById('playBtn');
+  const showFronts = document.getElementById('showFronts');
+  const chkNodal = document.getElementById('chkNodal');
+  const chkAnti  = document.getElementById('chkAnti');
+  const lambdaVal = document.getElementById('lambdaVal');
+  const nodalCountEl = document.getElementById('nodalCount');
+  const antiCountEl = document.getElementById('antiCount');
+  const formulaBtn = document.getElementById('formulaBtn');
+  const exerciseBtn = document.getElementById('exerciseBtn');
+
+  // flags
+  let showNodal = chkNodal.checked; // แนวบัพ (เขียวเส้นปะ)
+  let showAnti  = chkAnti.checked;  // แนวปฏิบัพ (เขียวเส้นเต็ม)
+
+  // sync range <-> number
+  function bindPair(rangeEl, numEl){
+    const toNum = ()=>{ numEl.value = rangeEl.value; };
+    const toRange = ()=>{ rangeEl.value = numEl.value; };
+    rangeEl.addEventListener('input', toNum);
+    numEl.addEventListener('input', toRange);
+    toNum();
+  }
+  bindPair(sepRange, sepNum);
+  bindPair(freqRange, freqNum);
+  bindPair(speedRange, speedNum);
+
+  // layout
+  function resize(){
+    // Use the element's actual rendered size (respects mobile 60vh and any layout changes)
+    const rect = canvas.getBoundingClientRect();
+    const w = Math.max(320, rect.width);
+    const h = Math.max(240, rect.height);
+    canvas.width = Math.round(w * DPR);
+    canvas.height = Math.round(h * DPR);
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+  }
+  window.addEventListener('resize', resize, {passive:true});
+  resize();
+
+  // state
+  let t0 = performance.now(), paused = false, tFreeze = 0;
+
+  function params(){
+    const d_cm = Number(sepRange.value);
+    const f = Number(freqRange.value);
+    const v_cm_s = Number(speedRange.value);
+    const d_px = d_cm * PX_PER_CM;
+    const v_px_s = v_cm_s * PX_PER_CM;
+    const lambda_px = v_px_s / Math.max(1e-6, f);
+    const k = (2*Math.PI)/Math.max(1e-6, lambda_px);
+    const w = 2*Math.PI*f;
+    const phi = phaseMode.value === 'PI' ? Math.PI : 0;
+    const lambda_cm = v_cm_s / Math.max(1e-6, f);
+    return {d_px,f,v_px_s,lambda_px,k,w,phi,d_cm,v_cm_s,lambda_cm};
+  }
+  function updateHUD(p){ lambdaVal.textContent = p.lambda_cm.toFixed(2); }
+
+  function drawScene(now){
+    const p = params();
+    updateHUD(p);
+
+    const W = canvas.clientWidth, H = canvas.clientHeight;
+    const cx = W/2, cy = H*0.75;
+    const s1 = {x: cx - p.d_px/2, y: cy};
+    const s2 = {x: cx + p.d_px/2, y: cy};
+
+    let t = (now - t0)/1000;
+    if (paused){ t = tFreeze; } else { tFreeze = t; }
+
+    const step = (W>900?2:3);
+    ctx.clearRect(0,0,W,H);
+
+    // พื้นคลื่น (intensity)
+    const img = ctx.createImageData(Math.ceil(W/step), Math.ceil(H/step));
+    const data = img.data; let ptr = 0;
+    const wt = (2*Math.PI*p.f)*t;
+
+    for(let y=0;y<H;y+=step){
+      for(let x=0;x<W;x+=step){
+        const r1 = Math.hypot(x - s1.x, y - s1.y);
+        const r2 = Math.hypot(x - s2.x, y - s2.y);
+        const A = Math.sin(p.k*r1 - wt) + Math.sin(p.k*r2 - wt + p.phi);
+        const m = 0.5 + 0.5 * (A/2);
+        const c = Math.max(0, Math.min(1, m));
+        const B = Math.floor(200 + 55*c);
+        const G = Math.floor(200 + 40*c);
+        const R = Math.floor(210 + 30*c);
+        data[ptr++] = R; data[ptr++] = G; data[ptr++] = B; data[ptr++] = 255;
+      }
+    }
+    const tmp = document.createElement('canvas');
+    tmp.width = img.width; tmp.height = img.height;
+    tmp.getContext('2d').putImageData(img,0,0);
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(tmp,0,0,W,H);
+
+    // แนวไฮเพอร์โบลา (เขียว; แสดงตามเมนู)
+    drawFringeCurves(ctx, p, s1, s2, W, H, showNodal, showAnti);
+
+    // วงกลมสัน/ท้องคลื่น “แผ่วง” ตามเวลา
+    if (showFronts.checked){
+      drawWavefronts(ctx, p, s1, W, H, t, 0);        // แหล่งซ้าย เฟส 0
+      drawWavefronts(ctx, p, s2, W, H, t, p.phi);    // แหล่งขวา เฟส = phi
+    }
+
+    // แหล่งกำเนิด
+    drawSource(ctx, s1.x, s1.y);
+    drawSource(ctx, s2.x, s2.y);
+
+    requestAnimationFrame(drawScene);
+  }
+
+  function drawSource(ctx,x,y){
+    ctx.fillStyle = 'rgba(17,24,39,0.88)';
+    ctx.strokeStyle = 'rgba(17,24,39,0.55)';
+    ctx.beginPath(); ctx.arc(x,y,7,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x,y,13,0,Math.PI*2); ctx.lineWidth = 2; ctx.stroke();
+  }
+
+  // วงกลมสัน/ท้องคลื่นเคลื่อนที่ออก (Huygens fronts)
+  function drawWavefronts(ctx, p, s, W, H, t, phaseShift){
+    const maxR = Math.hypot(Math.max(s.x, W-s.x), Math.max(s.y, H-s.y)) + 20;
+    const lambda = p.lambda_px;
+    const v = p.v_px_s;
+    const half = 0.5 * lambda;
+
+    const phaseOffset = (phaseShift / (2*Math.PI)) * lambda;
+    let crestStart  = ((v*t + phaseOffset) % lambda + lambda) % lambda;   // [0,λ)
+    let troughStart = ((crestStart + half) % lambda + lambda) % lambda;
+
+    ctx.lineWidth = 1.1;
+
+    // สันคลื่น: เส้นเต็ม (สีเทาเข้ม)
+    ctx.setLineDash([]);
+    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--front-solid').trim() || '#64748b';
+    for(let r = crestStart || lambda; r <= maxR; r += lambda){
+      ctx.beginPath(); ctx.arc(s.x, s.y, r, 0, Math.PI*2); ctx.stroke();
+    }
+
+    // ท้องคลื่น: เส้นปะ (สีเทาอ่อน)
+    ctx.setLineDash([6,6]);
+    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--front-dash').trim() || '#94a3b8';
+    for(let r = troughStart || lambda; r <= maxR; r += lambda){
+      ctx.beginPath(); ctx.arc(s.x, s.y, r, 0, Math.PI*2); ctx.stroke();
+    }
+    ctx.setLineDash([]);
+  }
+
+  function drawFringeCurves(ctx, p, s1, s2, W, H, showNodal, showAnti){
+    const d = p.d_px, lambda = p.lambda_px, inPhase = (p.phi===0);
+    function floorSafe(x){ return Math.max(0, Math.floor(x + 1e-9)); }
+
+    // นับจำนวนแนว (ประมาณ)
+    let antiTotal=0, nodalTotal=0;
+    if (inPhase){
+      const mMaxAnti = floorSafe(d / lambda);
+      antiTotal = 1 + 2*Math.max(0, mMaxAnti);
+      const mMaxNodal = floorSafe(d / lambda - 0.5);
+      nodalTotal = 2*Math.max(0, mMaxNodal + 1);
+    }else{
+      const mMaxNodal = floorSafe(d / lambda);
+      nodalTotal = 1 + 2*Math.max(0, mMaxNodal);
+      const mMaxAnti = floorSafe(d / lambda - 0.5);
+      antiTotal = 2*Math.max(0, mMaxAnti + 1);
+    }
+    nodalCountEl.textContent = nodalTotal;
+    antiCountEl.textContent  = antiTotal;
+
+    const cx = W/2, cy = H*0.75;
+
+    function drawSet(kind){
+      const deltas = [];
+      if (inPhase){
+        if (kind==='anti'){ for(let m=0;m<=Math.floor(d/lambda);m++) deltas.push(m*lambda); }
+        else              { for(let m=0;m<=Math.floor(d/lambda-0.5);m++) deltas.push((m+0.5)*lambda); }
+      }else{
+        if (kind==='anti'){ for(let m=0;m<=Math.floor(d/lambda-0.5);m++) deltas.push((m+0.5)*lambda); }
+        else              { for(let m=0;m<=Math.floor(d/lambda);m++) deltas.push(m*lambda); }
+      }
+
+      const green = getComputedStyle(document.documentElement).getPropertyValue('--fringe-green').trim() || '#22c55e';
+      if (kind==='anti'){ ctx.lineWidth = 1.8; ctx.setLineDash([]);     ctx.strokeStyle = green; }   // ปฏิบัพ = เขียวเส้นเต็ม
+      else              { ctx.lineWidth = 1.8; ctx.setLineDash([8,6]); ctx.strokeStyle = green; }   // บัพ = เขียวเส้นปะ
+
+      for(const Delta of deltas){
+        if (Delta===0 && kind==='nodal' && inPhase) continue;
+        if (Delta>=d) continue;
+        const a = Delta/2, cF = d/2;
+        const b2 = cF*cF - a*a; if (b2<=0) continue; const b = Math.sqrt(b2);
+
+        const umax=4; const sx=cx, sy=cy;
+        trace(+1); trace(-1);
+
+        function trace(sign){
+          ctx.beginPath(); let first=true;
+          for(let u=0; u<=umax; u+=0.01){
+            const Xh = sign * a * Math.cosh(u);
+            const Yh = b * Math.sinh(u);
+            const x = sx + Xh; const y = sy - Yh;
+            if (x<-20||x>W+20||y<-20||y>H+20){ if (!first){ ctx.stroke(); } break; }
+            if (first){ ctx.moveTo(x,y); first=false; } else { ctx.lineTo(x,y); }
+          }
+          if (!first) ctx.stroke();
+        }
+      }
+    }
+
+    if (showNodal) drawSet('nodal'); // บัพ (ทำลาย) = เขียวเส้นปะ
+    if (showAnti)  drawSet('anti');  // ปฏิบัพ (เสริม) = เขียวเส้นเต็ม
+  }
+
+  // ปุ่มเล่น/หยุด
+  playBtn.addEventListener('click', ()=>{
+    paused = !paused;
+    if (paused){
+      playBtn.textContent = '▶ เล่น';
+    }else{
+      playBtn.textContent = '⏸ หยุด';
+      t0 = performance.now() - tFreeze*1000;
+    }
+  });
+
+  // เมนูดรอปดาวน์: checkbox -> flags
+  chkNodal.addEventListener('change', ()=>{ showNodal = chkNodal.checked; });
+  chkAnti .addEventListener('change', ()=>{ showAnti  = chkAnti.checked; });
+
+  // โมดัล
+  const openModal = id => document.getElementById(id).classList.add('open');
+  const closeModal = id => document.getElementById(id).classList.remove('open');
+  document.getElementById('formulaBtn').addEventListener('click',()=>openModal('formulaModal'));
+  document.getElementById('exerciseBtn').addEventListener('click',()=>openModal('exerciseModal'));
+  // พิสูจน์สมการ
+  const proofBtn = document.getElementById('proofBtn');
+  if (proofBtn){
+    proofBtn.addEventListener('click',()=>openModal('proofModal'));
+  }
+  const proofModal = document.getElementById('proofModal');
+  if (proofModal){
+    proofModal.addEventListener('click',e=>{ if(e.target.id==='proofModal') closeModal('proofModal'); });
+  }
+
+  document.querySelectorAll('[data-close]').forEach(btn=>{
+    btn.addEventListener('click',()=> closeModal(btn.getAttribute('data-close')));
+  });
+  document.getElementById('formulaModal').addEventListener('click',e=>{ if(e.target.id==='formulaModal') closeModal('formulaModal'); });
+  document.getElementById('exerciseModal').addEventListener('click',e=>{ if(e.target.id==='exerciseModal') closeModal('exerciseModal'); });
+
+  requestAnimationFrame(drawScene);
+})();
+</script>
+</body>
+</html>

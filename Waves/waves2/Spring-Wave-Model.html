@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mini Lab : อนุภาคบนคลื่น — มวลติดสปริงหลายก้อน</title>
+  <style>
+    :root{
+      --blue:#2f6fd6;
+      --blue2:#6faee6;
+      --light-blue:#edf3fb;
+      --orange:#fff1de;
+      --orange-border:#f3c98f;
+      --green:#eef9ea;
+      --green-border:#9dcc92;
+      --gray:#eef1f4;
+      --gray-border:#cfd6de;
+      --text:#15324f;
+      --red:#d63b4b;
+      --red-dark:#9e1f2b;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;background:#fff;color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Thai",sans-serif}
+    body{min-height:100vh;overflow-x:hidden}
+    .page{max-width:1200px;margin:0 auto;padding:18px 16px 140px}
+    .hero{display:flex;align-items:center;gap:14px;margin-bottom:14px;flex-wrap:wrap}
+    .hero-icon{width:58px;height:58px;border-radius:18px;background:linear-gradient(135deg,#edf3fb,#d9e8fb);display:grid;place-items:center;font-size:30px;box-shadow:0 8px 20px rgba(47,111,214,.12)}
+    .hero-text h1{margin:0;font-size:clamp(24px,3.5vw,43px);line-height:1;color:var(--blue);font-weight:900}
+    .hero-text h2{margin:4px 0 0;font-size:clamp(21px,3vw,36px);line-height:1.12;color:#204d7c;font-weight:900}
+    .subtitle{margin:8px 0 14px;padding:12px 14px;border-radius:18px;background:#f8fbff;border:1px solid #dbe7f5;font-size:15px;line-height:1.6}
+    .layout{display:grid;grid-template-columns:1.45fr .95fr;gap:18px;align-items:start}
+    .left-stack{display:grid;gap:14px}
+    .card{background:#fff;border:1px solid #dde7f2;border-radius:24px;box-shadow:0 10px 26px rgba(27,66,120,.08)}
+    .lab-card,.graph-card{padding:14px}
+    .lab-head,.graph-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+    .pill{padding:10px 18px;border-radius:999px;background:var(--light-blue);color:#2e5f93;font-weight:800;font-size:17px}
+    .mini-pill{padding:10px 16px;border-radius:999px;background:#f7fbff;border:1px solid #dce8f6;font-weight:700;font-size:15px}
+    .lab-wrap,.graph-wrap{position:relative;background:linear-gradient(180deg,#fafcff,#ffffff);border-radius:20px;border:1px solid #dfe8f4;overflow:hidden}
+    svg{display:block;width:100%;height:auto;aspect-ratio:16/10}
+    #graphSVG{aspect-ratio:16/5.7}
+    .controls{padding:14px}
+    .controls h3{margin:0 0 10px;font-size:20px;color:#204d7c}
+    .control-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .ctrl{background:#f9fbfe;border:1px solid #e1e9f3;border-radius:18px;padding:12px}
+    .ctrl label{display:flex;align-items:center;justify-content:space-between;gap:10px;font-weight:800;font-size:15px;margin-bottom:8px}
+    .val{color:#b23460;font-weight:900}
+    input[type="range"]{width:100%}
+    select{width:100%;padding:11px 12px;border-radius:14px;border:1px solid #cfd9e4;background:#fff;font-size:15px;color:var(--text)}
+    .btn-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}
+    .btn{border:none;border-radius:18px;padding:14px 16px;font-size:16px;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;min-height:54px}
+    .btn.play{background:rgba(114,167,219,.82);border:1.5px solid #89b6e1;color:#fff}
+    .btn.reset{background:var(--gray);border:1.5px solid var(--gray-border);color:#46586c}
+    .btn.formula{background:var(--orange);border:1.5px solid var(--orange-border);color:#8b4d00}
+    .btn.exercise{background:var(--green);border:1.5px solid var(--green-border);color:#356b2c}
+    .readout{margin-top:12px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .read{padding:12px 14px;background:#fcfdff;border:1px solid #dde7f3;border-radius:16px;font-weight:800}
+    .read small{display:block;color:#6a7e93;font-weight:700;margin-bottom:4px}
+    .formula-box,.exercise-box{margin-top:14px;padding:14px;border-radius:20px;display:none}
+    .formula-box.show{display:block;background:#fff7ee;border:1px solid #efc58f}
+    .exercise-box.show{display:block;background:#f6fbf4;border:1px solid #bfdcaf}
+    .formula-box h4,.exercise-box h4{margin:0 0 10px;font-size:20px;font-weight:900;color:#123d70}
+    .formula-box .item,.exercise-box .item{background:rgba(255,255,255,.7);border:1px solid rgba(0,0,0,.05);padding:12px 14px;border-radius:16px;margin-bottom:10px;line-height:1.65}
+    .formula-eq{font-family:"Cambria Math","STIX Two Math","Times New Roman",serif;font-size:20px;font-weight:700;color:#1f3352;display:block;margin-top:4px;overflow-wrap:anywhere}
+    .warn{background:#fff0f1;border:1px solid #efb5bd;color:#7c2334}
+    .footer-link{position:fixed;left:0;right:0;bottom:0;padding:10px 14px calc(10px + env(safe-area-inset-bottom));text-align:center;background:rgba(255,255,255,.95);backdrop-filter:blur(10px);border-top:1px solid #dbe5f1;font-size:14px;z-index:30}
+    .footer-link a{color:var(--blue);text-decoration:underline;font-weight:800}
+    .hint,.graph-note{font-size:13px;color:#67809a;line-height:1.55;margin-top:8px}
+    @media (max-width:900px){
+      .layout{grid-template-columns:1fr}
+    }
+    @media (max-width:640px){
+      .page{padding:14px 12px 150px}
+      .hero{align-items:flex-start}
+      .hero-icon{width:46px;height:46px;font-size:24px;border-radius:14px}
+      .hero-text h1{font-size:clamp(20px,6vw,30px)}
+      .hero-text h2{font-size:clamp(18px,5.4vw,26px)}
+      .control-grid{grid-template-columns:1fr}
+      .btn-row,.readout{grid-template-columns:1fr 1fr}
+      .pill{font-size:15px;padding:9px 14px}
+      .mini-pill{font-size:13px;padding:8px 12px}
+      .btn{min-height:48px;font-size:15px}
+      .formula-eq{font-size:18px}
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="hero">
+      <div class="hero-icon">🌊</div>
+      <div class="hero-text">
+        <h1>Mini Lab</h1>
+        <h2>อนุภาคบนคลื่น — มวลติดสปริงหลายก้อน</h2>
+      </div>
+    </div>
+
+    <div class="subtitle">
+      แนวคิด: แต่ละก้อนมวลแทน <strong>อนุภาคของตัวกลาง</strong> ที่สั่นขึ้นลงรอบตำแหน่งสมดุล ส่วนรูปคลื่นที่เห็นคือ <strong>แบบแผนการรบกวน</strong> ที่เคลื่อนที่ไป ไม่ใช่มวลทั้งแถวไหลตามกัน
+    </div>
+
+    <div class="layout">
+      <div class="left-stack">
+        <section class="card lab-card">
+          <div class="lab-head">
+            <div class="pill">🧠 ดูการสั่นของอนุภาคแต่ละก้อน</div>
+            <div class="mini-pill" id="statusText">สถานะ: พร้อมเริ่ม</div>
+          </div>
+          <div class="lab-wrap">
+            <svg id="labSVG" viewBox="0 0 1000 620" preserveAspectRatio="xMidYMid meet" aria-label="Mass spring wave simulation">
+              <defs>
+                <linearGradient id="massGrad" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stop-color="#57a7e0"/>
+                  <stop offset="100%" stop-color="#1f5fb7"/>
+                </linearGradient>
+                <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+                  <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#1b4b90" flood-opacity="0.18"/>
+                </filter>
+              </defs>
+              <rect x="0" y="0" width="1000" height="620" fill="#fbfdff"></rect>
+              <line x1="0" y1="45" x2="1000" y2="45" stroke="#9ca7b3" stroke-width="28"></line>
+              <line x1="0" y1="310" x2="1000" y2="310" stroke="#a9b5bf" stroke-width="4" stroke-dasharray="12 8"></line>
+              <line x1="0" y1="180" x2="1000" y2="180" stroke="#d2dae2" stroke-width="3" stroke-dasharray="10 10"></line>
+              <line x1="0" y1="440" x2="1000" y2="440" stroke="#d2dae2" stroke-width="3" stroke-dasharray="10 10"></line>
+              <g id="springGroup"></g>
+              <path id="wavePath" fill="none" stroke="#bc2a66" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"></path>
+              <g id="massGroup" filter="url(#softShadow)"></g>
+            </svg>
+          </div>
+          <div class="hint">สังเกต: แตะหรือคลิกก้อนใดก้อนหนึ่งเพื่อเลือก ก้อนที่เลือกจะเป็น <strong>สีแดง</strong> และกราฟด้านล่างจะแสดง <strong>y-t ของก้อนนั้น</strong> โดยใช้แกนบวกขึ้นด้านบนและลบลงด้านล่าง</div>
+        </section>
+
+        <section class="card graph-card">
+          <div class="graph-head">
+            <div class="pill">📈 กราฟ y-t ของก้อนที่เลือก</div>
+            <div class="mini-pill" id="selectedText">ก้อนที่ 9 • สีแดง</div>
+          </div>
+          <div class="graph-wrap">
+            <svg id="graphSVG" viewBox="0 0 1000 340" preserveAspectRatio="xMidYMid meet" aria-label="Selected mass y-t graph">
+              <rect x="0" y="0" width="1000" height="340" fill="#fbfdff"></rect>
+              <g id="graphGrid"></g>
+              <line x1="90" y1="170" x2="950" y2="170" stroke="#a9b5bf" stroke-width="3" stroke-dasharray="10 8"></line>
+              <path id="tracePath" fill="none" stroke="#d63b4b" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"></path>
+              <circle id="traceDot" cx="950" cy="170" r="8" fill="#d63b4b" stroke="#ffffff" stroke-width="3"></circle>
+              <text x="28" y="54" font-size="24" font-weight="900" fill="#2f6fd6">y</text>
+              <text x="958" y="315" font-size="24" font-weight="900" fill="#2f6fd6">t</text>
+              <text id="graphTopLabel" x="20" y="98" font-size="18" font-weight="800" fill="#6b7f93">+110 px</text>
+              <text x="18" y="176" font-size="18" font-weight="800" fill="#6b7f93">0</text>
+              <text id="graphBottomLabel" x="20" y="256" font-size="18" font-weight="800" fill="#6b7f93">-110 px</text>
+            </svg>
+          </div>
+          <div class="graph-note">กราฟนี้ช่วยย้ำให้เห็นว่าอนุภาคหนึ่งก้อนเพียงแค่สั่นขึ้นลงตามเวลา ไม่ได้วิ่งไปพร้อมรูปคลื่น</div>
+        </section>
+      </div>
+
+      <aside class="card controls">
+        <h3>⚙️ แผงควบคุม</h3>
+        <div class="control-grid">
+          <div class="ctrl">
+            <label>แอมพลิจูด <span class="val" id="ampVal">110 px</span></label>
+            <input id="amp" type="range" min="20" max="150" value="110" />
+          </div>
+          <div class="ctrl">
+            <label>ความยาวคลื่น <span class="val" id="lamVal">360 px</span></label>
+            <input id="lambda" type="range" min="180" max="700" value="360" />
+          </div>
+          <div class="ctrl">
+            <label>ความถี่ <span class="val" id="freqVal">0.50 Hz</span></label>
+            <input id="freq" type="range" min="10" max="150" value="50" />
+          </div>
+          <div class="ctrl">
+            <label>จำนวนก้อน <span class="val" id="countVal">17</span></label>
+            <input id="count" type="range" min="7" max="27" step="2" value="17" />
+          </div>
+          <div class="ctrl">
+            <label>โหมดคลื่น</label>
+            <select id="mode">
+              <option value="right">กำเนิดคลื่นจากซ้าย → ไปขวา</option>
+              <option value="left">กำเนิดคลื่นจากขวา → ไปซ้าย</option>
+              <option value="standing">คลื่นนิ่ง</option>
+            </select>
+          </div>
+          <div class="ctrl">
+            <label>เฟสเริ่มต้นของการสั่น (ที่ต้นกำเนิด) <span class="val" id="phaseVal">0°</span></label>
+            <input id="phase" type="range" min="0" max="360" value="0" />
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn play" id="toggleBtn">▶️ เล่น</button>
+          <button class="btn reset" id="resetBtn">🔄 รีเซ็ต</button>
+          <button class="btn formula" id="formulaBtn">📘 สูตรสำคัญ</button>
+          <button class="btn exercise" id="exerciseBtn">📝 แบบฝึกคิด</button>
+        </div>
+
+        <div class="readout">
+          <div class="read"><small>คาบ</small><span id="periodText">2.00 s</span></div>
+          <div class="read"><small>อัตราเร็วคลื่น</small><span id="speedText">180 px/s</span></div>
+          <div class="read"><small>สมการย่อ</small><span id="eqText">y = A sin(kx - ωt)</span></div>
+          <div class="read"><small>ภาพที่ควรเห็น</small><span id="conceptText">อนุภาคสั่นขึ้นลง</span></div>
+        </div>
+
+        <div class="formula-box" id="formulaBox">
+          <h4>📘 สูตรสำคัญ</h4>
+          <div class="item">
+            การสั่นของก้อนต้นกำเนิด
+            <span class="formula-eq">yₛ(t) = A sin(ωt + φ)</span>
+          </div>
+          <div class="item">
+            สมการคลื่นแบบย่อ
+            <span class="formula-eq">y(x,t) = A sin(kx - ωt + φ)</span>
+          </div>
+          <div class="item">
+            ความสัมพันธ์ของเลขคลื่นและความยาวคลื่น
+            <span class="formula-eq">k = 2π / λ</span>
+          </div>
+          <div class="item">
+            ความถี่เชิงมุมและความถี่
+            <span class="formula-eq">ω = 2πf</span>
+          </div>
+          <div class="item">
+            อัตราเร็วคลื่น
+            <span class="formula-eq">v = fλ</span>
+          </div>
+          <div class="item">
+            ถ้าเป็นคลื่นนิ่ง
+            <span class="formula-eq">y(x,t) = 2A sin(kx) cos(ωt)</span>
+          </div>
+          <div class="item warn">
+            ⚠️ จุดที่ต้องระวัง: เมื่อปรับเฟสเริ่มต้น ก้อน <strong>ต้นกำเนิด</strong> ควรยกหรือยุบทันทีตามค่า <strong>φ</strong> ส่วนก้อนอื่นยังอยู่ที่สมดุลจนกว่าคลื่นจะเดินทางไปถึง
+          </div>
+          <div class="item warn">
+            ⚠️ จุดที่ต้องระวัง: อนุภาคของตัวกลางไม่ได้เคลื่อนที่ไปกับคลื่น แต่สั่นรอบตำแหน่งสมดุล ขณะที่การรบกวนและพลังงานเป็นสิ่งที่ส่งต่อไปตามแนวคลื่น
+          </div>
+        </div>
+
+        <div class="exercise-box" id="exerciseBox">
+          <h4>📝 แบบฝึกคิด</h4>
+          <div class="item">1) ลองเพิ่มความถี่ แล้วสังเกตว่า <strong>คาบ</strong> เปลี่ยนอย่างไร</div>
+          <div class="item">2) ลองเพิ่มความยาวคลื่น แล้วดูว่า <strong>ระยะระหว่างยอดคลื่น</strong> เปลี่ยนอย่างไร</div>
+          <div class="item">3) เปลี่ยนเป็น <strong>คลื่นนิ่ง</strong> แล้วสังเกตตำแหน่งที่แทบไม่สั่น ว่าเป็น node</div>
+          <div class="item">4) ถามนักเรียนว่า “ก้อนมวลทุกก้อนเคลื่อนที่ไปทางขวาพร้อมคลื่นหรือไม่” แล้วให้ตอบจากสิ่งที่เห็นจริง</div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <div class="footer-link">ศึกษาเพิ่มเติมที่ <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener noreferrer">เพจคลายปมฟิสิกส์</a></div>
+
+  <script>
+    const springGroup = document.getElementById('springGroup');
+    const massGroup = document.getElementById('massGroup');
+    const wavePath = document.getElementById('wavePath');
+    const graphGrid = document.getElementById('graphGrid');
+    const tracePath = document.getElementById('tracePath');
+    const traceDot = document.getElementById('traceDot');
+
+    const ampInput = document.getElementById('amp');
+    const lambdaInput = document.getElementById('lambda');
+    const freqInput = document.getElementById('freq');
+    const countInput = document.getElementById('count');
+    const modeInput = document.getElementById('mode');
+    const phaseInput = document.getElementById('phase');
+
+    const ampVal = document.getElementById('ampVal');
+    const lamVal = document.getElementById('lamVal');
+    const freqVal = document.getElementById('freqVal');
+    const countVal = document.getElementById('countVal');
+    const phaseVal = document.getElementById('phaseVal');
+    const periodText = document.getElementById('periodText');
+    const speedText = document.getElementById('speedText');
+    const eqText = document.getElementById('eqText');
+    const conceptText = document.getElementById('conceptText');
+    const statusText = document.getElementById('statusText');
+    const selectedText = document.getElementById('selectedText');
+    const graphTopLabel = document.getElementById('graphTopLabel');
+    const graphBottomLabel = document.getElementById('graphBottomLabel');
+
+    const toggleBtn = document.getElementById('toggleBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const formulaBtn = document.getElementById('formulaBtn');
+    const exerciseBtn = document.getElementById('exerciseBtn');
+    const formulaBox = document.getElementById('formulaBox');
+    const exerciseBox = document.getElementById('exerciseBox');
+
+    const W = 1000;
+    const topY = 45;
+    const eqY = 310;
+    const leftPad = 70;
+    const rightPad = 70;
+    const massR = 16;
+    const hitR = 28;
+    const historyMax = 240;
+    const EPS = 1e-6;
+
+    let running = false;
+    let simTime = 0;
+    let lastTime = performance.now();
+    let selectedIndex = 8;
+    let traceHistory = [];
+
+    function springPath(x, y0, y1, loops = 12, width = 16) {
+      const pts = [`M ${x} ${y0}`];
+      const lead = 10;
+      pts.push(`L ${x} ${y0 + lead}`);
+      const usable = Math.max(20, y1 - y0 - lead - 10);
+      const step = usable / loops;
+      for (let i = 0; i < loops; i++) {
+        const yy = y0 + lead + i * step;
+        const dir = i % 2 === 0 ? -1 : 1;
+        pts.push(`L ${x + dir * width} ${yy + step * 0.5}`);
+        pts.push(`L ${x - dir * width} ${yy + step}`);
+      }
+      pts.push(`L ${x} ${y1}`);
+      return pts.join(' ');
+    }
+
+    function getState() {
+      return {
+        A: +ampInput.value,
+        lambda: +lambdaInput.value,
+        f: +freqInput.value / 100,
+        count: +countInput.value,
+        mode: modeInput.value,
+        phase: (+phaseInput.value) * Math.PI / 180
+      };
+    }
+
+    function getSourceX(s) {
+      return s.mode === 'left' ? (W - rightPad) : leftPad;
+    }
+
+    function displacement(x, t, s) {
+      const w = 2 * Math.PI * s.f;
+      const v = Math.max(1, s.f * s.lambda);
+      const sourceX = getSourceX(s);
+      const sourceDelay = s.mode === 'left' ? (sourceX - x) / v : (x - sourceX) / v;
+      const localT = t - Math.max(0, sourceDelay);
+      const tau = Math.max(0.08, 0.22 / Math.max(0.15, s.f));
+      const isSource = Math.abs(x - sourceX) < EPS;
+
+      if (s.mode === 'standing') {
+        const k = 2 * Math.PI / s.lambda;
+        return s.A * Math.sin(k * x + s.phase) * Math.cos(w * t);
+      }
+
+      if (localT < 0) return 0;
+      if (isSource) {
+        return s.A * Math.sin(w * Math.max(0, localT) + s.phase);
+      }
+
+      const ramp = 1 - Math.exp(-localT / tau);
+      return s.A * ramp * Math.sin(w * localT + s.phase);
+    }
+
+    function sourceVelocityAtTime(t, s) {
+      const w = 2 * Math.PI * s.f;
+      return s.A * w * Math.cos(w * t + s.phase);
+    }
+
+    function drawGraphGrid() {
+      graphGrid.innerHTML = '';
+      for (let i = 0; i <= 6; i++) {
+        const x = 90 + (860 / 6) * i;
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', x);
+        line.setAttribute('y1', 50);
+        line.setAttribute('x2', x);
+        line.setAttribute('y2', 290);
+        line.setAttribute('stroke', '#d9e3ee');
+        line.setAttribute('stroke-width', '2');
+        graphGrid.appendChild(line);
+      }
+      for (let i = 0; i <= 4; i++) {
+        const y = 50 + (240 / 4) * i;
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', 90);
+        line.setAttribute('y1', y);
+        line.setAttribute('x2', 950);
+        line.setAttribute('y2', y);
+        line.setAttribute('stroke', i === 2 ? '#a9b5bf' : '#d9e3ee');
+        line.setAttribute('stroke-width', i === 2 ? '0' : '2');
+        graphGrid.appendChild(line);
+      }
+    }
+
+    function updateLabels(s) {
+      ampVal.textContent = `${s.A} px`;
+      lamVal.textContent = `${s.lambda} px`;
+      freqVal.textContent = `${s.f.toFixed(2)} Hz`;
+      countVal.textContent = `${s.count}`;
+      phaseVal.textContent = `${Math.round(phaseInput.value)}°`;
+      periodText.textContent = `${(1 / s.f).toFixed(2)} s`;
+      speedText.textContent = `${(s.f * s.lambda).toFixed(0)} px/s`;
+      graphTopLabel.textContent = `+${s.A} px`;
+      graphBottomLabel.textContent = `-${s.A} px`;
+      if (s.mode === 'standing') {
+        eqText.textContent = 'y = 2A sin(kx) cos(ωt)';
+        conceptText.textContent = 'คลื่นนิ่ง: แต่ละก้อนสั่นต่างเฟสตามตำแหน่ง';
+      } else if (s.mode === 'left') {
+        eqText.textContent = 'ต้นกำเนิด: yₛ = A sin(ωt + φ)';
+        conceptText.textContent = 'ก้อนต้นกำเนิดด้านขวาจะยก/ลดตามเฟสทันที แล้วการสั่นค่อย ๆ ส่งต่อไปทางซ้าย';
+      } else {
+        eqText.textContent = 'ต้นกำเนิด: yₛ = A sin(ωt + φ)';
+        conceptText.textContent = 'ก้อนต้นกำเนิดด้านซ้ายจะยก/ลดตามเฟสทันที แล้วการสั่นค่อย ๆ ส่งต่อไปทางขวา';
+      }
+      const modeLabel = s.mode === 'standing' ? 'คลื่นนิ่ง' : (s.mode === 'left' ? 'ต้นกำเนิดด้านขวา' : 'ต้นกำเนิดด้านซ้าย');
+      statusText.textContent = `สถานะ: ${running ? 'กำลังปล่อยคลื่น' : 'พร้อมเริ่ม'} • ${modeLabel}`;
+    }
+
+    function updateTrace(selectedDisplacement, s, shouldAppend = true) {
+      selectedText.textContent = `ก้อนที่ ${selectedIndex + 1} • สีแดง`;
+      if (shouldAppend) {
+        traceHistory.push(selectedDisplacement);
+        if (traceHistory.length > historyMax) traceHistory.shift();
+      }
+      if (traceHistory.length === 0) {
+        traceHistory.push(selectedDisplacement);
+      }
+
+      let d = '';
+      for (let i = 0; i < traceHistory.length; i++) {
+        const x = 90 + (860 * i) / Math.max(1, historyMax - 1);
+        const y = 170 - (traceHistory[i] / Math.max(1, s.A)) * 110;
+        d += `${i === 0 ? 'M' : 'L'} ${x} ${y} `;
+      }
+      tracePath.setAttribute('d', d);
+
+      const lastX = 90 + (860 * (traceHistory.length - 1)) / Math.max(1, historyMax - 1);
+      const lastY = 170 - (traceHistory[traceHistory.length - 1] / Math.max(1, s.A)) * 110;
+      traceDot.setAttribute('cx', lastX);
+      traceDot.setAttribute('cy', lastY);
+    }
+
+    function render() {
+      const s = getState();
+      updateLabels(s);
+      springGroup.innerHTML = '';
+      massGroup.innerHTML = '';
+
+      if (selectedIndex > s.count - 1) {
+        selectedIndex = Math.floor((s.count - 1) / 2);
+        traceHistory = [];
+      }
+
+      const dx = (W - leftPad - rightPad) / (s.count - 1);
+      let path = '';
+      let selectedDisplacement = 0;
+      const sourceX = getSourceX(s);
+
+      for (let i = 0; i < s.count; i++) {
+        const x = leftPad + i * dx;
+        const dy = displacement(x, simTime, s);
+        const y = eqY - dy;
+        const isSelected = i === selectedIndex;
+        const isSource = Math.abs(x - sourceX) < EPS && s.mode !== 'standing';
+
+        const spring = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        spring.setAttribute('d', springPath(x, topY + 14, y - massR));
+        spring.setAttribute('fill', 'none');
+        spring.setAttribute('stroke', isSelected ? '#e68a93' : (isSource ? '#f2a65a' : '#6faee6'));
+        spring.setAttribute('stroke-width', isSelected ? '4.5' : (isSource ? '4.5' : '4'));
+        spring.setAttribute('stroke-linecap', 'round');
+        spring.setAttribute('stroke-linejoin', 'round');
+        springGroup.appendChild(spring);
+
+        const massWrap = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        massWrap.style.cursor = 'pointer';
+
+        const hit = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        hit.setAttribute('cx', x);
+        hit.setAttribute('cy', y);
+        hit.setAttribute('r', hitR);
+        hit.setAttribute('fill', 'transparent');
+        hit.setAttribute('stroke', 'transparent');
+        hit.setAttribute('pointer-events', 'all');
+        massWrap.appendChild(hit);
+
+        if (isSelected) {
+          const ring = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          ring.setAttribute('cx', x);
+          ring.setAttribute('cy', y);
+          ring.setAttribute('r', massR + 8);
+          ring.setAttribute('fill', 'none');
+          ring.setAttribute('stroke', '#f7a7b0');
+          ring.setAttribute('stroke-width', '4');
+          ring.setAttribute('opacity', '0.95');
+          massWrap.appendChild(ring);
+        }
+
+        if (isSource) {
+          const srcRing = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          srcRing.setAttribute('cx', x);
+          srcRing.setAttribute('cy', y);
+          srcRing.setAttribute('r', massR + 14);
+          srcRing.setAttribute('fill', 'none');
+          srcRing.setAttribute('stroke', '#ffd7a8');
+          srcRing.setAttribute('stroke-width', '4');
+          srcRing.setAttribute('stroke-dasharray', '7 6');
+          srcRing.setAttribute('opacity', '0.9');
+          massWrap.appendChild(srcRing);
+        }
+
+        const mass = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        mass.setAttribute('cx', x);
+        mass.setAttribute('cy', y);
+        mass.setAttribute('r', massR);
+        mass.setAttribute('fill', isSelected ? '#d63b4b' : (isSource ? '#f2b865' : 'url(#massGrad)'));
+        mass.setAttribute('stroke', isSelected ? '#9e1f2b' : (isSource ? '#b86d13' : '#2f6fd6'));
+        mass.setAttribute('stroke-width', isSelected ? '3' : (isSource ? '2.5' : '2'));
+        mass.setAttribute('pointer-events', 'none');
+        massWrap.appendChild(mass);
+
+        const selectMass = (ev) => {
+          if (ev) ev.preventDefault();
+          if (selectedIndex !== i) {
+            selectedIndex = i;
+            traceHistory = [];
+          }
+          render();
+        };
+
+        if (isSource) {
+          const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          const vy = sourceVelocityAtTime(Math.max(0, simTime), s);
+          const arrowLen = 44;
+          const upward = vy >= 0;
+          const shaftTop = upward ? y - 58 : y + 14;
+          const shaftBottom = upward ? y - 14 : y + 58;
+          const tipY = upward ? shaftTop : shaftBottom;
+          const baseY = upward ? shaftBottom : shaftTop;
+          arrow.setAttribute('d', `M ${x} ${baseY} L ${x} ${tipY} M ${x} ${tipY} L ${x - 9} ${upward ? tipY + 12 : tipY - 12} M ${x} ${tipY} L ${x + 9} ${upward ? tipY + 12 : tipY - 12}`);
+          arrow.setAttribute('fill', 'none');
+          arrow.setAttribute('stroke', '#b86d13');
+          arrow.setAttribute('stroke-width', '4');
+          arrow.setAttribute('stroke-linecap', 'round');
+          arrow.setAttribute('stroke-linejoin', 'round');
+          arrow.setAttribute('opacity', '0.92');
+          massWrap.appendChild(arrow);
+
+          const srcLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          srcLabel.setAttribute('x', x + 18);
+          srcLabel.setAttribute('y', upward ? y - 46 : y + 46);
+          srcLabel.setAttribute('font-size', '18');
+          srcLabel.setAttribute('font-weight', '900');
+          srcLabel.setAttribute('fill', '#9a5a08');
+          srcLabel.textContent = 'ต้นกำเนิด';
+          massWrap.appendChild(srcLabel);
+        }
+        massWrap.addEventListener('click', selectMass);
+        massWrap.addEventListener('pointerdown', selectMass);
+        massWrap.addEventListener('touchstart', selectMass, { passive: false });
+        massGroup.appendChild(massWrap);
+
+        if (isSelected) selectedDisplacement = dy;
+        path += `${i === 0 ? 'M' : 'L'} ${x} ${y} `;
+      }
+
+      wavePath.setAttribute('d', path);
+      updateTrace(selectedDisplacement, s, running);
+    }
+
+    function tick(now) {
+      const dt = Math.min(0.04, (now - lastTime) / 1000);
+      lastTime = now;
+      if (running) simTime += dt;
+      render();
+      requestAnimationFrame(tick);
+    }
+
+    [ampInput, lambdaInput, freqInput, countInput, modeInput, phaseInput].forEach(el => {
+      el.addEventListener('input', () => render());
+      el.addEventListener('change', () => render());
+    });
+
+    toggleBtn.addEventListener('click', () => {
+      running = !running;
+      toggleBtn.textContent = running ? '⏸ หยุด' : '▶️ เล่น';
+      render();
+    });
+
+    resetBtn.addEventListener('click', () => {
+      ampInput.value = 110;
+      lambdaInput.value = 360;
+      freqInput.value = 50;
+      countInput.value = 17;
+      modeInput.value = 'right';
+      phaseInput.value = 0;
+      simTime = 0;
+      running = false;
+      selectedIndex = 8;
+      traceHistory = [];
+      toggleBtn.textContent = '▶️ เล่น';
+      render();
+    });
+
+    formulaBtn.addEventListener('click', () => {
+      formulaBox.classList.toggle('show');
+      if (formulaBox.classList.contains('show')) exerciseBox.classList.remove('show');
+    });
+
+    exerciseBtn.addEventListener('click', () => {
+      exerciseBox.classList.toggle('show');
+      if (exerciseBox.classList.contains('show')) formulaBox.classList.remove('show');
+    });
+
+    drawGraphGrid();
+    render();
+    requestAnimationFrame((t) => { lastTime = t; requestAnimationFrame(tick); });
+  </script>
+</body>
+</html>
