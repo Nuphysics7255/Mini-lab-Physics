@@ -1,0 +1,1199 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>พื้นเอียง + รอก</title>
+<style>
+  :root{
+    --bg:#ffffff;
+    --wood1:#d8b792; --wood2:#eed2a8;
+    --ink:#0f172a; --muted:#475569;
+    --rope:#000000;
+    --pulley:#111111;
+    --m1:#d9ecff; --m2:#fff4cc;
+    --panel:#fff; --panelborder:#e5e7eb;
+    --accent:#0ea5e9;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,"Noto Sans Thai",sans-serif}
+  .wrap{
+    display:grid;
+    grid-template-columns:minmax(260px,360px) 1fr;
+    gap:clamp(8px,2vw,16px);
+    max-width:min(1200px,96vw);
+    margin:12px auto;
+    padding:clamp(6px,1.2vw,12px);
+  }
+  @media(max-width:880px){.wrap{grid-template-columns:1fr}}
+  .card{
+    background:var(--panel);
+    border:1px solid var(--panelborder);
+    border-radius:14px;
+    padding:clamp(10px,1.5vw,14px);
+  }
+  h1{margin:0 0 6px;font-size:clamp(16px,2.2vw,20px)}
+  label{display:block;margin:6px 0 4px;color:var(--muted);font-size:14px}
+  input[type=number]{width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  button{padding:10px 14px;border:1px solid #d1d5db;border-radius:10px;background:#fff;cursor:pointer;font-size:14px}
+  button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  button.danger{background:#fff;border-color:#fecaca;color:#b91c1c}
+  .stat{font-size:14px;margin:3px 0}
+  .tag{display:inline-block;font-size:12px;border:1px solid #e2e8f0;border-radius:999px;padding:1px 10px;background:#fff}
+  svg{width:100%;height:auto;border:1px solid #e2e8f0;border-radius:12px;background:#fff;touch-action:none}
+  .foot{margin-top:10px;font-size:13px;color:#475569}
+  .foot a{color:#2563eb;text-decoration:none}
+  .foot a:hover{text-decoration:underline}
+  .modal.hidden{display:none}
+  .modal{position:fixed;inset:0;background:#0f172a1f;backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;z-index:50;padding:10px}
+  .sheet{background:#fff;border:1px solid #e2e8f0;border-radius:14px;max-width:700px;width:100%;max-height:90vh;overflow:auto;padding:14px}
+  .sheet h2{margin-top:0}
+
+  /* --- Mobile fixed bar (เฉพาะมือถือ) --- */
+  .mobile-under.hidden{display:none}
+  .mobile-bar.hidden{display:none}
+  @media(max-width:880px){
+    /* กันแถบปุ่มทับเนื้อหา */
+    body{padding-bottom:92px}
+    .mobile-under{display:block;margin-top:10px}
+    .mobile-bar{
+      position:fixed;
+      left:0; right:0; bottom:0;
+      z-index:60;
+      background:#ffffff;
+      border-top:1px solid #e5e7eb;
+      padding:10px 12px;
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      justify-content:center;
+    }
+    .mobile-bar button{
+      flex:1 1 calc(50% - 8px);
+      max-width:260px;
+      min-width:150px;
+      padding:12px 14px;
+      border-radius:12px;
+      font-size:15px;
+    }
+    .mobile-bar button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+    .mobile-bar button.danger{background:#fff;border-color:#fecaca;color:#b91c1c}
+  }
+
+
+@media (max-width:880px){
+  body.show-formula .mobile-fixed-bar{
+    display:none !important;
+  }
+  #formulaModal{
+    align-items:flex-start;
+  }
+  #formulaModal .sheet{
+    margin-top:60px;
+    max-height:calc(100vh - 80px);
+    overflow-y:auto;
+  }
+  .close-btn{
+    position:fixed;
+    top:12px;
+    right:12px;
+    z-index:1001;
+    background:#fff;
+    border:1px solid #e5e7eb;
+    border-radius:50%;
+    width:40px;
+    height:40px;
+    font-size:18px;
+    cursor:pointer;
+  }
+}
+
+
+@media (max-width:880px){
+  /* เมื่อเปิดสูตรสำคัญ: ซ่อนแถบปุ่มล่างให้ชัวร์ (กันกรณี class ไม่ติด) */
+  #formulaModal:not(.hidden) ~ #mobileBar,
+  body.show-formula #mobileBar,
+  #formulaModal:not(.hidden) ~ .mobile-fixed-bar,
+  body.show-formula .mobile-fixed-bar{
+    display:none !important;
+  }
+
+  /* ให้สูตรเลื่อนดูได้เต็มจอ */
+  #formulaModal{
+    align-items:stretch;
+    justify-content:flex-start;
+    padding:0;
+  }
+  #formulaModal .sheet{
+    width:min(720px, 96vw);
+    margin:64px auto 18px;
+    max-height:calc(100vh - 82px);
+    overflow:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+}
+
+
+@media (max-width:880px){
+  /* ขยายตัวอักษรป้ายในจอทดลอง */
+  #scene text{
+    font-size: calc(1em + 5px);
+  }
+}
+
+
+@media (max-width:880px){
+  #status{
+    color:#16a34a; /* green-600 */
+    font-weight:600;
+  }
+}
+
+
+/* ===== ปรับตามคำสั่ง ===== */
+.title-main{
+  color:#2563eb;
+  font-size:clamp(20px, 2.8vw, 26px);
+  font-weight:700;
+}
+#angleLabel{
+  fill:#64748b;
+}
+
+
+#anglePivotLabel{
+  fill:#64748b;
+  font-size:14px;
+}
+
+</style>
+</head>
+<body data-version="v16">
+<div class="wrap">
+  <!-- LEFT PANEL -->
+  <div class="card">
+    <h1 class="title-main">พื้นเอียง + รอก</h1>
+
+    <div class="row">
+      <div>
+        <label>มวล m₁ (kg)</label>
+        <input id="m1Input" type="number" value="3.0" step="0.1" min="0.1">
+      </div>
+      <div>
+        <label>มวล m₂ (kg)</label>
+        <input id="m2Input" type="number" value="4.0" step="0.1" min="0.1">
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>μₛ</label>
+        <input id="muSInput" type="number" value="0" step="0.01" min="0" max="1">
+      </div>
+      <div>
+        <label>μₖ</label>
+        <input id="muKInput" type="number" value="0" step="0.01" min="0" max="1">
+      </div>
+    </div>
+    <div>
+      <label>มุมโต๊ะเอียง (°)</label>
+      <input id="angleInput" type="number" value="20" step="1" min="0" max="60">
+      <small style="color:#64748b">ลากปลายคาน/รอกในรูปเพื่อหมุนได้</small>
+    </div>
+
+    <div class="controls">
+      <button id="playBtn" class="primary">▶ เล่น</button>
+      <button id="resetBtn" class="danger">↺ รีเซ็ต</button>
+      <button id="vecBtn">แสดงเวกเตอร์แรง</button>
+      <button id="formulaBtn">สูตรสำคัญ</button>
+    </div>
+
+    <h2 style="margin-top:12px">ผลคำนวณ</h2>
+    <div class="stat">สถานะ: <span id="status" class="tag">พร้อม</span></div>
+    <div class="stat">มุม θ = <b><span id="thetaOut">20</span>°</b></div>
+    <div class="stat">มวล m₁ = <b><span id="m1Out">3.00</span></b> kg • มวล m₂ = <b><span id="m2Out">4.00</span></b> kg</div>
+    <div class="stat">ความเร่ง m₁ = <b><span id="a1Out">0.00</span></b> m/s²</div>
+    <div class="stat">ความเร่ง m₂ = <b><span id="a2Out">0.00</span></b> m/s²</div>
+    <div class="stat">แรงตึงเชือก T = <b><span id="tOut">0.00</span></b> N</div>
+    <div class="stat">แรงเสียดทาน = <b><span id="fricOut">0.00</span></b> N <span id="fricType"></span></div>
+    <div class="stat">แรง m₁g sinθ = <b><span id="m1gParOut">0.00</span></b> N</div>
+
+    <div class="foot">
+      รอกเบาไม่มีความฝืด • เชือกเบา → <b>แรงตึงเท่ากันทั้งเส้น</b><br>
+      ศึกษาเพิ่มเติมที่
+      <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener noreferrer">เพจคลายปมฟิสิกส์</a>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="card">
+    <svg id="scene" viewBox="0 0 820 560">
+      <defs>
+        <linearGradient id="woodGrad" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stop-color="#eed2a8"/>
+          <stop offset="100%" stop-color="#d8b792"/>
+        </linearGradient>
+        <marker id="arrow-red" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+          <path d="M0,0 L6,3 L0,6 z" fill="#ef4444" />
+        </marker>
+        <marker id="arrow-blue" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+          <path d="M0,0 L6,3 L0,6 z" fill="#2563eb" />
+        </marker>
+        <marker id="arrow-orange" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+          <path d="M0,0 L6,3 L0,6 z" fill="#f97316" />
+        </marker>
+      </defs>
+
+      <!-- พื้นราบ -->
+      <line x1="30" y1="520" x2="800" y2="520" stroke="#d1d5db" stroke-width="3"/>
+
+      <!-- คานเอียง -->
+      <g id="rampGroup">
+        <rect x="0" y="-10" width="520" height="20" rx="2" fill="url(#woodGrad)" stroke="#8b6a45"/>
+        <circle cx="0" cy="0" r="6" fill="#0f172a"/>
+        <circle id="angleHandle" cx="520" cy="0" r="10" fill="#0ea5e9" stroke="#fff" stroke-width="2" style="cursor:grab"/>
+      </g>
+
+      <!-- รอก -->
+      <g id="pulleyGroup">
+        <circle cx="0" cy="0" r="20" fill="#111"/>
+        <circle cx="0" cy="0" r="4" fill="#fff"/>
+      </g>
+
+      <!-- เชือก -->
+      <path id="ropePath" d="" stroke="#000" stroke-width="3" stroke-linecap="round" fill="none"/>
+
+      <!-- m1 -->
+      <g id="m1Group">
+        <rect x="-29.5" y="-59" width="59" height="50" rx="7" fill="#d9ecff" stroke="#0f172a"/>
+        <text x="0" y="-30" text-anchor="middle" font-size="19" fill="#0f172a">m<tspan dy="4" font-size="12">1</tspan></text>
+      </g>
+
+      <!-- ลูกศรแรงเสียดทาน -->
+      <line id="fricArrow" x1="0" y1="0" x2="0" y2="0" stroke="#ef4444" stroke-width="3" marker-end="url(#arrow-red)" visibility="hidden"/>
+      <text id="fricLabel" x="0" y="0" font-size="12" fill="#ef4444" visibility="hidden"></text>
+
+      <!-- ลูกศร m1g sinθ -->
+      <line id="m1gParArrow" x1="0" y1="0" x2="0" y2="0" stroke="#2563eb" stroke-width="3" marker-end="url(#arrow-blue)" visibility="hidden"/>
+      <text id="m1gParLabel" x="0" y="0" font-size="12" fill="#2563eb" visibility="hidden"></text>
+
+      <!-- m2 -->
+      <g id="m2Group">
+        <rect x="-29.5" y="0" width="59" height="50" rx="7" fill="#fff4cc" stroke="#0f172a"/>
+        <text x="0" y="32" text-anchor="middle" font-size="19" fill="#0f172a">m<tspan dy="4" font-size="12">2</tspan></text>
+      </g>
+
+      <!-- ลูกศร m2g -->
+      <line id="m2gArrow" x1="0" y1="0" x2="0" y2="0" stroke="#f97316" stroke-width="3" marker-end="url(#arrow-orange)" visibility="hidden"/>
+      <text id="m2gLabel" x="0" y="0" font-size="12" fill="#f97316" visibility="hidden"></text>
+
+      <!-- ป้าย -->
+      <!-- ป้ายมุมตรงจุดหมุน -->
+      <text id="anglePivotLabel" x="0" y="0" font-size="14" fill="#64748b"></text>
+      <path id="angleArc" d="" stroke="#94a3b8" stroke-width="2" stroke-dasharray="5 5" fill="none"/>
+      <!-- angleLabel removed (duplicate) -->
+<text id="massLabel"  x="560" y="100" font-size="14" fill="#0f172a"></text>
+      <text id="accLabel"   x="560" y="120" font-size="14" fill="#0f172a"></text>
+      <text id="tensionLabel" x="560" y="140" font-size="14" fill="#0f172a"></text>
+      <text id="phaseText" x="40" y="40" font-size="14" fill="#475569"></text>
+    </svg>
+    <div id="mobileUnder" class="mobile-under hidden"></div>
+    <div id="mobileBar" class="mobile-bar hidden" aria-label="Mobile Controls"></div>
+  </div>
+</div>
+
+<!-- modal สูตรสำคัญ -->
+<div id="formulaModal" class="modal hidden" aria-modal="true">
+  <div class="sheet">
+    <h2>สูตรสำคัญ: ใช้กฎข้อ 2 ของนิวตัน</h2>
+    <div id="formulaContent"></div>
+    <div style="margin-top:12px;display:flex;justify-content:flex-end">
+      <button id="closeFormula" class="close-btn">❌</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  function isMobileView(){
+    // ใช้ทั้ง matchMedia + clientWidth กันกรณี innerWidth เพี้ยนในบางเบราว์เซอร์มือถือ
+    const w = Math.min(window.innerWidth || 9999, document.documentElement.clientWidth || 9999);
+    return (window.matchMedia && window.matchMedia('(max-width: 880px)').matches) || (w <= 880) || ('ontouchstart' in window);
+  }
+
+
+
+
+  function adjustAndEnableDragLabelsMobile(){
+    if (window.innerWidth > 880) return;
+
+    const labels = [massLabel, accLabel, tensionLabel];
+
+    // initial adjust only once
+    labels.forEach((lb, i)=>{
+      if (!lb.dataset.adjusted){
+        const x = +lb.getAttribute('x') || 0;
+        const y = +lb.getAttribute('y') || 0;
+        lb.setAttribute('x', x - 20);              // ซ้าย 20px
+        lb.setAttribute('y', y + i*3);             // เพิ่มระยะห่างแถว +3px ต่อแถว
+        lb.dataset.adjusted = "1";
+      }
+
+      // ทำให้ลากได้
+      lb.style.cursor = 'move';
+      lb.addEventListener('pointerdown', startDragLabel);
+    });
+  }
+
+  let dragLabel = null;
+  function startDragLabel(e){
+    if (window.innerWidth > 880) return;
+    dragLabel = e.target;
+    dragLabel.setPointerCapture(e.pointerId);
+  }
+
+  function moveDragLabel(e){
+    if (!dragLabel) return;
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
+    dragLabel.setAttribute('x', svgP.x);
+    dragLabel.setAttribute('y', svgP.y);
+  }
+
+  function endDragLabel(e){
+    if (!dragLabel) return;
+    dragLabel.releasePointerCapture(e.pointerId);
+    dragLabel = null;
+  }
+
+
+  function shiftInfoLabelsMobile(){
+    if (window.innerWidth > 880) return;
+    const shiftX = 50;
+    const shiftY = -20;
+    const labels = [massLabel, accLabel, tensionLabel];
+    labels.forEach(lb=>{
+      const x = +lb.getAttribute('x') || 0;
+      const y = +lb.getAttribute('y') || 0;
+      lb.setAttribute('x', x + shiftX);
+      lb.setAttribute('y', y + shiftY);
+    });
+  }
+
+  const g = 9.81;
+  const SCALE = 100;
+  const rampBase = {x:120, y:500};
+  const rampLen_m = 5.2;
+  const rampLen_px = rampLen_m * SCALE;
+  const pulleyR = 20;
+  const groundY = 520;
+  const boxH = 50;
+  const FORCE_PX_PER_N = 2;
+
+  // เริ่ม m1 กลางคาน
+  const s1_start_m = rampLen_m / 2;
+  let s1 = s1_start_m;
+
+  const rampGroup = document.getElementById('rampGroup');
+  const angleHandle = document.getElementById('angleHandle');
+  const pulleyGroup = document.getElementById('pulleyGroup');
+  const ropePath = document.getElementById('ropePath');
+  const m1Group = document.getElementById('m1Group');
+  const m2Group = document.getElementById('m2Group');
+  const fricArrow = document.getElementById('fricArrow');
+  const fricLabel = document.getElementById('fricLabel');
+  const m1gParArrow = document.getElementById('m1gParArrow');
+  const m1gParLabel = document.getElementById('m1gParLabel');
+  const m2gArrow = document.getElementById('m2gArrow');
+  const m2gLabel = document.getElementById('m2gLabel');
+
+  const statusEl = document.getElementById('status');
+  const thetaOut = document.getElementById('thetaOut');
+  const m1Out = document.getElementById('m1Out');
+  const m2Out = document.getElementById('m2Out');
+  const a1Out = document.getElementById('a1Out');
+  const a2Out = document.getElementById('a2Out');
+  const tOut  = document.getElementById('tOut');
+  const fricOut = document.getElementById('fricOut');
+  const fricType = document.getElementById('fricType');
+  const m1gParOut = document.getElementById('m1gParOut');
+
+  const angleLabel   = document.getElementById('angleLabel');
+  const massLabel    = document.getElementById('massLabel');
+  const accLabel     = document.getElementById('accLabel');
+  const tensionLabel = document.getElementById('tensionLabel');
+  const phaseText    = document.getElementById('phaseText');
+
+  // ===== มือถือ: จัดป้ายค่า θ, m₁ m₂, a, T เป็น "กลุ่มเดียว" และลากทั้งกลุ่มได้ =====
+  let infoGroup = {
+    inited: false,
+    baseX: 560,
+    baseY: 80,
+    offsetX: -10,   // ขยับซ้าย 10px (ตามคำสั่ง)
+    offsetY: 0,
+    gap: 23         // ระยะห่างแถว = 20 + 3 px
+  };
+  let draggingInfoGroup = false;
+  let infoDragStart = {x:0,y:0, ox:0, oy:0};
+
+  function initInfoGroupMobile(){
+    if (window.innerWidth > 880) return;
+    if (infoGroup.inited) return;
+
+    const labels = [massLabel, accLabel, tensionLabel];
+
+    // เก็บตำแหน่งตั้งต้น (ดูจาก SVG เดิม)
+    infoGroup.baseX = +massLabel.getAttribute('x') || 560;
+    infoGroup.baseY = +massLabel.getAttribute('y') || 100;
+
+    // เคอร์เซอร์ + ใช้ pointerdown ที่ "ป้ายใดก็ได้" เพื่อเริ่มลากทั้งกลุ่ม
+    labels.forEach(lb=>{
+      lb.style.cursor = 'move';
+      lb.addEventListener('pointerdown', startDragInfoGroup);
+    });
+
+    infoGroup.inited = true;
+    applyInfoGroupLayout();
+    lockInfoGroupUnderStatus();
+  }
+
+  
+  function lockInfoGroupUnderStatus(){
+    if (window.innerWidth > 880) return;
+
+    // ตำแหน่งอ้างอิงจากมุมซ้ายบนของพื้นที่สถานะใน SVG
+    const statusX = 40;
+    const statusY = 60;
+
+    const startX = statusX;
+    const startY = statusY + 20; // ใต้คำว่า "พร้อม"
+    const gap = 23; // ระยะห่างแถว
+
+    massLabel.setAttribute('x', startX);
+    massLabel.setAttribute('y', startY);
+
+    accLabel.setAttribute('x', startX);
+    accLabel.setAttribute('y', startY + gap);
+
+    tensionLabel.setAttribute('x', startX);
+    tensionLabel.setAttribute('y', startY + gap*2);
+
+    // กันการลาก/แตะแล้วป้ายวิ่ง
+    [massLabel, accLabel, tensionLabel].forEach(lb=>{
+      lb.style.cursor = 'default';
+      lb.style.pointerEvents = 'none';
+    });
+  }
+
+function applyInfoGroupLayout(){
+    if (window.innerWidth > 880) return;
+    const labels = [massLabel, accLabel, tensionLabel];
+    labels.forEach((lb, i)=>{
+      lb.setAttribute('x', infoGroup.baseX + infoGroup.offsetX);
+      lb.setAttribute('y', infoGroup.baseY + infoGroup.offsetY + i*infoGroup.gap);
+    });
+  }
+
+  function startDragInfoGroup(e){ return; }
+
+  function moveDragInfoGroup(e){ return; }
+
+  function endDragInfoGroup(){ return; }
+
+
+  const m1Input = document.getElementById('m1Input');
+  const m2Input = document.getElementById('m2Input');
+  const muSInput = document.getElementById('muSInput');
+  const muKInput = document.getElementById('muKInput');
+  const angleInput = document.getElementById('angleInput');
+
+  const playBtn = document.getElementById('playBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const vecBtn = document.getElementById('vecBtn');
+  const formulaBtn = document.getElementById('formulaBtn');
+
+  const formulaModal = document.getElementById('formulaModal');
+  const formulaContent = document.getElementById('formulaContent');
+  const closeFormula = document.getElementById('closeFormula');
+
+  const svg = document.getElementById('scene');
+
+  let angleDeg = 20;
+  let playing = false;
+  let lastT = null;
+  let v = 0;
+  let phase = 1;
+  let pulleyPos = {x:0,y:0};
+  let draggingAngle = false;
+  let showVectors = false;
+
+  function updateRampTransform(){
+    // === ป้ายมุมตรงจุดหมุน ===
+    const lbl = document.getElementById('anglePivotLabel');
+    if (lbl){
+      lbl.textContent = `θ = ${angleDeg.toFixed(0)}°`;
+      lbl.setAttribute('x', rampBase.x + 70); // ขวา 70px จากจุดหมุน
+      lbl.setAttribute('y', rampBase.y);      // ระดับเดียวกับจุดหมุน
+    }
+
+    const arc = document.getElementById('angleArc');
+    if (arc){
+      const r = 46; // รัศมีโค้ง
+      const cx = rampBase.x;
+      const cy = rampBase.y;
+
+      const th = angleDeg * Math.PI/180;
+
+      const x1 = cx + r;
+      const y1 = cy;
+
+      const x2 = cx + r * Math.cos(th);
+      const y2 = cy - r * Math.sin(th);
+
+      const largeArc = 0;
+      const sweep = 0; // ให้โค้งขึ้นด้านบน (CCW)
+      arc.setAttribute('d', `M ${x1.toFixed(2)} ${y1.toFixed(2)} A ${r} ${r} 0 ${largeArc} ${sweep} ${x2.toFixed(2)} ${y2.toFixed(2)}`);
+    }
+
+
+    rampGroup.setAttribute('transform', `translate(${rampBase.x},${rampBase.y}) rotate(${-angleDeg})`);
+    const rad = angleDeg*Math.PI/180;
+    const endX = rampBase.x + rampLen_px * Math.cos(rad);
+    const endY = rampBase.y - rampLen_px * Math.sin(rad);
+    pulleyPos.x = endX;
+    pulleyPos.y = endY - 15;
+    pulleyGroup.setAttribute('transform', `translate(${pulleyPos.x},${pulleyPos.y})`);
+  }
+
+  function placeM1(){
+    const rad = angleDeg*Math.PI/180;
+    const x = rampBase.x + s1 * SCALE * Math.cos(rad);
+    const y = rampBase.y - s1 * SCALE * Math.sin(rad);
+    m1Group.setAttribute('transform', `translate(${x},${y}) rotate(${-angleDeg})`);
+    return {x,y};
+  }
+
+  function getM1Anchor(m1pos){
+    const rad = angleDeg*Math.PI/180;
+    const lx = 29.5, ly = -34;
+    const cosA = Math.cos(rad), sinA = Math.sin(rad);
+    return {
+      x: m1pos.x + lx*cosA + ly*sinA,
+      y: m1pos.y + (-lx*sinA) + ly*cosA
+    };
+  }
+  function getM1LeftSurface(m1pos){
+    const rad = angleDeg*Math.PI/180;
+    const lx = -29.5, ly = -34;
+    const cosA = Math.cos(rad), sinA = Math.sin(rad);
+    return {
+      x: m1pos.x + lx*cosA + ly*sinA,
+      y: m1pos.y + (-lx*sinA) + ly*cosA
+    };
+  }
+  function getM1RightMid(m1pos){
+    const rad = angleDeg*Math.PI/180;
+    const lx = 29.5, ly = -34;
+    const cosA = Math.cos(rad), sinA = Math.sin(rad);
+    return {
+      x: m1pos.x + lx*cosA + ly*sinA,
+      y: m1pos.y + (-lx*sinA) + ly*cosA
+    };
+  }
+
+  function placeM2(){
+    // ระยะหย่อนตามสัดส่วนจากการเลื่อน m1
+    const drop_m = 1.0 + (s1 - s1_start_m);
+    const unclampedY = pulleyPos.y + drop_m * SCALE;
+    const minY = pulleyPos.y + pulleyR + 10;
+    const y = Math.max(unclampedY, minY);
+    const x = pulleyPos.x + pulleyR;
+    m2Group.setAttribute('transform', `translate(${x},${y})`);
+    return {x,y,drop_m,minY,unclampedY};
+  }
+
+  function drawRope(anchor, m2pos){
+    const topX = pulleyPos.x;
+    const topY = pulleyPos.y - pulleyR;
+    const rightX = pulleyPos.x + pulleyR;
+    const rightY = pulleyPos.y;
+    ropePath.setAttribute('d',
+      `M ${anchor.x} ${anchor.y} L ${topX} ${topY} A ${pulleyR} ${pulleyR} 0 0 1 ${rightX} ${rightY} L ${m2pos.x} ${m2pos.y}`);
+  }
+
+  function computeAccel(m1,m2,mu_s,mu_k,thetaRad){
+    const m1g_parallel = m1 * g * Math.sin(thetaRad);
+    const n1 = m1 * g * Math.cos(thetaRad);
+    const m2g = m2 * g;
+    const drive = m2g - m1g_parallel;
+    const fs_max = mu_s * n1;
+
+    // ยังไม่ไถล
+    if (Math.abs(drive) <= fs_max){
+      const fric = Math.abs(drive);
+      const T = Math.min(m1g_parallel, m2g);
+      return {moving:false,a:0,T,fric,fricKind:fric>0?'fs':'',m1gPar:m1g_parallel,m2g,drive};
+    }
+
+    // ไถล → ใช้จลน์
+    const fk = mu_k * n1;
+    if (drive > 0){
+      const a = (m2g - m1g_parallel - fk)/(m1+m2);
+      const T = m2g - m2*a;
+      return {moving:true,a,T,fric:fk,fricKind:'fk',m1gPar:m1g_parallel,m2g,drive};
+    } else {
+      const a = (m2g - m1g_parallel + fk)/(m1+m2);
+      const T = m2g - m2*a;
+      return {moving:true,a,T,fric:fk,fricKind:'fk',m1gPar:m1g_parallel,m2g,drive};
+    }
+  }
+
+  function updateHUD(a,T,fric,fricKind,m1gPar){
+    thetaOut.textContent = angleDeg.toFixed(0);
+    const m1 = +m1Input.value, m2 = +m2Input.value;
+    m1Out.textContent = m1.toFixed(2);
+    m2Out.textContent = m2.toFixed(2);
+    a1Out.textContent = Math.abs(a).toFixed(2);
+    a2Out.textContent = Math.abs(a).toFixed(2);
+    tOut.textContent  = (T||0).toFixed(2);
+    fricOut.textContent = (fric||0).toFixed(2);
+    fricType.textContent = fricKind ? `(${fricKind})` : '';
+    m1gParOut.textContent = (m1gPar||0).toFixed(2);
+    statusEl.textContent = (phase===1 ? 'กำลังเคลื่อนที่' : 'หยุด');
+    massLabel.textContent  = `m₁=${m1.toFixed(2)} kg, m₂=${m2.toFixed(2)} kg`;
+    accLabel.textContent   = `a = ${Math.abs(a).toFixed(2)} m/s²`;
+    tensionLabel.textContent = `T = ${(T||0).toFixed(2)} N`;
+  }
+
+  function setVectorVisibility(vis){
+    const v = vis ? 'visible' : 'hidden';
+    m1gParArrow.setAttribute('visibility', v);
+    m1gParLabel.setAttribute('visibility', v);
+    m2gArrow.setAttribute('visibility', v);
+    m2gLabel.setAttribute('visibility', v);
+    if (!vis){
+      fricArrow.setAttribute('visibility','hidden');
+      fricLabel.setAttribute('visibility','hidden');
+    }
+  }
+
+  function drawFricArrow(m1pos, a, fric, fricKind, drive){
+    if (!showVectors) return;
+    if (!fric || fric <= 1e-4){
+      fricArrow.setAttribute('visibility','hidden');
+      fricLabel.setAttribute('visibility','hidden');
+      return;
+    }
+    const rad = angleDeg*Math.PI/180;
+    const dirX = Math.cos(rad), dirY = -Math.sin(rad);
+
+    let sign = 0;
+    if (Math.abs(v)>1e-4) {
+      sign = v>0 ? -1:1;
+    } else if (Math.abs(a)>1e-4){
+      sign = a>0 ? -1:1;
+    } else {
+      if (drive > 0) sign = -1;
+      else if (drive < 0) sign = 1;
+      else sign = 0;
+    }
+
+    const startX = m1pos.x;
+    const startY = m1pos.y - 25 + 10;
+    const len = Math.max(8, Math.min(240, fric * FORCE_PX_PER_N));
+    const endX = startX + sign*dirX*len;
+    const endY = startY + sign*dirY*len;
+    fricArrow.setAttribute('visibility','visible');
+    fricLabel.setAttribute('visibility','visible');
+    fricArrow.setAttribute('x1', startX);
+    fricArrow.setAttribute('y1', startY);
+    fricArrow.setAttribute('x2', endX);
+    fricArrow.setAttribute('y2', endY);
+    fricLabel.textContent = (fricKind||'f') + ' = ' + fric.toFixed(2) + ' N';
+    fricLabel.setAttribute('x', endX + 50);
+    fricLabel.setAttribute('y', endY - 4);
+  }
+
+  function drawM1gPar(m1LeftPos, m1gPar){
+    if (!showVectors) return;
+    const rad = angleDeg*Math.PI/180;
+    const dirX = Math.cos(rad), dirY = -Math.sin(rad);
+    const startX = m1LeftPos.x;
+    const startY = m1LeftPos.y;
+    const len = Math.max(8, Math.min(240, m1gPar * FORCE_PX_PER_N));
+    const endX = startX - dirX*len;
+    const endY = startY - dirY*len;
+    m1gParArrow.setAttribute('x1', startX);
+    m1gParArrow.setAttribute('y1', startY);
+    m1gParArrow.setAttribute('x2', endX);
+    m1gParArrow.setAttribute('y2', endY);
+        m1gParLabel.textContent = 'm₁g sinθ = ' + m1gPar.toFixed(2) + ' N';
+    let lx = endX - 100;
+    let ly = endY - dirY*20;
+    // บังคับขยับ (ตามคำสั่ง): ซ้าย 40px และลง 10px
+    lx -= 40;
+    ly += 10;
+    m1gParLabel.setAttribute('x', lx);
+    m1gParLabel.setAttribute('y', ly);
+    // เผื่อบางเบราว์เซอร์/การวาดซ้ำ: reinforce ด้วย transform
+    m1gParLabel.setAttribute('transform', 'translate(0,0)');
+  }
+
+  function drawM2g(m2pos, m2g){
+    if (!showVectors) return;
+    const startX = m2pos.x;
+    const startY = m2pos.y + boxH;
+    const len = Math.max(8, Math.min(240, m2g * FORCE_PX_PER_N));
+    const endX = startX;
+    const endY = startY + len;
+    m2gArrow.setAttribute('x1', startX);
+    m2gArrow.setAttribute('y1', startY);
+    m2gArrow.setAttribute('x2', endX);
+    m2gArrow.setAttribute('y2', endY);
+    m2gLabel.textContent = 'm₂g = ' + m2g.toFixed(2) + ' N';
+    m2gLabel.setAttribute('x', endX + 4);
+    m2gLabel.setAttribute('y', endY + 12);
+  }
+
+  function resetAll(){
+    angleDeg = +angleInput.value || 20;
+    s1 = s1_start_m;
+    v = 0;
+    phase = 1;
+    updateRampTransform();
+    const m1pos = placeM1();
+    const anchor = getM1Anchor(m1pos);
+    const m2pos = placeM2();
+    drawRope(anchor, m2pos);
+    const info = computeAccel(+m1Input.value,+m2Input.value,+muSInput.value,+muKInput.value,angleDeg*Math.PI/180);
+    updateHUD(info.a, info.T, info.fric||0, info.fricKind, info.m1gPar);
+    setVectorVisibility(showVectors);
+    drawFricArrow(m1pos, info.a, info.fric||0, info.fricKind, info.drive);
+    const m1Left = getM1LeftSurface(m1pos);
+    drawM1gPar(m1Left, info.m1gPar);
+drawM2g(m2pos, info.m2g);
+    lockInfoGroupUnderStatus();
+    shiftInfoLabelsMobile();
+    initInfoGroupMobile();
+    applyInfoGroupLayout();
+    lockInfoGroupUnderStatus();
+    phaseText.textContent = 'พร้อม';
+  }
+
+  function step(dt){
+    if (phase !== 1) return;
+
+    const m1 = +m1Input.value, m2 = +m2Input.value;
+    const mu_s = +muSInput.value, mu_k = +muKInput.value;
+    const thetaRad = angleDeg*Math.PI/180;
+    const info = computeAccel(m1,m2,mu_s,mu_k,thetaRad);
+    const a = info.a;
+
+    v += a * dt;
+    s1 += v * dt;
+
+    const maxAlong = rampLen_m - 0.3;
+    if (s1 > maxAlong){ s1 = maxAlong; v=0; phase=2; }
+    if (s1 < 0){ s1 = 0; v=0; phase=2; }
+
+    const m1pos = placeM1();
+    const anchor = getM1Anchor(m1pos);
+    const m2pos = placeM2();
+    drawRope(anchor, m2pos);
+
+    const m2bottom = m2pos.y + boxH;
+    const hitTop = m2pos.unclampedY <= m2pos.minY;
+
+    // ห้ามจุดกึ่งกลางผิวขวาของ m1 เข้าใกล้ศูนย์กลางรอก < 27 px
+    const m1Right = getM1RightMid(m1pos);
+    const dx1 = m1Right.x - pulleyPos.x;
+    const dy1 = m1Right.y - pulleyPos.y;
+    const m1TooClose = Math.sqrt(dx1*dx1 + dy1*dy1) < 27;
+
+    if (m2bottom >= groundY || hitTop || m1TooClose){
+      v = 0;
+      phase = 2;
+    }
+
+    updateHUD(a, info.T, info.fric||0, info.fricKind, info.m1gPar);
+    drawFricArrow(m1pos, a, info.fric||0, info.fricKind, info.drive);
+    const m1Left = getM1LeftSurface(m1pos);
+    drawM1gPar(m1Left, info.m1gPar);
+drawM2g(m2pos, info.m2g);
+    lockInfoGroupUnderStatus();
+    shiftInfoLabelsMobile();
+    initInfoGroupMobile();
+    applyInfoGroupLayout();
+    lockInfoGroupUnderStatus();
+
+    phaseText.textContent = (phase===1 ? 'กำลังเคลื่อนที่' : 'หยุด');
+    if (phase === 2){
+      playing = false;
+      playBtn.textContent = '▶ เล่น';
+    }
+  }
+
+  function tick(ts){
+    if (!playing){ lastT = null; return; }
+    if (lastT == null) lastT = ts;
+    const dt = Math.min(0.033, (ts - lastT)/1000);
+    lastT = ts;
+    step(dt);
+    requestAnimationFrame(tick);
+  }
+
+  // จำกัด μk ≤ μs และถ้า μs = 0 ⇒ μk = 0
+  muSInput.addEventListener('input', ()=>{
+    let muS = +muSInput.value;
+    if (muS < 0) muS = 0;
+    if (muS > 1) muS = 1;
+    muSInput.value = muS.toFixed(2);
+    let muK = +muKInput.value;
+    if (muS === 0) muK = 0;
+    else if (muK > muS) muK = muS;
+    muKInput.value = muK.toFixed(2);
+    resetAll();
+  shiftInfoLabelsMobile();
+  initInfoGroupMobile();
+  applyInfoGroupLayout();
+  lockInfoGroupUnderStatus();
+    lockInfoGroupUnderStatus();
+    initInfoGroupMobile();
+    applyInfoGroupLayout();
+    lockInfoGroupUnderStatus();
+  });
+  muKInput.addEventListener('input', ()=>{
+    let muS = +muSInput.value;
+    let muK = +muKInput.value;
+    if (muS === 0) muK = 0;
+    else if (muK > muS) muK = muS;
+    muKInput.value = muK.toFixed(2);
+    resetAll();
+  shiftInfoLabelsMobile();
+  initInfoGroupMobile();
+  applyInfoGroupLayout();
+  lockInfoGroupUnderStatus();
+    lockInfoGroupUnderStatus();
+    initInfoGroupMobile();
+    applyInfoGroupLayout();
+    lockInfoGroupUnderStatus();
+  });
+
+  playBtn.addEventListener('click', ()=>{
+    if (phase === 2) resetAll();
+  shiftInfoLabelsMobile();
+  initInfoGroupMobile();
+  applyInfoGroupLayout();
+  lockInfoGroupUnderStatus();
+    lockInfoGroupUnderStatus();
+    initInfoGroupMobile();
+    applyInfoGroupLayout();
+    lockInfoGroupUnderStatus();
+    playing = !playing;
+    playBtn.textContent = playing ? '⏸ หยุด' : '▶ เล่น';
+    if (playing) requestAnimationFrame(tick);
+  });
+
+  resetBtn.addEventListener('click', ()=>{
+    playing = false;
+    playBtn.textContent = '▶ เล่น';
+    resetAll();
+  shiftInfoLabelsMobile();
+  initInfoGroupMobile();
+  applyInfoGroupLayout();
+  lockInfoGroupUnderStatus();
+    lockInfoGroupUnderStatus();
+    initInfoGroupMobile();
+    applyInfoGroupLayout();
+    lockInfoGroupUnderStatus();
+  });
+
+  vecBtn.addEventListener('click', ()=>{
+    showVectors = !showVectors;
+    setVectorVisibility(showVectors);
+    const m1pos = placeM1();
+    const m2pos = placeM2();
+    const info = computeAccel(+m1Input.value,+m2Input.value,+muSInput.value,+muKInput.value,angleDeg*Math.PI/180);
+    drawFricArrow(m1pos, info.a, info.fric||0, info.fricKind, info.drive);
+    const m1Left = getM1LeftSurface(m1pos);
+    drawM1gPar(m1Left, info.m1gPar);
+drawM2g(m2pos, info.m2g);
+    lockInfoGroupUnderStatus();
+    shiftInfoLabelsMobile();
+    initInfoGroupMobile();
+    applyInfoGroupLayout();
+    lockInfoGroupUnderStatus();
+  });
+
+  // สูตรสำคัญเวอร์ชันกระชับ + สี + การตัดสินใจ
+  formulaBtn.addEventListener('click', ()=>{
+    const m1 = +m1Input.value;
+    const m2 = +m2Input.value;
+    const mu_s = +muSInput.value;
+    const mu_k = +muKInput.value;
+    const thetaDeg = angleDeg;
+    const theta = thetaDeg * Math.PI/180;
+    const m1g = m1 * g;
+    const m2g = m2 * g;
+    const m1g_par = m1g * Math.sin(theta);
+    const n1 = m1g * Math.cos(theta);
+    const fs_max = mu_s * n1;
+    const drive = m2g - m1g_par;
+    const info = computeAccel(m1,m2,mu_s,mu_k,theta);
+
+    // ตัดสินใจแบบสั้น
+    let decisionBlock = `
+      <div style="background:#eff6ff;border:1px solid #dbeafe;border-radius:10px;padding:10px 12px;margin-bottom:10px">
+        <b style="color:#1d4ed8">ขั้นตัดสินใจ (สรุป 4 ขั้น)</b><br>
+        1) หาแรงพยายาม: <code>F_try = m₂g − m₁g sinθ = ${drive.toFixed(2)} N</code><br>
+        2) หาเสียดทานสถิตสูงสุด: <code>fₛ,max = μₛ m₁ g cosθ = ${fs_max.toFixed(2)} N</code><br>
+        3) ถ้า <b>|F_try| ≤ fₛ,max</b> ⇒ ยังไม่ไถล ⇒ a = 0, T = m₂g, fₛ = |F_try|, ทิศต้านแนวโน้ม<br>
+        4) ถ้า <b>|F_try| > fₛ,max</b> ⇒ ไถล ⇒ ใช้ μₖ ตั้งสมการนิวตันหาค่า a และ T
+      </div>
+    `;
+
+    let html = decisionBlock;
+
+    // เคสไม่ไถล
+    if (Math.abs(drive) <= fs_max) {
+      let fricDirText = '';
+      if (drive > 0) {
+        fricDirText = 'm₂ ดึงลง → m₁ มีแนวโน้มขึ้นเอียง → fₛ บน m₁ ชี้ลงตามพื้นเอียง';
+      } else if (drive < 0) {
+        fricDirText = 'm₁ อยากไหลลงเอง → fₛ บน m₁ ชี้ขึ้นตามพื้นเอียง';
+      } else {
+        fricDirText = 'แรงสองฝั่งสมดุล ทิศ fₛ เลือกให้ต้านการรบกวน';
+      }
+      const fs = Math.abs(drive);
+      html += `
+        <div style="background:#dcfce7;border:1px solid #bbf7d0;border-radius:10px;padding:10px 12px;margin-bottom:10px">
+          <b style="color:#15803d">ผลลัพธ์: ยังไม่ไถล</b><br>
+          เพราะ |F_try| ≤ fₛ,max<br>
+          ⇒ a = 0,  T = m₂ g = ${m2g.toFixed(2)} N<br>
+          <div style="margin-top:6px;padding:6px 8px;background:#fff;border-radius:6px;border:1px dashed #bbf7d0">
+            แรงเสียดทานสถิตจริง: fₛ = ${fs.toFixed(2)} N<br>
+            ทิศ: ${fricDirText}
+          </div>
+        </div>
+      `;
+    } else {
+      // เคสไถล
+      html += `
+        <div style="background:#ffedd5;border:1px solid #fed7aa;border-radius:10px;padding:10px 12px;margin-bottom:10px">
+          <b style="color:#c05621">ผลลัพธ์: เริ่มไถลแล้ว ⇒ ใช้เสียดทานจลน์</b><br>
+          บน m₁: <code>T − μₖ m₁ g cosθ − m₁ g sinθ = m₁ a</code><br>
+          บน m₂: <code>m₂ g − T = m₂ a</code><br>
+          ได้จากคำนวณตอนนี้<br>
+          a = ${info.a.toFixed(3)} m/s²,<br>
+          T = ${info.T.toFixed(2)} N,<br>
+          fₖ = ${(info.fric||0).toFixed(2)} N (ทวนการเคลื่อนที่ของ m₁)
+        </div>
+      `;
+    }
+
+    // สรุปตัวเลข
+    html += `
+      <div style="background:#e2e8f0;border:1px solid #cbd5f5;border-radius:10px;padding:10px 12px">
+        <b>สรุปตัวเลขตอนนี้</b><br>
+        θ = ${thetaDeg.toFixed(0)}°,
+        m₁ = ${m1.toFixed(2)} kg,
+        m₂ = ${m2.toFixed(2)} kg,
+        μₛ = ${mu_s.toFixed(2)},
+        μₖ = ${mu_k.toFixed(2)}<br>
+        m₁g sinθ = ${m1g_par.toFixed(2)} N,
+        m₂g = ${m2g.toFixed(2)} N
+      </div>
+    `;
+
+    formulaContent.innerHTML = html;
+    
+
+    document.body.classList.add('show-formula');
+    // ซ่อนแถบปุ่มล่างในมือถือแบบชัวร์
+    const mb = document.getElementById('mobileBar') || document.querySelector('.mobile-fixed-bar');
+    if (mb) mb.style.display = 'none';
+    // กันการเลื่อนพื้นหลัง (เลื่อนเฉพาะใน modal)
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
+
+
+    formulaModal.classList.remove('hidden');
+  });
+
+  closeFormula.addEventListener('click', ()=>{
+    document.body.classList.remove('show-formula');
+    formulaModal.classList.add('hidden');
+    // แสดงแถบปุ่มล่างกลับมา
+    const mb = document.getElementById('mobileBar') || document.querySelector('.mobile-fixed-bar');
+    if (mb) mb.style.display = '';
+    // คืนค่า scroll ของหน้า
+    document.documentElement.style.overflow = '';
+    document.body.style.overflow = '';
+  });
+formulaModal.addEventListener('click', e=>{ if(e.target===formulaModal){
+  document.body.classList.remove('show-formula');
+  formulaModal.classList.add('hidden');
+  const mb = document.getElementById('mobileBar') || document.querySelector('.mobile-fixed-bar');
+  if (mb) mb.style.display = '';
+  document.documentElement.style.overflow = '';
+  document.body.style.overflow = '';
+} });
+angleInput.addEventListener('input', ()=>{
+    angleDeg = Math.max(0, Math.min(60, +angleInput.value||0));
+    updateRampTransform();
+    const m1pos = placeM1();
+    const anchor = getM1Anchor(m1pos);
+    const m2pos = placeM2();
+    drawRope(anchor, m2pos);
+    const info = computeAccel(+m1Input.value,+m2Input.value,+muSInput.value,+muKInput.value,angleDeg*Math.PI/180);
+    updateHUD(info.a, info.T, info.fric||0, info.fricKind, info.m1gPar);
+    drawFricArrow(m1pos, info.a, info.fric||0, info.fricKind, info.drive);
+    const m1Left = getM1LeftSurface(m1pos);
+    drawM1gPar(m1Left, info.m1gPar);
+drawM2g(m2pos, info.m2g);
+    lockInfoGroupUnderStatus();
+    shiftInfoLabelsMobile();
+    initInfoGroupMobile();
+    applyInfoGroupLayout();
+    lockInfoGroupUnderStatus();
+  });
+
+  // พื้นที่จับหมุนกว้างขึ้น
+  function clientToSvgPoint(e){
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return {x:0,y:0};
+    const p = pt.matrixTransform(ctm.inverse());
+    return {x:p.x, y:p.y};
+  }
+
+  // พื้นที่จับหมุนกว้างขึ้น (แก้ให้รองรับการซูม/สเกลบนมือถือ)
+  svg.addEventListener('pointerdown', e=>{
+    const p = clientToSvgPoint(e);
+    const dist = Math.hypot(p.x - pulleyPos.x, p.y - pulleyPos.y);
+    const hitR = (window.matchMedia && window.matchMedia('(max-width:880px)').matches) ? 80 : 40;
+    if (e.target === angleHandle || dist < hitR){
+      e.preventDefault();
+      draggingAngle = true;
+      svg.setPointerCapture(e.pointerId);
+      angleHandle.style.cursor = 'grabbing';
+    }
+  });
+
+  svg.addEventListener('pointermove', e=>{
+    moveDragLabel(e);
+    moveDragInfoGroup(e);
+
+    if (!draggingAngle) return;
+    e.preventDefault();
+    const p = clientToSvgPoint(e);
+    const dx = p.x - rampBase.x;
+    const dy = rampBase.y - p.y;
+    let deg = Math.atan2(dy, dx) * 180/Math.PI;
+    deg = Math.max(0, Math.min(60, deg));
+    angleDeg = deg;
+    angleInput.value = angleDeg.toFixed(0);
+    updateRampTransform();
+    const m1pos = placeM1();
+    const anchor = getM1Anchor(m1pos);
+    const m2pos = placeM2();
+    drawRope(anchor, m2pos);
+    const info = computeAccel(+m1Input.value,+m2Input.value,+muSInput.value,+muKInput.value,angleDeg*Math.PI/180);
+    updateHUD(info.a, info.T, info.fric||0, info.fricKind, info.m1gPar);
+    drawFricArrow(m1pos, info.a, info.fric||0, info.fricKind, info.drive);
+    const m1Left = getM1LeftSurface(m1pos);
+    drawM1gPar(m1Left, info.m1gPar);
+drawM2g(m2pos, info.m2g);
+    lockInfoGroupUnderStatus();
+    shiftInfoLabelsMobile();
+    initInfoGroupMobile();
+    applyInfoGroupLayout();
+    lockInfoGroupUnderStatus();
+  });
+
+  svg.addEventListener('pointerup', e=>{
+    if (draggingAngle) e.preventDefault();
+    draggingAngle=false;
+    angleHandle.style.cursor='grab';
+  });
+  svg.addEventListener('pointercancel', ()=>{ draggingAngle=false; angleHandle.style.cursor='grab'; });
+  svg.addEventListener('pointerleave', ()=>{ draggingAngle=false; angleHandle.style.cursor='grab'; });
+function setupMobileLayout(){
+    const mq = window.matchMedia('(max-width:880px)');
+    const mobileUnder = document.getElementById('mobileUnder');
+    const mobileBar = document.getElementById('mobileBar');
+    const leftCard = document.querySelector('.wrap .card'); // card ซ้ายตัวแรก
+    const controls = leftCard.querySelector('.controls');
+    const calcTitle = leftCard.querySelector('h2');
+    const stats = Array.from(leftCard.querySelectorAll('.stat'));
+    const foot = leftCard.querySelector('.foot');
+
+    function apply(){
+      const isMobile = mq.matches;
+
+      if (isMobile){
+        // แสดงคอนเทนเนอร์มือถือ
+        mobileUnder.classList.remove('hidden');
+        mobileBar.classList.remove('hidden');
+
+        // ย้ายปุ่มไปแถบ fixed bar (ลำดับตามมาตรฐานที่พี่สั่ง)
+        // (ย้าย element เดิม ไม่สร้างใหม่ เพื่อให้ event listener เดิมยังทำงาน)
+        if (controls && controls.children.length){
+          const btns = Array.from(controls.querySelectorAll('button'));
+          btns.forEach(b=> mobileBar.appendChild(b));
+        }
+
+        // ย้าย "ผลคำนวณ" + stat ทั้งหมด + ลิงก์เพจ ไปไว้ใต้จอทดลอง
+        const frag = document.createDocumentFragment();
+        if (calcTitle) frag.appendChild(calcTitle);
+        stats.forEach(s=> frag.appendChild(s));
+        if (foot) frag.appendChild(foot);
+        mobileUnder.appendChild(frag);
+      } else {
+        // กลับสภาพ desktop (เผื่อ resize)
+        mobileUnder.classList.add('hidden');
+        mobileBar.classList.add('hidden');
+
+        if (controls){
+          // ย้ายปุ่มกลับเข้ากล่อง controls ซ้าย
+          const btns = Array.from(mobileBar.querySelectorAll('button'));
+          btns.forEach(b=> controls.appendChild(b));
+        }
+
+        // ย้ายผลคำนวณกลับเข้าการ์ดซ้าย (หลังปุ่ม controls)
+        const insertAfter = controls;
+        const backFrag = document.createDocumentFragment();
+        if (calcTitle) backFrag.appendChild(calcTitle);
+        stats.forEach(s=> backFrag.appendChild(s));
+        if (foot) backFrag.appendChild(foot);
+
+        // วางกลับต่อท้าย controls
+        if (insertAfter && insertAfter.parentNode){
+          insertAfter.parentNode.insertBefore(backFrag, insertAfter.nextSibling);
+        }
+      }
+    }
+
+    mq.addEventListener?.('change', apply);
+    apply();
+  }
+
+  setupMobileLayout();
+  resetAll();
+  shiftInfoLabelsMobile();
+  initInfoGroupMobile();
+  applyInfoGroupLayout();
+  lockInfoGroupUnderStatus();
+    lockInfoGroupUnderStatus();
+    initInfoGroupMobile();
+    applyInfoGroupLayout();
+    lockInfoGroupUnderStatus();
+})();
+</script>
+</body>
+</html>

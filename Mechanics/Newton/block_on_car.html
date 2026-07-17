@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>การทดลอง: กล่องบนรถบรรทุก — การเร่ง/เบรก (µ=0 fixed)</title>
+<style>
+  :root{
+    --ink:#0f172a;
+    --muted:#475569;
+    --bed:#6b7280;
+    --cabin:#bebbbb;
+    --box:#b45309;
+    --fr:#ef4444;
+    --aTruck:#000;
+    --aBox:#2563eb;
+  }
+
+  body{
+    margin:0;
+    padding:14px;
+    font-family:system-ui,"Noto Sans Thai",sans-serif;
+    background:#fff;
+    color:var(--ink);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:10px;
+    max-width:100%;
+    overflow-x:hidden;
+  }
+
+  h2{
+    margin:4px 0 6px 0;
+    text-align:center;
+  }
+
+  canvas{
+    border:1px solid #e5e7eb;
+    border-radius:12px;
+    background:#f8fafc;
+    touch-action:pan-x;
+    display:block;
+  }
+
+  #vp{
+    width:100%;
+    max-width:920px;
+    overflow-x:auto;
+    overflow-y:hidden;
+    border-radius:12px;
+    border:1px solid #e5e7eb;
+    background:#f8fafc;
+    position:relative;
+  }
+
+  .panel{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    width:100%;
+    max-width:920px;
+  }
+
+  .card{
+    border:1px solid #e5e7eb;
+    background:#f8f8f8;
+    border-radius:12px;
+    padding:10px 12px;
+    box-sizing:border-box;
+    width:100%;
+  }
+
+  button{
+    padding:10px 16px;
+    border:none;
+    border-radius:10px;
+    background:#2563eb;
+    color:#fff;
+    cursor:pointer;
+    font-size:16px;
+  }
+  button.ghost{ background:#e5e7eb; color:#111827 }
+
+  .controls{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    justify-content:flex-start;
+    align-items:center;
+  }
+
+  .num{
+    min-width:56px;
+    text-align:right;
+    display:inline-block;
+    font-variant-numeric:tabular-nums;
+  }
+
+  small.muted{ color:var(--muted) }
+
+  input[type="range"]{
+    width:160px;
+    max-width:100%;
+  }
+
+  .glow{
+    box-shadow:0 0 0 0 rgba(37,99,235,0.6);
+    animation:pulseGlow 1.6s ease-in-out infinite;
+  }
+  @keyframes pulseGlow{
+    0%{box-shadow:0 0 0 0 rgba(37,99,235,0.85)}
+    50%{box-shadow:0 0 18px 6px rgba(37,99,235,0.35)}
+    100%{box-shadow:0 0 0 0 rgba(37,99,235,0.0)}
+  }
+
+  #throttleLbl,#brakeLbl{
+    padding:2px 6px;
+    border-radius:6px;
+    transition:color .2s ease;
+  }
+
+  .amax-label{ color:#16a34a; font-weight:600 }
+  .amax-num{ color:#16a34a }
+
+  /* โมดัลวิเคราะห์ */
+  .modal-backdrop{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.45);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:50;
+    overflow-y:auto;
+  }
+  .modal{
+    background:#ffffff;
+    border:1px solid #e5e7eb;
+    border-radius:14px;
+    max-width:min(720px,96vw);
+    width:96vw;
+    padding:16px;
+    box-sizing:border-box;
+    max-height:90vh;
+    overflow-y:auto;
+  }
+  .modal h3{
+    margin:0 0 6px 0;
+    font-size:20px;
+  }
+  .modal .content{
+    background:#f0f9ff;
+    border:1px solid #bae6fd;
+    border-radius:12px;
+    padding:12px;
+  }
+  .modal .warn{
+    margin-top:10px;
+    background:#fff7ed;
+    border:1px solid #fdba74;
+    border-radius:12px;
+    padding:10px;
+  }
+  .modal .row{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    align-items:center;
+    margin:6px 0;
+  }
+  .modal button{ background:#2563eb }
+  .modal button.ghost{ background:#e5e7eb;color:#111827 }
+
+  @media (max-width:640px){
+    body{
+      padding:10px 6px;
+    }
+    h2{
+      font-size:18px;
+      line-height:1.3;
+    }
+    button{
+      font-size:15px;
+      padding:8px 12px;
+    }
+    #status{
+      font-size:13px !important;
+    }
+    #vp{
+      height:230px;
+    }
+  }
+</style>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath: [["\\(", "\\)"]],
+      displayMath: [["\\[", "\\]"]]
+    },
+    svg: { fontCache: 'global' }
+  };
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<h2>การทดลอง: กล่องบนรถบรรทุก — การเร่ง/เบรก</h2>
+
+<div id="vp">
+  <canvas id="cv" width="4000" height="460"></canvas>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <div class="controls">
+      <button id="toggle">▶ เล่น</button>
+      <button id="analysis" class="ghost">🔎 แสดงการวิเคราะห์</button>
+      <button id="reset" class="ghost">↺ รีเซ็ต</button>
+    </div>
+  </div>
+
+  <div class="card">
+    µₛ
+    <input type="range" id="muS" min="0" max="1" step="0.01" value="0.40"/>
+    <input type="number" id="muSNum" min="0" max="1" step="0.01" value="0.40" style="width:70px"/>
+    µₛ=<span id="muSVal" class="num">0.40</span>,
+    µₖ=<span id="muKVal" class="num">0.32</span>,
+    <span class="amax-label">a(max,กล่อง)=</span>
+    <span id="aMax" class="num amax-num">0.00 m/s²</span>
+  </div>
+
+  <div class="card">
+    m=<input type="number" id="mass" value="5" min="0.1" step="0.5" style="width:70px"/> kg
+    v₀=<input type="number" id="v0" value="2" min="0" step="0.5" style="width:70px"/> m/s
+    <br/>
+    <label><input type="radio" name="mode" value="throttle" checked> <span id="throttleLbl">เหยียบคันเร่ง</span></label>
+    <label><input type="radio" name="mode" value="brake"> <span id="brakeLbl">เบรก</span></label>
+    <br/>
+    a=
+    <input type="range" id="accel" min="0" max="10" step="0.1" value="0"/>
+    <input type="number" id="accelNum" min="0" max="10" step="0.1" value="0" style="width:70px;display:none"/>
+    <span id="aVal">0.0 m/s²</span>
+    <br/>
+    <small class="muted">
+      เริ่มต้นถือว่า v₀ ของรถ และ v₀ ของกล่องมีค่าขนาดเท่ากันเสมอ (แล่นไปด้วยกันตั้งแต่ต้น)
+    </small>
+  </div>
+</div>
+
+<div id="status" class="card" style="font-size:14px"></div>
+<p style="margin:0 8px 8px 8px;font-size:14px">
+  ศึกษาเพิ่มเติมที่เพจ
+  <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">คลายปมฟิสิกส์</a>
+</p>
+
+<script>
+// ===== ค่าพื้นฐานและพิกัด =====
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+const g = 9.81;
+const SCALE = 100;
+const wheelR = 22;
+const wheelCY = 260 + wheelR;
+const roadY = 260 + wheelR*2;
+const offsetY = -20;
+
+const isMobile = window.matchMedia("(max-width: 640px)").matches;
+const SIM_SCALE = isMobile ? 0.5 : 1;
+const FONT_SCALE = isMobile ? 2 : 1;
+const EXTRA_F_LABEL_Y = isMobile ? 10 : 0;
+
+const truck = { x:0, y:260+offsetY, w:400, h:40, v:0, a:0 };
+const box   = { w:60, h:50, relX:120, y:0, v:0, a:0, state:'onbed' };
+box.y = truck.y - box.h;
+
+// UI
+const muSEl = document.getElementById('muS');
+const muSVal = document.getElementById('muSVal');
+const muKVal = document.getElementById('muKVal');
+const aMaxEl = document.getElementById('aMax');
+const muSNum = document.getElementById('muSNum');
+const accelNum = document.getElementById('accelNum');
+const massEl = document.getElementById('mass');
+const v0El = document.getElementById('v0');
+const accelEl = document.getElementById('accel');
+const aVal = document.getElementById('aVal');
+const toggleBtn = document.getElementById('toggle');
+const resetBtn = document.getElementById('reset');
+const statusEl = document.getElementById('status');
+const throttleLbl = document.getElementById('throttleLbl');
+const brakeLbl = document.getElementById('brakeLbl');
+const analysisBtn = document.getElementById('analysis');
+
+function muS(){ return +muSEl.value }
+function muK(){ return 0.8 * muS() }
+function mass(){ return Math.max(0.1, +massEl.value || 5) }
+
+function updateMu(){
+  if(document.activeElement===muSEl){
+    muSNum.value = (+muSEl.value).toFixed(2);
+  }
+  if(document.activeElement===muSNum){
+    muSEl.value = (+muSNum.value).toFixed(2);
+  }
+  muSVal.textContent = (+muSEl.value).toFixed(2);
+  muKVal.textContent = (0.8*+muSEl.value).toFixed(2);
+  aMaxEl.textContent = (muS()*g).toFixed(2) + ' m/s²';
+}
+muSEl.oninput = ()=>{ updateMu(); markNeedsReset(); };
+muSNum.oninput = ()=>{ updateMu(); markNeedsReset(); };
+updateMu();
+
+let mode='throttle';
+document.querySelectorAll('input[name="mode"]').forEach(r=>{
+  r.onchange = ()=>{
+    mode = r.value;
+    updateA();
+    updateModeUI();
+    markNeedsReset();
+  };
+});
+
+function updateA(){
+  let a = +accelEl.value;
+  if(document.activeElement===accelNum){
+    a = +accelNum.value;
+    accelEl.value = a;
+  }else{
+    accelNum.value = (+accelEl.value).toFixed(1);
+  }
+  if(mode==='brake') a = -a;
+  truck.a = a;
+  aVal.textContent = a.toFixed(1) + ' m/s²';
+}
+accelEl.oninput = ()=>{ updateA(); markNeedsReset(); };
+accelNum.oninput = ()=>{ updateA(); markNeedsReset(); };
+updateA();
+
+v0El.addEventListener('input', ()=>{ if(+v0El.value < 0) v0El.value = 0; markNeedsReset(); });
+massEl.addEventListener('input', markNeedsReset);
+
+function markNeedsReset(){ resetBtn.classList.add('glow'); }
+function updateModeUI(){
+  if(mode==='throttle'){
+    throttleLbl.style.color = '#dc2626';
+    brakeLbl.style.color = '#cbd5e1';
+  } else {
+    throttleLbl.style.color = '#cbd5e1';
+    brakeLbl.style.color = '#dc2626';
+  }
+}
+updateModeUI();
+
+let running=false, last=0;
+let ghostRelX = null;
+let wasSlipping = false;
+
+function loop(ts){
+  if(!running) return;
+  const dt = Math.min(0.032,(ts-last)/1000);
+  last = ts;
+  step(dt);
+  draw();
+  requestAnimationFrame(loop);
+}
+
+function resetSimulation(userTriggered=false){
+  truck.x = 0;
+  truck.v0 = Math.abs(+v0El.value || 0);
+  truck.v = truck.v0;
+  updateA();
+
+  box.state='onbed';
+  box.relX=120;
+  // ★ เริ่มต้นให้ความเร็วกล่องเท่ากับรถเสมอ ★
+  box.v = truck.v;
+  box.y=truck.y - box.h;
+
+  const aReq = truck.a, aCrit = muS()*g;
+  if(Math.abs(aReq) > aCrit + 1e-12){
+    box.a = Math.sign(aReq||1)*muK()*g;
+  } else {
+    box.a = aReq;
+  }
+
+  ghostRelX = null;
+  if(userTriggered){ resetBtn.classList.remove('glow'); }
+  draw();
+  updateStatus();
+}
+
+(function boot(){
+  v0El.value = 2;
+  accelEl.value = 0;
+  accelNum.value = 0;
+  aVal.textContent='0.0 m/s²';
+  document.querySelector('input[name="mode"][value="throttle"]').checked = true;
+  mode='throttle';
+  updateModeUI();
+  resetBtn.classList.add('glow');
+  resetSimulation(false);
+})();
+
+function start(){
+  updateA();
+  if((+v0El.value||0)===0 && Math.abs(truck.a) < 1e-9){
+    statusEl.innerHTML = '<b>เตือน:</b> v₀ = 0 และ a = 0 — รถจะไม่เคลื่อนที่ (ตั้งค่า v₀ หรือ a ก่อนแล้วกดเล่น)';
+    return;
+  }
+  if(running){
+    running=false;
+    toggleBtn.textContent='▶ เล่น';
+  } else {
+    running=true;
+    last=performance.now();
+    toggleBtn.textContent='⏸ หยุด';
+    requestAnimationFrame(loop);
+  }
+}
+
+toggleBtn.onclick = start;
+resetBtn.onclick = ()=> resetSimulation(true);
+
+// ===== ฟิสิกส์ =====
+function step(dt){
+  truck.v += truck.a * dt;
+  if(mode==='brake' && truck.v <= 0){
+    truck.v = 0;
+    truck.a = 0;
+    aVal.textContent='0.0 m/s²';
+  }
+  truck.x += truck.v * dt * SCALE;
+
+  const ms = muS(), mk = muK(), aReq = truck.a, aCrit = ms*g;
+  const frictionless = (ms < 1e-12);
+
+  if(box.state==='onbed'){
+    const hittingTail = (box.relX <= 0);
+    const hittingCab   = (box.relX + box.w >= truck.w-100);
+    const slipping = Math.abs(aReq) > aCrit + 1e-12 && !hittingTail && !hittingCab;
+
+    if(slipping && !wasSlipping){ ghostRelX = box.relX; }
+    wasSlipping = slipping;
+
+    if(!slipping){
+      if(frictionless && !hittingTail && !hittingCab){
+        // ★ กรณีพิเศษ: µ = 0 และ a รถ ≈ 0 → ให้กล่องติดไปกับรถตลอด ★
+        box.a = 0;
+        box.v = truck.v;
+        // ไม่เปลี่ยน box.relX เพื่อรักษาตำแหน่งสัมพัทธ์บนกระบะ
+      } else {
+        box.a = aReq;
+        box.v = truck.v;
+      }
+    } else {
+      const dir = Math.sign(aReq)||1;
+      const aSlip = mk*g;
+      box.a = dir*aSlip;
+      box.v += box.a * dt;
+      box.relX += (box.v - truck.v) * dt * SCALE;
+    }
+
+    if(box.relX < 0){
+      box.relX = 0;
+      box.v = truck.v;
+      box.a = aReq;
+    }
+    if(box.relX + box.w > truck.w - 100){
+      box.relX = truck.w - 100 - box.w;
+      box.v = truck.v;
+      box.a = aReq;
+    }
+  }
+
+  updateStatus();
+}
+
+function updateStatus(){
+  const ms=muS(), mk=muK(), aCrit=ms*g, aReq=truck.a;
+  const frictionless = (ms < 1e-12);
+
+  if(frictionless && Math.abs(aReq) < 1e-12){
+    statusEl.innerHTML = `สถานะ: <b>พื้นลื่น (µ=0)</b> · a รถ = 0 ⇒ กล่อง <b>ติดไปกับรถด้วยความเร็ว v₀ เดิม</b> (ไม่มีแรงเสียดทานเพิ่ม)`;
+    return;
+  }
+  if(Math.abs(aReq) <= aCrit + 1e-12){
+    if(frictionless){
+      statusEl.innerHTML = `สถานะ: <b>พื้นลื่น (µ=0)</b> · |a รถ| ≤ 0 ⇒ ก่อนชนผนัง/ท้าย <b>a กล่อง = 0</b>`;
+    } else {
+      statusEl.innerHTML = `สถานะ: <b>ไม่ไถล</b> · a รถ < a(max,กล่อง) ⇒ a กล่อง = a รถ`;
+    }
+  } else {
+    const aK = (mk*g).toFixed(2);
+    statusEl.innerHTML = `สถานะ: <b>ไถล</b> · a รถ > a(max,กล่อง) ⇒ a กล่อง = µₖ g = ${aK} m/s²`;
+  }
+}
+
+// ===== วาดภาพ =====
+function draw(){
+  ctx.clearRect(0,0,cv.width,cv.height);
+  ctx.save();
+  ctx.scale(SIM_SCALE, SIM_SCALE);
+
+  ctx.fillStyle='#444';
+  ctx.fillRect(0, roadY, cv.width, 8);
+
+  ctx.fillStyle=getCSS('--bed');
+  ctx.fillRect(truck.x, truck.y, truck.w, truck.h);
+  ctx.fillStyle='#000';
+  ctx.fillRect(truck.x-3, truck.y-40, 3, truck.h+40);
+
+  const cabX = truck.x + truck.w - 100, cabY = truck.y - 60;
+  ctx.beginPath();
+  ctx.moveTo(cabX,     cabY+60);
+  ctx.lineTo(cabX+100, cabY+60);
+  ctx.lineTo(cabX+70,  cabY);
+  ctx.lineTo(cabX,     cabY);
+  ctx.closePath();
+  ctx.fillStyle=getCSS('--cabin');
+  ctx.fill();
+  ctx.strokeStyle='#1e293b';
+  ctx.stroke();
+
+  drawWheel(truck.x+80,  wheelCY);
+  drawWheel(truck.x+345, wheelCY);
+
+  const bx = truck.x + box.relX, by = truck.y - box.h;
+  box.y = by;
+  if(ghostRelX!=null){
+    const gx = truck.x + ghostRelX;
+    ctx.save();
+    ctx.setLineDash([6,6]);
+    ctx.strokeStyle='#9ca3af';
+    ctx.strokeRect(gx, by, box.w, box.h);
+    ctx.restore();
+  }
+  ctx.fillStyle=getCSS('--box');
+  ctx.fillRect(bx, by, box.w, box.h);
+
+  let aTruckY = truck.y - 70 - 25;
+  if(isMobile) aTruckY -= 20;
+  drawAccelArrow(truck.x + truck.w/2 + 40, aTruckY, truck.a, 'a รถ', getCSS('--aTruck'));
+
+  drawAccelArrow(bx + box.w/2, by-16, box.a, 'a กล่อง', getCSS('--aBox'));
+
+  const aReq = truck.a, ms = muS(), mk = muK(), m = mass();
+  const hittingTail = (box.relX <= 0);
+  const hittingCab = (box.relX + box.w >= truck.w-100);
+  const slipping = Math.abs(aReq) > ms*g + 1e-12;
+
+  if(!hittingTail && !hittingCab){
+    if(slipping){
+      const dir = Math.sign(aReq)||1;
+      const Fk = mk*m*g;
+      if(Fk>1e-9) drawForceArrow(bx+box.w/2, by+box.h+21-20, dir*Fk, 'fₖ', 24);
+    } else if(Math.abs(aReq) > 1e-6 && ms>1e-12){
+      const dir = Math.sign(aReq)||1;
+      const Fs = Math.min(Math.abs(aReq), ms*g) * m;
+      drawForceArrow(bx+box.w/2, by+box.h+21-20, dir*Fs, 'fₛ', 24);
+    }
+  }
+
+  ctx.fillStyle = '#0f172a';
+  ctx.font = `${16*FONT_SCALE}px system-ui`;
+  ctx.fillText(`v₀ = ${ (truck.v0||0).toFixed(2) } m/s`, 14, 100);
+
+  ctx.restore();
+}
+
+function drawWheel(x,y){
+  ctx.beginPath();
+  ctx.arc(x,y,wheelR,0,Math.PI*2);
+  ctx.fillStyle='#111';
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(x,y,7,0,Math.PI*2);
+  ctx.fillStyle='#fff';
+  ctx.fill();
+}
+
+function drawAccelArrow(cx,cy,a,label,color){
+  const scale=16;
+  const L=a*scale;
+  const dir=Math.sign(L)||1;
+  ctx.save();
+  ctx.strokeStyle=color;
+  ctx.fillStyle=color;
+  ctx.lineWidth=2.2;
+  ctx.beginPath();
+  ctx.moveTo(cx,cy);
+  ctx.lineTo(cx+L,cy);
+  ctx.stroke();
+  const ah=7;
+  ctx.beginPath();
+  ctx.moveTo(cx+L,cy);
+  ctx.lineTo(cx+L-dir*ah,cy-4);
+  ctx.lineTo(cx+L-dir*ah,cy+4);
+  ctx.closePath();
+  ctx.fill();
+  ctx.font = `${15*FONT_SCALE}px system-ui`;
+  ctx.fillText(`${label} = ${a.toFixed(2)} m/s²`, cx+L+6*dir, cy-8);
+  ctx.restore();
+}
+
+/* ★★ ปรับความหนาเส้น + ขนาดตัวอักษร + ขยับลง 2px ★★ */
+function drawForceArrow(cx,cy,F,label,labelYOffset=0){
+  const scale=2, maxL=160;
+  const L=Math.max(-maxL, Math.min(maxL, F*scale));
+  const dir=Math.sign(L)||1;
+  ctx.save();
+  ctx.strokeStyle=getCSS('--fr');
+  ctx.fillStyle=getCSS('--fr');
+  ctx.lineWidth=3.2;              // หนาเส้นขึ้น
+  ctx.beginPath();
+  ctx.moveTo(cx,cy);
+  ctx.lineTo(cx+L,cy);
+  ctx.stroke();
+  const ah=7;
+  ctx.beginPath();
+  ctx.moveTo(cx+L,cy);
+  ctx.lineTo(cx+L-dir*ah,cy-4);
+  ctx.lineTo(cx+L-dir*ah,cy+4);
+  ctx.closePath();
+  ctx.fill();
+  ctx.font = `${16*FONT_SCALE}px system-ui`;  // ตัวอักษรเล็กลงจาก 18 → 16
+  ctx.fillText(
+    `${label} = ${Math.abs(F).toFixed(2)} N`,
+    cx+L+6*dir,
+    cy-4+labelYOffset+EXTRA_F_LABEL_Y   // จาก -6 → -4 ขยับลง 2px
+  );
+  ctx.restore();
+}
+
+function getCSS(v){
+  return getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+}
+
+// ===== โมดัลวิเคราะห์ =====
+function openAnalysis(){
+  const ms = muS();
+  const mk = muK();
+  const m = mass();
+  const aCar = truck.a;
+  const aMax = ms * g;
+  const slipping = Math.abs(aCar) > aMax + 1e-12;
+  const aBox = slipping ? (Math.sign(aCar)||1) * mk * g : (ms<1e-12? 0 : aCar);
+  const Fk = mk * m * g;
+
+  const html = String.raw`
+  <div class="modal-backdrop" id="anaBackdrop">
+    <div class="modal">
+      <h3>การวิเคราะห์ & สูตรที่ใช้</h3>
+      <div class="content">
+        <div class="row"><b>ค่าที่ตั้งไว้ตอนนี้:</b>
+          \( \mu_s=${ms.toFixed(2)} \), \( \mu_k=${mk.toFixed(2)} \), \( m=${m.toFixed(2)}\,\mathrm{kg} \), \( a_{\mathrm{รถ}}=${aCar.toFixed(2)}\,\mathrm{m/s^2} \)
+        </div>
+        <div class="row">\( a_{\max,\mathrm{กล่อง}}=\mu_s g = ${ms.toFixed(2)} \times 9.81 = ${aMax.toFixed(2)}\,\mathrm{m/s^2} \)</div>
+        <hr/>
+        <div class="row"><b>ตัดสินการไถล:</b></div>
+        <div class="row">ถ้า \( |a_{\mathrm{รถ}}| \le a_{\max,\mathrm{กล่อง}} \) ⇒ <b>ไม่ไถล</b>, \( a_{\mathrm{กล่อง}}=${ms<1e-12? '0 (พื้นลื่น)' : 'a_{\mathrm{รถ}}'} \)</div>
+        <div class="row">ถ้า \( |a_{\mathrm{รถ}}| > a_{\max,\mathrm{กล่อง}} \) ⇒ <b>ไถล</b>, \( a_{\mathrm{กล่อง}}=\dfrac{F_k}{m}=\dfrac{\mu_k m g}{m}=\mu_k g \)</div>
+        <div class="row"><b>ผลลัพธ์ตอนนี้:</b> ${slipping? 'ไถล' : (ms<1e-12? 'พื้นลื่น (a กล่อง = 0 จนกว่าจะชนผนัง/ท้าย)' : 'ไม่ไถล')} · \( a_{\mathrm{กล่อง}}=${aBox.toFixed(2)}\,\mathrm{m/s^2} \)</div>
+        <hr/>
+        <div class="row"><b>แรงเสียดทานที่เกิดขึ้น</b></div>
+        ${slipping
+          ? String.raw`<div class="row">ไถล ⇒ ใช้แรงเสียดทานจลน์: \( F_k=\mu_k N=\mu_k m g=${mk.toFixed(2)}\times${m.toFixed(2)}\times9.81=${Fk.toFixed(2)}\,\mathrm{N} \)</div>`
+          : (ms<1e-12
+              ? String.raw`<div class="row">พื้นลื่น ⇒ \( F_s=0 \) (ก่อนชนผนัง/ท้าย)</div>`
+              : String.raw`<div class="row">ไม่ไถล ⇒ ใช้แรงเสียดทานสถิต: \( F_s = m a_{\mathrm{รถ}} = ${m.toFixed(2)}\times${aCar.toFixed(2)} = ${(m*aCar).toFixed(2)}\,\mathrm{N} \) (และต้องมี \( |F_s|\le \mu_s m g \))</div>`)}
+      </div>
+      <div class="warn"><b>คำเตือน:</b> ห้ามจำว่า “แรงเสียดทานตรงข้ามการเคลื่อนที่เสมอ” — จริง ๆ แล้วแรงเสียดทานต้าน <i>แนวโน้มการเลื่อนสัมพัทธ์</i>; บางกรณีทิศของแรงเสียดทานอาจ <u>ไปทางเดียวกับการเคลื่อนที่</u> ของวัตถุได้</div>
+
+      <button id="anaClose" class="ghost">ปิด</button>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+  if(window.MathJax){
+    if(MathJax.typesetPromise){ MathJax.typesetPromise(); }
+    else if(MathJax.typeset){ MathJax.typeset(); }
+  }
+  document.getElementById('anaClose').onclick = closeAnalysis;
+  document.getElementById('anaBackdrop').onclick = function(e){
+    if(e.target && e.target.id==='anaBackdrop') closeAnalysis();
+  };
+}
+function closeAnalysis(){
+  const el=document.getElementById('anaBackdrop');
+  if(el) el.remove();
+}
+analysisBtn.addEventListener('click', openAnalysis);
+</script>
+</body>
+</html>

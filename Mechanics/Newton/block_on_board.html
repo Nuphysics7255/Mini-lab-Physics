@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>การทดลอง: กล่อง A บนกระดาน B — ดึงด้วยแรง F บนพื้น</title>
+<style>
+  :root{
+    --ink:#0f172a; --muted:#475569; --floor:#111827; --board:#9ca3af; --box:#f59e0b;
+    --F:#ef4444; --aA:#2563eb; --aB:#111827; --dash:#cbd5e1; --panel:#ffffff; --line:#e5e7eb;
+    --accent:#0ea5e9; --accent2:#f43f5e; --accent3:#22c55e;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;padding:14px;
+    font-family:system-ui,"Noto Sans Thai",sans-serif;
+    background:#fff;color:var(--ink);
+    display:flex;flex-direction:column;align-items:center;gap:10px
+  }
+  canvas{border:1px solid var(--line);border-radius:12px;background:#f8fafc;touch-action:pan-x}
+  #vp{
+    width:min(100%, 980px);
+    overflow:hidden;
+    border-radius:12px;border:1px solid var(--line);
+    background:#f8fafc;position:relative
+  }
+  .panel{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;align-items:center}
+  .card{border:1px solid var(--line);background:#fcfcfd;border-radius:12px;padding:10px 12px}
+  .num{min-width:70px;text-align:right;display:inline-block;font-variant-numeric:tabular-nums}
+  input[type="range"]{width:180px}
+  button{padding:10px 16px;border:none;border-radius:10px;background:#2563eb;color:#fff;cursor:pointer;font-size:16px}
+  button.ghost{background:#e5e7eb;color:#111827}
+  .hidden{display:none}
+  .thres{color:#16a34a;font-weight:600}
+  .warn{color:#b91c1c}
+
+  /* modal */
+  .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:50;margin:0;padding:0}
+  .modal{
+    background:#ffffff;border:1px solid #e5e7eb;border-radius:14px;
+    width:min(1024px,98vw);max-width:98vw;max-height:min(92vh,820px);
+    overflow:auto;padding:16px;box-sizing:border-box
+  }
+  .modal h3{margin:0 0 8px 0}
+  .grid{display:grid;grid-template-columns:1fr;gap:10px}
+  @media(min-width:720px){ .grid{grid-template-columns:1fr 1fr} }
+  .box{background:#f0f9ff;border:1px solid #bae6fd;border-radius:12px;padding:12px}
+  .ok{background:#ecfdf5;border:1px solid #a7f3d0}
+  .hl{color:#0ea5e9}
+</style>
+<script>
+  // MathJax config
+  window.MathJax = {
+    tex: { inlineMath: [["\\(","\\)"],["$","$"]], displayMath: [["\\[","\\]"]] },
+    svg:{fontCache:'global'}
+  };
+</script>
+<script async id="MathJax-script" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<h2>กล่อง A บนกระดาน B — ดึงด้วยแรง F บนพื้น</h2>
+<div id="vp">
+  <canvas id="cv" width="2400" height="520"></canvas>
+</div>
+
+<div class="panel">
+  <!-- มวล: mB อยู่บรรทัดใหม่ใต้ mA -->
+  <div class="card">
+    m<sub>A</sub>=<input type="number" id="mA" value="5" min="0.1" step="0.5" style="width:80px"/> kg
+    <br/>
+    m<sub>B</sub>=<input type="number" id="mB" value="15" min="0.1" step="0.5" style="width:80px"/> kg
+  </div>
+
+  <!-- สัมประสิทธิ์: สลับให้ A–B อยู่บน / B–พื้น อยู่ล่าง -->
+  <div class="card">
+    μₛ(A–B)
+    <input type="range" id="muSAB" min="0" max="1" step="0.01" value="0.40"/>
+    <input type="number" id="muSABNum" min="0" max="1" step="0.01" value="0.40" style="width:70px"/>
+    μₖ(A–B)=<span id="muKAB" class="num">0.32</span>
+    <br/>
+    μₛ(B–พื้น)
+    <input type="range" id="muSR" min="0" max="1" step="0.01" value="0.40"/>
+    <input type="number" id="muSRNum" min="0" max="1" step="0.01" value="0.40" style="width:70px"/>
+    μₖ(B–พื้น)=<span id="muKR" class="num">0.32</span>
+  </div>
+
+  <!-- การ์ดปุ่ม + สไลด์ F บรรทัดล่าง -->
+  <div class="card">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <button id="toggle">▶ เล่น</button>
+      <button id="reset" class="ghost">↺ รีเซ็ต</button>
+      <button id="analysis" class="ghost">🔎 แสดงการวิเคราะห์</button>
+      <!-- ตัดปุ่มเต็มจอออก -->
+    </div>
+    <div style="margin-top:8px">
+      F ดึงกระดาน B → 
+      <input type="range" id="Fslider" min="0" max="2000" step="1" value="0"/>
+      <input type="number" id="Fnum" min="0" max="20000" step="1" value="0" style="width:90px"/> N
+    </div>
+  </div>
+</div>
+
+<div id="readout" class="card" style="font-size:14px;max-width:min(100%,980px)"></div>
+<p style="margin:0 8px 8px 8px;font-size:14px">
+  ศึกษาเพิ่มเติมที่เพจ
+  <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">คลายปมฟิสิกส์</a>
+</p>
+
+<script>
+// ===== ค่าพื้นฐาน =====
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+const vp = document.getElementById('vp');
+const g = 9.81;              // m/s^2
+const SCALE = 100;           // 100 px = 1 m (พิกัดโลก)
+let UI_SCALE = 2;            // ขยายวัตถุ/ป้ายบนจอ 2 เท่า
+let TEXT_SCALE = 1;          // สเกลตัวอักษร (จะขยายเพิ่มในมือถือ)
+
+// ===== Responsive Canvas =====
+const WORLD = { w: 2400, h: 520 };
+let SCALE_VIEW = 1, DPR = Math.max(1, window.devicePixelRatio || 1);
+
+function resizeCanvas(){
+  const vw = vp.clientWidth || 980;
+  SCALE_VIEW = vw / WORLD.w;
+  DPR = Math.max(1, window.devicePixelRatio || 1);
+
+  // ปรับสเกลตัวอักษรสำหรับหน้าจอเล็ก (มือถือ)
+  if(vw < 640){
+    TEXT_SCALE = 1.6;
+  }else if(vw < 800){
+    TEXT_SCALE = 1.3;
+  }else{
+    TEXT_SCALE = 1.0;
+  }
+
+  cv.width  = Math.round(WORLD.w * SCALE_VIEW * DPR);
+  cv.height = Math.round(WORLD.h * SCALE_VIEW * DPR);
+
+  cv.style.width  = '100%';
+  cv.style.height = (WORLD.h * SCALE_VIEW) + 'px';
+
+  draw();
+}
+window.addEventListener('resize', resizeCanvas);
+
+// เรขาคณิต
+const floorY = 430; // เส้นพื้น (พิกัดโลก)
+const baseBW = Math.round(560/3);
+// กระดาน B ยาว 2× จากเวอร์ชันก่อน (baseBW*4)
+const B = { x: 80, y: floorY - 30*UI_SCALE, w: baseBW*4, h: 30*UI_SCALE, v:0, a:0 };
+const A = { w: 90*UI_SCALE, h: 70*UI_SCALE, relX: 0, y: 0, v:0, a:0, slipping:false };
+A.y = B.y - A.h;
+// เริ่มให้ A อยู่ปลายขวาของ B
+A.relX = Math.max(0, B.w - A.w);
+
+// UI refs
+const mAEl = document.getElementById('mA');
+const mBEl = document.getElementById('mB');
+const muSR = document.getElementById('muSR');
+const muSRNum = document.getElementById('muSRNum');
+const muKRSpan = document.getElementById('muKR');
+const muSAB = document.getElementById('muSAB');
+const muSABNum = document.getElementById('muSABNum');
+const muKABSpan = document.getElementById('muKAB');
+const Fslider = document.getElementById('Fslider');
+const Fnum = document.getElementById('Fnum');
+const toggleBtn = document.getElementById('toggle');
+const resetBtn = document.getElementById('reset');
+const analysisBtn = document.getElementById('analysis');
+const readout = document.getElementById('readout');
+
+// helpers
+const mA = ()=> Math.max(0.1, +mAEl.value||5);
+const mB = ()=> Math.max(0.1, +mBEl.value||15);
+const mu_k = mu_s => +(0.8*mu_s).toFixed(2);
+function syncMuPair(rangeEl, numEl, kSpan){
+  if(document.activeElement===rangeEl){ numEl.value = (+rangeEl.value).toFixed(2); }
+  if(document.activeElement===numEl){ rangeEl.value = (+numEl.value).toFixed(2); }
+  kSpan.textContent = mu_k(+rangeEl.value).toFixed(2);
+}
+function updateMu(){
+  syncMuPair(muSR, muSRNum, muKRSpan);
+  syncMuPair(muSAB, muSABNum, muKABSpan);
+  updateThresholds();
+}
+muSR.oninput = updateMu; muSRNum.oninput = updateMu;
+muSAB.oninput = updateMu; muSABNum.oninput = updateMu;
+
+function F(){
+  let val = +Fslider.value;
+  if(document.activeElement===Fnum){ val = +Fnum.value; Fslider.value = val; }
+  else { Fnum.value = val; }
+  return Math.max(0, val);
+}
+Fslider.oninput = ()=>{ F(); updateReadout(); };
+Fnum.oninput = ()=>{ F(); updateReadout(); };
+
+// เส้นปะตำแหน่งเดิมของกล่อง A ตอนเริ่มไถล
+let ghostRelX = null;
+
+// loop
+let running=false, last=0;
+function loop(ts){
+  if(!running) return;
+  const dt = Math.min(0.032,(ts-last)/1000);
+  last = ts;
+  step(dt);
+  draw();
+  requestAnimationFrame(loop);
+}
+
+function reset(){
+  B.x = 80; B.v=0; B.a=0;
+  B.y = floorY - 30*UI_SCALE;
+  A.relX = Math.max(0, B.w - A.w); A.v = 0; A.a = 0; A.slipping=false;
+  A.y = B.y - A.h;
+  ghostRelX = null;
+  updateReadout();
+  draw();
+}
+resetBtn.onclick = reset;
+
+function startStop(){
+  if(running){
+    running=false;
+    toggleBtn.textContent='▶ เล่น';
+  } else {
+    running=true;
+    last=performance.now();
+    toggleBtn.textContent='⏸ หยุด';
+    requestAnimationFrame(loop);
+  }
+}
+toggleBtn.onclick = startStop;
+
+// ===== ฟิสิกส์ =====
+function thresholds(){
+  const mus_r = +muSR.value; const muk_r = mu_k(mus_r);
+  const mus_ab = +muSAB.value; const muk_ab = mu_k(mus_ab);
+  const W = (mA()+mB())*g;
+  const F_start_B = mus_r * W; // เริ่มไถล B–พื้น
+  const F_noslip_A = (mA()+mB())*g*(mus_ab + muk_r); // แรงมากสุดที่ A ไม่ไถลบน B (พื้นเป็นจลน์)
+  const a_max_B_noslip = mus_ab * g; // a ร่วมสูงสุดที่ยังไม่ทำให้ A ไถล
+  return { mus_r,muk_r,mus_ab,muk_ab,F_start_B,F_noslip_A,a_max_B_noslip };
+}
+
+function step(dt){
+  const { mus_r,muk_r,mus_ab,muk_ab } = thresholds();
+  const fext = F();
+  const Mtot = mA()+mB();
+  const W = Mtot*g;
+
+  // ถ้าแรงดึงยังแพ้เสียดทานสถิตระหว่าง B–พื้น ⇒ หยุดนิ่ง
+  const f_s_max_BR = mus_r * W;
+  if(fext <= f_s_max_BR + 1e-12){
+    B.a = 0; B.v = 0; A.a = 0; A.v = 0; A.slipping=false; return;
+  }
+
+  // พื้นเป็นจลน์
+  const f_k_BR = mu_k(mus_r) * W;
+  let a_sys = (fext - f_k_BR)/Mtot; // สมมติโดยยังไม่รู้ว่า A จะไถลไหม
+
+  if(a_sys <= mus_ab * g + 1e-12){
+    // A ไม่ไถลบน B
+    B.a = a_sys; B.v += B.a * dt; B.x += B.v * dt * SCALE;
+    A.a = a_sys; A.v = B.v;
+  } else {
+    // A ไถลบน B
+    if(!A.slipping){ A.slipping = true; ghostRelX = A.relX; }
+    A.a = mu_k(mus_ab) * g; A.v += A.a * dt; // a ของ A ถูกจำกัดด้วยเสียดทานจลน์ A–B
+    const f_AB = mu_k(mus_ab) * mA() * g;     // แรงเสียดทานจาก A ที่ต้าน B
+    B.a = (fext - f_k_BR - f_AB)/mB();
+    B.v += B.a * dt; B.x += B.v * dt * SCALE;
+    A.relX += (A.v - B.v) * dt * SCALE;
+  }
+
+  // กันหลุดขอบ (หยุดเมื่อชนซ้ายในช่วงไถล)
+  const eps = 0.5;
+  if(A.slipping && A.relX <= eps){
+    A.relX = 0;
+    running = false;
+    toggleBtn.textContent='▶ เล่น';
+  }
+  if(A.relX + A.w > B.w){ A.relX = B.w - A.w; }
+}
+
+function updateThresholds(){ updateReadout(); }
+
+function updateReadout(){
+  const { mus_r,muk_r,mus_ab,muk_ab,F_start_B,F_noslip_A,a_max_B_noslip } = thresholds();
+  const fext = F();
+  let phase = '';
+  if(fext <= F_start_B + 1e-12) phase = 'หยุดนิ่ง (F < แรงเสียดทานสถิตสูงสุด B–พื้น)';
+  else if(fext <= F_noslip_A + 1e-12) phase = 'B เคลื่อนที่ และ A ไม่ไถลบน B';
+  else phase = 'A ไถลบน B (B ไปได้ไกลกว่า)';
+
+  // ค่าแรงเสียดทาน A–B เพื่อรายงาน
+  const a_if_noslip = (fext > F_start_B) ? (fext - mu_k(mus_r)*(mA()+mB())*g)/(mA()+mB()) : 0;
+  const noslip = (fext > F_start_B) && (a_if_noslip <= mus_ab*g + 1e-12);
+  const f_AB = noslip ? Math.min(mA()*a_if_noslip, mus_ab*mA()*g) : mu_k(mus_ab)*mA()*g;
+
+  readout.innerHTML = `
+  <div><b>ค่าเกณฑ์สำคัญ</b></div>
+  <div>แรงเริ่มให้กระดาน B ไถลบนพื้น: <span class="thres">F_start = ${F_start_B.toFixed(2)} N</span></div>
+  <div>แรงมากสุดที่กล่อง A <u>ไม่ไถล</u> บน B: <span class="thres">F_max(A ไม่ไถล) = ${F_noslip_A.toFixed(2)} N</span></div>
+  <div>ความเร่งร่วมสูงสุดที่ยังไม่ทำให้ A ไถล (ประมาณ): <span class="thres">a_max(B,ไม่ทำให้ A ไถล) = ${a_max_B_noslip.toFixed(2)} m/s²</span></div>
+  <hr style="border:none;border-top:1px solid #e5e7eb;margin:6px 0"/>
+  <div>แรงที่ตั้งตอนนี้: <b>F = ${fext.toFixed(2)} N</b> → <i>${phase}</i></div>
+  <div>ผลสด: a_A ≈ ${A.a.toFixed(2)} m/s², a_B ≈ ${B.a.toFixed(2)} m/s² · f_AB ≈ ${f_AB.toFixed(2)} N</div>`;
+}
+
+// ===== วาด (สเกลด้วย DPR, SCALE_VIEW และขยาย UI 2x + TEXT_SCALE) =====
+function draw(){
+  ctx.setTransform(DPR * SCALE_VIEW, 0, 0, DPR * SCALE_VIEW, 0, 0);
+  ctx.clearRect(0, 0, WORLD.w, WORLD.h);
+
+  // พื้น
+  ctx.fillStyle= getCSS('--floor'); ctx.fillRect(0, floorY, WORLD.w, 10);
+
+  // กระดาน B
+  ctx.fillStyle= getCSS('--board'); ctx.fillRect(B.x, B.y, B.w, B.h);
+
+  // กล่อง A
+  const Ax = B.x + A.relX; const Ay = B.y - A.h; A.y = Ay;
+  if(ghostRelX!=null){
+    const gx = B.x + ghostRelX;
+    ctx.save();
+    ctx.setLineDash([6,6]);
+    ctx.strokeStyle=getCSS('--dash');
+    ctx.lineWidth=2*UI_SCALE;
+    ctx.strokeRect(gx, Ay, A.w, A.h);
+    ctx.restore();
+  }
+  ctx.fillStyle= getCSS('--box'); ctx.fillRect(Ax, Ay, A.w, A.h);
+
+  // ป้าย
+  drawTag(Ax+6*UI_SCALE, Ay+16*UI_SCALE, 'A');
+  drawTag(B.x+6*UI_SCALE, B.y+18*UI_SCALE, 'B');
+
+  // ลูกศร F ที่ขอบขวาของ B
+  drawArrow(B.x + B.w, B.y + B.h/2, 40 + 0.2*F(), getCSS('--F'), `F = ${F().toFixed(1)} N`);
+
+  // ลูกศรความเร่ง
+  drawAccel(B.x + B.w, B.y - 10*UI_SCALE, B.a, getCSS('--aB'), `a_B=${B.a.toFixed(2)} m/s²`);
+  drawAccel(Ax + A.w/2,  Ay-16*UI_SCALE,   A.a, getCSS('--aA'), `a_A=${A.a.toFixed(2)} m/s²`);
+}
+
+function drawArrow(x,y,L,color,label){
+  const dir = 1;
+  const len = Math.max(20*UI_SCALE, Math.min(320*UI_SCALE, L*UI_SCALE));
+  ctx.save();
+  ctx.strokeStyle=color;
+  ctx.fillStyle=color;
+  ctx.lineWidth=2.4*UI_SCALE;
+  ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+len*dir,y); ctx.stroke();
+  const ah=8*UI_SCALE;
+  ctx.beginPath();
+  ctx.moveTo(x+len*dir,y);
+  ctx.lineTo(x+len*dir-ah,y-4*UI_SCALE);
+  ctx.lineTo(x+len*dir-ah,y+4*UI_SCALE);
+  ctx.closePath(); ctx.fill();
+
+  const fontSize = 15*UI_SCALE*TEXT_SCALE;
+  ctx.font=`${fontSize}px system-ui`;
+  ctx.fillText(label, x+len*dir+6*UI_SCALE, y-6*UI_SCALE);
+  ctx.restore();
+}
+function drawAccel(x,y,a,color,label){
+  const scale=16*UI_SCALE; const L=a*scale; const dir=Math.sign(L)||1;
+  ctx.save();
+  ctx.strokeStyle=color;
+  ctx.fillStyle=color;
+  ctx.lineWidth=2.2*UI_SCALE;
+  ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+L,y); ctx.stroke();
+  const ah=7*UI_SCALE;
+  ctx.beginPath();
+  ctx.moveTo(x+L,y);
+  ctx.lineTo(x+L-dir*ah,y-4*UI_SCALE);
+  ctx.lineTo(x+L-dir*ah,y+4*UI_SCALE);
+  ctx.closePath(); ctx.fill();
+
+  const fontSize = 14*UI_SCALE*TEXT_SCALE;
+  ctx.font=`${fontSize}px system-ui`;
+  ctx.fillText(label, x+L+6*dir*UI_SCALE, y-6*UI_SCALE);
+  ctx.restore();
+}
+function drawTag(x,y,text){
+  ctx.save();
+  const fontSize = 16*UI_SCALE*TEXT_SCALE;
+  ctx.font=`bold ${fontSize}px system-ui`;
+  ctx.fillStyle='#0f172a';
+  ctx.fillText(text, x, y);
+  ctx.restore();
+}
+function getCSS(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+
+// ===== โมดัลแสดงการวิเคราะห์ =====
+function openAnalysis(){
+  const { mus_r,muk_r,mus_ab,muk_ab,F_start_B,F_noslip_A,a_max_B_noslip } = thresholds();
+  const fext = F();
+  const M = mA()+mB();
+  const W = M*g;
+  const a_if_noslip = (fext > F_start_B) ? (fext - muk_r*W)/M : 0;
+  const noslip = (fext > F_start_B) && (a_if_noslip <= mus_ab*g + 1e-12);
+  const aA = noslip ? a_if_noslip : muk_ab*g;
+  const fAB_val = noslip ? Math.min(mA()*a_if_noslip, mus_ab*mA()*g) : muk_ab*mA()*g;
+  const aB = noslip ? a_if_noslip : (fext - muk_r*W - fAB_val)/mB();
+
+  const html = String.raw`
+  <div class="modal-backdrop" id="anaBackdrop">
+    <div class="modal">
+      <h3>การวิเคราะห์จากค่าที่ตั้งไว้ตอนนี้</h3>
+      <div class="grid">
+        <div class="box">
+          <b class="hl">1) แรงให้กระดาน B เริ่มไถลบนพื้น</b>
+          <div>\[ F_{\text{start}} = \mu_{s,BR}\,(m_A+m_B)g = ${mus_r.toFixed(2)}\,(m_A+m_B)\,g \]</div>
+          <div><b>ค่า:</b> \( F_{\text{start}} = ${F_start_B.toFixed(2)}\,\mathrm{N} \)</div>
+          <div style="font-size:13px;color:#64748b"><em>หมายเหตุ:</em> <b>BR</b> หมายถึงคู่สัมผัส <b>B–พื้น</b> (B–Road)</div>
+        </div>
+        <div class="box">
+          <b class="hl">2) แรงมากสุดที่ A <em>ไม่ไถล</em> บน B</b>
+          <div>เมื่อ B เคลื่อน (พื้นเป็นจลน์): \( f_k^{BR}=\mu_{k,BR}(m_A+m_B)g \)</div>
+          <div>เงื่อนไขไม่ไถล: \( a_{\text{ร่วม}} \le \mu_{s,AB}g \Rightarrow F \le (m_A+m_B)(\mu_{s,AB}+\mu_{k,BR})g \)</div>
+          <div><b>ค่า:</b> \( F_{\max,(A\,\text{ไม่ไถล})} = ${F_noslip_A.toFixed(2)}\,\mathrm{N} \)</div>
+        </div>
+        <div class="box ok">
+          <b class="hl">3) ความเร่งสูงสุดของ B ที่ยังไม่ทำให้ A ไถล</b>
+          <div>\[ a_{\max} = \mu_{s,AB} g = ${mus_ab.toFixed(2)}\,g = ${(a_max_B_noslip).toFixed(2)}\,\mathrm{m/s^2} \]</div>
+        </div>
+        <div class="box">
+          <b class="hl">4) แรงเสียดทานระหว่าง A–B</b>
+          <div>ถ้าไม่ไถล: \( f_{AB} = m_A a_{\text{ร่วม}}\;(\le \mu_{s,AB} m_A g) \)</div>
+          <div>ถ้าไถล: \( f_{AB} = \mu_{k,AB} m_A g \)</div>
+          <div><b>ค่า:</b> \( f_{AB} \approx ${fAB_val.toFixed(2)}\,\mathrm{N} \)</div>
+        </div>
+        <div class="box">
+          <b class="hl">5) ความเร่งของแต่ละวัตถุ</b>
+          <div>ไม่ไถล: \( a_A=a_B=\dfrac{F-\mu_{k,BR}(m_A+m_B)g}{m_A+m_B} \)</div>
+          <div>A ไถล: \( a_A=\mu_{k,AB}g,\quad a_B=\dfrac{F-\mu_{k,BR}(m_A+m_B)g-f_{AB}}{m_B} \)</div>
+          <div><b>ค่า:</b> \( a_A \approx ${aA.toFixed(3)}\,\mathrm{m/s^2},\; a_B \approx ${aB.toFixed(3)}\,\mathrm{m/s^2} \)</div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px">
+        <button id="anaClose" class="ghost">ปิด</button>
+      </div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+  document.body.style.overflow = 'hidden';
+  if(window.MathJax){
+    if(MathJax.typesetPromise){ MathJax.typesetPromise(); }
+    else if(MathJax.typeset){ MathJax.typeset(); }
+  }
+  document.getElementById('anaClose').onclick = closeAnalysis;
+  document.getElementById('anaBackdrop').onclick = e=>{
+    if(e.target && e.target.id==='anaBackdrop') closeAnalysis();
+  };
+}
+function closeAnalysis(){
+  const el=document.getElementById('anaBackdrop');
+  if(el) el.remove();
+  document.body.style.overflow = '';
+}
+analysisBtn.onclick = openAnalysis;
+
+// boot
+updateMu(); reset(); resizeCanvas(); updateReadout();
+</script>
+</body>
+</html>

@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>การเบนของลูกตุ้มในรถ(Responsive)</title>
+<style>
+  :root{
+    --ink:#0f172a; --muted:#475569;
+    --bed:#cbd5e1; --cabin:#bebbbb; --panel:#d1d5db;
+    --rope:#111111; --bob:#b45309;
+    --aTruck:#000; --T:#0ea5e9; --mg:#ef4444;
+    --sky:#eaf6ff; --ground:#d9ead3; --tree:#1f7a1f; --trunk:#5c3b1e;
+  }
+  body{
+    margin:0;padding:14px;
+    font-family:system-ui,"Noto Sans Thai",sans-serif;
+    background:#fff;color:var(--ink);
+    display:flex;flex-direction:column;align-items:center;gap:10px
+  }
+  #vp{
+    width:100%; max-width:980px;
+    border-radius:12px; border:1px solid #e5e7eb;
+    background:#f8fafc; position:relative;
+  }
+  canvas{
+    width:100%; height:auto; /* responsive */
+    border:1px solid #e5e7eb; border-radius:12px;
+    background:#f8fafc; touch-action:pan-x;
+  }
+  .panel{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;align-items:center}
+  .card{border:1px solid #e5e7eb;background:#f8f8f8;border-radius:12px;padding:10px 12px}
+  button{padding:10px 16px;border:none;border-radius:10px;background:#2563eb;color:#fff;cursor:pointer;font-size:16px}
+  button.ghost{background:#e5e7eb;color:#111827}
+  input[type="range"]{width:160px}
+  .glow{box-shadow:0 0 0 0 rgba(37,99,235,0.6);animation:pulseGlow 1.6s ease-in-out infinite}
+  @keyframes pulseGlow{
+    0%{box-shadow:0 0 0 0 rgba(37,99,235,0.85)}
+    50%{box-shadow:0 0 18px 6px rgba(37,99,235,0.35)}
+    100%{box-shadow:0 0 0 0 rgba(37,99,235,0)}
+  }
+  #throttleLbl,#brakeLbl{padding:2px 6px;border-radius:6px;transition:color .2s ease}
+
+  @media (max-width:480px){
+    .panel{flex-direction:column;align-items:stretch}
+    .card{padding:12px}
+    input[type="range"]{width:100%}
+    button{width:100%;padding:14px 16px;font-size:18px}
+    /* ให้ช่องติ๊กอยู่บรรทัดเดียวกับข้อความ เหยียบคันเร่ง/เบรก */
+    .modeLabel{
+      display:inline-flex;
+      align-items:center;
+      gap:4px;
+    }
+  }
+</style>
+</head>
+<body>
+<h2 style="margin:8px 0 0">การทดลอง: ลูกตุ้มบนรถบรรทุก</h2>
+
+<div id="vp">
+  <!-- ใช้อัตราส่วน 960x520 เพื่อคุม layout; ความคมชัดจัดด้วย DPR ใน JS -->
+  <canvas id="cv" width="960" height="520"></canvas>
+</div>
+
+<div class="panel">
+  <div class="card">
+    m=
+    <input id="mass" type="number" value="1.0" min="0.1" step="0.1" style="width:72px"/> kg
+    v₀=
+    <input id="v0" type="number" value="2" min="0" step="0.5" style="width:72px"/> m/s
+    <label class="modeLabel"><input type="radio" name="mode" value="throttle" checked> <span id="throttleLbl">เหยียบคันเร่ง</span></label>
+    <label class="modeLabel"><input type="radio" name="mode" value="brake"> <span id="brakeLbl">เบรก</span></label>
+    a=
+    <input id="accel" type="range" min="0" max="10" step="0.1" value="0"/>
+    <input id="accelNum" type="number" min="0" max="10" step="0.1" value="0" style="width:72px"/>
+    <span id="aVal">0.0</span> m/s²
+  </div>
+  <div class="card">
+    <button id="toggle">▶ เล่น</button>
+    <button id="vectors" class="ghost">👁 แสดงเวกเตอร์แรง</button>
+    <button id="reset" class="ghost">↺ รีเซ็ต</button>
+  </div>
+</div>
+
+<div id="status" class="card" style="font-size:14px;max-width:980px;width:100%"></div>
+<p style="margin:0 8px 8px 8px;font-size:14px">
+  ศึกษาเพิ่มเติมที่เพจ
+  <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">คลายปมฟิสิกส์</a>
+</p>
+
+<script>
+// ===== Canvas & DPR (ให้คมชัดบนมือถือ) =====
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+const BASE_W = 960, BASE_H = 520; // ระบบพิกัดตรึง
+
+function resizeCanvas(){
+  const dpr = Math.max(1, window.devicePixelRatio || 1);
+  const cssW = cv.clientWidth || BASE_W;
+  const scale = cssW / BASE_W;
+  const cssH = BASE_H * scale;
+
+  cv.style.height = cssH + 'px';
+  cv.width  = Math.floor(cssW * dpr);
+  cv.height = Math.floor(cssH * dpr);
+
+  // scale ทั้งภาพจากพิกัด 960x520 → ขนาดจริงบนจอ
+  ctx.setTransform(dpr * scale, 0, 0, dpr * scale, 0, 0);
+
+  draw(); // วาดใหม่หลังรีไซส์
+}
+window.addEventListener('load', resizeCanvas);
+window.addEventListener('resize', resizeCanvas);
+window.addEventListener('orientationchange', resizeCanvas);
+
+// helper ตรวจว่าหน้าจอขนาดมือถือไหม
+function isMobile(){
+  return window.innerWidth <= 480;
+}
+
+// ===== ค่าพื้นฐาน =====
+const g = 9.81;          // m/s^2
+const SCALE = 100;       // 100 px = 1 m
+function mass(){ return Math.max(0.1, +massEl.value || 1.0); }
+
+// รถถูกตรึง "กลางจอ" ในพิกัด BASE
+const wheelR = 28;
+const truckY = 300;
+const CX = BASE_W/2;
+
+const truck = { xScr: CX - 460/2, y: truckY, w:460, h:40, v:0, a:0, worldX:0, v0:2 };
+
+// แผงสี่เหลี่ยมติดรถ: สูง 250px, กว้าง 240px
+const panel = { xScr:0, y: truck.y - 250, w:240, h:250 };
+
+// เชือกยาว 120px
+const ropeL = 120;
+
+// UI
+const massEl = document.getElementById('mass');
+const v0El = document.getElementById('v0');
+const accelEl = document.getElementById('accel');
+const accelNum = document.getElementById('accelNum');
+const aVal = document.getElementById('aVal');
+const toggleBtn = document.getElementById('toggle');
+const vectorsBtn = document.getElementById('vectors');
+const resetBtn = document.getElementById('reset');
+const statusEl = document.getElementById('status');
+const throttleLbl = document.getElementById('throttleLbl');
+const brakeLbl = document.getElementById('brakeLbl');
+
+let showVectors = false;
+
+// โหมดเร่ง/เบรก
+let mode='throttle';
+document.querySelectorAll('input[name="mode"]').forEach(r=> r.onchange = ()=>{
+  mode=r.value;
+  updateA();
+  updateModeUI();
+  markNeedsReset();
+});
+
+function updateModeUI(){
+  if(mode==='throttle'){
+    throttleLbl.style.color = '#dc2626';
+    brakeLbl.style.color = '#cbd5e1';
+  }else{
+    throttleLbl.style.color = '#cbd5e1';
+    brakeLbl.style.color = '#dc2626';
+  }
+}
+
+function markNeedsReset(){ resetBtn.classList.add('glow'); }
+
+// ตั้งค่า a และทิศ
+function updateA(){
+  let a = +accelEl.value;
+  if(document.activeElement===accelNum){
+    a = +accelNum.value;
+    accelEl.value = a;
+  }else{
+    accelNum.value = (+accelEl.value).toFixed(1);
+  }
+  if(mode==='brake') a = -a;
+  truck.a = a;
+  aVal.textContent = a.toFixed(1);
+
+  draw();
+  updateStatus();
+}
+
+accelEl.oninput = ()=>{ updateA(); markNeedsReset(); };
+accelNum.oninput = ()=>{ updateA(); markNeedsReset(); };
+
+v0El.addEventListener('input', ()=>{
+  if(+v0El.value < 0) v0El.value = 0;
+  draw();
+  markNeedsReset();
+});
+
+massEl.addEventListener('input', ()=>{
+  markNeedsReset();
+  updateStatus();
+  draw();
+});
+
+// ฟิสิกส์มุมเบน
+function thetaFromA(a){ return Math.atan2(-a, g); }
+
+// ghost ลูกตุ้ม
+let prevBob = null;
+
+// ===== ลูปเวลา =====
+let running=false, last=0;
+
+function loop(ts){
+  if(!running) return;
+  const dt = Math.min(0.032,(ts-last)/1000);
+  last = ts;
+  step(dt);
+  draw();
+  requestAnimationFrame(loop);
+}
+
+function start(){
+  updateA();
+  if((+v0El.value||0)===0 && Math.abs(truck.a) < 1e-9){
+    statusEl.innerHTML = '<b>เตือน:</b> v₀ = 0 และ a = 0 — รถจะไม่เคลื่อนที่ (ตั้งค่า v₀ หรือ a ก่อนแล้วกดเล่น)';
+    return;
+  }
+  if(running){
+    running=false;
+    toggleBtn.textContent='▶ เล่น';
+  }else{
+    running=true;
+    last=performance.now();
+    toggleBtn.textContent='⏸ หยุด';
+    requestAnimationFrame(loop);
+  }
+}
+toggleBtn.onclick = start;
+
+vectorsBtn.onclick = ()=>{
+  showVectors=!showVectors;
+  vectorsBtn.textContent = showVectors?'👁 ซ่อนเวกเตอร์แรง':'👁 แสดงเวกเตอร์แรง';
+  draw();
+};
+
+function resetSimulation(userTriggered=false){
+  truck.worldX = 0;
+  truck.v0 = Math.abs(+v0El.value || 0);
+  truck.v = truck.v0;
+  updateA();
+  prevBob = null;
+  if(userTriggered){ resetBtn.classList.remove('glow'); }
+  draw();
+  updateStatus();
+}
+resetBtn.onclick = ()=> resetSimulation(true);
+
+// เริ่มต้น
+(function boot(){
+  v0El.value = 2;
+  accelEl.value = 0;
+  accelNum.value = 0;
+  aVal.textContent='0.0';
+  document.querySelector('input[name="mode"][value="throttle"]').checked = true;
+  mode='throttle';
+  updateModeUI();
+  resetBtn.classList.add('glow');
+  resetSimulation(false);
+})();
+
+// ===== อัปเดตเวลา =====
+function step(dt){
+  const now = bobPosScreen();
+  prevBob = {x: now.bx, y: now.by};
+
+  truck.v += truck.a * dt;
+  if(mode==='brake' && truck.v <= 0){
+    truck.v = 0;
+    truck.a = 0;
+    aVal.textContent='0.0';
+  }
+  truck.worldX += truck.v * dt * SCALE;
+
+  updateStatus();
+}
+
+function updateStatus(){
+  const a = truck.a, m = mass();
+  const theta = thetaFromA(a);
+  const deg = Math.abs(theta * 180/Math.PI); // ใช้ค่าสัมบูรณ์ ไม่เอาเครื่องหมายลบ
+  const T = m * Math.sqrt(g*g + a*a);
+  statusEl.innerHTML =
+    `สถานะ: v = ${truck.v.toFixed(2)} m/s, ` +
+    `a = ${a.toFixed(2)} m/s² · ` +
+    `มุมเบน θ = ${deg.toFixed(1)}, ` +
+    `แรงตึงเชือก T = ${T.toFixed(2)} N`;
+}
+
+// ===== Layout รถบนจอ =====
+function cabinGeomScreen(){
+  const cabX = truck.xScr + truck.w - 110;
+  const cabW = 110;
+  const cabY = truck.y - 70;
+  return { cabX, cabY, cabW };
+}
+function layoutPanelScreen(){
+  const {cabX} = cabinGeomScreen();
+  panel.y = truck.y - panel.h;
+  panel.xScr = cabX - panel.w;
+}
+
+// จุดยึดเชือก/ลูกตุ้ม
+function attachPointScreen(){
+  layoutPanelScreen();
+  const ax = panel.xScr + panel.w/2;
+  const ay = panel.y + 2;
+  return {ax, ay};
+}
+function bobPosScreen(){
+  const a = truck.a;
+  const theta = thetaFromA(a);
+  const {ax, ay} = attachPointScreen();
+  const bx = ax + ropeL * Math.sin(theta);
+  const by = ay + ropeL * Math.cos(theta);
+  return {bx, by, theta, ax, ay};
+}
+
+// ===== วาดฉากหลังเลื่อน (ใช้ BASE_W, BASE_H) =====
+function drawBackground(){
+  const wheelCY = truckY + wheelR;
+  const roadY  = truckY + wheelR*2;
+
+  // ท้องฟ้า
+  ctx.fillStyle = getCSS('--sky');
+  ctx.fillRect(0, 0, BASE_W, roadY);
+
+  // พื้นหญ้า
+  ctx.fillStyle = getCSS('--ground');
+  ctx.fillRect(0, roadY, BASE_W, BASE_H-roadY);
+
+  // ถนน
+  ctx.fillStyle='#444';
+  ctx.fillRect(0, roadY-8, BASE_W, 8);
+
+  // เส้นประกลางถนน
+  const dashW = 40, gapW = 30;
+  let offset = - (truck.worldX % (dashW+gapW));
+  ctx.fillStyle='#f8f8f8';
+  for(let x=offset; x<BASE_W; x+=dashW+gapW){
+    ctx.fillRect(x, roadY-4, dashW, 2);
+  }
+
+  // ต้นไม้
+  const tileW = 300;
+  let x0 = - (truck.worldX % tileW);
+  for(let x = x0 - tileW; x < BASE_W + tileW; x += tileW){
+    drawTree(x + 60,  roadY-12);
+    drawTree(x + 180, roadY-10);
+  }
+}
+function drawTree(xBase, groundY){
+  ctx.fillStyle = getCSS('--trunk');
+  ctx.fillRect(xBase-6, groundY-40, 12, 40);
+  ctx.fillStyle = getCSS('--tree');
+  ctx.beginPath();
+  ctx.moveTo(xBase, groundY-80);
+  ctx.lineTo(xBase-28, groundY-40);
+  ctx.lineTo(xBase+28, groundY-40);
+  ctx.closePath();
+  ctx.fill();
+}
+
+// ===== วาดรถ + ลูกตุ้ม =====
+function draw(){
+  // ล้างจอในพิกัด BASE
+  ctx.clearRect(0,0,BASE_W,BASE_H);
+
+  drawBackground();
+  layoutPanelScreen();
+
+  // กระบะ
+  const bedX = panel.xScr;
+  const bedW = (truck.xScr + truck.w) - bedX;
+  ctx.fillStyle=getCSS('--bed');
+  ctx.fillRect(bedX, truck.y, Math.max(260, bedW), truck.h);
+
+  // ห้องโดยสาร
+  const {cabX, cabY, cabW} = cabinGeomScreen();
+  ctx.beginPath();
+  ctx.moveTo(cabX,      cabY+70);
+  ctx.lineTo(cabX+cabW, cabY+70);
+  ctx.lineTo(cabX+80,   cabY);
+  ctx.lineTo(cabX,      cabY);
+  ctx.closePath();
+  ctx.fillStyle=getCSS('--cabin');
+  ctx.fill();
+  ctx.strokeStyle='#1e293b';
+  ctx.stroke();
+
+  // ล้อ
+  const wheelCY = truckY + wheelR;
+  const leftWheelX  = bedX + 90;
+  const rightWheelX = bedX + Math.max(260, (truck.xScr + truck.w) - bedX - 90);
+  drawWheel(leftWheelX,  wheelCY);
+  drawWheel(rightWheelX, wheelCY);
+
+  // แผงสีเทา
+  ctx.fillStyle=getCSS('--panel');
+  ctx.fillRect(panel.xScr, panel.y, panel.w, panel.h);
+  ctx.strokeStyle='#9aa0a6';
+  ctx.strokeRect(panel.xScr, panel.y, panel.w, panel.h);
+
+  // ลูกตุ้ม + เชือก
+  const {bx, by, theta, ax, ay} = bobPosScreen();
+
+  // เส้นปะอ้างอิงแนวดิ่ง
+  ctx.save();
+  ctx.setLineDash([6,6]);
+  ctx.strokeStyle='#9ca3af';
+  ctx.beginPath();
+  ctx.moveTo(ax, ay);
+  ctx.lineTo(ax, ay + ropeL);
+  ctx.stroke();
+  ctx.restore();
+
+  // เงาอดีต
+  if(prevBob){
+    ctx.save();
+    ctx.globalAlpha = 0.35;
+    ctx.setLineDash([6,6]);
+    ctx.strokeStyle='#9ca3af';
+    ctx.beginPath();
+    ctx.moveTo(ax, ay);
+    ctx.lineTo(prevBob.x, prevBob.y);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(prevBob.x, prevBob.y, 12, 0, Math.PI*2);
+    ctx.fillStyle='#a3a3a3';
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // เชือกจริง
+  ctx.beginPath();
+  ctx.moveTo(ax, ay);
+  ctx.lineTo(bx, by);
+  ctx.strokeStyle=getCSS('--rope');
+  ctx.lineWidth=2;
+  ctx.stroke();
+
+  // ลูกตุ้มจริง
+  ctx.beginPath();
+  ctx.arc(bx, by, 12, 0, Math.PI*2);
+  ctx.fillStyle=getCSS('--bob');
+  ctx.fill();
+  ctx.lineWidth=1.5;
+  ctx.strokeStyle='#8a3e07';
+  ctx.stroke();
+
+  // ป้ายมุม θ และแรงตึง T — ใช้ค่าสัมบูรณ์ + วงกลมองศา
+  const labelFontSize = isMobile() ? 18 : 16;
+  const degAbs = Math.abs(theta*180/Math.PI);
+  const Tval = mass() * Math.sqrt(g*g + (truck.a*truck.a));
+  ctx.fillStyle = '#0f172a';
+  ctx.font = `${labelFontSize}px system-ui`;
+
+  const angleText = `θ = ${degAbs.toFixed(1)}`;
+  const angleX = ax + 8;
+  const angleY = ay + 18;
+  ctx.fillText(angleText, angleX, angleY);
+
+  // วาดวงกลมเล็กๆ เป็นสัญลักษณ์องศาที่ด้านบนตัวเลข
+  const textWidth = ctx.measureText(angleText).width;
+  const circleX = angleX + textWidth + 4;
+  const circleY = angleY - labelFontSize * 0.6;
+  ctx.beginPath();
+  ctx.arc(circleX, circleY, 3, 0, Math.PI * 2);
+  ctx.strokeStyle = '#0f172a';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  ctx.fillText(`T = ${Tval.toFixed(2)} N`, ax+8, ay+38);
+
+  // ===== ลูกศรแสดงความเร่งของรถ (แสดงตลอดเวลา) ย้ายขึ้น 150px และขวา 150px =====
+  const vecFontSize = isMobile() ? 16 : 14;
+  const aClamped = clamp(truck.a, -10, 10);
+  const aDx = 28 * (aClamped / 10); // a>0 → ชี้ขวา, a<0 → ชี้ซ้าย
+
+  const baseAx = bedX + Math.max(260, bedW)/2 + 150;
+  const baseAy = truck.y - 50 - 150;
+
+  drawArrow(
+    baseAx,
+    baseAy,
+    aDx,
+    0,
+    getCSS('--aTruck'),
+    `a = ${truck.a.toFixed(2)} m/s²`,
+    'bottom',
+    vecFontSize
+  );
+
+  // เวกเตอร์ mg, T (เปิด/ปิดด้วยปุ่ม 👁)
+  if(showVectors){
+    drawArrow(
+      bx, by,
+      0, 46,
+      getCSS('--mg'),
+      `mg = ${(mass()*g).toFixed(2)} N`,
+      'right',
+      vecFontSize
+    );
+    const ux = (ax - bx), uy = (ay - by);
+    const len = Math.hypot(ux,uy) || 1;
+    const tx = (ux/len)*46, ty=(uy/len)*46;
+    drawArrow(
+      bx, by,
+      tx, ty,
+      getCSS('--T'),
+      `T = ${Tval.toFixed(2)} N`,
+      'left',
+      vecFontSize
+    );
+  }
+
+  // ป้าย v0 ใช้ค่าจากกล่องป้อนโดยตรง — โตขึ้นในมือถือ
+  const v0Display = Math.abs(+v0El.value || 0);
+  ctx.font = `${labelFontSize}px system-ui`;
+  ctx.fillStyle = '#0f172a';
+  ctx.fillText(`v₀ = ${v0Display.toFixed(2)} m/s`, 14, 100);
+}
+
+// ===== Helpers =====
+function drawWheel(x,y){
+  ctx.beginPath();
+  ctx.arc(x,y,wheelR,0,Math.PI*2);
+  ctx.fillStyle='#111';
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(x,y,7,0,Math.PI*2);
+  ctx.fillStyle='#fff';
+  ctx.fill();
+}
+function drawArrow(x,y,dx,dy,color,label,align='right',fontSize=14){
+  const endX = x+dx, endY=y+dy;
+  ctx.save();
+  ctx.strokeStyle=color;
+  ctx.fillStyle=color;
+  ctx.lineWidth=2.2;
+  ctx.beginPath();
+  ctx.moveTo(x,y);
+  ctx.lineTo(endX,endY);
+  ctx.stroke();
+  const ang = Math.atan2(dy,dx || 0.0001);
+  ctx.beginPath();
+  ctx.moveTo(endX, endY);
+  ctx.lineTo(endX - 7*Math.cos(ang - Math.PI/8), endY - 7*Math.sin(ang - Math.PI/8));
+  ctx.lineTo(endX - 7*Math.cos(ang + Math.PI/8), endY - 7*Math.sin(ang + Math.PI/8));
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.font = `${fontSize}px system-ui`;
+  ctx.fillStyle=color;
+  let lx=endX+8, ly=endY-6;
+  if(align==='left'){ lx=endX-72; }
+  if(align==='bottom'){ lx=endX-28; ly=endY+18; }
+  ctx.fillText(label, lx, ly);
+  ctx.restore();
+}
+function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
+function getCSS(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+
+// ===== วาดครั้งแรก =====
+function drawOnce(){ draw(); updateStatus(); }
+drawOnce();
+resizeCanvas();
+</script>
+</body>
+</html>

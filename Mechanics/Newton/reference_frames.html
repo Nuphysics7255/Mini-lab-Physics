@@ -1,0 +1,1854 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>กรอบอ้างอิงเฉื่อย - การทดลองในรถไฟ</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #e3f2fd 0%, #f8f9fa 50%, #e8f5e8 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #2c3e50;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .experiment-area {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.8);
+        }
+
+        .simulation-container {
+            position: relative;
+            height: 400px;
+            background: linear-gradient(to bottom, #e3f2fd 0%, #f0f8ff 50%, #f1f8e9 100%);
+            border-radius: 15px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            border: 2px solid #e0e0e0;
+        }
+
+        .railway-track {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 120px;
+            background: linear-gradient(to bottom, #8B7355 0%, #654321 100%);
+        }
+
+        .rails {
+            position: absolute;
+            bottom: 15px;
+            width: 100%;
+            height: 8px;
+        }
+
+        .rail-left {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(to right, #C0C0C0 0%, #A9A9A9 100%);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .rail-right {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(to right, #C0C0C0 0%, #A9A9A9 100%);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .railway-ties {
+            position: absolute;
+            bottom: 8px;
+            width: 100%;
+            height: 12px;
+            background: repeating-linear-gradient(
+                to right,
+                #8B4513 0px,
+                #8B4513 15px,
+                transparent 15px,
+                transparent 25px
+            );
+        }
+
+        .train {
+            z-index: 5;
+            position: absolute;
+            bottom: 120px;
+            right: -450px;
+            width: 400px;
+            height: 180px;
+            transition: none;
+        }
+
+        .train-engine {
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 120px;
+            height: 140px;
+            background: linear-gradient(135deg, #2C3E50 0%, #34495E 100%);
+            border-radius: 10px 10px 5px 5px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+        }
+
+        .engine-front {
+            position: absolute;
+            left: -15px;
+            top: 20px;
+            width: 20px;
+            height: 80px;
+            background: linear-gradient(135deg, #E74C3C 0%, #C0392B 100%);
+            border-radius: 10px 0 0 10px;
+        }
+
+        .engine-chimney {
+            position: absolute;
+            top: -25px;
+            left: 30px;
+            width: 20px;
+            height: 30px;
+            background: linear-gradient(135deg, #34495E 0%, #2C3E50 100%);
+            border-radius: 10px 10px 0 0;
+            border: 2px solid #1A252F;
+        }
+
+        .engine-chimney::after {
+            content: '💨';
+            position: absolute;
+            top: -15px;
+            left: 5px;
+            font-size: 12px;
+            animation: smoke 2s infinite;
+        }
+
+        @keyframes smoke {
+            0% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-20px); }
+        }
+
+        .train-car {
+            position: absolute;
+            right: 0;
+            bottom: 0;
+            width: 280px;
+            height: 140px;
+            background: linear-gradient(135deg, #3498DB 0%, #2980B9 100%);
+            border-radius: 10px 10px 5px 5px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+            border: 3px solid #2471A3;
+        }
+
+        .train-windows {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            height: 80px;
+            background: rgba(173, 216, 230, 0.2);
+            border-radius: 15px;
+            border: 3px solid #4682B4;
+            backdrop-filter: blur(2px);
+        }
+
+        .window-frame-vertical {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 4px;
+            height: 100%;
+            background: #2471A3;
+            transform: translateX(-50%);
+        }
+
+        .window-frame-horizontal {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: #2471A3;
+            transform: translateY(-50%);
+        }
+
+        .train-wheels {
+            position: absolute;
+            bottom: -25px;
+            width: 100%;
+        }
+
+        .train-wheel {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background: radial-gradient(circle, #2C3E50 0%, #1A252F 100%);
+            border-radius: 50%;
+            border: 5px solid #34495E;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.6);
+        }
+
+        .train-wheel::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 25px;
+            height: 25px;
+            background: radial-gradient(circle, #4A6741 0%, #2C3E50 100%);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            border: 3px solid #5D6D7E;
+        }
+
+        .train-wheel::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 10px;
+            height: 10px;
+            background: #85929E;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .train-wheel.engine-wheel1 {
+            left: 20px;
+        }
+
+        .train-wheel.engine-wheel2 {
+            left: 70px;
+        }
+
+        .train-wheel.car-wheel1 {
+            right: 230px;
+        }
+
+        .train-wheel.car-wheel2 {
+            right: 180px;
+        }
+
+        .train-wheel.car-wheel3 {
+            right: 80px;
+        }
+
+        .train-wheel.car-wheel4 {
+            right: 30px;
+        }
+
+        .pendulum {
+            position: absolute;
+            top: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 4px;
+            height: 90px;
+            background: linear-gradient(to bottom, #8B4513 0%, #A0522D 100%);
+            transform-origin: top center;
+            transition: transform 0.5s ease;
+            border-radius: 2px;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.4);
+        }
+
+        .pendulum::before {
+            content: '';
+            position: absolute;
+            top: -8px;
+            left: -6px;
+            width: 16px;
+            height: 16px;
+            background: #654321;
+            border-radius: 50%;
+            border: 3px solid #8B4513;
+        }
+
+        .pendulum-bob {
+            position: absolute;
+            bottom: -18px;
+            left: -18px;
+            width: 36px;
+            height: 36px;
+            background: radial-gradient(circle at 30% 30%, #FFD700 0%, #FFA500 70%, #FF8C00 100%);
+            border-radius: 50%;
+            border: 4px solid #FF8C00;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5), inset 4px 4px 8px rgba(255,255,255,0.3);
+        }
+
+        .pendulum-bob::after {
+            content: '';
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            width: 12px;
+            height: 12px;
+            background: rgba(255,255,255,0.8);
+            border-radius: 50%;
+            box-shadow: 2px 2px 4px rgba(255,255,255,0.9);
+        }
+
+        .passenger {
+            position: absolute;
+            bottom: 60px;
+            left: 80px;
+            width: 60px;
+            height: 80px;
+            transition: all 0.5s ease;
+        }
+
+        .passenger-head {
+            width: 25px;
+            height: 25px;
+            background: #FDBCB4;
+            border-radius: 50%;
+            margin: 0 auto 2px;
+            border: 2px solid #F4A261;
+            position: relative;
+        }
+
+        .passenger-hair {
+            position: absolute;
+            top: -8px;
+            left: -4px;
+            right: -4px;
+            height: 20px;
+            background: #8B4513;
+            border-radius: 50% 50% 30% 30%;
+            border: 2px solid #654321;
+            transition: all 0.3s ease;
+        }
+
+        .passenger-hair.shocked {
+            transform: scaleY(1.5) translateY(-3px);
+            border-radius: 80% 80% 20% 20%;
+        }
+
+        .passenger-eyes {
+            position: absolute;
+            top: 8px;
+            left: 4px;
+            width: 3px;
+            height: 3px;
+            background: #333;
+            border-radius: 50%;
+            box-shadow: 10px 0 0 #333;
+        }
+
+        .passenger-mouth {
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 8px;
+            height: 4px;
+            border-radius: 0 0 8px 8px;
+            background: #FF6B6B;
+            transition: all 0.3s ease;
+        }
+
+        .passenger-mouth.smile {
+            background: #32CD32;
+            border-radius: 8px 8px 0 0;
+            transform: translateX(-50%) rotate(180deg);
+        }
+
+        .passenger-mouth.shocked {
+            width: 6px;
+            height: 8px;
+            border-radius: 50%;
+            background: #333;
+            transform: translateX(-50%);
+        }
+
+        .passenger-torso {
+            width: 35px;
+            height: 40px;
+            background: linear-gradient(135deg, #4169E1 0%, #6495ED 100%);
+            border-radius: 15px 15px 8px 8px;
+            margin: 0 auto;
+            position: relative;
+            border: 2px solid #4682B4;
+        }
+
+        .passenger-arms {
+            position: absolute;
+            top: 10px;
+            left: -8px;
+            right: -8px;
+            height: 4px;
+            background: #FDBCB4;
+            border-radius: 2px;
+            transition: all 0.5s ease;
+        }
+
+        .passenger-arms.forward {
+            transform: rotate(-20deg);
+            transform-origin: center;
+        }
+
+        .passenger-arms.backward {
+            transform: rotate(20deg);
+            transform-origin: center;
+        }
+
+        .passenger-legs {
+            position: absolute;
+            bottom: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 30px;
+            height: 15px;
+        }
+
+        .passenger-leg {
+            position: absolute;
+            width: 12px;
+            height: 15px;
+            background: #2C3E50;
+            border-radius: 0 0 6px 6px;
+        }
+
+        .passenger-leg.left {
+            left: 0;
+        }
+
+        .passenger-leg.right {
+            right: 0;
+        }
+
+        .passenger-foot {
+            position: absolute;
+            bottom: -4px;
+            left: -2px;
+            width: 8px;
+            height: 4px;
+            background: #34495E;
+            border-radius: 4px;
+        }
+
+        .passenger-pants {
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 28px;
+            height: 12px;
+            background: #2C3E50;
+            border-radius: 0 0 6px 6px;
+        }
+
+        .passenger.lean-forward {
+            transform: translateX(-15px) rotate(-15deg);
+        }
+
+        .passenger.lean-backward {
+            transform: translateX(15px) rotate(15deg);
+        }
+
+        .passenger.normal {
+            transform: rotate(0deg);
+        }
+
+        .observer-outside {
+            z-index: 1;
+            position: absolute;
+            bottom: 140px;
+            right: 80px;
+            width: 35px;
+            height: 60px;
+        }
+
+        .observer-outside-head {
+            width: 18px;
+            height: 18px;
+            background: #FDBCB4;
+            border-radius: 50%;
+            margin: 0 auto 4px;
+            border: 2px solid #F4A261;
+            position: relative;
+        }
+
+        .observer-outside-head::after {
+            content: '';
+            position: absolute;
+            top: 4px;
+            left: 3px;
+            width: 3px;
+            height: 3px;
+            background: #333;
+            border-radius: 50%;
+            box-shadow: 8px 0 0 #333;
+        }
+
+        .observer-outside-body {
+            width: 30px;
+            height: 35px;
+            background: linear-gradient(135deg, #45B7D1 0%, #96CEB4 100%);
+            border-radius: 15px 15px 8px 8px;
+            margin: 0 auto;
+            position: relative;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+        }
+
+        .observer-outside-arms {
+            position: absolute;
+            top: 8px;
+            left: -6px;
+            right: -6px;
+            height: 4px;
+            background: #FDBCB4;
+            border-radius: 2px;
+        }
+
+        .observer-outside-legs {
+            position: absolute;
+            bottom: -12px;
+            left: 5px;
+            right: 5px;
+            height: 12px;
+            background: #2C3E50;
+            border-radius: 0 0 5px 5px;
+        }
+
+        .observer-outside-legs::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 3px;
+            width: 8px;
+            height: 4px;
+            background: #34495E;
+            border-radius: 4px;
+            box-shadow: 12px 0 0 #34495E;
+        }
+
+        .observer-label {
+            position: absolute;
+            top: -30px;
+            left: -25px;
+            font-size: 13px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            white-space: nowrap;
+        }
+
+
+
+
+
+
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .btn-accelerate {
+            background: linear-gradient(45deg, #ffab91, #ff8a65);
+            color: white;
+            border: 1px solid #ff7043;
+        }
+
+        .btn-brake {
+            background: linear-gradient(45deg, #81c784, #66bb6a);
+            color: white;
+            border: 1px solid #4caf50;
+        }
+
+        .btn-reset {
+            background: linear-gradient(45deg, #e1f5fe, #b3e5fc);
+            color: #37474f;
+            border: 1px solid #81d4fa;
+        }
+
+        .btn-view {
+            background: linear-gradient(45deg, #ce93d8, #ba68c8);
+            color: white;
+            border: 1px solid #ab47bc;
+        }
+
+        .btn-constant {
+            background: linear-gradient(45deg, #90caf9, #64b5f6);
+            color: white;
+            border: 1px solid #42a5f5;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        .explanation {
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+            border: 1px solid #e0e0e0;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+        }
+
+        .explanation h3 {
+            margin-bottom: 15px;
+            color: #5d4037;
+            font-weight: 600;
+        }
+
+        .explanation ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+
+        .explanation li {
+            margin-bottom: 10px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .explanation li:before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: #66bb6a;
+            font-weight: bold;
+        }
+
+        .status {
+            text-align: center;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 12px;
+            border: 1px solid #e0e0e0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            color: #37474f;
+        }
+
+        .accelerating {
+            animation: shake 0.5s infinite;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-3px); }
+            75% { transform: translateX(3px); }
+        }
+
+        .clouds {
+            position: absolute;
+            top: 20px;
+            width: 100%;
+            height: 60px;
+        }
+
+        .cloud {
+            position: absolute;
+            background: white;
+            border-radius: 50px;
+            opacity: 0.8;
+        }
+
+        .cloud:before,
+        .cloud:after {
+            content: '';
+            position: absolute;
+            background: white;
+            border-radius: 50px;
+        }
+
+        .cloud1 {
+            width: 60px;
+            height: 25px;
+            top: 10px;
+            left: 120px;
+            animation: float 20s infinite linear;
+        }
+
+        .cloud1:before {
+            width: 30px;
+            height: 30px;
+            top: -15px;
+            left: 8px;
+        }
+
+        .cloud1:after {
+            width: 35px;
+            height: 25px;
+            top: -10px;
+            right: 8px;
+        }
+
+        .cloud2 {
+            width: 50px;
+            height: 20px;
+            top: 30px;
+            right: 180px;
+            animation: float 25s infinite linear reverse;
+        }
+
+        .cloud2:before {
+            width: 25px;
+            height: 25px;
+            top: -12px;
+            left: 10px;
+        }
+
+        .cloud2:after {
+            width: 30px;
+            height: 20px;
+            top: -8px;
+            right: 10px;
+        }
+
+        @keyframes float {
+            0% { transform: translateX(-100px); }
+            100% { transform: translateX(calc(100vw + 100px)); }
+        }
+
+        .trees {
+            position: absolute;
+            bottom: 140px;
+            width: 100%;
+            height: 100px;
+        }
+
+        .tree {
+            position: absolute;
+            bottom: 0;
+        }
+
+        .tree-trunk {
+            width: 10px;
+            height: 35px;
+            background: #8B4513;
+            margin: 0 auto;
+            border-radius: 3px;
+        }
+
+        .tree-leaves {
+            width: 35px;
+            height: 35px;
+            background: #228B22;
+            border-radius: 50%;
+            margin: -8px auto 0;
+            position: relative;
+        }
+
+        .tree-leaves:before,
+        .tree-leaves:after {
+            content: '';
+            position: absolute;
+            width: 28px;
+            height: 28px;
+            background: #32CD32;
+            border-radius: 50%;
+        }
+
+        .tree-leaves:before {
+            top: -12px;
+            left: -8px;
+        }
+
+        .tree-leaves:after {
+            top: -12px;
+            right: -8px;
+        }
+
+        .tree1 {
+            left: 60px;
+        }
+
+        .tree2 {
+            right: 250px;
+        }
+
+        .tree3 {
+            right: 350px;
+        }
+
+        .force-arrow {
+            position: absolute;
+            top: 50%;
+            right: -60px;
+            width: 50px;
+            height: 5px;
+            background: #FF0000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .force-arrow:after {
+            content: '';
+            position: absolute;
+            right: -10px;
+            top: -6px;
+            width: 0;
+            height: 0;
+            border-left: 16px solid #FF0000;
+            border-top: 8px solid transparent;
+            border-bottom: 8px solid transparent;
+        }
+
+        .force-arrow.show {
+            opacity: 1;
+        }
+
+        .inside-view {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, #2C3E50 0%, #34495E 100%);
+            border-radius: 15px;
+            overflow: hidden;
+        }
+
+        .inside-view.active {
+            display: block;
+        }
+
+        .train-interior {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #34495E 0%, #2C3E50 100%);
+        }
+
+        .interior-windows {
+            position: absolute;
+            top: 30px;
+            left: 30px;
+            right: 30px;
+            height: 120px;
+            background: rgba(173, 216, 230, 0.1);
+            border-radius: 20px;
+            border: 4px solid #4682B4;
+            backdrop-filter: blur(1px);
+        }
+
+        .interior-window-frame-vertical {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 6px;
+            height: 100%;
+            background: #2471A3;
+            transform: translateX(-50%);
+        }
+
+        .interior-window-frame-horizontal {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 6px;
+            background: #2471A3;
+            transform: translateY(-50%);
+        }
+
+        .train-floor {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: linear-gradient(to top, #1A252F 0%, #2C3E50 100%);
+            border-radius: 0 0 15px 15px;
+            border-top: 3px solid #34495E;
+        }
+
+        .train-floor::before {
+            content: '';
+            position: absolute;
+            top: 5px;
+            left: 20px;
+            right: 20px;
+            height: 2px;
+            background: repeating-linear-gradient(
+                to right,
+                #4A6741 0px,
+                #4A6741 10px,
+                transparent 10px,
+                transparent 15px
+            );
+        }
+
+        .luggage {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40px;
+            height: 30px;
+            background: linear-gradient(135deg, #8B4513 0%, #A0522D 100%);
+            border-radius: 8px;
+            border: 3px solid #654321;
+            transition: all 1.5s ease;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.4);
+        }
+
+        .luggage::before {
+            content: '';
+            position: absolute;
+            top: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 25px;
+            height: 6px;
+            background: #654321;
+            border-radius: 3px;
+            border: 2px solid #4A4A4A;
+        }
+
+        .luggage::after {
+            content: '';
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            right: 8px;
+            height: 2px;
+            background: #654321;
+            border-radius: 1px;
+            box-shadow: 0 6px 0 #654321, 0 12px 0 #654321;
+        }
+
+        .luggage.slide-right {
+            transform: translateX(200px) rotateZ(15deg);
+            animation: bounceRight 1.5s ease-out;
+        }
+
+        .luggage.slide-left {
+            transform: translateX(-200px) rotateZ(-15deg);
+            animation: bounceLeft 1.5s ease-out;
+        }
+
+        @keyframes bounceRight {
+            0% { transform: translateX(-50%); }
+            70% { transform: translateX(220px) rotateZ(20deg); }
+            85% { transform: translateX(180px) rotateZ(10deg); }
+            100% { transform: translateX(200px) rotateZ(15deg); }
+        }
+
+        @keyframes bounceLeft {
+            0% { transform: translateX(-50%); }
+            70% { transform: translateX(-220px) rotateZ(-20deg); }
+            85% { transform: translateX(-180px) rotateZ(-10deg); }
+            100% { transform: translateX(-200px) rotateZ(-15deg); }
+        }
+
+        .train-seats {
+            position: absolute;
+            bottom: 50px;
+            left: 50px;
+            right: 50px;
+            height: 60px;
+        }
+
+        .train-seat-left {
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 80px;
+            height: 60px;
+            background: linear-gradient(135deg, #8B4513 0%, #A0522D 100%);
+            border-radius: 20px 20px 8px 8px;
+            border: 3px solid #654321;
+        }
+
+        .train-seat-right {
+            position: absolute;
+            right: 0;
+            bottom: 0;
+            width: 80px;
+            height: 60px;
+            background: linear-gradient(135deg, #8B4513 0%, #A0522D 100%);
+            border-radius: 20px 20px 8px 8px;
+            border: 3px solid #654321;
+        }
+
+        .seat-back {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 35px;
+            background: linear-gradient(135deg, #A0522D 0%, #8B4513 100%);
+            border-radius: 20px 20px 0 0;
+            border-bottom: 3px solid #654321;
+        }
+
+        .seat-cushion {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 25px;
+            background: linear-gradient(135deg, #CD853F 0%, #A0522D 100%);
+            border-radius: 0 0 8px 8px;
+        }
+
+        .interior-pendulum {
+            position: absolute;
+            top: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 5px;
+            height: 140px;
+            background: linear-gradient(to bottom, #8B4513 0%, #A0522D 100%);
+            transform-origin: top center;
+            transition: transform 0.5s ease;
+            border-radius: 3px;
+            box-shadow: 3px 3px 8px rgba(0,0,0,0.6);
+        }
+
+        .interior-pendulum::before {
+            content: '';
+            position: absolute;
+            top: -10px;
+            left: -6px;
+            width: 16px;
+            height: 16px;
+            background: #654321;
+            border-radius: 50%;
+            border: 3px solid #8B4513;
+        }
+
+        .interior-pendulum-bob {
+            position: absolute;
+            bottom: -20px;
+            left: -20px;
+            width: 40px;
+            height: 40px;
+            background: radial-gradient(circle at 30% 30%, #FFD700 0%, #FFA500 70%, #FF8C00 100%);
+            border-radius: 50%;
+            border: 5px solid #FF8C00;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.7), inset 4px 4px 10px rgba(255,255,255,0.4);
+        }
+
+        .interior-pendulum-bob::after {
+            content: '';
+            position: absolute;
+            top: 6px;
+            left: 6px;
+            width: 15px;
+            height: 15px;
+            background: rgba(255,255,255,0.8);
+            border-radius: 50%;
+            box-shadow: 3px 3px 6px rgba(255,255,255,0.9);
+        }
+
+        .train-coupling {
+            position: absolute;
+            right: -15px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 15px;
+            height: 20px;
+            background: #2C3E50;
+            border-radius: 0 5px 5px 0;
+            border: 2px solid #1A252F;
+        }
+
+        .train-coupling::after {
+            content: '';
+            position: absolute;
+            right: -8px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 8px;
+            height: 8px;
+            background: #85929E;
+            border-radius: 50%;
+            border: 2px solid #5D6D7E;
+        }
+
+        .train-headlight {
+            position: absolute;
+            left: -8px;
+            top: 40px;
+            width: 20px;
+            height: 20px;
+            background: radial-gradient(circle, #FFFF99 0%, #FFD700 100%);
+            border-radius: 50%;
+            border: 3px solid #FFA500;
+            box-shadow: 0 0 15px rgba(255, 255, 153, 0.9);
+        }
+
+        .mountain {
+            position: absolute;
+            bottom: 140px;
+            width: 0;
+            height: 0;
+            border-style: solid;
+        }
+
+        .mountain1 {
+            left: 200px;
+            border-left: 40px solid transparent;
+            border-right: 40px solid transparent;
+            border-bottom: 60px solid #8FBC8F;
+        }
+
+        .mountain2 {
+            right: 100px;
+            border-left: 50px solid transparent;
+            border-right: 50px solid transparent;
+            border-bottom: 80px solid #9ACD32;
+        }
+
+        .mountain1::after {
+            content: '';
+            position: absolute;
+            bottom: -60px;
+            left: -25px;
+            width: 0;
+            height: 0;
+            border-left: 25px solid transparent;
+            border-right: 25px solid transparent;
+            border-bottom: 35px solid #F0F8FF;
+        }
+
+        .mountain2::after {
+            content: '';
+            position: absolute;
+            bottom: -80px;
+            left: -30px;
+            width: 0;
+            height: 0;
+            border-left: 30px solid transparent;
+            border-right: 30px solid transparent;
+            border-bottom: 45px solid #F0F8FF;
+        }
+
+        .external-view-monitor {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 200px;
+            height: 120px;
+            background: #2C3E50;
+            border-radius: 10px;
+            border: 4px solid #34495E;
+            display: none;
+            overflow: hidden;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.6);
+        }
+
+        .external-view-monitor.show {
+            display: block;
+        }
+
+        .monitor-screen {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, #87CEEB 0%, #E0F6FF 50%, #98FB98 100%);
+        }
+
+        .monitor-train {
+            position: absolute;
+            bottom: 20px;
+            right: -100px;
+            width: 100px;
+            height: 40px;
+            transition: none;
+        }
+
+        .monitor-train-car {
+            position: absolute;
+            right: 0;
+            bottom: 0;
+            width: 70px;
+            height: 35px;
+            background: linear-gradient(135deg, #3498DB 0%, #2980B9 100%);
+            border-radius: 6px 6px 3px 3px;
+            border: 2px solid #2471A3;
+        }
+
+        .monitor-train-engine {
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 30px;
+            height: 35px;
+            background: linear-gradient(135deg, #2C3E50 0%, #34495E 100%);
+            border-radius: 6px 6px 3px 3px;
+        }
+
+        .monitor-engine-front {
+            position: absolute;
+            left: -4px;
+            top: 5px;
+            width: 5px;
+            height: 20px;
+            background: linear-gradient(135deg, #E74C3C 0%, #C0392B 100%);
+            border-radius: 3px 0 0 3px;
+        }
+
+        .monitor-engine-chimney {
+            position: absolute;
+            top: -6px;
+            left: 8px;
+            width: 5px;
+            height: 8px;
+            background: linear-gradient(135deg, #34495E 0%, #2C3E50 100%);
+            border-radius: 3px 3px 0 0;
+        }
+
+        .monitor-train-windows {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            right: 5px;
+            height: 20px;
+            background: rgba(173, 216, 230, 0.2);
+            border-radius: 4px;
+            border: 1px solid #4682B4;
+        }
+
+        .monitor-window-frame {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 1px;
+            height: 100%;
+            background: #2471A3;
+            transform: translateX(-50%);
+        }
+
+        .monitor-train-wheels {
+            position: absolute;
+            bottom: -8px;
+            width: 100%;
+        }
+
+        .monitor-wheel {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background: #2C3E50;
+            border-radius: 50%;
+            border: 2px solid #34495E;
+        }
+
+        .monitor-wheel1 { left: 10px; }
+        .monitor-wheel2 { left: 30px; }
+        .monitor-wheel3 { right: 25px; }
+        .monitor-wheel4 { right: 5px; }
+
+        .monitor-ground {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 25px;
+            background: linear-gradient(to bottom, #8B7355 0%, #654321 100%);
+        }
+
+        .monitor-rails {
+            position: absolute;
+            bottom: 5px;
+            width: 100%;
+            height: 3px;
+            background: #C0C0C0;
+        }
+
+        .monitor-speed-indicator {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            font-size: 10px;
+            color: white;
+            background: rgba(0,0,0,0.7);
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+
+        .ghost-force-text {
+            position: absolute;
+            top: 120px;
+            left: 200px;
+            background: linear-gradient(45deg, #fff3e0, #ffe0b2);
+            color: #5d4037;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            border: 2px solid #ffcc02;
+            box-shadow: 0 4px 15px rgba(255, 204, 2, 0.3);
+            opacity: 0;
+            transition: all 0.5s ease;
+            z-index: 100;
+        }
+
+        .ghost-force-text.show {
+            opacity: 1;
+            transform: translateY(-10px);
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {
+                transform: translateY(-10px);
+            }
+            40% {
+                transform: translateY(-15px);
+            }
+            60% {
+                transform: translateY(-12px);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚂 กรอบอ้างอิงเฉื่อยเช็คยังไง ?</h1>
+            <p>สังเกตการเคลื่อนที่ของลูกตุ้มและกล่องในขบวนรถไฟ</p>
+        </div>
+
+        <div class="experiment-area">
+            <div class="status" id="status">กดปุ่มเพื่อเริ่มการทดลอง</div>
+            
+            <div class="simulation-container">
+                <!-- มุมมองภายนอก -->
+                <div class="outside-view" id="outsideView">
+                    <div class="clouds">
+                        <div class="cloud cloud1"></div>
+                        <div class="cloud cloud2"></div>
+                    </div>
+                    
+                    <div class="trees">
+                        <div class="tree tree1">
+                            <div class="tree-leaves"></div>
+                            <div class="tree-trunk"></div>
+                        </div>
+                        <div class="tree tree2">
+                            <div class="tree-leaves"></div>
+                            <div class="tree-trunk"></div>
+                        </div>
+                        <div class="tree tree3">
+                            <div class="tree-leaves"></div>
+                            <div class="tree-trunk"></div>
+                        </div>
+                    </div>
+
+                    <div class="mountain mountain1"></div>
+                    <div class="mountain mountain2"></div>
+                    
+                    <div class="railway-track">
+                        <div class="railway-ties"></div>
+                        <div class="rails">
+                            <div class="rail-left"></div>
+                            <div class="rail-right"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="train" id="train">
+                        <div class="train-car">
+                            <div class="train-windows">
+                                <div class="window-frame-vertical"></div>
+                                <div class="window-frame-horizontal"></div>
+                            </div>
+                            <div class="train-coupling"></div>
+                            
+                            <div class="pendulum" id="pendulum">
+                                <div class="pendulum-bob"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="train-engine">
+                            <div class="engine-front"></div>
+                            <div class="engine-chimney"></div>
+                            <div class="train-headlight"></div>
+                        </div>
+                        
+                        <div class="train-wheels">
+                            <div class="train-wheel car-wheel1"></div>
+                            <div class="train-wheel car-wheel2"></div>
+                            <div class="train-wheel car-wheel3"></div>
+                            <div class="train-wheel car-wheel4"></div>
+                            <div class="train-wheel engine-wheel1"></div>
+                            <div class="train-wheel engine-wheel2"></div>
+                        </div>
+                        
+                        <div class="force-arrow" id="forceArrow"></div>
+                    </div>
+                    
+                    <div class="observer-outside">
+                        <div class="observer-outside-head"></div>
+                        <div class="observer-outside-body">
+                            <div class="observer-outside-arms"></div>
+                            <div class="observer-outside-legs"></div>
+                        </div>
+                        <div class="observer-label">ผู้สังเกตภายนอก</div>
+
+                    </div>
+                </div>
+
+                <!-- มุมมองภายในรถไฟ -->
+                <div class="inside-view" id="insideView">
+                    <div class="train-interior">
+                        <div class="interior-windows">
+                            <div class="interior-window-frame-vertical"></div>
+                            <div class="interior-window-frame-horizontal"></div>
+                        </div>
+                        
+                        <div class="train-floor"></div>
+                        
+                        <div class="train-seats">
+                            <div class="train-seat-left">
+                                <div class="seat-back"></div>
+                                <div class="seat-cushion"></div>
+                            </div>
+                            
+                            <div class="train-seat-right">
+                                <div class="seat-back"></div>
+                                <div class="seat-cushion"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="interior-pendulum" id="interiorPendulum">
+                            <div class="interior-pendulum-bob"></div>
+                        </div>
+                        
+                        <div class="passenger" id="passenger">
+                            <div class="passenger-head">
+                                <div class="passenger-hair" id="passengerHair"></div>
+                                <div class="passenger-eyes"></div>
+                                <div class="passenger-mouth" id="passengerMouth"></div>
+                            </div>
+                            <div class="passenger-torso">
+                                <div class="passenger-arms" id="passengerArms"></div>
+                            </div>
+                            <div class="passenger-pants"></div>
+                            <div class="passenger-legs">
+                                <div class="passenger-leg left">
+                                    <div class="passenger-foot"></div>
+                                </div>
+                                <div class="passenger-leg right">
+                                    <div class="passenger-foot"></div>
+                                </div>
+                            </div>
+
+                        </div>
+                        
+                        <div class="luggage" id="luggage"></div>
+                        
+                        <div class="ghost-force-text" id="ghostForceText">
+                            มีแรงผี !! ดึงลูกตุ้ม ??
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <div class="controls">
+                <button class="btn btn-view" onclick="toggleView()">👁️ ผู้สังเกตในรถไฟ</button>
+                <button class="btn btn-accelerate" onclick="accelerate()">⚡ เร่งรถไฟ</button>
+                <button class="btn btn-constant" onclick="constantSpeed()">🚂 ความเร็วคงที่</button>
+                <button class="btn btn-brake" onclick="brake()">🛑 เบรก</button>
+                <button class="btn btn-reset" onclick="reset()">🔄 รีเซ็ต</button>
+            </div>
+
+            <div class="explanation">
+                <h3>📚 กฎข้อที่ 1 ของนิวตัน</h3>
+                <p style="background: linear-gradient(45deg, #fff3e0, #ffe0b2); color: #5d4037; padding: 15px; border-radius: 10px; font-weight: 600; border: 2px solid #ffcc02; box-shadow: 0 4px 15px rgba(255, 204, 2, 0.2);">"ในกรอบอ้างอิงเฉื่อย ถ้าไม่มีแรงมากระทำต่อวัตถุ วัตถุจะรักษาสภาพการเคลื่อนที่เดิม"</p>
+                
+                <div style="background: linear-gradient(135deg, #e8f5e8, #f3e5f5); color: #37474f; padding: 20px; border-radius: 15px; margin: 20px 0; border: 2px solid #81c784; box-shadow: 0 8px 25px rgba(0,0,0,0.1); position: relative;">
+                    <div style="position: absolute; top: -15px; left: 20px; background: #ffcc02; color: #5d4037; padding: 5px 15px; border-radius: 20px; font-weight: 600; font-size: 14px;">⚡ สำคัญ!</div>
+                    <p style="font-size: 18px; font-weight: 600; line-height: 1.6;">ดังนั้น ถ้าเราสังเกตเห็นว่า วัตถุมีการเคลื่อนที่ด้วยความเร่ง ทั้งๆที่ไม่มีแรงมากระทำ เราสามารถบอกได้ทันทีว่า กรอบอ้างอิงที่เราใช้สังเกตนั้นไม่เฉื่อย (กรอบอ้างอิงมีความเร่ง)</p>
+                </div>
+                
+                <p style="color: #5d4037; font-weight: 600; background: rgba(255, 204, 2, 0.1); padding: 10px; border-radius: 8px; border-left: 4px solid #ffcc02;">กฎของนิวตันจะใช้ได้ ตรง ๆ เฉพาะใน กรอบอ้างอิงเฉื่อย เท่านั้น</p>
+                
+                <ul style="background: rgba(255, 255, 255, 0.7); padding: 20px; border-radius: 10px; margin: 15px 0; border: 1px solid #e0e0e0;">
+                    <li><strong>ถ้าอยู่ใน รถไฟที่กำลังเร่ง (กรอบไม่เฉื่อย)</strong> คนในรถจะเห็นกล่องไถลหรือลูกตุ้มเอียง ทั้งที่ไม่มีแรงจริงมากระทำ → จึงรู้สึกเหมือนมี "แรงลึกลับ" มาดึงวัตถุ แต่จริง ๆ แล้วไม่มีแรงนั้นจริง</li>
+                    
+                    <li><strong>ถ้ามองจาก พื้นโลก (กรอบเฉื่อย)</strong> ทุกอย่างอธิบายได้ด้วยกฎของนิวตันปกติ เช่น
+                        <ul style="margin-top: 10px; padding-left: 20px;">
+                            <li>กล่องไถล เพราะพื้นรถเคลื่อนที่หนีไปข้างหน้า</li>
+                            <li>ลูกตุ้มเอียง เพราะเชือกดึงมันให้เคลื่อนที่ตามรถ</li>
+                            <li>รถเบรก แต่กล่องยังเคลื่อนต่อไปเพราะ ความเฉื่อย</li>
+                        </ul>
+                    </li>
+                </ul>
+                
+                <div style="background: linear-gradient(45deg, #fff3e0, #ffe0b2); color: #5d4037; padding: 15px; border-radius: 10px; font-weight: 600; border: 2px solid #ffcc02; box-shadow: 0 4px 15px rgba(255, 204, 2, 0.2); margin: 15px 0;">
+                    👉 <strong>สรุป:</strong> กฎของนิวตันใช้ได้ตรงไปตรงมาในกรอบเฉื่อยเท่านั้น ถ้าอยู่ในกรอบไม่เฉื่อย ต้องอธิบายด้วย "แรงเสมือน" (แรงเฉื่อย) เพิ่มเข้ามา
+                </div>
+                
+                <p style="text-align: center; margin-top: 20px; font-weight: 600; color: #5d4037;">
+                    📖 ศึกษาเพิ่มเติมได้ที่เพจ <a href="https://www.facebook.com/resolvephysics" target="_blank" style="color: #1565c0; text-decoration: underline;">คลายปมฟิสิกส์</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isAccelerating = false;
+        let isBraking = false;
+        let isConstantSpeed = false;
+        let isInsideView = false;
+        let currentSpeed = 10; // m/s
+        
+        const train = document.getElementById('train');
+        const pendulum = document.getElementById('pendulum');
+        const interiorPendulum = document.getElementById('interiorPendulum');
+        const status = document.getElementById('status');
+        const forceArrow = document.getElementById('forceArrow');
+        const outsideView = document.getElementById('outsideView');
+        const insideView = document.getElementById('insideView');
+        const passenger = document.getElementById('passenger');
+        const passengerMouth = document.getElementById('passengerMouth');
+        const passengerArms = document.getElementById('passengerArms');
+        const passengerHair = document.getElementById('passengerHair');
+        const luggage = document.getElementById('luggage');
+        const ghostForceText = document.getElementById('ghostForceText');
+
+        function toggleView() {
+            isInsideView = !isInsideView;
+            const viewButton = document.querySelector('.btn-view');
+            
+            if (isInsideView) {
+                outsideView.style.display = 'none';
+                insideView.classList.add('active');
+                viewButton.textContent = '🌍 ผู้สังเกตภายนอก';
+                status.textContent = "มุมมองจากภายในรถไฟ - สังเกตผู้โดยสาร กระเป๋า และลูกตุ้ม";
+            } else {
+                outsideView.style.display = 'block';
+                insideView.classList.remove('active');
+                viewButton.textContent = '👁️ ผู้สังเกตในรถไฟ';
+                status.textContent = "มุมมองจากภายนอกรถไฟ - เห็นทุกอย่างผ่านกระจกใส";
+            }
+        }
+
+        function playCollisionSound() {
+            // สร้างเสียง "โคม" ด้วย Web Audio API
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.setValueAtTime(200, audioContext.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(100, audioContext.currentTime + 0.3);
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.3);
+        }
+
+        function accelerate() {
+            if (isAccelerating || isBraking || isConstantSpeed) return;
+            
+            isAccelerating = true;
+            currentSpeed = 10; // เริ่มต้นที่ 10 m/s
+            
+            if (isInsideView) {
+                status.textContent = "🚂💨 รถไฟเร่งจาก 10→30 m/s - กล่องไถลไปชนเก้าอี้ขวา! โคม! 💥";
+                // ลูกตุ้มในรถไฟเอียงไปข้างซ้าย (ทิศทางตรงข้ามกับความเร่ง) และค้างไว้
+                interiorPendulum.style.transform = 'translateX(-50%) rotate(-25deg)';
+                // ผู้โดยสารเซถลาไปข้างขวา (ตามทิศทางความเฉื่อย) และตกใจ
+                passenger.classList.add('lean-backward');
+                passengerArms.classList.add('backward');
+                passengerMouth.classList.remove('smile');
+                passengerMouth.classList.add('shocked');
+                passengerHair.classList.add('shocked');
+                // แสดงข้อความแรงผี
+                ghostForceText.classList.add('show');
+                // กล่องไถลไปทางขวาชนเก้าอี้
+                luggage.classList.add('slide-right');
+                // เล่นเสียงชน
+                setTimeout(() => {
+                    playCollisionSound();
+                }, 1000);
+            } else {
+                status.textContent = "🚂💨 รถไฟเร่งจาก 10→30 m/s - เห็นรถไฟเร่งผ่านไปทางขวา!";
+                // รถไฟเคลื่อนที่ผ่านจอไปทางขวาแบบเร่ง
+                animateTrainAcceleration();
+                // ลูกตุ้มเอียงไปข้างซ้าย และค้างไว้
+                pendulum.style.transform = 'rotate(-25deg)';
+            }
+            
+            setTimeout(() => {
+                isAccelerating = false;
+                currentSpeed = 30; // ความเร็วหลังเร่ง
+                if (isInsideView) {
+                    // ลูกตุ้มค้างเอียงไว้ ไม่กลับมาตั้งฉาก
+                    passenger.classList.remove('lean-backward');
+                    passenger.classList.add('normal');
+                    passengerArms.classList.remove('backward');
+                    passengerMouth.classList.remove('shocked');
+                    passengerMouth.classList.add('smile');
+                    passengerHair.classList.remove('shocked');
+                    status.textContent = "กรอบอ้างอิงมีความเร่ง : ผู้สังเกตมองเห็นลูกตุ้มอยู่นิ่ง(สมดุล) ทั้งๆที่ไม่มีแรงดึงในแนวราบ 🤔";
+                } else {
+                    // ลูกตุ้มค้างเอียงไว้ ไม่กลับมาตั้งฉาก
+                    status.textContent = "รถไฟเคลื่อนที่ 30 m/s คงที่ - รถไฟผ่านไปแล้ว! ลูกตุ้มยังเอียงอยู่! 😊";
+                }
+            }, 3000);
+        }
+
+        function brake() {
+            if (isAccelerating || isBraking || isConstantSpeed) return;
+            
+            isBraking = true;
+            currentSpeed = 30; // เริ่มต้นที่ 30 m/s
+            
+            if (isInsideView) {
+                status.textContent = "🛑 รถไฟเบรกจาก 30→10 m/s - กล่องไถลไปชนเก้าอี้ซ้าย! โคม! 💥";
+                // ลูกตุ้มในรถไฟเอียงไปข้างขวา (ความเฉื่อย) และค้างไว้
+                interiorPendulum.style.transform = 'translateX(-50%) rotate(25deg)';
+                // ผู้โดยสารเซถลาไปข้างซ้าย (ตามทิศทางความเฉื่อย) และตกใจ
+                passenger.classList.add('lean-forward');
+                passengerArms.classList.add('forward');
+                passengerMouth.classList.remove('smile');
+                passengerMouth.classList.add('shocked');
+                passengerHair.classList.add('shocked');
+                // แสดงข้อความแรงผี
+                ghostForceText.classList.add('show');
+                // กล่องไถลไปทางซ้ายชนเก้าอี้
+                luggage.classList.add('slide-left');
+                // เล่นเสียงชน
+                setTimeout(() => {
+                    playCollisionSound();
+                }, 1000);
+            } else {
+                status.textContent = "🛑 รถไฟเบรกจาก 30→10 m/s - เห็นรถไฟช้าลงและหยุดที่ขอบซ้าย!";
+                // รถไฟเบรกและหยุดที่ขอบซ้าย
+                animateTrainBraking();
+                // ลูกตุ้มเอียงไปข้างขวา และค้างไว้
+                pendulum.style.transform = 'rotate(25deg)';
+            }
+            
+            setTimeout(() => {
+                isBraking = false;
+                currentSpeed = 10; // ความเร็วหลังเบรก
+                if (isInsideView) {
+                    // ลูกตุ้มค้างเอียงไว้ ไม่กลับมาตั้งฉาก
+                    passenger.classList.remove('lean-forward');
+                    passenger.classList.add('normal');
+                    passengerArms.classList.remove('forward');
+                    passengerMouth.classList.remove('shocked');
+                    passengerMouth.classList.add('smile');
+                    passengerHair.classList.remove('shocked');
+                    status.textContent = "กรอบอ้างอิงมีความเร่ง : ผู้สังเกตมองเห็นลูกตุ้มอยู่นิ่ง(สมดุล) ทั้งๆที่ไม่มีแรงดึงในแนวราบ 🤔";
+                } else {
+                    // ลูกตุ้มค้างเอียงไว้ ไม่กลับมาตั้งฉาก
+                    status.textContent = "รถไฟหยุดที่ขอบซ้าย - ลูกตุ้มยังเอียงอยู่! 😊";
+                }
+            }, 4000);
+        }
+
+        function constantSpeed() {
+            if (isAccelerating || isBraking || isConstantSpeed) return;
+            
+            isConstantSpeed = true;
+            
+            if (isInsideView) {
+                status.textContent = "🚂 รถไฟเคลื่อนที่ด้วยความเร็วคงที่ - ผู้โดยสารนั่งสบาย กล่องนิ่ง! 😊";
+                // ลูกตุ้มอยู่นิ่งในตำแหน่งตั้งฉาก
+                interiorPendulum.style.transform = 'translateX(-50%) rotate(0deg)';
+                // ผู้โดยสารนั่งปกติและยิ้ม
+                passenger.classList.add('normal');
+                passenger.classList.remove('lean-forward', 'lean-backward');
+                passengerArms.classList.remove('forward', 'backward');
+                passengerMouth.classList.add('smile');
+                // กล่องอยู่นิ่ง
+                luggage.classList.remove('slide-left', 'slide-right');
+            } else {
+                status.textContent = "🚂 รถไฟเคลื่อนที่ด้วยความเร็วคงที่ - เห็นรถไฟผ่านไปด้วยความเร็วคงที่!";
+                // รถไฟเคลื่อนที่ด้วยความเร็วคงที่ผ่านไป
+                animateTrainConstantSpeed();
+                pendulum.style.transform = 'rotate(0deg)';
+            }
+            
+            setTimeout(() => {
+                isConstantSpeed = false;
+                if (isInsideView) {
+                    status.textContent = "รถไฟมีความเร็วคงที่ กรอบอ้างอิงในรถไฟเป็นกรอบเฉื่อย - ทุกอย่างอยู่นิ่งสัมพัทธ์กัน";
+                } else {
+                    status.textContent = "รถไฟผ่านไปแล้ว - ความเร็วคงที่ทำให้ไม่รู้สึกถึงการเคลื่อนที่";
+                }
+            }, 5000);
+        }
+
+        function animateTrainAcceleration() {
+            const startTime = Date.now();
+            const duration = 3000; // 3 วินาที
+            const startPos = -450; // เริ่มจากซ้ายจอ
+            const endPos = window.innerWidth + 450; // จบที่ขวาจอ
+            
+            train.style.right = startPos + 'px';
+            
+            function animate() {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                // การเร่งแบบ exponential
+                const easedProgress = 1 - Math.pow(1 - progress, 3);
+                const currentPos = startPos + (endPos - startPos) * easedProgress;
+                
+                train.style.right = currentPos + 'px';
+                
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                }
+            }
+            
+            animate();
+        }
+
+        function animateTrainBraking() {
+            const startTime = Date.now();
+            const duration = 4000; // 4 วินาที
+            const startPos = -450; // เริ่มจากขอบขวา (ค่าติดลบหมายถึงอยู่ทางขวา)
+            const endPos = window.innerWidth - 100; // หยุดที่ขอบซ้ายของจอ
+            
+            train.style.right = startPos + 'px';
+            
+            function animate() {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                // การเบรก - เริ่มเร็วแล้วช้าลงจนหยุด
+                const easedProgress = 1 - Math.pow(1 - progress, 4);
+                const currentPos = startPos + (endPos - startPos) * easedProgress;
+                
+                train.style.right = currentPos + 'px';
+                
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                }
+            }
+            
+            animate();
+        }
+
+        function animateTrainConstantSpeed() {
+            const startTime = Date.now();
+            const duration = 5000; // 5 วินาที
+            const startPos = -450;
+            const endPos = window.innerWidth + 450;
+            
+            train.style.right = startPos + 'px';
+            
+            function animate() {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                // ความเร็วคงที่ - linear
+                const currentPos = startPos + (endPos - startPos) * progress;
+                
+                train.style.right = currentPos + 'px';
+                
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                }
+            }
+            
+            animate();
+        }
+
+
+
+        function reset() {
+            isAccelerating = false;
+            isBraking = false;
+            isConstantSpeed = false;
+            currentSpeed = 10;
+            
+            // รีเซ็ตตำแหน่งรถไฟ
+            train.style.right = '-450px';
+            
+            // รีเซ็ตลูกตุ้มกลับมาตั้งฉาก
+            if (isInsideView) {
+                interiorPendulum.style.transform = 'translateX(-50%) rotate(0deg)';
+                passenger.classList.remove('lean-forward', 'lean-backward');
+                passenger.classList.add('normal');
+                passengerArms.classList.remove('forward', 'backward');
+                passengerMouth.classList.remove('shocked');
+                passengerMouth.classList.add('smile');
+                passengerHair.classList.remove('shocked');
+                // รีเซ็ตกล่องกลับมาตรงกลาง
+                luggage.classList.remove('slide-left', 'slide-right');
+                luggage.style.transform = 'translateX(-50%)';
+                // ซ่อนข้อความแรงผี
+                const ghostText = document.getElementById('ghostForceText');
+                ghostText.classList.remove('show');
+
+                status.textContent = "มุมมองจากภายในรถไฟ - ผู้โดยสารพร้อมสำหรับการทดลอง! 😊";
+            } else {
+                // รีเซ็ตลูกตุ้มกลับมาตั้งฉาก
+                pendulum.style.transform = 'rotate(0deg)';
+                status.textContent = "มุมมองจากภายนอกรถไฟ - เห็นทุกอย่างผ่านกระจกใส";
+            }
+        }
+
+        // เพิ่มเอฟเฟกต์เมื่อโหลดหน้า
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                status.textContent = "🎯 พร้อมสำหรับการทดลอง - สังเกตพฤติกรรมลูกตุ้มในรถไฟกระจกใส";
+            }, 1000);
+        });
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'976ac5a3d0e95805',t:'MTc1NjQ1NzEyNC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>

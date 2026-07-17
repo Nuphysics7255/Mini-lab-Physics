@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Mini Lab : วัตถุบนสายพาน</title>
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)'], ['$', '$']], displayMath: [['\\[','\\]']] },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<style>
+:root{
+  --blue:#2f6fd6; --deep:#204d7c; --soft:#edf3fb; --line:#d8e3ef;
+  --orange:#fff3df; --orangeLine:#efc58f; --green:#eaf7e8;
+  --gray:#eef2f6; --ink:#17324d; --red:#d93025; --belt:#242629;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;font-family:system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;background:#f7fbff;color:var(--ink)}
+body{padding:12px;padding-bottom:calc(120px + env(safe-area-inset-bottom))}
+.wrap{max-width:1180px;margin:0 auto}
+.header{text-align:center;margin:4px 0 10px}
+.header h1{margin:0;color:var(--blue);font-size:clamp(24px,3.5vw,43px);font-weight:900;line-height:1.1}
+.header h2{margin:3px 0 0;color:var(--deep);font-size:clamp(21px,3vw,36px);font-weight:900;line-height:1.1}
+.main{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(320px,.8fr);gap:14px;align-items:start}
+.card{background:white;border:1.5px solid var(--line);border-radius:24px;box-shadow:0 12px 28px rgba(36,73,116,.08);overflow:hidden}
+.labHead{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:12px 16px;background:var(--soft);border-bottom:1px solid var(--line);font-weight:900;color:#2e5f93}
+.badge{padding:8px 13px;border-radius:999px;background:white;border:1px solid var(--line);font-weight:800}
+.stage{position:relative;height:430px;background:linear-gradient(#fff,#f4f8fc);overflow:hidden;touch-action:none}
+.belt{position:absolute;left:8%;right:8%;top:58%;height:92px;background:var(--belt);border:7px solid #090909;border-radius:48px;box-shadow:inset 0 12px 0 rgba(255,255,255,.06),0 12px 20px rgba(0,0,0,.12);overflow:hidden}
+.belt:before,.belt:after{content:"";position:absolute;z-index:5;top:50%;width:76px;height:76px;border-radius:50%;background:radial-gradient(circle at center,#111 0 22%,#d7d7d7 23% 50%,#838383 51% 62%,#181818 63%);transform:translateY(-50%);box-shadow:0 0 0 4px #050505}
+.belt:before{left:10px}.belt:after{right:10px}
+.pattern{position:absolute;z-index:1;inset:8px 98px;border-radius:34px;overflow:hidden;background:
+  repeating-linear-gradient(135deg, rgba(255,255,255,.12) 0 20px, rgba(0,0,0,0) 20px 42px),
+  linear-gradient(180deg, rgba(255,255,255,.06), rgba(0,0,0,.08));
+}
+.patternInner{position:absolute;inset:-40px -260px;background:
+  repeating-linear-gradient(135deg, rgba(255,255,255,.16) 0 18px, rgba(255,255,255,.03) 18px 36px, rgba(0,0,0,.18) 36px 54px, rgba(0,0,0,0) 54px 72px);
+}
+.boxObj{position:absolute;width:92px;height:92px;border-radius:14px;background:linear-gradient(135deg,#dc7b20,#a84c07);border:4px solid #3c1e06;box-shadow:inset 12px 0 18px rgba(255,255,255,.08),inset -10px 0 18px rgba(0,0,0,.12),0 8px 14px rgba(0,0,0,.15);z-index:7}
+.boxObj:before{content:"";position:absolute;left:50%;top:-4px;width:28px;height:44px;border:4px solid rgba(70,35,6,.55);border-top:none;background:rgba(91,44,7,.24);transform:translateX(-50%)}
+.boxObj:after{content:"";position:absolute;left:50%;bottom:-4px;width:28px;height:44px;border:4px solid rgba(70,35,6,.55);border-bottom:none;background:rgba(91,44,7,.24);transform:translateX(-50%)}
+.arrow{position:absolute;height:0;border-top:5px solid var(--red);transform-origin:left center;display:none;z-index:12}
+.arrow:after{content:"";position:absolute;right:-2px;top:-11px;border-left:16px solid var(--red);border-top:8px solid transparent;border-bottom:8px solid transparent}
+.arrowLabel{position:absolute;display:none;padding:5px 9px;border-radius:999px;background:#fff;border:1px solid #ffd1cc;color:var(--red);font-weight:900;font-size:15px;z-index:13}
+.readout{position:absolute;left:14px;top:14px;background:rgba(255,255,255,.92);border:1px solid var(--line);border-radius:18px;padding:10px 12px;font-size:15px;line-height:1.55;box-shadow:0 8px 18px rgba(20,60,100,.08);z-index:14}
+.status{position:absolute;right:14px;top:14px;max-width:330px;background:#fff7eb;border:1px solid #f0cfaa;color:#8b4d00;border-radius:20px;padding:10px 12px;font-size:14px;font-weight:800;line-height:1.45;z-index:14}
+.controls{padding:14px;display:grid;gap:12px}
+.sceneBox{background:#f8fbff;border:1px solid var(--line);border-radius:18px;padding:12px}
+.sceneTitle{font-weight:900;color:#123d70;margin-bottom:8px}
+.sceneGrid{display:grid;gap:8px}
+.sceneItem{display:grid;grid-template-columns:22px 1fr;gap:8px;align-items:start;padding:10px;border:1px solid #dbe6f2;border-radius:16px;background:white;cursor:pointer}
+.sceneItem:has(input:checked){background:#eef5ff;border-color:#8bb8ee}
+.sceneItem b{color:#145fd1}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+label{font-weight:850;color:#284b68;font-size:15px}
+input[type=number],input[type=range]{width:100%}
+input[type=number]{margin-top:6px;border:1.5px solid var(--line);border-radius:14px;padding:10px 12px;font-size:16px;background:#fbfdff}
+input[type=range]{margin-top:10px}
+.toggle{display:flex;align-items:center;gap:9px;background:#f8fbff;border:1px solid var(--line);border-radius:18px;padding:11px 12px}
+.toggle input{width:20px;height:20px}
+.btnRow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+button{border:none;border-radius:18px;padding:13px 16px;font-weight:900;font-size:16px;cursor:pointer;box-shadow:0 5px 0 rgba(0,0,0,.14)}
+.btnBlue{background:#68a9e9;color:white}.btnGray{background:#dfe5ec;color:#485768}.btnOrange{background:#ffe4c4;color:#8b4d00}.btnGreen{background:#dff2da;color:#1f6e35}
+.info{padding:14px;background:#fff}
+.formulaBox{background:#fff7ee;border:1.5px solid var(--orangeLine);border-radius:20px;padding:13px;margin-bottom:12px}
+.formulaBox h3,.exerciseBox h3{margin:0 0 8px;font-size:20px;color:#123d70}
+.exerciseBox{background:#f3fbf1;border:1.5px solid #bfdcaf;border-radius:20px;padding:13px}
+.small{font-size:14px;line-height:1.6;color:#41566b}
+.footer{margin:22px 0 0;text-align:center;font-weight:800}
+.footer a{color:#1d5fd1;text-decoration:underline}
+.modal{position:fixed;inset:0;background:#fffaf2;z-index:50;display:none;overflow:auto;padding:calc(72px + env(safe-area-inset-top)) 16px calc(130px + env(safe-area-inset-bottom))}
+.modal.show{display:block}
+.close{position:fixed;right:14px;top:calc(14px + env(safe-area-inset-top));z-index:60;width:52px;height:52px;border-radius:18px;background:#e7eef6;color:#45688f;box-shadow:0 5px 0 rgba(0,0,0,.12)}
+.modalInner{max-width:900px;margin:0 auto;background:white;border-radius:24px;border:1.5px solid var(--orangeLine);padding:18px;line-height:1.75}
+.qCard{background:#fff;border:1px solid #dfe6ed;border-radius:18px;padding:14px;margin:12px 0}
+.choice{display:block;margin:8px 0;padding:11px 13px;border:1px solid #dde5ee;border-radius:15px;background:#fff;box-shadow:none;text-align:left;color:#17324d}
+.answer{display:none;margin-top:8px;padding:10px;border-radius:14px;background:#fff7f7;border:1px solid #ffd1d1}
+@media(max-width:860px){
+ body{padding:8px;padding-bottom:calc(128px + env(safe-area-inset-bottom))}
+ .header h1{font-size:clamp(20px,6vw,30px)}.header h2{font-size:clamp(18px,5.4vw,26px)}
+ .main{grid-template-columns:1fr}
+ .stage{height:390px;position:sticky;top:0;z-index:3}
+ .controls{padding-bottom:20px}
+ .grid2{grid-template-columns:1fr}
+ .btnRow{position:fixed;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom));z-index:30;background:rgba(235,241,247,.72);backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:22px;padding:8px}
+ button{min-height:46px;padding:10px 12px;font-size:15px}
+ .boxObj{width:76px;height:76px}.belt{left:3%;right:3%;height:80px}.belt:before,.belt:after{width:62px;height:62px}.pattern{inset:8px 78px}
+ .readout{font-size:13px}.status{left:14px;right:14px;top:auto;bottom:12px;max-width:none;font-size:13px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="header">
+    <h1>Mini Lab</h1>
+    <h2>วัตถุบนสายพานลำเลียง</h2>
+  </header>
+
+  <main class="main">
+    <section class="card">
+      <div class="labHead">
+        <span>ทดลองแรงเสียดทานระหว่างกล่องกับสายพาน</span>
+        <span class="badge" id="modeBadge">หยุดนิ่ง</span>
+      </div>
+      <div class="stage" id="stage">
+        <div class="readout" id="readout"></div>
+        <div class="status" id="status">เลือกสถานการณ์ แล้วกด ▶️ เริ่ม / รีเซ็ต</div>
+        <div class="belt"><div class="pattern"><div class="patternInner" id="patternInner"></div></div></div>
+        <div class="boxObj" id="boxObj"></div>
+        <div class="arrow" id="frArrow"></div>
+        <div class="arrowLabel" id="frLabel">f</div>
+      </div>
+
+      <div class="controls">
+        <div class="sceneBox">
+          <div class="sceneTitle">1. กำหนดสถานการณ์</div>
+          <div class="sceneGrid">
+            <label class="sceneItem"><input type="radio" name="scene" value="rest" checked><span><b>เริ่มจากหยุดนิ่ง</b><br>วัตถุและสายพานเริ่มหยุด แล้วสายพานค่อย ๆ เร่ง</span></label>
+            <label class="sceneItem"><input type="radio" name="scene" value="constant"><span><b>ความเร็วคงที่</b><br>วัตถุเคลื่อนที่ไปพร้อมสายพานด้วยความเร็วคงที่</span></label>
+            <label class="sceneItem"><input type="radio" name="scene" value="stop"><span><b>หยุดเครื่องให้วัตถุชะลอลง</b><br>เริ่มจากกำลังเคลื่อนที่ แล้วสายพานหน่วงจนหยุด</span></label>
+          </div>
+        </div>
+
+        <div class="btnRow">
+          <button class="btnBlue" id="startBtn">▶️ เริ่ม / รีเซ็ต</button>
+          <button class="btnGray" id="pauseBtn">⏸ หยุดชั่วคราว</button>
+        </div>
+
+        <div class="grid2">
+          <label>มวลวัตถุ \(m\) (kg)
+            <input type="number" id="mass" min="0.1" step="0.1" value="2">
+          </label>
+          <label>สัมประสิทธิ์เสียดทานสถิต \(\mu_s\)
+            <input type="number" id="muS" min="0" max="2" step="0.05" value="0.50">
+          </label>
+        </div>
+
+        <label>ความเร็วสายพาน \(v_b\) (m/s): <b id="vSetShow">3.0</b>
+          <input type="range" id="vSet" min="0.5" max="6" step="0.1" value="3">
+        </label>
+
+        <label>อัตราเร่ง/หน่วงของสายพาน \(a_b\) (m/s²): <b id="aSetShow">1.5</b>
+          <input type="range" id="aSet" min="0.2" max="8" step="0.1" value="1.5">
+        </label>
+
+        <label class="toggle"><input type="checkbox" id="showF" checked> แสดงเวกเตอร์แรงเสียดทาน \(f\) ที่ผิวสัมผัส</label>
+
+        <div class="grid2">
+          <button class="btnOrange" id="formulaBtn">Σ สูตรสำคัญ</button>
+          <button class="btnGreen" id="exerciseBtn">📝 แบบฝึกหัด</button>
+        </div>
+      </div>
+    </section>
+
+    <aside class="card info">
+      <div class="formulaBox">
+        <h3>หลักการสังเกต</h3>
+        <div class="small">
+          <b>เริ่มจากหยุดนิ่ง:</b> สายพานเร่งไปทางขวา แรงเสียดทานที่กล่องจึงชี้ไปทางขวา<br>
+          <b>ความเร็วคงที่:</b> ถ้ากล่องเคลื่อนที่ไปพร้อมสายพานและไม่มีความเร่ง แรงเสียดทานเป็นศูนย์<br>
+          <b>หยุดเครื่อง:</b> สายพานหน่วงลง กล่องมีแนวโน้มลื่นไปข้างหน้า แรงเสียดทานจึงชี้ย้อนการลื่น
+        </div>
+      </div>
+      <div class="exerciseBox">
+        <h3>ค่าที่ใช้ใน Lab</h3>
+        <div class="small">
+          ใช้ \(g=10\,\mathrm{N/kg}\)<br>
+          กำหนดอัตโนมัติ \( \mu_k = 0.8\mu_s \)<br>
+          \( f_{s,\max}=\mu_s mg \)<br>
+          \( f_k=\mu_k mg \)
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <div class="footer">
+    <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">ศึกษาเพิ่มเติมที่เพจคลายปมฟิสิกส์</a>
+  </div>
+</div>
+
+<div class="modal" id="formulaModal">
+  <button class="close" onclick="closeModal('formulaModal')">❌</button>
+  <div class="modalInner">
+    <h2 style="color:#204d7c;margin-top:0">Σ สูตรสำคัญ</h2>
+    <p><b>แรงกดปกติ</b></p>
+    <p>\[N=mg\]</p>
+    <p><b>แรงเสียดทานสถิตสูงสุด</b></p>
+    <p>\[f_{s,\max}=\mu_s N=\mu_s mg\]</p>
+    <p><b>แรงเสียดทานจลน์</b></p>
+    <p>\[\mu_k=0.8\mu_s\]</p>
+    <p>\[f_k=\mu_k N=\mu_k mg\]</p>
+    <p><b>เงื่อนไขไม่ไถล</b></p>
+    <p>\[ma_b\leq f_{s,\max}\]</p>
+    <p>หรือ</p>
+    <p>\[a_b\leq \mu_s g\]</p>
+    <p style="color:#d93025;font-weight:900">ข้อควรระวัง: เมื่อสายพานเคลื่อนที่ด้วยความเร็วคงที่และกล่องไม่ไถล แรงเสียดทานอาจเป็นศูนย์ แต่ตอนเร่งหรือหน่วง แรงเสียดทานอาจเป็นแรงที่ทำให้กล่องมีความเร่งหรือชะลอลง</p>
+  </div>
+</div>
+
+<div class="modal" id="exerciseModal">
+  <button class="close" onclick="closeModal('exerciseModal')">❌</button>
+  <div class="modalInner">
+    <h2 style="color:#1f6e35;margin-top:0">📝 แบบฝึกหัด</h2>
+
+    <div class="qCard">
+      <b>1. วางกล่องบนสายพานที่เริ่มเร่งไปทางขวา ถ้ากล่องยังไม่ไถล แรงเสียดทานที่กระทำต่อกล่องมีทิศใด?</b>
+      <button class="choice" onclick="showAns(1)">A. ไปทางซ้าย</button>
+      <button class="choice" onclick="showAns(1)">B. ไปทางขวา</button>
+      <button class="choice" onclick="showAns(1)">C. ขึ้นด้านบน</button>
+      <button class="choice" onclick="showAns(1)">D. ลงด้านล่าง</button>
+      <button class="choice" onclick="showAns(1)">E. ไม่มีแรงเสียดทาน</button>
+      <div class="answer" id="ans1"><b style="color:#d93025">เฉลย B</b><br>สายพานพยายามพากล่องให้เคลื่อนที่ไปทางขวา แรงเสียดทานจึงช่วยเร่งกล่องไปทางขวา</div>
+    </div>
+
+    <div class="qCard">
+      <b>2. เมื่อกล่องเคลื่อนที่ไปพร้อมสายพานด้วยความเร็วคงที่ และไม่มีแรงแนวนอนอื่น แรงเสียดทานมีค่าเท่าไร?</b>
+      <button class="choice" onclick="showAns(2)">A. \(\mu_s mg\)</button>
+      <button class="choice" onclick="showAns(2)">B. \(\mu_k mg\)</button>
+      <button class="choice" onclick="showAns(2)">C. \(mg\)</button>
+      <button class="choice" onclick="showAns(2)">D. 0</button>
+      <button class="choice" onclick="showAns(2)">E. ขึ้นกับความเร็วเสมอ</button>
+      <div class="answer" id="ans2"><b style="color:#d93025">เฉลย D</b><br>ถ้าไม่มีความเร่งในแนวนอน ผลรวมแรงแนวนอนเป็นศูนย์ แรงเสียดทานจึงเป็นศูนย์</div>
+    </div>
+
+    <div class="qCard">
+      <b>3. ถ้า \(\mu_s=0.5\) จะได้ \(\mu_k\) เท่าไร?</b>
+      <button class="choice" onclick="showAns(3)">A. 0.20</button>
+      <button class="choice" onclick="showAns(3)">B. 0.30</button>
+      <button class="choice" onclick="showAns(3)">C. 0.40</button>
+      <button class="choice" onclick="showAns(3)">D. 0.50</button>
+      <button class="choice" onclick="showAns(3)">E. 0.80</button>
+      <div class="answer" id="ans3"><b style="color:#d93025">เฉลย C</b><br>\(\mu_k=0.8\mu_s=0.8(0.5)=0.40\)</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const g = 10;
+const stage = document.getElementById('stage');
+const box = document.getElementById('boxObj');
+const patternInner = document.getElementById('patternInner');
+const readout = document.getElementById('readout');
+const statusBox = document.getElementById('status');
+const modeBadge = document.getElementById('modeBadge');
+const arrow = document.getElementById('frArrow');
+const arrowLabel = document.getElementById('frLabel');
+
+let sim=false, paused=false, last=null;
+let x=0, vBox=0, vBelt=0, beltOffset=0;
+let currentScene='rest';
+
+function val(id){ return Number(document.getElementById(id).value); }
+function clamp(n,a,b){ return Math.max(a,Math.min(b,n)); }
+function scene(){ return document.querySelector('input[name="scene"]:checked').value; }
+
+function setInitial(){
+  currentScene = scene();
+  const vSet=val('vSet');
+  x=0; beltOffset=0; last=null;
+  if(currentScene==='constant'){ vBelt=vSet; vBox=vSet; }
+  else if(currentScene==='stop'){ vBelt=vSet; vBox=vSet; }
+  else { vBelt=0; vBox=0; }
+}
+function start(){
+  setInitial();
+  sim=true; paused=false;
+  document.getElementById('pauseBtn').textContent='⏸ หยุดชั่วคราว';
+}
+function pause(){
+  paused=!paused;
+  document.getElementById('pauseBtn').textContent=paused?'▶️ ทำต่อ':'⏸ หยุดชั่วคราว';
+  last=null;
+}
+function draw(f, slip, state, dir){
+  const sw=stage.clientWidth, sh=stage.clientHeight;
+  const beltY=sh*0.58, boxSize = sw<700?76:92;
+  const centerX = sw*0.5 + x*48;
+  box.style.width=boxSize+'px'; box.style.height=boxSize+'px';
+  box.style.left=clamp(centerX-boxSize/2, sw*0.08, sw*0.92-boxSize)+'px';
+  box.style.top=(beltY-boxSize+5)+'px';
+
+  patternInner.style.transform = `translateX(${beltOffset % 144}px)`;
+
+  const m=val('mass'), muS=val('muS'), muK=.8*muS;
+  readout.innerHTML =
+    `m = <b>${m.toFixed(1)}</b> kg, μs = <b>${muS.toFixed(2)}</b>, μk = <b>${muK.toFixed(2)}</b><br>`+
+    `v สายพาน = <b>${vBelt.toFixed(2)}</b> m/s<br>`+
+    `v วัตถุ = <b>${vBox.toFixed(2)}</b> m/s<br>`+
+    `f = <b>${Math.abs(f).toFixed(2)}</b> N`;
+
+  statusBox.textContent = state;
+  modeBadge.textContent = slip ? 'ไถล / เสียดทานจลน์' : (Math.abs(f)>0.02 ? 'ไม่ไถล / เสียดทานสถิต' : 'f = 0');
+
+  if(document.getElementById('showF').checked && Math.abs(f)>0.03){
+    const len = clamp(Math.abs(f)*10,36,140);
+    const bx = parseFloat(box.style.left), by=parseFloat(box.style.top);
+    const y = by + boxSize - 5;              // ด้านล่าง ระหว่างผิวกล่องกับสายพาน
+    const startX = bx + boxSize/2;
+    arrow.style.display='block'; arrowLabel.style.display='block';
+    arrow.style.width=len+'px';
+    arrow.style.left=(dir>=0?startX:startX-len)+'px';
+    arrow.style.top=y+'px';
+    arrow.style.transform = dir>=0 ? 'scaleX(1)' : 'scaleX(-1)';
+    arrowLabel.style.left=(dir>=0?startX+len+7:startX-len-62)+'px';
+    arrowLabel.style.top=(y-21)+'px';
+    arrowLabel.textContent = slip ? 'f จลน์' : 'f สถิต';
+  }else{
+    arrow.style.display='none'; arrowLabel.style.display='none';
+  }
+}
+function physics(dt){
+  const m=val('mass'), muS=val('muS'), muK=.8*muS, aSet=val('aSet'), vSet=val('vSet');
+  let aB=0;
+  const sc=currentScene;
+
+  if(sc==='rest'){
+    if(vBelt<vSet){ aB=aSet; vBelt=Math.min(vSet, vBelt+aB*dt); }
+    else { aB=0; vBelt=vSet; }
+  }else if(sc==='constant'){
+    aB=0; vBelt=vSet;
+  }else if(sc==='stop'){
+    if(vBelt>0){ aB=-aSet; vBelt=Math.max(0, vBelt+aB*dt); }
+    else { aB=0; vBelt=0; }
+  }
+
+  let f=0, slip=false, dir=1, aBox=0, state='';
+  const rel = vBelt - vBox;
+
+  if(Math.abs(rel) < 0.018 && Math.abs(aB) <= muS*g){
+    aBox = aB;
+    f = m*aBox;
+    slip = false;
+    dir = f>=0?1:-1;
+    if(sc==='rest' && aB>0) state='เริ่มจากหยุดนิ่ง: f อยู่ที่ผิวสัมผัสและเร่งกล่องไปทางขวา';
+    else if(sc==='constant') state='ความเร็วคงที่: กล่องกับสายพานเคลื่อนที่ไปด้วยกัน จึงไม่มีแรงเสียดทานในแนวนอน';
+    else if(sc==='stop' && aB<0) state='หยุดเครื่อง: f อยู่ที่ผิวสัมผัสและทำให้กล่องชะลอลง';
+    else state='กล่องกับสายพานอยู่ในสภาวะเดียวกัน';
+  }else{
+    slip=true;
+    dir = rel>=0 ? 1 : -1;
+    f = dir*muK*m*g;
+    aBox = f/m;
+    if(sc==='stop') state='หยุดเครื่อง: กล่องมีแนวโน้มลื่นไปข้างหน้า จึงเกิด f จลน์ย้อนการลื่น';
+    else state='แรงที่ต้องใช้มากกว่า f สถิตสูงสุด กล่องจึงไถลบนสายพาน';
+  }
+
+  vBox += aBox*dt;
+  if(sc==='constant'){ vBox=vBelt; f=0; slip=false; }
+  x += vBox*dt;
+  x = clamp(x,-4.5,4.5);
+  beltOffset += vBelt*100*dt;
+
+  return {f,slip,state,dir};
+}
+function loop(t){
+  if(last==null) last=t;
+  const dt=Math.min((t-last)/1000,0.03); last=t;
+
+  if(sim && !paused){
+    const r=physics(dt);
+    draw(r.f,r.slip,r.state,r.dir);
+  }else{
+    const sc=scene();
+    if(!sim){
+      if(sc==='rest') draw(0,false,'เริ่มจากหยุดนิ่ง: กดเริ่มเพื่อให้สายพานค่อย ๆ เร่ง',1);
+      if(sc==='constant') draw(0,false,'ความเร็วคงที่: กดเริ่มเพื่อให้กล่องเคลื่อนที่ไปพร้อมสายพาน',1);
+      if(sc==='stop') draw(0,false,'หยุดเครื่อง: กดเริ่มเพื่อเริ่มจากกำลังเคลื่อนที่ แล้วชะลอลง',-1);
+    }
+  }
+  requestAnimationFrame(loop);
+}
+document.getElementById('startBtn').onclick=start;
+document.getElementById('pauseBtn').onclick=pause;
+document.getElementById('vSet').oninput=e=>document.getElementById('vSetShow').textContent=Number(e.target.value).toFixed(1);
+document.getElementById('aSet').oninput=e=>document.getElementById('aSetShow').textContent=Number(e.target.value).toFixed(1);
+document.querySelectorAll('input[name="scene"]').forEach(el=>el.addEventListener('change',()=>{sim=false;setInitial();}));
+['mass','muS','showF'].forEach(id=>document.getElementById(id).addEventListener('input',()=>{if(!sim){setInitial();}}));
+
+document.getElementById('formulaBtn').onclick=()=>openModal('formulaModal');
+document.getElementById('exerciseBtn').onclick=()=>openModal('exerciseModal');
+function openModal(id){document.getElementById(id).classList.add('show'); setTimeout(()=>MathJax.typesetPromise(),50);}
+function closeModal(id){document.getElementById(id).classList.remove('show');}
+function showAns(n){document.getElementById('ans'+n).style.display='block';}
+
+setInitial();
+requestAnimationFrame(loop);
+setTimeout(()=>MathJax.typesetPromise(),500);
+</script>
+</body>
+</html>

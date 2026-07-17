@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Mini Lab : การดึงวัตถุและแรงเสียดทาน</title>
+<script>
+window.MathJax={tex:{inlineMath:[["\\(","\\)"],["$","$"]],displayMath:[["\\[","\\]"]]},svg:{fontCache:"global"}};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<style>
+:root{--blue:#2f6fd6;--blue2:#204d7c;--line:#d8e3ef;--dark:#1d2939;--green:#e8f7e6;--orange:#fff2df;--red:#d92d20;--gray:#667085;}
+*{box-sizing:border-box} html,body{margin:0;min-height:100%;font-family:system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;background:#f6f9fc;color:var(--dark);overflow-x:hidden}
+body{padding:calc(env(safe-area-inset-top) + 12px) 12px calc(env(safe-area-inset-bottom) + 130px)}
+.header{text-align:center;margin:4px auto 12px;max-width:1080px}.header h1{margin:0;color:var(--blue);font-size:clamp(24px,3.3vw,42px);font-weight:900;line-height:1.12}.header h2{margin:4px 0 0;color:var(--blue2);font-size:clamp(18px,2.4vw,30px);font-weight:900}
+.main{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:12px}.card{background:#fff;border:1px solid var(--line);border-radius:24px;box-shadow:0 8px 24px rgba(31,71,120,.08);overflow:hidden}.cardPad{padding:12px}
+.topControls{display:grid;grid-template-columns:1fr 1fr;gap:12px}.controlGroup{border:1px solid #dfe8f3;border-radius:20px;background:#fbfdff;padding:12px}.labelRow{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;font-weight:900;color:#245b94;font-size:15px}.valuePill{background:#edf3fb;color:#245b94;border-radius:999px;padding:6px 10px;font-weight:900;font-size:14px;white-space:nowrap}.muInfo{margin-top:8px;color:#c1121f;font-weight:900;font-size:14px;line-height:1.45}
+select,input[type=range]{width:100%}select{border:1px solid #cbd5e1;border-radius:14px;padding:10px 12px;background:#fff;font-size:16px;font-weight:800;color:#243b53}input[type=range]{accent-color:#2f6fd6}.graphTitle{display:flex;justify-content:space-between;gap:10px;align-items:center;font-weight:900;color:#245b94;margin:0 0 8px;font-size:18px}.graphHint{font-size:13px;color:#667085;font-weight:800}.graphWrap{padding:12px}#graph{height:245px;border:1px solid #d8e3ef;border-radius:18px;background:#fff;width:100%;display:block}.labTop{padding:12px;background:linear-gradient(180deg,#fff,#f7fbff)}.stageWrap{position:relative;border-radius:20px;border:1px solid #d6e3ef;background:linear-gradient(#eff7ff 0 62%,#e9edf2 62% 100%);height:206px;overflow:hidden;touch-action:none}#stage{width:100%;height:100%;display:block}.statusBox{position:absolute;left:12px;top:12px;background:rgba(255,255,255,.95);border:1px solid #d8e3ef;border-radius:18px;padding:10px 42px 10px 12px;box-shadow:0 6px 16px rgba(0,0,0,.08);max-width:min(560px,calc(100% - 24px));font-size:15px;line-height:1.45;font-weight:800;z-index:3}.statusClose{position:absolute;right:8px;top:7px;width:28px;height:28px;border-radius:10px;border:1px solid #cbd5e1;background:#fff;color:#667085;font-size:20px;font-weight:900;line-height:1;cursor:pointer}.forcePanel{padding:12px}.forcePanel .bigLabel{display:flex;justify-content:space-between;align-items:center;gap:10px;font-weight:900;color:#245b94;margin-bottom:8px;font-size:18px}.formulaBar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:10px 12px;border-top:1px solid #e6edf5;background:#fbfdff}.btn{border:none;border-radius:16px;padding:10px 14px;font-weight:900;cursor:pointer;font-size:15px}.btnOrange{background:#fff2df;color:#9a6500}.btnGray{background:#edf1f5;color:#425466}.formulaBox{display:none;padding:14px;background:#fff7ee;border-top:1px solid #efc58f}.formulaBox.show{display:block}.formulaBox h3{margin:0 0 8px;color:#9a6500;font-size:20px}.formulaBox p{margin:8px 0;line-height:1.6;font-weight:700}.link{color:#2f6fd6;font-weight:900;text-decoration:underline}
+@media(max-width:720px){.topControls{grid-template-columns:1fr}.stageWrap{height:176px}.statusBox{display:none!important}.graphTitle{font-size:15px}#graph{height:210px}.formulaBar{padding-bottom:18px}}
+</style>
+</head>
+<body>
+<header class="header"><h1>Mini Lab</h1><h2>การดึงวัตถุและแรงเสียดทาน</h2></header>
+<main class="main">
+  <section class="card cardPad">
+    <div class="topControls">
+      <div class="controlGroup"><div class="labelRow"><span>มวลของวัตถุ</span><span class="valuePill" id="massRead">5 kg</span></div><select id="massSel"><option value="2">2 kg</option><option value="5" selected>5 kg</option><option value="10">10 kg</option><option value="15">15 kg</option><option value="20">20 kg</option></select></div>
+      <div class="controlGroup"><div class="labelRow"><span>ชนิดผิวสัมผัส</span><span class="valuePill" id="surfaceRead">ไม้บนคอนกรีต</span></div><select id="surfaceSel"><option value="wood" selected>ไม้บนคอนกรีต  μs=0.55, μk=0.35</option><option value="rubber">ยางบนพื้นแห้ง  μs=0.80, μk=0.60</option><option value="ice">เหล็กบนน้ำแข็ง  μs=0.08, μk=0.04</option><option value="smooth">พื้นเรียบลื่น  μs=0.20, μk=0.12</option><option value="rough">พื้นหยาบ  μs=0.65, μk=0.45</option></select><div class="muInfo" id="muInfo"></div></div>
+    </div>
+  </section>
+  <section class="card graphWrap">
+    <div class="graphTitle"><span>กราฟแรงเสียดทานกับแรงดึง</span><span class="graphHint" id="graphHint">เริ่มต้นยังไม่มีเส้นกราฟ — เส้นจะเกิดเมื่อเพิ่มแรงดึง F</span></div>
+    <canvas id="graph"></canvas>
+  </section>
+  <section class="card labTop">
+    <div class="stageWrap">
+      <canvas id="stage"></canvas>
+    </div>
+  </section>
+  <section class="card forcePanel">
+    <div class="bigLabel"><span>ปรับแรงดึง F</span><span class="valuePill" id="forceRead">0 N</span></div>
+    <input id="forceSlider" type="range" min="0" max="160" step="1" value="0" />
+  </section>
+  <section class="card">
+    <div class="formulaBar"><button class="btn btnOrange" id="formulaBtn">Σ สูตรสำคัญ</button><button class="btn btnGray" id="resetBtn">🔄 รีเซ็ต</button><a class="link" href="https://www.facebook.com/resolvephysics" target="_blank">ศึกษาเพิ่มเติมที่เพจคลายปมฟิสิกส์</a></div>
+    <div class="formulaBox" id="formulaBox"><h3>สูตรสำคัญ</h3><p>แรงตั้งฉาก: \(N=mg\)</p><p>แรงเสียดทานสถิต: \(f_s\leq f_{s,max}=\mu_s N\)</p><p>แรงเสียดทานจลน์: \(f_k=\mu_k N\)</p><p>ถ้าแรงดึงยังไม่เกิน \(f_{s,max}\) วัตถุยังไม่ไถล และแรงเสียดทานสถิตจะปรับค่าเท่ากับแรงดึงเพื่อพยายามต้านการไถล</p><p>เมื่อ \(F=f_{s,max}\) วัตถุยังไม่ไถล และเมื่อ \(F>f_{s,max}\) วัตถุเริ่มไถล แรงเสียดทานเปลี่ยนเป็นแรงเสียดทานจลน์ \(f_k\) ซึ่งมักมีค่าน้อยกว่าแรงเสียดทานสถิตสูงสุด</p></div>
+  </section>
+</main>
+<script>
+const g=9.8;
+const surfaces={wood:{name:'ไม้บนคอนกรีต',mus:.55,muk:.35,color:'#b68656'},rubber:{name:'ยางบนพื้นแห้ง',mus:.80,muk:.60,color:'#5b5f66'},ice:{name:'เหล็กบนน้ำแข็ง',mus:.08,muk:.04,color:'#a5d8ff'},smooth:{name:'พื้นเรียบลื่น',mus:.20,muk:.12,color:'#d0d5dd'},rough:{name:'พื้นหยาบ',mus:.65,muk:.45,color:'#9c6644'}};
+const massSel=document.getElementById('massSel'), surfaceSel=document.getElementById('surfaceSel'), forceSlider=document.getElementById('forceSlider');
+const massRead=document.getElementById('massRead'), surfaceRead=document.getElementById('surfaceRead'), forceRead=document.getElementById('forceRead'), muInfo=document.getElementById('muInfo'), graphHint=document.getElementById('graphHint');
+const stage=document.getElementById('stage'), sctx=stage.getContext('2d'), graph=document.getElementById('graph'), gctx=graph.getContext('2d');
+let blockX=0, v=0, bgOffset=0, last=performance.now();
+function fitCanvas(c){const r=c.getBoundingClientRect(),d=window.devicePixelRatio||1;c.width=Math.max(1,Math.floor(r.width*d));c.height=Math.max(1,Math.floor(r.height*d));const ctx=c.getContext('2d');ctx.setTransform(d,0,0,d,0,0);return {w:r.width,h:r.height};}
+function state(){const m=+massSel.value, surf=surfaces[surfaceSel.value], F=+forceSlider.value, N=m*g, mg=N, fsmax=surf.mus*N;
+const fsmaxShown = Math.round(fsmax*10)/10; // ใช้ค่าที่แสดงจริงเป็นจุดเริ่มไถล
+const moving = F > fsmaxShown;
+const f = moving ? surf.muk*N : F;
+const type = moving ? 'fk' : 'fs';
+const a = moving ? (F-f)/m : 0;
+return {m,surf,F,N,mg,fsmax:fsmaxShown,f,type,moving,a};}
+function arrow(ctx,x1,y1,x2,y2,color,label){ctx.save();ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();const ang=Math.atan2(y2-y1,x2-x1);ctx.beginPath();ctx.moveTo(x2,y2);ctx.lineTo(x2-13*Math.cos(ang-Math.PI/6),y2-13*Math.sin(ang-Math.PI/6));ctx.lineTo(x2-13*Math.cos(ang+Math.PI/6),y2-13*Math.sin(ang+Math.PI/6));ctx.closePath();ctx.fill();ctx.font='900 15px system-ui';ctx.fillText(label,(x1+x2)/2+6,(y1+y2)/2-8);ctx.restore();}
+function drawStage(dt){const r=fitCanvas(stage), st=state(); const floorY=r.h*0.70, bw=Math.min(116,r.w*.23), bh=62; if(st.moving){v+=st.a*dt*12; /* block fixed */ bgOffset += Math.max(1, v) * dt * 90;} else {v=0; blockX=0;} const maxX=r.w-bw-70; if(blockX>maxX){blockX=maxX;v*=.2;} if(blockX<0)blockX=0; const x=(r.w>720 ? Math.min(r.w-550, Math.max(r.w*0.62-250, 170)) : 70), y=floorY-bh;
+ sctx.clearRect(0,0,r.w,r.h); sctx.fillStyle='#eaf4ff';sctx.fillRect(0,0,r.w,floorY);
+ // ฉากหลังเคลื่อนที่เมื่อวัตถุไถล เพื่อให้เห็นการเคลื่อนที่ชัดเจน
+ // ฉากหลังแบบเมฆห่าง ๆ เท่านั้น: เลื่อนไปทางซ้ายช้า ๆ เพื่อลดภาพลวงตากลับทิศ
+ const cloudSpacing = 520;
+ const cloudSpeed = bgOffset * 0.22;
+ const cloudStart = Math.floor((cloudSpeed - 520) / cloudSpacing) - 1;
+ const cloudEnd = cloudStart + Math.ceil(r.w / cloudSpacing) + 4;
+
+ sctx.fillStyle='rgba(255,255,255,.82)';
+ for(let k=cloudStart; k<=cloudEnd; k++){
+   const cx = k * cloudSpacing - cloudSpeed + 170;
+   const cy = 28 + (Math.abs(k) % 2) * 14;
+   sctx.beginPath();
+   sctx.arc(cx,cy+5,7,0,Math.PI*2);
+   sctx.arc(cx+10,cy,10,0,Math.PI*2);
+   sctx.arc(cx+22,cy+5,7,0,Math.PI*2);
+   sctx.fill();
+ }
+
+ sctx.fillStyle=st.surf.color;
+ sctx.fillRect(0,floorY,r.w,r.h-floorY);
+
+ // จุดบนถนนห่าง ๆ เพื่อบอกการเคลื่อนที่ โดยไม่เกิดภาพลวงตา
+ const dotSpacing = 400;
+ const dotSpeed = bgOffset;
+ const dotStart = Math.floor((dotSpeed-400)/dotSpacing)-1;
+ const dotEnd = dotStart + Math.ceil(r.w/dotSpacing) + 4;
+
+ sctx.fillStyle='rgba(255,255,255,.60)';
+ for(let k=dotStart;k<=dotEnd;k++){
+    const dx = k*dotSpacing - dotSpeed + 120;
+    const dy = (k % 2 === 0) ? floorY+18 : floorY+34;
+
+    // ขีดสั้น ๆ สลับบนล่าง
+    sctx.fillRect(dx, dy, 18, 3);
+ }
+
+ // เมฆ + จุดถนนเท่านั้น เพื่อลดภาพหลอกตา
+
+ sctx.fillStyle='#7b4b2a';sctx.strokeStyle='#5d361c';sctx.lineWidth=3;sctx.beginPath();sctx.roundRect(x,y,bw,bh,16);sctx.fill();sctx.stroke();sctx.fillStyle='#fff';sctx.font='900 16px system-ui';sctx.textAlign='center';sctx.fillText(st.m+' kg',x+bw/2,y+40);sctx.textAlign='left';
+ // contact friction arrow at interface
+ if(st.F>0){arrow(sctx,x+bw+8,y+bh/2,x+bw+8+Math.min(120,st.F*1.6),y+bh/2,'#d92d20',`F = ${st.F.toFixed(0)} N`);} else {sctx.fillStyle='#667085';sctx.font='900 15px system-ui';sctx.fillText('ยังไม่ออกแรงดึง',x+bw+12,y+bh/2);}
+ if(st.f>0){
+ const fx2=x+8-Math.min(120,st.f*1.6);
+ arrow(sctx,x+8,floorY-3,fx2,floorY-3,'#7a3db8','');
+ sctx.fillStyle='#7a3db8';
+ sctx.font='900 15px system-ui';
+ sctx.fillText(`${st.type} = ${st.f.toFixed(1)} N`,fx2-90,floorY-8);
+}
+ arrow(sctx,x+bw/2,y-5,x+bw/2,Math.max(18,y-46),'#1570ef',`N = ${st.N.toFixed(1)} N`); arrow(sctx,x+bw/2,y+bh+5,x+bw/2,Math.min(r.h-18,y+bh+50),'#101828',`mg = ${st.mg.toFixed(1)} N`);
+ if(r.w>720){
+   sctx.fillStyle='#c1121f';
+   sctx.font='900 14px system-ui';
+   sctx.fillText(`fs(max) = ${st.fsmax.toFixed(1)} N`,12,18);
+
+   sctx.fillStyle=st.moving?'#d92d20':'#027a48';
+   sctx.font='900 14px system-ui';
+   sctx.fillText(st.moving?'สถานะ: วัตถุไถล → ใช้ fk':'สถานะ: หยุดนิ่ง → ใช้ fs',12,40);
+ }
+ sctx.fillStyle='#1d2939';sctx.font='900 14px system-ui';sctx.fillText(`a = ${st.a.toFixed(2)} m/s²`,12,r.h-10);
+}
+function niceStep(max){if(max<=20)return 5;if(max<=80)return 10;return 20;}
+function drawGraph(){const r=fitCanvas(graph), st=state(), padL=54,padR=18,padT=20,padB=48; const W=r.w-padL-padR,H=r.h-padT-padB; const xMax=Math.max(20,Math.ceil((Math.max(160,st.F,st.fsmax)*1.05)/10)*10); const yMax=Math.max(20,Math.ceil((Math.max(st.fsmax,st.f,st.surf.muk*st.N)*1.15)/10)*10); gctx.clearRect(0,0,r.w,r.h); gctx.fillStyle='#fff';gctx.fillRect(0,0,r.w,r.h); gctx.strokeStyle='#d8e3ef';gctx.lineWidth=1; gctx.fillStyle='#475467';gctx.font='800 13px system-ui';
+ function X(F){return padL+F/xMax*W} function Y(f){return padT+H-f/yMax*H}
+ const step=niceStep(yMax); for(let y=0;y<=yMax;y+=step){gctx.beginPath();gctx.moveTo(padL,Y(y));gctx.lineTo(padL+W,Y(y));gctx.stroke();gctx.fillText(y.toFixed(0),12,Y(y)+4)} for(let x=0;x<=xMax;x+=20){gctx.beginPath();gctx.moveTo(X(x),padT);gctx.lineTo(X(x),padT+H);gctx.stroke();gctx.fillText(x.toFixed(0),X(x)-8,padT+H+22)}
+ gctx.strokeStyle='#344054';gctx.lineWidth=2;gctx.beginPath();gctx.moveTo(padL,padT);gctx.lineTo(padL,padT+H);gctx.lineTo(padL+W,padT+H);gctx.stroke();gctx.fillStyle='#101828';gctx.font='900 14px system-ui';gctx.fillText('แรงเสียดทาน f (N)',padL+4,16);gctx.fillText('แรงดึง F (N)',padL+W-86,padT+H+40);
+ if(st.F>0){graphHint.textContent='เส้นกราฟเกิดจากค่าที่ทดลองจริง: ก่อนลื่น f = F, หลังลื่น f = fk คงที่'; gctx.strokeStyle='#7a3db8';gctx.lineWidth=4;gctx.beginPath();const end1=Math.min(st.F,st.fsmax);gctx.moveTo(X(0),Y(0));gctx.lineTo(X(end1),Y(end1)); if(st.F>st.fsmax){const fk=st.surf.muk*st.N; gctx.moveTo(X(st.fsmax),Y(fk)); gctx.lineTo(X(st.F),Y(fk));} gctx.stroke(); if(st.F>st.fsmax){const fk=st.surf.muk*st.N; gctx.strokeStyle='#7a3db8';gctx.lineWidth=2;gctx.setLineDash([4,5]);gctx.beginPath();gctx.moveTo(X(st.fsmax),Y(st.fsmax));gctx.lineTo(X(st.fsmax),Y(fk));gctx.stroke();gctx.setLineDash([]);} gctx.fillStyle='#d92d20';gctx.beginPath();gctx.arc(X(st.F),Y(st.f),7,0,Math.PI*2);gctx.fill();gctx.font='900 15px system-ui';gctx.fillText(`${st.type}=${st.f.toFixed(1)} N`,Math.min(X(st.F)+10,r.w-110),Y(st.f)-10); gctx.strokeStyle='#d92d20';gctx.setLineDash([6,6]);gctx.beginPath();gctx.moveTo(X(st.fsmax),padT);gctx.lineTo(X(st.fsmax),padT+H);gctx.stroke();gctx.setLineDash([]);gctx.fillStyle='#d92d20';gctx.font='900 13px system-ui';gctx.fillText('fs,max',X(st.fsmax)+4,padT+16);} else {graphHint.textContent='เริ่มต้นยังไม่มีเส้นกราฟ — เส้นจะเกิดเมื่อเพิ่มแรงดึง F'; gctx.fillStyle='#98a2b3';gctx.font='900 18px system-ui';gctx.textAlign='center';gctx.fillText('ยังไม่มีเส้นกราฟ',padL+W/2,padT+H/2-4);gctx.font='800 13px system-ui';gctx.fillText('ลองเลื่อนสไลเดอร์แรงดึง F',padL+W/2,padT+H/2+22);gctx.textAlign='left';}
+}
+function updateReads(){const st=state(); massRead.textContent=st.m+' kg';surfaceRead.textContent=st.surf.name;forceRead.textContent=st.F+' N'; muInfo.innerHTML=`μs = ${st.surf.mus.toFixed(2)}, μk = ${st.surf.muk.toFixed(2)}<br>fs(max) = μsN = ${st.fsmax.toFixed(1)} N`; forceSlider.max=Math.max(120,Math.ceil((st.fsmax*1.6)/10)*10);}
+function loop(now){const dt=Math.min(.04,(now-last)/1000);last=now;updateReads();drawStage(dt);drawGraph();requestAnimationFrame(loop)}
+[massSel,surfaceSel,forceSlider].forEach(el=>el.addEventListener('input',()=>{updateReads();}));
+document.getElementById('formulaBtn').onclick=()=>{document.getElementById('formulaBox').classList.toggle('show'); if(window.MathJax)MathJax.typesetPromise();};document.getElementById('resetBtn').onclick=()=>{forceSlider.value=0;blockX=0;v=0;bgOffset=0;};window.addEventListener('resize',()=>{});
+updateReads();requestAnimationFrame(loop);
+</script>
+</body>
+</html>

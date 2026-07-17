@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>PulleyLab — m₁ เขียว • m₂ ฟ้า • เวกเตอร์ครบ</title>
+
+<style>
+  :root{
+    --bg:#f6f7fb;
+    --panel:#ffffff;
+    --ink:#0f172a;
+    --muted:#475569;
+    --line:#e5e7eb;
+  }
+  *{box-sizing:border-box;}
+
+  html,body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:system-ui,"Noto Sans Thai",sans-serif;
+  }
+
+  .wrap{
+    display:grid;
+    grid-template-columns:320px 1fr;
+    gap:12px;
+    max-width:1200px;
+    margin:0 auto;
+    padding:12px;
+    height:100dvh;
+  }
+
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:14px;
+    box-shadow:0 6px 20px rgba(0,0,0,.06);
+  }
+
+  .side{padding:14px; display:flex; flex-direction:column; gap:12px;}
+  .side h2{margin:0 0 6px 0;}
+
+  label{font-size:13px;color:var(--muted);margin-bottom:4px;}
+  input[type=number]{width:100%; padding:6px 8px; font-size:15px;}
+
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+
+  .btn{
+    padding:10px 12px;
+    border-radius:10px;
+    border:1px solid var(--line);
+    background:#fff;
+    cursor:pointer;
+  }
+  .btn.primary{background:#0ea5e9;color:#fff;}
+  .btn.green{background:#22c55e;color:#fff;}
+
+  .stat{
+    background:#f8fafc;
+    border:1px dashed var(--line);
+    border-radius:12px;
+    padding:10px;
+    font-size:14px;
+    margin-top:8px;
+  }
+
+  .scene{position:relative; overflow:hidden;}
+  #stage{width:100%;height:100%;display:block;touch-action:none;}
+
+  .mobile-stage-holder{display:none;}
+
+  .footer-link{
+    text-align:center;
+    margin-top:14px;
+    font-size:14px;
+  }
+  .footer-link a{
+    color:#0ea5e9;
+    font-weight:600;
+    text-decoration:none;
+  }
+  .footer-link a:hover{ text-decoration:underline; }
+
+  @media (max-width:768px){
+
+    .wrap{
+      grid-template-columns:1fr;
+      height:auto;
+      padding:10px 8px 40px;
+    }
+
+    #desktopScene{display:none;}
+
+    .mobile-stage-holder{
+      display:block;
+      border:1px solid var(--line);
+      border-radius:12px;
+      overflow:hidden;
+      height:46vh;
+      min-height:240px;
+      background:#fff;
+      margin-top:8px;
+    }
+
+    .g-row{
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+    .g-row label{
+      white-space:nowrap;
+      font-size:15px;
+    }
+    .g-row input{
+      flex:1;
+      height:38px;
+      font-size:16px;
+    }
+  }
+
+</style>
+
+<!-- MathJax -->
+<script>
+  window.MathJax={
+    tex:{ inlineMath:[['\\(','\\)'], ['$', '$']], displayMath:[['\\[','\\]']] },
+    svg:{fontCache:'global'}
+  };
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+
+</head>
+<body>
+
+<div class="wrap">
+
+  <aside class="panel side">
+    <h2>ตั้งค่า</h2>
+
+    <div class="row">
+      <div>
+        <label>มวลกล่องสีเขียว m₁ (kg)</label>
+        <input id="mass1" type="number" step="0.1" value="20">
+      </div>
+      <div>
+        <label>มวลกล่องสีฟ้า m₂ (kg)</label>
+        <input id="mass2" type="number" step="0.1" value="12">
+      </div>
+    </div>
+
+    <div class="g-row">
+      <label>g (N/kg)</label>
+      <input id="grav" type="number" step="0.01" value="9.81">
+    </div>
+
+    <div class="mobile-stage-holder" id="mobileStageHolder"></div>
+
+    <div class="row">
+      <button id="play" class="btn primary">เล่น</button>
+      <button id="reset" class="btn">รีเซ็ต</button>
+    </div>
+
+    <div class="row">
+      <button id="vectors" class="btn">แสดงเวกเตอร์</button>
+      <button id="showDerive" class="btn green">วิธีคำนวณแบบละเอียด</button>
+    </div>
+
+    <div class="stat">
+      <div>ความเร่ง a₁: <b id="a1">—</b></div>
+      <div>ความเร่ง a₂: <b id="a2">—</b></div>
+      <div>แรงตึงเชือก T: <b id="tension">—</b></div>
+    </div>
+
+    <div class="footer-link">
+      ศึกษาเพิ่มเติมที่
+      <a href="https://www.facebook.com/resolvephysics" target="_blank">
+        เพจคลายปมฟิสิกส์
+      </a>
+    </div>
+
+  </aside>
+
+  <main id="desktopScene" class="panel scene">
+    <canvas id="stage"></canvas>
+  </main>
+
+</div>
+
+<!-- Modal -->
+<div id="overlayDerive" style="position:fixed;inset:0;background:rgba(0,0,0,.25);display:none;align-items:center;justify-content:center;z-index:200">
+  <div style="width:min(900px,92vw);max-height:88vh;overflow:auto;background:#fff;border:1px solid #ddd;border-radius:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid #ddd;">
+      <h3 style="margin:0;font-size:18px;">วิธีคำนวณแบบละเอียด</h3>
+      <button id="closeDerive" class="btn">ปิด</button>
+    </div>
+    <div id="deriveBody" style="padding:16px;"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+
+  const canvas=document.getElementById('stage');
+  const ctx=canvas.getContext('2d');
+
+  const mobileStageHolder=document.getElementById('mobileStageHolder');
+  const desktopScene=document.getElementById('desktopScene');
+
+  function applyLayout(){
+    const mobile = window.innerWidth <= 768;
+
+    if(mobile){
+      if(!mobileStageHolder.contains(canvas)){
+        mobileStageHolder.appendChild(canvas);
+      }
+      desktopScene.style.display='none';
+    }else{
+      if(!desktopScene.contains(canvas)){
+        desktopScene.appendChild(canvas);
+      }
+      desktopScene.style.display='block';
+    }
+
+    resizeCanvas();
+    draw();
+  }
+
+  function resizeCanvas(){
+    const dpr=Math.max(1, window.devicePixelRatio||1);
+    const rect=canvas.getBoundingClientRect();
+
+    canvas.width  = Math.floor(rect.width*dpr);
+    canvas.height = Math.floor(rect.height*dpr);
+
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+
+  window.addEventListener('resize', applyLayout);
+
+  const m1El=document.getElementById('mass1');
+  const m2El=document.getElementById('mass2');
+  const gEl=document.getElementById('grav');
+
+  const a1El=document.getElementById('a1');
+  const a2El=document.getElementById('a2');
+  const TEl=document.getElementById('tension');
+
+  const playBtn=document.getElementById('play');
+  const resetBtn=document.getElementById('reset');
+  const vectorsBtn=document.getElementById('vectors');
+  const showDeriveBtn=document.getElementById('showDerive');
+  const overlayDerive=document.getElementById('overlayDerive');
+  const closeDerive=document.getElementById('closeDerive');
+  const deriveBody=document.getElementById('deriveBody');
+
+  let playing=false, showVectors=false;
+  let last=0;
+
+  const beam={x:80,y:60,w:300,h:20};
+  const fixedPulley={r:38};
+  const movPulley  ={r:38};
+  const load1={x:0,y:0,w:80,h:60};
+  const load2={x:0,y:0,w:60,h:44};
+
+  let y1_base=0, y2_base=0, y1=0, v1=0, gap0=0;
+
+  const PX=100;
+  const px=(m)=>m*PX;
+
+  function masses(){
+    return{
+      m1:+m1El.value,
+      m2:+m2El.value,
+      g:+gEl.value
+    };
+  }
+
+  function calc(){
+    const {m1,m2,g}=masses();
+
+    const a1=((2*m2 - m1)*g)/(m1 + 4*m2);
+    const a2=-2*a1;
+    const T=(m1*(g + a1))/2;
+
+    a1El.textContent = a1.toFixed(1)+" m/s²";
+    a2El.textContent = a2.toFixed(1)+" m/s²";
+    TEl.textContent  = T.toFixed(2)+" N";
+
+    return {a1,a2,T,m1,m2,g};
+  }
+
+  function reset(){
+    playing=false;
+    playBtn.textContent="เล่น";
+
+    fixedPulley.cx = beam.x + beam.w - fixedPulley.r - 30;
+    fixedPulley.cy = beam.y + beam.h + 60;
+
+    load1.x = beam.x + beam.w/2 - load1.w/2;
+    load1.y = fixedPulley.cy + 220;
+
+    movPulley.cx = load1.x + load1.w/2;
+    movPulley.cy = fixedPulley.cy + 120;
+
+    load2.x = fixedPulley.cx + fixedPulley.r - load2.w/2;
+    load2.y = movPulley.cy;
+
+    gap0 = load1.y - (movPulley.cy + movPulley.r);
+
+    y1_base = load1.y;
+    y2_base = load2.y;
+    y1=0; v1=0;
+
+    calc();
+    draw();
+  }
+
+  function update(dt){
+    const {a1}=calc();
+
+    v1 += a1*dt;
+    y1 += v1*dt;
+
+    const maxRisePx = y1_base - (fixedPulley.cy + movPulley.r + 10);
+    const maxRise   = Math.max(0, maxRisePx)/PX;
+
+    if(y1 > maxRise){ y1=maxRise; v1=0; }
+    if(y1 < 0){ y1=0; v1=0; }
+
+    load1.y = y1_base - px(y1);
+    movPulley.cx = load1.x + load1.w/2;
+
+    let cand = load1.y - movPulley.r - gap0;
+    if(cand <= fixedPulley.cy){
+      movPulley.cy = fixedPulley.cy;
+      playing=false;
+    }else movPulley.cy=cand;
+
+    load2.y = y2_base + px(2*y1);
+  }
+
+  function drawBeam(){
+    ctx.fillStyle="#111";
+    ctx.fillRect(beam.x,beam.y,beam.w,beam.h);
+  }
+
+  function drawPulley(cy,cx,r){
+    ctx.fillStyle="#e5e7eb";
+    ctx.strokeStyle="#111";
+    ctx.lineWidth=3;
+    ctx.beginPath(); ctx.arc(cx,cy,r,0,2*Math.PI); ctx.fill(); ctx.stroke();
+  }
+
+  function drawSupports(){
+    ctx.strokeStyle="#111";
+    ctx.lineWidth=4;
+
+    ctx.beginPath();
+    ctx.moveTo(fixedPulley.cx, beam.y+beam.h/2);
+    ctx.lineTo(fixedPulley.cx, fixedPulley.cy);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(movPulley.cx, movPulley.cy);
+    ctx.lineTo(load1.x+load1.w/2, load1.y);
+    ctx.stroke();
+  }
+
+  function drawRope(){
+    ctx.strokeStyle="#a16207";
+    ctx.lineWidth=4;
+
+    const rM=movPulley.r, rF=fixedPulley.r;
+
+    ctx.beginPath();
+    ctx.moveTo(movPulley.cx-rM, beam.y+beam.h/2);
+    ctx.lineTo(movPulley.cx-rM, movPulley.cy);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(movPulley.cx, movPulley.cy, rM, Math.PI, 0, true);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(movPulley.cx+rM, movPulley.cy);
+    ctx.lineTo(fixedPulley.cx-rF, fixedPulley.cy);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(fixedPulley.cx, fixedPulley.cy, rF, Math.PI, 0, false);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(fixedPulley.cx+rF, fixedPulley.cy);
+    ctx.lineTo(load2.x+load2.w/2, load2.y);
+    ctx.stroke();
+  }
+
+  function drawLoads(){
+    ctx.fillStyle="#22c55e";
+    ctx.fillRect(load1.x,load1.y,load1.w,load1.h);
+
+    ctx.fillStyle="#0f172a";
+    ctx.font="12px Inter";
+    ctx.fillText("m₁ = "+(+m1El.value).toFixed(1)+" kg", load1.x+6, load1.y+16);
+
+    ctx.fillStyle="#3b82f6";
+    ctx.fillRect(load2.x,load2.y,load2.w,load2.h);
+
+    ctx.fillStyle="#0f172a";
+    ctx.fillText("m₂ = "+(+m2El.value).toFixed(1)+" kg", load2.x+6, load2.y+16);
+  }
+
+  function arrow(x1,y1,x2,y2){
+    const ang=Math.atan2(y2-y1, x2-x1);
+    const L=10;
+
+    ctx.beginPath();
+    ctx.moveTo(x1,y1);
+    ctx.lineTo(x2,y2);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(x2,y2);
+    ctx.lineTo(x2 - L*Math.cos(ang - Math.PI/6),
+               y2 - L*Math.sin(ang - Math.PI/6));
+    ctx.lineTo(x2 - L*Math.cos(ang + Math.PI/6),
+               y2 - L*Math.sin(ang + Math.PI/6));
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  function drawVectors(){
+    if(!showVectors) return;
+
+    const {m1,m2,g,a1,a2,T}=calc();
+    const kF=0.004*PX, kA=22;
+
+    const cx1=load1.x+load1.w/2;
+    const cy1=load1.y+load1.h/2;
+
+    const cx2=load2.x+load2.w/2;
+    const cy2=load2.y+load2.h/2;
+
+    ctx.font="12px Inter";
+
+    ctx.strokeStyle="#22c55e";
+    ctx.fillStyle="#22c55e";
+    const mg1_endY = cy1 + m1*g*kF;
+    arrow(cx1, cy1, cx1, mg1_endY);
+    ctx.fillText(`m₁ g = ${(m1*g).toFixed(1)} N`, cx1+6, mg1_endY + 14);
+
+    ctx.strokeStyle="#3b82f6";
+    ctx.fillStyle="#3b82f6";
+    const mg2_endY = cy2 + m2*g*kF;
+    arrow(cx2, cy2, cx2, mg2_endY);
+    ctx.fillText(`m₂ g = ${(m2*g).toFixed(1)} N`, cx2+6, mg2_endY + 14);
+
+    const UP=30;
+    ctx.strokeStyle="#ef4444";
+    ctx.fillStyle="#ef4444";
+
+    const y2T = (cy1-UP) - 2*T*kF;
+    arrow(cx1, cy1-UP, cx1, y2T);
+    /* 👇 ขยับป้าย 2T ลงมา 50 px */
+    ctx.fillText(`2T = ${(2*T).toFixed(1)} N`, cx1+8, y2T - 6 + 50);
+
+    const yT = (cy2-UP) - T*kF;
+    arrow(cx2, cy2-UP, cx2, yT);
+    ctx.fillText(`T = ${T.toFixed(1)} N`, cx2+8, yT - 6);
+
+    ctx.strokeStyle="#22c55e";
+    ctx.fillStyle="#22c55e";
+    const a1Len=Math.min(60, Math.abs(a1)*kA);
+    ctx.fillText(`a₁ = ${a1.toFixed(1)} m/s²`, cx1-120, cy1-UP-6);
+    arrow(cx1-40, cy1-UP, cx1-40, cy1-UP - (a1>=0?a1Len:-a1Len));
+
+    ctx.strokeStyle="#3b82f6";
+    ctx.fillStyle="#3b82f6";
+    const a2Len=Math.min(60, Math.abs(a2)*kA);
+    arrow(cx2+60, cy2, cx2+60, cy2 - (a2>=0?a2Len:-a2Len));
+    ctx.fillText(`a₂ = ${a2.toFixed(1)} m/s²`, cx2+80, cy2-6);
+  }
+
+  function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    const mobile=window.innerWidth<=768;
+    const dpr=Math.max(1, window.devicePixelRatio||1);
+
+    const cssW=canvas.width/dpr;
+    const cssH=canvas.height/dpr;
+
+    ctx.save();
+
+    if(mobile){
+      const s=0.50;
+      const designW=480, designH=520;
+      const drawW=designW*s, drawH=designH*s;
+
+      const offX = (cssW - drawW)/2;
+      const offY = (cssH - drawH)/2;
+
+      ctx.translate(offX, offY);
+      ctx.scale(s, s);
+    }
+
+    drawBeam();
+    drawPulley(fixedPulley.cy, fixedPulley.cx, fixedPulley.r);
+    drawPulley(movPulley.cy, movPulley.cx, movPulley.r);
+    drawSupports();
+    drawRope();
+    drawLoads();
+    drawVectors();
+
+    ctx.restore();
+  }
+
+  function step(ts){
+    if(!last) last=ts;
+    const dt=(ts-last)/1000;
+    last=ts;
+
+    if(playing){
+      update(dt);
+      draw();
+    }
+    requestAnimationFrame(step);
+  }
+
+  function openDerive(){
+    const {m1,m2,g}=masses();
+    const a1 = ((2*m2 - m1)*g)/(m1 + 4*m2);
+    const a2 = -2*a1;
+    const T  = (m1*(g + a1))/2;
+
+    deriveBody.innerHTML = `
+      <div style="border:1px solid #e5e7eb;border-radius:12px;padding:12px 14px;margin:10px 0;background:#fafafa">
+        <b>สมมติฐานและข้อจำกัด</b>
+        <p>เชือกยาวคงที่ ทำให้ความเร่งของมวลทั้งสองสัมพันธ์กันด้วยสมการ</p>
+        \\[
+          a_{2} = -2a_{1}
+        \\]
+        <p>เลือกให้ทิศขึ้นเป็นทิศบวกสำหรับทุกวัตถุ</p>
+      </div>
+
+      <div style="border:1px solid #e5e7eb;border-radius:12px;padding:12px 14px;margin:10px 0;background:#fafafa">
+        <b>กฎของนิวตันสำหรับแต่ละมวล</b>
+        <p>(บนรอกเคลื่อนที่ มวล \\(m_{1}\\) ได้แรงตึงเชือกสองเส้น)</p>
+        \\[
+          2T - m_{1}g = m_{1}a_{1}
+        \\]
+        <p>(มวลแขวน \\(m_{2}\\))</p>
+        \\[
+          T - m_{2}g = m_{2}a_{2}
+        \\]
+        <p>จากสมการที่สองได้ว่า</p>
+        \\[
+          T = m_{2}(g + a_{2})
+        \\]
+        <p>และจากเงื่อนไขเชือกยาวคงที่ ใช้ \\(a_{2} = -2a_{1}\\)</p>
+      </div>
+
+      <div style="border:1px solid #e5e7eb;border-radius:12px;padding:12px 14px;margin:10px 0;background:#fafafa">
+        <b>การแก้ระบบสมการ</b>
+        <p>แทนค่า \\(T\\) และ \\(a_{2} = -2a_{1}\\) ลงในสมการของมวล \\(m_{1}\\)</p>
+        \\[
+          2m_{2}(g - 2a_{1}) - m_{1}g = m_{1}a_{1}
+        \\]
+        <p>จัดรูปจะได้</p>
+        \\[
+          (2m_{2} - m_{1})g = (m_{1} + 4m_{2})a_{1}
+        \\]
+        <p>ดังนั้น</p>
+        \\[
+          a_{1} = \\frac{(2m_{2} - m_{1})g}{m_{1} + 4m_{2}},\\qquad
+          a_{2} = -2a_{1},\\qquad
+          T = \\frac{m_{1}(g + a_{1})}{2}
+        \\]
+      </div>
+
+      <div style="border:1px solid #e5e7eb;border-radius:12px;padding:12px 14px;margin:10px 0;background:#fafafa">
+        <b>คำนวณด้วยค่าที่ตั้งไว้ในแผงควบคุม</b>
+        <p>
+          ค่าที่กำหนด:
+          \\(
+            m_{1} = ${m1.toFixed(1)}\\,\\text{kg},\\;
+            m_{2} = ${m2.toFixed(1)}\\,\\text{kg},\\;
+            g = ${g.toFixed(1)}\\,\\text{N/kg}
+          \\)
+        </p>
+        <p>แทนค่าแล้วได้</p>
+        \\[
+          a_{1} = ${a1.toFixed(1)}\\,\\text{m/s}^2,\\quad
+          a_{2} = ${a2.toFixed(1)}\\,\\text{m/s}^2,\\quad
+          T = ${T.toFixed(1)}\\,\\text{N}
+        \\]
+      </div>
+    `;
+    overlayDerive.style.display='flex';
+    if(window.MathJax?.typesetPromise) MathJax.typesetPromise();
+  }
+
+  closeDerive.onclick=()=> overlayDerive.style.display="none";
+  overlayDerive.onclick=(e)=>{ if(e.target===overlayDerive) overlayDerive.style.display="none"; };
+
+  playBtn.onclick=()=>{
+    playing=!playing;
+    playBtn.textContent = playing ? "หยุด" : "เล่น";
+  };
+  resetBtn.onclick=reset;
+
+  vectorsBtn.onclick=()=>{
+    showVectors=!showVectors;
+    vectorsBtn.textContent = showVectors ? "ซ่อนเวกเตอร์" : "แสดงเวกเตอร์";
+    draw();
+  };
+
+  showDeriveBtn.onclick=openDerive;
+
+  reset();
+  applyLayout();
+  requestAnimationFrame(step);
+
+})();
+</script>
+
+</body>
+</html>

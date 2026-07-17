@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>รถสามคันลากกันด้วยเชือก — หา T₁, T₂ </title>
+<style>
+  :root{
+    --ink:#0f172a; --sky:#eaf6ff; --ground:#d9ead3;
+    --truck-bed:#cbd5e1; --truck-cabin:#bebbbb;
+    --m1:#cbd5e1; --m2:#fde68a;
+  }
+  body{
+    margin:0; padding:14px;
+    font-family:system-ui,"Noto Sans Thai",sans-serif;
+    background:#fff; color:var(--ink);
+    display:flex; flex-direction:column; align-items:center; gap:10px;
+  }
+  #vp{
+    width:100%; max-width:980px;
+    border-radius:12px; border:1px solid #e5e7eb;
+    background:#f8fafc;
+  }
+  canvas{width:100%; height:auto; border-radius:12px;}
+  .panel{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;align-items:center}
+  .card{border:1px solid #e5e7eb;background:#f8fafc;border-radius:12px;padding:8px 12px}
+  input[type="number"]{width:70px}
+  input[type="range"]{width:140px}
+  button{padding:8px 14px;border:none;border-radius:10px;background:#2563eb;color:#fff;cursor:pointer}
+  button.ghost{background:#e5e7eb;color:#111827}
+
+  /* ปรับเฉพาะมือถือ */
+  @media (max-width:540px){
+    body{font-size:15px;}
+    .panel{flex-direction:column;align-items:stretch}
+    .card{font-size:15px;}
+    button{padding:6px 10px;font-size:14px;border-radius:8px;}
+    .card button{width:auto;}
+    #play,#reset{display:inline-block;margin-right:6px;}
+    #formulaBtn{display:inline-block;margin-top:6px;}
+    #status{font-size:15px !important;}
+  }
+
+  /* modal สูตร */
+  #formulaModal{position:fixed;inset:0;background:rgba(15,23,42,.45);display:none;align-items:center;justify-content:center;z-index:999;}
+  #formulaBox{background:#fff;border-radius:16px;max-width:560px;width:92%;padding:16px 18px;border:3px solid #38bdf8;
+    box-shadow:0 20px 45px rgba(0,0,0,.18);}
+  .formula-block{background:#f1f5f9;border-left:4px solid #fb7185;padding:6px 10px;border-radius:10px;margin:6px 0;}
+  #closeFormula{margin-top:10px;background:#ef4444;color:#fff;padding:6px 14px;border:none;border-radius:10px;cursor:pointer;}
+  .badge{display:inline-block;background:#e0f2fe;color:#0369a1;padding:3px 10px;border-radius:999px;font-size:.7rem;margin-bottom:6px;}
+</style>
+<script>
+window.MathJax = { tex: {inlineMath: [['\\(','\\)'], ['$', '$']]}, svg: {fontCache: 'global'} };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+</head>
+<body>
+<h2>การทดลอง: รถพ่วงลากกันด้วยเชือก — หา T₁, T₂ </h2>
+
+<div id="vp">
+  <canvas id="cv" width="960" height="520"></canvas>
+</div>
+
+<div class="panel">
+  <div class="card">
+    m₁ = <input id="m1" type="number" min="0.1" step="0.1" value="2.0"> kg&nbsp;&nbsp;
+    m₂ = <input id="m2" type="number" min="0.1" step="0.1" value="1.5"> kg<br/><br/>
+    f₁ = <input id="f1" type="number" min="0" step="0.1" value="0"> N&nbsp;&nbsp;
+    f₂ = <input id="f2" type="number" min="0" step="0.1" value="0"> N
+  </div>
+  <div class="card">
+    a = <input id="accel" type="range" min="0" max="10" step="0.1" value="1.0">
+    <input id="accelNum" type="number" min="0" max="10" step="0.1" value="1.0"> m/s²<br/>
+    <button id="play">▶ เล่น</button>
+    <button id="reset" class="ghost">↺ รีเซ็ต</button>
+    <button id="formulaBtn" class="ghost">📘 สูตรสำคัญ</button><br/>
+    <label style="font-size:13px;display:inline-flex;align-items:center;margin-top:4px;">
+      <input type="checkbox" id="showT" style="margin-right:4px;"> แสดงแรง T
+    </label>
+  </div>
+</div>
+
+<div id="status" class="card" style="max-width:980px;width:100%;font-size:14px;"></div>
+<p style="margin:0 8px 8px 8px;font-size:14px">ศึกษาเพิ่มเติมที่เพจ 
+<a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">คลายปมฟิสิกส์</a></p>
+
+<!-- Modal สูตร -->
+<div id="formulaModal">
+  <div id="formulaBox">
+    <div id="formulaScroll" style="overflow-x:auto;">
+      <div class="badge">Newton’s 2nd Law · ระบบรถลากกัน</div>
+      <h3>สูตรสำคัญที่ใช้ในโจทย์นี้</h3>
+      <p>ใช้กฎข้อที่ 2 ของนิวตัน \( \sum F = ma \)</p>
+      <div class="formula-block">
+        รถ \(m_2\):  
+        \[
+        T_2 - f_2 = m_2 a \;\Rightarrow\; T_2 = m_2 a + f_2
+        \]
+      </div>
+      <div class="formula-block">
+        รถ \(m_1\):  
+        \[
+        T_1 - T_2 - f_1 = m_1 a \;\Rightarrow\; T_1 = m_1 a + f_1 + T_2
+        \]
+      </div>
+      <p id="currentVals" style="background:#fef9c3;border:1px solid #fde68a;border-radius:8px;padding:6px 8px;font-size:.9rem;">
+        กำลังคำนวณค่าปัจจุบัน...
+      </p>
+    </div>
+    <div id="formulaPanRow" style="margin-top:6px;font-size:13px;display:none;">
+      เลื่อนดูซ้าย–ขวา:
+      <input id="formulaPan" type="range" min="0" max="100" value="0" style="width:70%;">
+    </div>
+    <button id="closeFormula">ปิด</button>
+  </div>
+</div>
+
+<script>
+// ========== canvas / layout ==========
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+const BASE_W = 960, BASE_H = 520;
+
+let layoutScale = 1;
+let fontScale   = 1;
+
+let roadY = 370;
+let carY  = 300;
+let carH  = 48;
+let wheelR = 16;
+let carW  = 115;
+let gap   = 90;
+let centerX = BASE_W/2;
+
+const leadCar = { x:0, y:0, w:0, h:0, v:0, a:1.0, worldX:0 };
+const carM1  = { x:0, y:0, w:0, h:0 };
+const carM2  = { x:0, y:0, w:0, h:0 };
+
+function updateLayout(){
+  if(window.innerWidth <= 540){
+    layoutScale = 0.4;
+    fontScale   = 0.8;
+
+    roadY = 340 * layoutScale;
+    carY  = 260 * layoutScale;
+    carH  = 48  * layoutScale;
+    wheelR = 16 * layoutScale;
+    carW  = 115 * layoutScale;
+    gap   = 90  * layoutScale;
+
+    centerX = (BASE_W/2 - 120) * layoutScale;
+  }else{
+    layoutScale = 1;
+    fontScale   = 1;
+
+    roadY = 370;
+    carY  = 300;
+    carH  = 48;
+    wheelR = 16;
+    carW  = 115;
+    gap   = 90;
+    centerX = BASE_W/2;
+  }
+
+  leadCar.x = centerX + 80 * layoutScale;
+  leadCar.y = carY;
+  leadCar.w = 140 * layoutScale;
+  leadCar.h = carH;
+
+  carM1.x = leadCar.x - (carW + gap);
+  carM1.y = carY;
+  carM1.w = carW;
+  carM1.h = carH;
+
+  carM2.x = carM1.x - (carW + gap);
+  carM2.y = carY;
+  carM2.w = carW;
+  carM2.h = carH;
+}
+
+function resizeCanvas(){
+  updateLayout();
+  const dpr = Math.max(1, window.devicePixelRatio||1);
+  let cssW = cv.clientWidth;
+  if(!cssW){
+    const vp = document.getElementById('vp');
+    cssW = vp.clientWidth || BASE_W;
+  }
+  const cssH = Math.round(cssW*(BASE_H/BASE_W));
+  cv.style.height = cssH+'px';
+  cv.width  = cssW*dpr;
+  cv.height = cssH*dpr;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  draw();
+}
+window.addEventListener('load', resizeCanvas);
+window.addEventListener('resize', resizeCanvas);
+
+// ========== elements ==========
+const m1Input = document.getElementById('m1');
+const m2Input = document.getElementById('m2');
+const f1Input = document.getElementById('f1');
+const f2Input = document.getElementById('f2');
+const accelInput = document.getElementById('accel');
+const accelNum = document.getElementById('accelNum');
+const playBtn = document.getElementById('play');
+const resetBtn = document.getElementById('reset');
+const statusEl = document.getElementById('status');
+const formulaBtn = document.getElementById('formulaBtn');
+const formulaModal = document.getElementById('formulaModal');
+const closeFormula = document.getElementById('closeFormula');
+const currentVals = document.getElementById('currentVals');
+const showTCheckbox = document.getElementById('showT');
+
+const formulaScroll = document.getElementById('formulaScroll');
+const formulaPanRow = document.getElementById('formulaPanRow');
+const formulaPan = document.getElementById('formulaPan');
+
+let showT = false;
+
+// helpers
+function m1(){ return Math.max(0.1, +m1Input.value || 2); }
+function m2(){ return Math.max(0.1, +m2Input.value || 1.5); }
+function f1(){ return Math.max(0, +f1Input.value || 0); }
+function f2(){ return Math.max(0, +f2Input.value || 0); }
+
+// physics
+const SCALE = 100;
+function calcTensions(){
+  const a = leadCar.a;
+  const T2 = m2()*a + f2();
+  const T1 = m1()*a + f1() + T2;
+  return {T1, T2};
+}
+
+function updateA(fromNum=false){
+  const a = fromNum ? (+accelNum.value||0) : (+accelInput.value||0);
+  accelInput.value = a;
+  accelNum.value = a.toFixed(1);
+  leadCar.a = a;
+  updateStatus();
+}
+accelInput.oninput = ()=>updateA(false);
+accelNum.oninput = ()=>updateA(true);
+[m1Input,m2Input,f1Input,f2Input].forEach(el=>el.oninput=updateStatus);
+
+showTCheckbox.onchange = ()=>{
+  showT = showTCheckbox.checked;
+  draw();
+};
+
+// animation
+let running = false, last = 0;
+function loop(ts){
+  if(!running) return;
+  const dt = Math.min(0.032, (ts - last)/1000);
+  last = ts;
+  leadCar.v += leadCar.a * dt;
+  leadCar.worldX += leadCar.v * dt * SCALE; // worldX ยังวิ่ง ใช้กับถนน
+  draw();
+  requestAnimationFrame(loop);
+}
+playBtn.onclick = ()=>{
+  running = !running;
+  playBtn.textContent = running ? '⏸ หยุด' : '▶ เล่น';
+  if(running){ last = performance.now(); requestAnimationFrame(loop); }
+};
+resetBtn.onclick = ()=>{
+  leadCar.v = 0;
+  leadCar.worldX = 0;
+  draw();
+  updateStatus();
+};
+
+// ========== draw ==========
+function draw(){
+  ctx.clearRect(0,0,cv.clientWidth,cv.clientHeight);
+  drawBackground();
+
+  // cars
+  drawTruck(leadCar.x, leadCar.y, leadCar.w, leadCar.h);
+  drawBoxCar(carM1.x, carM1.y, carM1.w, carM1.h, getCSS('--m1'), 'm₁', m1(), f1());
+  drawBoxCar(carM2.x, carM2.y, carM2.w, carM2.h, getCSS('--m2'), 'm₂', m2(), f2());
+
+  // ropes + labels
+  const leadAttach = { x: leadCar.x, y: leadCar.y + leadCar.h/2 };
+  const m1Rear = { x: carM1.x + carM1.w, y: carM1.y + carM1.h/2 };
+  const m1Front = { x: carM1.x, y: carM1.y + carM1.h/2 };
+  const m2Rear = { x: carM2.x + carM2.w, y: carM2.y + carM2.h/2 };
+
+  ctx.strokeStyle = '#0f172a'; ctx.lineWidth = 2;
+  // T1 rope
+  ctx.beginPath();
+  ctx.moveTo(leadAttach.x, leadAttach.y);
+  ctx.lineTo(m1Rear.x, m1Rear.y);
+  ctx.stroke();
+  // T2 rope
+  ctx.beginPath();
+  ctx.moveTo(m1Front.x, m1Front.y);
+  ctx.lineTo(m2Rear.x, m2Rear.y);
+  ctx.stroke();
+
+  const {T1,T2} = calcTensions();
+  if(showT){
+    ctx.fillStyle = '#ef4444';   // ป้าย T เป็นสีแดง
+    ctx.font = `${14*fontScale}px system-ui`;
+    const t1x = (leadAttach.x+m1Rear.x)/2 - 50*layoutScale + 5; // ขยับขวา 5px
+    const t2x = (m1Front.x+m2Rear.x)/2 - 50*layoutScale + 5;
+    ctx.fillText(`T₁ = ${T1.toFixed(2)} N`, t1x, leadAttach.y - 30*layoutScale);
+    ctx.fillText(`T₂ = ${T2.toFixed(2)} N`, t2x, m1Front.y - 30*layoutScale);
+  }
+
+  // ป้าย a
+  const aTextY = leadCar.y - (34*layoutScale + 30);
+  ctx.fillStyle = '#2563eb';
+  ctx.font = `${14*fontScale}px system-ui`;
+  ctx.fillText(`a = ${leadCar.a.toFixed(2)} m/s²`, leadCar.x + 8*layoutScale + 30, aTextY);
+
+  // ลูกศรความเร่ง: ยาวตามค่า a และถ้า a = 0 ไม่แสดง
+  const aVal = leadCar.a;
+  if (Math.abs(aVal) > 1e-3) {
+    const baseLen  = 20 * layoutScale;
+    const extraLen = aVal * 6 * layoutScale;        // ยาวขึ้นตาม a
+    const len      = Math.min(120 * layoutScale, baseLen + extraLen); // กันยาวเกิน
+
+    const arrowY = aTextY - 18*layoutScale - 15;
+    const xStart = leadCar.x + leadCar.w/2;
+    const xEnd   = xStart + len;
+
+    ctx.beginPath();
+    ctx.moveTo(xStart, arrowY);
+    ctx.lineTo(xEnd, arrowY);
+    ctx.strokeStyle = '#2563eb'; ctx.lineWidth = 2; ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(xEnd, arrowY);
+    ctx.lineTo(xEnd - 8*layoutScale, arrowY - 6*layoutScale);
+    ctx.lineTo(xEnd - 8*layoutScale, arrowY + 6*layoutScale);
+    ctx.closePath(); ctx.fillStyle = '#2563eb'; ctx.fill();
+  }
+}
+
+function drawTruck(x,y,w,h){
+  ctx.fillStyle = getCSS('--truck-bed');
+  ctx.fillRect(x, y, w-50*layoutScale, h);
+  ctx.strokeStyle = '#0f172a'; ctx.strokeRect(x, y, w-50*layoutScale, h);
+  const cabX = x + (w-50*layoutScale);
+  const cabW = 50*layoutScale;
+  const cabY = y - 26*layoutScale;
+  ctx.beginPath();
+  ctx.moveTo(cabX, y+h);
+  ctx.lineTo(cabX+cabW, y+h);
+  ctx.lineTo(cabX+cabW-10*layoutScale, cabY);
+  ctx.lineTo(cabX, cabY);
+  ctx.closePath();
+  ctx.fillStyle = getCSS('--truck-cabin'); ctx.fill(); ctx.strokeStyle = '#0f172a'; ctx.stroke();
+  const cy = y + h + wheelR;
+  drawWheel(x+28*layoutScale, cy);
+  drawWheel(x + (w-50*layoutScale) - 28*layoutScale + 40*layoutScale, cy);
+}
+
+function drawBoxCar(x,y,w,h,color,label,mass,fric){
+  ctx.fillStyle = color;
+  ctx.fillRect(x,y,w,h);
+  ctx.strokeStyle = '#0f172a'; ctx.strokeRect(x,y,w,h);
+
+  const cy = y + h + wheelR;
+  drawWheel(x+20*layoutScale, cy);
+  drawWheel(x+w-20*layoutScale, cy);
+
+  ctx.fillStyle = '#0f172a';
+
+  // ป้าย m₁, m₂: เฉพาะมือถือให้เล็กลงเหลือ 0.7 เท่า
+  const isMobile = window.innerWidth <= 540;
+  const labelScale = isMobile ? fontScale * 0.7 : fontScale;
+  ctx.font = `${13*labelScale}px system-ui`;
+
+  ctx.fillText(`${label} = ${mass.toFixed(2)} kg`, x+6*layoutScale, y+22*layoutScale);
+
+  if(fric > 0){
+    const baseY = y + h + 35*layoutScale;
+    const baseX = x + w/2;
+    const len = Math.min(70*layoutScale, fric * 8*layoutScale);
+    drawLeftArrow(baseX, baseY, len, '#ef4444');
+    ctx.fillStyle = '#ef4444';
+    const sub = label === 'm₁' ? '₁' : '₂';
+    ctx.font = `${13*labelScale}px system-ui`;
+    ctx.fillText(`f${sub} = ${fric.toFixed(2)} N`, baseX - 35*layoutScale, baseY + 20*layoutScale);
+  }
+}
+
+function drawLeftArrow(x,y,len,color){
+  ctx.save();
+  ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x - len, y); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x - len, y);
+  ctx.lineTo(x - len + 8*layoutScale, y - 4*layoutScale);
+  ctx.lineTo(x - len + 8*layoutScale, y + 4*layoutScale);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawWheel(x,y){
+  ctx.beginPath(); ctx.arc(x,y,wheelR,0,Math.PI*2); ctx.fillStyle='#111'; ctx.fill();
+  ctx.beginPath(); ctx.arc(x,y,5*layoutScale,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.fill();
+}
+
+function drawBackground(){
+  ctx.fillStyle = '#eaf6ff';
+  ctx.fillRect(0,0,cv.clientWidth,roadY);
+  ctx.fillStyle = '#d9ead3';
+  ctx.fillRect(0,roadY,cv.clientWidth,cv.clientHeight-roadY);
+  ctx.fillStyle = '#444';
+  ctx.fillRect(0, roadY, cv.clientWidth, 10*layoutScale);
+
+  // เส้นถนนเลื่อนแบบห่าง ๆ ให้ฟีลเกม แต่ลดภาพลวงตา
+  const dashW = 25*layoutScale;          // ความยาวเส้นขาวเดิม
+  const g     = 180*layoutScale;         // ช่องว่างระหว่างเส้น = 2 เท่าของเดิม (60 → 120)
+  const period = dashW + g;
+
+  const scrollFactor = 0.5;
+  const rawOffset = (leadCar.worldX * scrollFactor) % period;
+  const offset = -rawOffset;
+
+  ctx.fillStyle = '#f8fafc';
+  for(let x = offset; x < cv.clientWidth + dashW; x += period){
+    ctx.fillRect(x, roadY+3*layoutScale, dashW, 3*layoutScale);
+  }
+}
+
+function getCSS(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+
+function updateStatus(){
+  const {T1,T2} = calcTensions();
+  statusEl.innerHTML = `m₁=${m1().toFixed(2)} kg · m₂=${m2().toFixed(2)} kg · f₁=${f1().toFixed(2)} N · f₂=${f2().toFixed(2)} N · a=${leadCar.a.toFixed(2)} m/s²<br>
+  T₁=${T1.toFixed(2)} N · T₂=${T2.toFixed(2)} N`;
+}
+
+// ===== slider เลื่อนสูตรซ้าย–ขวา =====
+function setupFormulaPan(){
+  const maxScroll = formulaScroll.scrollWidth - formulaScroll.clientWidth;
+  if(maxScroll > 5){
+    formulaPanRow.style.display = 'block';
+    formulaPan.value = 0;
+    formulaScroll.scrollLeft = 0;
+    formulaPan.oninput = ()=>{
+      const ratio = formulaPan.value/100;
+      formulaScroll.scrollLeft = maxScroll * ratio;
+    };
+  }else{
+    formulaPanRow.style.display = 'none';
+  }
+}
+
+// modal
+formulaBtn.onclick = ()=>{
+  const a = leadCar.a, m1v = m1(), m2v = m2(), f1v = f1(), f2v = f2();
+  const T2 = m2v*a + f2v;
+  const T1 = m1v*a + f1v + T2;
+  currentVals.textContent = `ค่าปัจจุบัน: a=${a.toFixed(2)} m/s², m₁=${m1v.toFixed(2)} kg, m₂=${m2v.toFixed(2)} kg, f₁=${f1v.toFixed(2)} N, f₂=${f2v.toFixed(2)} N → T₂=${T2.toFixed(2)} N, T₁=${T1.toFixed(2)} N`;
+  formulaModal.style.display = 'flex';
+  if(window.MathJax && window.MathJax.typesetPromise){
+    window.MathJax.typesetPromise().then(setupFormulaPan);
+  }else{
+    setupFormulaPan();
+  }
+};
+closeFormula.onclick = ()=> formulaModal.style.display='none';
+formulaModal.onclick = (e)=>{ if(e.target===formulaModal) formulaModal.style.display='none'; };
+
+// init
+updateStatus();
+draw();
+resizeCanvas();
+</script>
+</body>
+</html>

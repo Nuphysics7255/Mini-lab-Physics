@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>รถดันกล่องด้วยแรงเสียดทาน (แนวตั้ง)</title>
+  <style>
+    :root{
+      --ink:#0f172a;
+      --panel:#ffffff;
+      --accent:#0ea5e9;
+      --road:#222;
+      --car:#d1d5db;
+      --box:#facc15;
+    }
+    body{
+      margin:0;
+      background:#fff;
+      font-family:system-ui,"Noto Sans Thai",sans-serif;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:10px;
+      padding:10px 6px 20px;
+    }
+    h2{margin:0;font-size:18px;}
+    #wrap{
+      width:min(100%, 980px);
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+    canvas{
+      border:1px solid #e2e8f0;
+      border-radius:10px;
+      background:#e2ecff;
+      touch-action:none;
+      width:100%;
+      max-width:980px;
+      height:340px; /* desktop */
+    }
+    .panel{
+      background:#f8fafc;
+      border:1px solid #e2e8f0;
+      border-radius:10px;
+      padding:8px 10px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-items:center;
+    }
+    .panel-row{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      width:100%;
+    }
+    .panel-row.buttons{
+      margin-top:4px;
+    }
+    label{font-size:13px; display:flex; gap:4px; align-items:center; flex-wrap:wrap;}
+    input[type="number"]{width:70px; padding:2px 4px;}
+    input[type="range"]{width:160px;}
+    button{
+      background:#0f172a;
+      color:#fff;
+      border:none;
+      padding:6px 14px;
+      border-radius:8px;
+      cursor:pointer;
+      font-size:13px;
+    }
+    button.secondary{
+      background:#e2e8f0;
+      color:#0f172a;
+    }
+    #amin{
+      background:#fee2e2;
+      border:1px solid #fca5a5;
+      color:#b91c1c;
+      border-radius:8px;
+      padding:5px 10px;
+      font-size:13px;
+    }
+    #morelink{
+      font-size:13px;
+    }
+    #morelink a{
+      color:#0ea5e9;
+      text-decoration:underline;
+    }
+    /* modal */
+    #modal{
+      position:fixed;
+      inset:0;
+      background:rgba(15,23,42,0.45);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index:999;
+    }
+    #modalBox{
+      background:#fff;
+      border:2px solid #0ea5e9;
+      border-radius:14px;
+      padding:14px 16px 12px;
+      width:min(95%,560px);
+      max-height:90vh;
+      overflow-y:auto;
+      box-shadow:0 20px 40px rgba(0,0,0,0.2);
+    }
+    #modalBox h3{
+      margin-top:0;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:8px;
+    }
+    #closeModal{
+      background:#ef4444;
+      border:none;
+      color:#fff;
+      border-radius:999px;
+      padding:2px 10px;
+      cursor:pointer;
+    }
+    /* fallback แสดงสมการแบบตัวหนังสือ */
+    .eq-fallback{
+      background:#fee2e2;
+      color:#b91c1c;
+      padding:4px 6px;
+      font-size:12px;
+      border-radius:6px;
+      margin-top:6px;
+    }
+
+    /* ---- เฉพาะมือถือ ---- */
+    @media (max-width:600px){
+      canvas{
+        height:auto;               /* ปล่อยให้สูงอัตโนมัติ */
+        aspect-ratio:49/17;        /* รักษาสัดส่วน 980:340 ไม่ให้ภาพยืด */
+      }
+      .panel{
+        flex-direction:column;
+        align-items:flex-start;
+      }
+      .panel-row{
+        flex-direction:column;
+        align-items:flex-start;
+      }
+      .panel-row.buttons{
+        flex-direction:row;
+        flex-wrap:wrap;
+        align-items:center;
+      }
+      input[type="range"]{width:100%;}
+
+      /* ให้ปุ่มเล่น + รีเซ็ต โตขึ้นอีกนิด */
+      #play,
+      #reset{
+        padding:8px 20px;
+        font-size:14px;
+      }
+    }
+  </style>
+
+  <!-- config -->
+  <script>
+    window.MathJax = {
+      tex: {inlineMath: [['\\(', '\\)'], ['$', '$']]}
+    };
+  </script>
+  <!-- โหลดจาก jsDelivr -->
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" id="mj1"></script>
+  <!-- โหลดซ้ำจาก cdnjs เป็นสำรอง -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-chtml.js" id="mj2"></script>
+</head>
+<body>
+  <div id="wrap">
+    <h2>การทดลอง: รถดันกล่องด้วยแรงเสียดทานให้ติดอยู่ด้านหน้า</h2>
+    <canvas id="cv" width="980" height="340"></canvas>
+    <div class="panel">
+      <div class="panel-row">
+        <label>μₛ (สถิต):
+          <input type="number" id="muS" value="0.80" step="0.05" min="0.05" max="2">
+        </label>
+        <label style="gap:8px;">ความเร่งรถ a:
+          <input type="range" id="accSlider" min="0" max="15" step="0.1" value="8">
+          <input type="number" id="acc" value="8" step="0.5" min="0" style="width:70px;">
+          <span>m/s²</span>
+        </label>
+        <label>มวลกล่อง m (kg):
+          <input type="number" id="mass" value="5" step="0.5" min="0.1">
+        </label>
+        <label>
+          <input type="checkbox" id="showVec"> แสดงเวกเตอร์ของแรง
+        </label>
+      </div>
+      <div class="panel-row buttons">
+        <button id="play">เล่น</button>
+        <button id="reset" class="secondary">รีเซ็ต</button>
+        <button id="explain" class="secondary" style="background:#0ea5e9;color:#fff;">อธิบายหลักการ</button>
+      </div>
+    </div>
+    <div id="amin">จากข้อมูลที่กรอก: ความเร่งน้อยที่สุดที่ทำให้กล่องอยู่นิ่งโดยไม่ไถลลงมาคือ ...</div>
+    <div id="morelink">ศึกษาเพิ่มเติมที่ <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener noreferrer">เพจคลายปมฟิสิกส์</a></div>
+  </div>
+
+  <!-- Modal -->
+  <div id="modal">
+    <div id="modalBox">
+      <h3>
+        อธิบายหลักการ
+        <button id="closeModal">ปิด</button>
+      </h3>
+      <p>รถเร่งไปทางขวา ผนังของรถดันกล่องในแนวนอนด้วยแรงปฏิกิริยา \(N\) ทำให้เกิดแรงเสียดทานขึ้นในแนวดิ่งเพื่อพยุงกล่องไว้ไม่ให้ตกลง.</p>
+      <p>แรงปฏิกิริยาจากรถ: \(N = m a\)</p>
+      <p>แรงเสียดทานสถิตมากสุด: \(f_s^{\max} = \mu_s N = \mu_s m a\)</p>
+      <p>เงื่อนไขไม่ให้กล่องตกลงมา: ต้องให้แรงเสียดทานมากพอจะต้านน้ำหนัก \(mg\)</p>
+      <p>
+        \[
+           f_s^{\max} \ge mg \quad \Rightarrow \quad \mu_s m a \ge m g \quad \Rightarrow \quad a \ge \frac{g}{\mu_s}
+        \]
+      </p>
+      <p><strong>ข้อสังเกต:</strong> มวล \(m\) ตัดออกหมด ดังนั้นความเร่งต่ำสุดนี้ <u>ไม่ขึ้นกับมวลของกล่อง</u></p>
+      <p style="background:#e0f2fe;padding:6px 10px;border-radius:8px;display:inline-block;">
+        \[
+          a_{\min} = \frac{g}{\mu_s}
+        \]
+      </p>
+      <div class="eq-fallback">
+        ถ้ายังไม่เห็นสมการ ให้ต่อเน็ตหรืออนุญาตโหลดสคริปต์ภายนอก แล้วเปิดใหม่<br>
+        สมการหลัก: a_min = g / μ_s
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const isMobile = window.innerWidth < 600;
+
+  const canvas = document.getElementById('cv');
+  const ctx = canvas.getContext('2d');
+
+  const muSIn = document.getElementById('muS');
+  const massIn = document.getElementById('mass');
+  const accIn = document.getElementById('acc');
+  const accSlider = document.getElementById('accSlider');
+  const showVec = document.getElementById('showVec');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  const aminDiv = document.getElementById('amin');
+  const explainBtn = document.getElementById('explain');
+  const modal = document.getElementById('modal');
+  const closeModal = document.getElementById('closeModal');
+
+  function forceMathJax(){
+    if (window.MathJax && window.MathJax.typesetPromise){
+      window.MathJax.typesetPromise();
+    } else {
+      setTimeout(forceMathJax, 500);
+    }
+  }
+  window.addEventListener('load', forceMathJax);
+
+  // Physics
+  const g = 9.81;
+  let muS = parseFloat(muSIn.value);
+  let muK = 0.8 * muS;
+  let m = parseFloat(massIn.value);
+  let aCar = parseFloat(accIn.value);
+  let aMin = g / muS;
+
+  // Positions
+  const carY = 140;
+  const carX = 320;
+  const carW = 260;
+  const carH = 120;
+  const wheelR = 26;
+
+  const blockW = 80;
+  const blockH = 60;
+  const blockX = carX + carW;
+  const blockY0 = carY + 25;
+  let blockY = blockY0;
+  let blockVy = 0;
+
+  const groundY = 280;
+
+  let bgOffset = 0;
+
+  // clouds
+  const clouds = [];
+  for (let i = 0; i < 4; i++){
+    clouds.push({
+      x: 80 + i*240,
+      y: 30 + (i%2)*25,
+      w: 110 + (i%3)*20,
+      h: 40
+    });
+  }
+
+  // trees
+  const trees = [];
+  for (let i = 0; i < 5; i++){
+    trees.push({
+      x: 100 + i*200,
+      y: groundY - 70,
+      h: 55 + (i%2)*10
+    });
+  }
+
+  let playing = false;
+  let lastTime = null;
+  let blockLanded = false;
+
+  function updateAminText(){
+    muS = Math.max(0.05, parseFloat(muSIn.value));
+    muK = 0.8 * muS;
+    aCar = Math.max(0, parseFloat(accIn.value));
+    accSlider.value = aCar;
+    m = Math.max(0.1, parseFloat(massIn.value));
+    aMin = g / muS;
+    aminDiv.textContent = `จากข้อมูลที่กรอก: a₍min₎ = g / μₛ = ${g.toFixed(2)} / ${muS.toFixed(2)} = ${aMin.toFixed(2)} m/s²`;
+  }
+  updateAminText();
+
+  accSlider.addEventListener('input', () => {
+    accIn.value = accSlider.value;
+    updateAminText();
+  });
+  accIn.addEventListener('input', () => {
+    accSlider.value = accIn.value;
+    updateAminText();
+  });
+  muSIn.addEventListener('input', updateAminText);
+  massIn.addEventListener('input', updateAminText);
+
+  playBtn.addEventListener('click', () => {
+    playing = !playing;
+    playBtn.textContent = playing ? 'หยุด' : 'เล่น';
+    if (playing) blockLanded = false;
+  });
+
+  resetBtn.addEventListener('click', () => {
+    muSIn.value = '0.80';
+    massIn.value = '5';
+    accSlider.value = '8';
+    accIn.value = '8';
+    showVec.checked = false;
+    blockY = blockY0;
+    blockVy = 0;
+    blockLanded = false;
+    bgOffset = 0;
+    updateAminText();
+    playing = false;
+    playBtn.textContent = 'เล่น';
+  });
+
+  explainBtn.addEventListener('click', () => {
+    modal.style.display = 'flex';
+    forceMathJax();
+  });
+  closeModal.addEventListener('click', () => {
+    modal.style.display = 'none';
+  });
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) modal.style.display = 'none';
+  });
+
+  function drawArrow(x1, y1, x2, y2, color, width=2){
+    const headLen = 10;
+    const angle = Math.atan2(y2 - y1, x2 - x1);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x2, y2);
+    ctx.lineTo(x2 - headLen * Math.cos(angle - Math.PI / 6), y2 - headLen * Math.sin(angle - Math.PI / 6));
+    ctx.lineTo(x2 - headLen * Math.cos(angle + Math.PI / 6), y2 - headLen * Math.sin(angle + Math.PI / 6));
+    ctx.lineTo(x2, y2);
+    ctx.fillStyle = color;
+    ctx.fill();
+  }
+
+  function drawCloud(c){
+    ctx.fillStyle = "rgba(255,255,255,0.95)";
+    ctx.beginPath();
+    ctx.ellipse(c.x, c.y, c.w*0.35, c.h*0.4, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(c.x + c.w*0.25, c.y+5, c.w*0.32, c.h*0.35, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(c.x - c.w*0.25, c.y+8, c.w*0.28, c.h*0.32, 0, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  function drawTree(t){
+    ctx.fillStyle = "rgba(15,118,110,0.14)";
+    ctx.fillRect(t.x-10, t.y, 20, t.h);
+    ctx.beginPath();
+    ctx.fillStyle = "rgba(22,163,74,0.2)";
+    ctx.arc(t.x, t.y, 22, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  function drawScene(dt){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    // sky
+    ctx.fillStyle = "#dbeafe";
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    // clouds
+    clouds.forEach(cl => {
+      if (playing && !blockLanded){
+        cl.x -= 30 * dt;
+      }
+      if (cl.x < -150){
+        cl.x = canvas.width + 80;
+      }
+      drawCloud(cl);
+    });
+
+    // trees
+    trees.forEach(tr => {
+      if (playing && !blockLanded){
+        tr.x -= 40 * dt;
+      }
+      if (tr.x < -50){
+        tr.x = canvas.width + 150;
+      }
+      drawTree(tr);
+    });
+
+    // road
+    if (playing && !blockLanded) {
+      bgOffset -= aCar * 2;
+    }
+    ctx.fillStyle = "#f8fafc";
+    ctx.fillRect(0, groundY - 50, canvas.width, 50);
+    ctx.fillStyle = "#111";
+    ctx.fillRect(0, groundY, canvas.width, 40);
+
+    // white lines farther again
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = 4;
+    const dashGap = 240;
+    for (let x = (bgOffset % dashGap) - dashGap; x < canvas.width+dashGap; x += dashGap){
+      ctx.beginPath();
+      ctx.moveTo(x, groundY + 20);
+      ctx.lineTo(x + 45, groundY + 20);
+      ctx.stroke();
+    }
+
+    // car
+    ctx.fillStyle = "rgba(209,213,219,1)";
+    ctx.strokeStyle = "#0f172a";
+    ctx.lineWidth = 2;
+    ctx.fillRect(carX, carY, carW, carH);
+    ctx.strokeRect(carX, carY, carW, carH);
+    ctx.beginPath();
+    ctx.moveTo(carX + carW, carY);
+    ctx.lineTo(carX + carW, carY + carH);
+    ctx.stroke();
+
+    // wheels
+    ctx.fillStyle = "#000";
+    ctx.beginPath();
+    ctx.arc(carX + 60, carY + carH, wheelR, 0, Math.PI*2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(carX + carW - 60, carY + carH, wheelR, 0, Math.PI*2);
+    ctx.fill();
+
+    // block
+    ctx.fillStyle = "rgba(250,204,21,1)";
+    ctx.strokeStyle = "#0f172a";
+    ctx.fillRect(blockX, blockY, blockW, blockH);
+    ctx.strokeRect(blockX, blockY, blockW, blockH);
+    ctx.fillStyle = "#0f172a";
+    ctx.font = isMobile ? "22px system-ui" : "16px system-ui";
+    ctx.fillText("m", blockX + blockW/2 - 4, blockY + blockH/2 + 5);
+
+    // accel arrow
+    const aScale = 15;
+    const aLen = Math.min(120, aCar * aScale);
+    const ax1 = carX + carW/2;
+    const ay1 = carY - 20;
+    const ax2 = ax1 + aLen;
+    drawArrow(ax1, ay1, ax2, ay1, "#0ea5e9", 3);
+    // label above arrow
+    ctx.fillStyle = "#0f172a";
+    const labelText = `a = ${aCar.toFixed(2)} m/s²`;
+    ctx.font = isMobile ? "18px system-ui" : "13px system-ui";
+    const labelWidth = ctx.measureText(labelText).width;
+    const midX = (ax1 + ax2)/2;
+    ctx.fillText(labelText, midX - labelWidth/2, ay1 - 20);
+
+    // forces
+    if (showVec.checked){
+      const N = m * aCar;
+      const holdable = (muS * N >= m * g);
+      const f = holdable ? m * g : (muK * N);
+      const W = m * g;
+      const fScale = 120 / (m*g + 1);
+
+      const contactX = carX + carW;
+      const contactY = blockY + blockH/2;
+
+      // friction up
+      const fLen = f * fScale;
+      drawArrow(contactX, contactY, contactX, contactY - fLen, "#f97316", 2);
+      ctx.font = isMobile ? "18px system-ui" : "13px system-ui";
+      ctx.fillStyle = "#f97316";
+      ctx.fillText("f", contactX + 4, contactY - fLen - 4);
+
+      // weight
+      const baseX = blockX + blockW/2;
+      const baseY = blockY + blockH/2;
+      const wLen = W * fScale;
+      drawArrow(baseX, baseY, baseX, baseY + wLen, "#ef4444", 2);
+      ctx.font = isMobile ? "18px system-ui" : "13px system-ui";
+      ctx.fillStyle = "#ef4444";
+      ctx.fillText("mg", baseX + 4, baseY + wLen + 12);
+
+      // normal arrow length depends on N
+      const nExtra = Math.min(100, N * 0.45);
+      const nLen = 25 + nExtra;
+      const nStartX = blockX - nLen;
+      const nStartY = contactY;
+      const nEndX = blockX;
+      const nEndY = contactY;
+      drawArrow(nStartX, nStartY, nEndX, nEndY, "#0f172a", 2);
+      ctx.font = isMobile ? "18px system-ui" : "13px system-ui";
+      ctx.fillStyle = "#0f172a";
+      ctx.fillText("N", nStartX + nLen/2 - 4, nStartY - 6);
+    }
+
+    // condition text
+    ctx.fillStyle = (aCar >= aMin) ? "#16a34a" : "#dc2626";
+    ctx.font = isMobile ? "18px system-ui" : "13px system-ui";
+    const msg = (aCar >= aMin)
+      ? "เงื่อนไขผ่าน: แรงเสียดทานสถิตเพียงพอ กล่องติดหน้ารถ"
+      : "เงื่อนไขไม่พอ: แรงเสียดทานสถิตไม่พอ กล่องไถลลงด้วยแรงเสียดทานจลน์";
+    ctx.fillText(msg, 10, 20);
+  }
+
+  function step(timestamp){
+    if (!lastTime) lastTime = timestamp;
+    const dt = Math.min(0.03, (timestamp - lastTime)/1000);
+    lastTime = timestamp;
+
+    if (playing){
+      muS = Math.max(0.05, parseFloat(muSIn.value));
+      muK = 0.8 * muS;
+      aCar = Math.max(0, parseFloat(accIn.value));
+      m = Math.max(0.1, parseFloat(massIn.value));
+      aMin = g / muS;
+      aminDiv.textContent = `จากข้อมูลที่กรอก: a₍min₎ = g / μₛ = ${g.toFixed(2)} / ${muS.toFixed(2)} = ${aMin.toFixed(2)} m/s²`;
+
+      if (!blockLanded){
+        if (aCar >= aMin){
+          blockY = blockY0;
+          blockVy = 0;
+        } else {
+          const aDown = g - muK * aCar;
+          blockVy += aDown * dt;
+          const pxPerM = 60;
+          blockY += blockVy * dt * pxPerM;
+
+          if (blockY + blockH >= groundY){
+            blockY = groundY - blockH;
+            blockVy = 0;
+            blockLanded = true;
+            playing = false;
+            playBtn.textContent = 'เล่น';
+          }
+        }
+      }
+    }
+
+    drawScene(dt);
+    requestAnimationFrame(step);
+  }
+
+  requestAnimationFrame(step);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+
+<html lang="th">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1, viewport-fit=cover" name="viewport"/>
+<title>แล็บชั่งน้ำหนักบนลิฟต์ — N = m(g+a)</title>
+<style>
+    :root{ --bg:#f7f7f5; --ink:#0f172a; --line:#e5e7eb; --accent:#0ea5e9; --accent2:#38bdf8; --scale:#cbd5e1; --red:#ef4444; --green:#10b981; --blue:#3b82f6; --black:#000; }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--ink);
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial;overflow:auto}
+    .wrap{display:flex;flex-direction:column;height:100%;width:100%}
+    .head{padding:8px 12px;background:#fff;border-bottom:1px solid var(--line);flex:0 0 auto}
+
+    .head h1{margin:0;color:#1d4ed8;font-size:22px}
+
+    /* สีตัวอักษรเฉพาะหัวข้อปรับค่า */
+    #v0Wrap{color:#7c3aed}
+    #accelLabelBlue{color:#2563eb}
+
+    /* Desktop: จอทดลองซ้าย / แผงขวา และไม่ให้แผงมีสไลเดอร์ */
+    @media (min-width: 1000px){
+      .wrap{display:grid;grid-template-columns: 1fr 380px;grid-template-rows:auto 1fr auto;height:100%;width:100%}
+      .head{grid-column:1 / -1}
+      .canvas-wrap{grid-column:1;grid-row:2}
+      .controls{
+        grid-column:2;grid-row:2;
+        max-height:none;overflow:visible;
+        display:flex;flex-direction:column;gap:10px;
+        border-left:1px solid var(--line);
+        border-bottom:none;
+      }
+      .controls label{width:100%}
+      .toolbar{display:grid;grid-template-columns:1fr;gap:8px;margin-top:6px}
+    }
+
+    .controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;
+      padding:8px;background:#fff;border-bottom:1px solid var(--line);flex:0 0 auto;overflow:visible;max-height:none}
+    .controls label{font-size:13px;display:flex;flex-direction:column;gap:4px}
+    .controls select,.controls input,.controls button{width:100%}
+    .toolbar{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+    .btn{padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;cursor:pointer;font-size:13px}
+    .btn.primary{background:#e0f2fe;border-color:#bae6fd}
+    .btn.active{border-color:var(--accent);box-shadow:0 0 0 2px rgba(14,165,233,.15)}
+    .canvas-wrap{flex:1 1 auto;position:relative;overflow:auto;background:#f8fafc;display:flex}
+    canvas{flex:1;width:100%;height:100%;display:block;background:#fafafa;border:1px solid var(--line);border-radius:12px}
+    .hint{padding:6px 12px;color:#475569;font-size:12px;background:#fff;border-top:1px solid var(--line);flex:0 0 auto}
+    .modal{position:fixed;inset:0;background:rgba(15,23,42,.45);display:none;align-items:center;justify-content:center;padding:20px;z-index:50;overflow:auto}
+    .modal.show{display:flex}
+    .modal .panel{max-width:820px;width:100%;max-height:90vh;display:flex;flex-direction:column;background:#fff;border-radius:16px;border:1px solid var(--line);box-shadow:0 20px 60px rgba(2,8,23,.25)}
+    .modal .panel header{padding:10px 14px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+    .modal .panel header h3{margin:0;font-size:15px}
+    .modal .panel .body{padding:12px;font-size:14px;line-height:1.55;overflow:auto;flex:1 1 auto}
+    .modal .panel footer{padding:10px 14px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end}
+    .q{border:1px solid var(--line);border-radius:12px;padding:10px;margin:8px 0;background:#f9fafb}
+    .q h4{margin:0 0 6px 0;font-size:14px}
+    .options{display:grid;gap:6px}
+    .badge{display:inline-block;padding:2px 8px;border-radius:999px;background:#eef2ff;color:#312e81;font-size:12px}
+    .ok{color:#065f46}
+    .no{color:#991b1b}
+    code, .mjx-math{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:2px 6px}
+    .hidden{display:none !important}
+    .credit{position:absolute;right:10px;bottom:10px;background:#ffffffcc;border:1px solid var(--line);padding:6px 10px;border-radius:999px;font-size:12px}
+    .credit a{color:#0369a1;text-decoration:none}
+.status-pill{position:absolute;top:10px;left:50%;transform:translateX(-50%);
+background:rgba(219,234,254,.96);border:1px solid rgba(147,197,253,.9);color:#1e3a8a;
+padding:6px 14px;border-radius:999px;font-size:13px;font-weight:700;
+box-shadow:0 10px 28px rgba(2,8,23,.12);z-index:6;}
+
+  
+    .btn-vector{border:2px solid #f59e0b;background:#fff;}
+    .btn-play{background:#e0f2fe;border-color:#bae6fd;}
+    .btn-reset{background:#e5e7eb;border-color:#d1d5db;}
+    .btn-calc{background:#ffedd5;border-color:#fdba74;}
+    .btn-quiz{background:#ecfeec;border-color:#86efac;}
+
+
+
+    /* Stepper (+/-) for numeric inputs */
+    .stepper{display:flex;align-items:stretch;gap:6px;margin-top:2px}
+    .stepper input{flex:1;min-width:0}
+    .stepper-btn{width:38px;flex:0 0 38px;border:1px solid var(--line);border-radius:10px;background:#fff;cursor:pointer;font-size:18px;line-height:1}
+    .stepper-btn:active{transform:translateY(1px)}
+    /* Mobile: move toolbar under canvas */
+    .toolbar-mount{display:none}
+    @media (max-width: 860px){
+      .toolbar-mount{display:block}
+      #toolbar{margin-top:10px}
+    }
+
+
+/* Mobile stacked toolbar under canvas */
+@media (max-width: 860px){
+  .toolbar{flex-direction:column;gap:10px}
+  .toolbar .btn{width:100%;padding:14px 16px;font-size:18px;border-radius:18px}
+}
+
+    /* Layout fix to prevent canvas disappearing on mobile */
+    html,body{height:100%}
+    .wrap{min-height:100vh}
+
+    /* Vector checkbox */
+    .vector-toggle{width:100%;margin-top:6px}
+    .chk{display:flex;align-items:center;gap:10px;padding:10px 12px;border:2px solid #f59e0b;border-radius:18px;background:#fff;font-size:18px;justify-content:center}
+    .chk input{transform:scale(1.2)}
+    .chk span{user-select:none}
+
+    /* Toolbar 2 columns, shorter buttons */
+    .toolbar{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:10px}
+    .toolbar .btn{padding:10px 12px;font-size:18px;border-radius:18px}
+
+    /* Ensure canvas stays visible */
+    .canvas-wrap{min-height:300px}
+    @media (max-width: 860px){
+      .canvas-wrap{min-height:320px}
+      canvas{min-height:320px}
+    }
+
+
+
+/* ===== Mobile fine-tuning ===== */
+@media (max-width: 860px){
+
+  /* Checkbox 'แสดงเวกเตอร์' thinner orange border */
+  .vector-toggle{
+    border-width:1px !important;
+    border-color:#fde68a !important; /* lighter orange */
+  }
+
+  /* Status labels: ลิฟต์ขึ้น / ลิฟต์ลง -> 80% */
+  .status-pill{
+    transform: scale(0.8);
+    transform-origin: top center;
+  }
+
+  /* Acceleration label 'a' move down */
+  .label-a{
+    transform: translateY(30px);
+  }
+
+  /* Human figure taller */
+  .person{
+    transform: scaleY(1.5);
+    transform-origin: bottom center;
+  }
+
+  /* Force labels N, mg smaller */
+  .force-label{
+    transform: scale(0.4);
+    transform-origin: center;
+  }
+
+  /* Credit text to very bottom */
+  .credit{
+    position: relative;
+    order: 99;
+    margin-top: 16px;
+    text-align: center;
+  }
+}
+</style>
+<script>
+    window.MathJax = { tex: {inlineMath: [['$','$'],['\\(','\\)']]}, svg: {fontCache: 'global'} };
+  </script>
+<script async="" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+</head>
+<body>
+<div class="wrap">
+<div class="head"><h1>การทดลอง : ชั่งน้ำหนักบนลิฟต์</h1></div>
+<div class="controls">
+<!-- ซ้ายสุด: มวลคน -->
+<label>มวลคน (kg)
+        <input id="mass" max="120" min="20" step="0.1" type="number" value="60"/>
+</label>
+<!-- ต่อมา: สถานะการเคลื่อนที่เริ่มต้น -->
+<label>สถานะการเคลื่อนที่เริ่มต้น
+        <select id="motion">
+<option selected="" value="stop">หยุดนิ่ง</option>
+<option value="up">เคลื่อนที่ขึ้น</option>
+<option value="down">เคลื่อนที่ลง</option>
+<option value="freefall">ลิฟต์ขาด (Free fall)</option>
+</select>
+</label>
+<!-- ต่อจากสถานะ: ความเร็วต้น -->
+<label class="hidden" id="v0Wrap">ความเร็วต้น v₀ (m/s)
+        <div class="stepper"><button class="stepper-btn" data-stepper="minus" type="button">−</button><input id="v0" max="20" min="0" step="0.1" type="number" value="0"/><button class="stepper-btn" data-stepper="plus" type="button">+</button></div>
+</label>
+<label>ลักษณะการเคลื่อนที่
+        <select id="kinematics">
+<option selected="" value="const">ความเร็วคงที่ (a=0)</option>
+<option value="accel">มีความเร่ง</option>
+</select>
+</label>
+<label id="accelDirWrap" style="display:none">ทิศของความเร่ง
+        <select id="accelDir">
+<option value="up">เร่งขึ้น</option>
+<option value="down">เร่งลง</option>
+</select>
+</label>
+<label id="accelLabelBlue">|a| (m/s²)
+        <div class="stepper"><button class="stepper-btn" data-stepper="minus" type="button">−</button><input id="accel" max="9.8" min="0" step="0.1" type="number" value="0"/><button class="stepper-btn" data-stepper="plus" type="button">+</button></div>
+</label>
+<div class="vector-toggle">
+<label class="chk">
+<input id="toggleForces" type="checkbox"/>
+<span>แสดงเวกเตอร์</span>
+</label>
+</div>
+<div class="toolbar" id="toolbar">
+<button class="btn btn-play" id="playPause">พัก/เล่น</button>
+<button class="btn btn-reset" id="reset">รีเซ็ต</button>
+<button class="btn btn-calc" id="showCalc">วิธีคำนวณ</button>
+<button class="btn btn-quiz" id="btnQuiz">แบบฝึกหัด</button>
+</div>
+</div>
+<div class="canvas-wrap">
+<canvas aria-label="elevator scene" id="scene"></canvas>
+<div class="status-pill" id="statusPill">ลิฟต์หยุดนิ่ง</div>
+
+</div><div class="toolbar-mount" id="toolbarMount"></div>
+<div class="hint" id="hint">สถานะ: หยุดนิ่ง</div>
+</div>
+<!-- Modal -->
+<div aria-labelledby="modalTitle" aria-modal="true" class="modal" id="modal" role="dialog">
+<div class="panel">
+<header>
+<h3 id="modalTitle">เนื้อหา</h3>
+<button class="btn" id="closeModal">ปิด</button>
+</header>
+<div class="body" id="modalBody"></div>
+<footer id="modalFooter" style="display:none">
+<button class="btn" id="submitQuiz">ส่งคำตอบ</button>
+<button class="btn" id="retryQuiz" style="display:none">ทำใหม่</button>
+<button class="btn" id="closeQuiz" style="display:none">ปิด</button>
+</footer>
+</div>
+</div>
+<script>
+(() => {
+  const canvas = document.getElementById('scene');
+  const ctx = canvas.getContext('2d');
+  const ui = {
+    motion: document.getElementById('motion'),
+    kinematics: document.getElementById('kinematics'),
+    accelDir: document.getElementById('accelDir'),
+    accelDirWrap: document.getElementById('accelDirWrap'),
+    mass: document.getElementById('mass'),
+    accel: document.getElementById('accel'),
+    accelLabelBlue: document.getElementById('accelLabelBlue'),
+    v0: document.getElementById('v0'),
+    v0Wrap: document.getElementById('v0Wrap'),
+    toggleForces: document.getElementById('toggleForces'),
+    showCalc: document.getElementById('showCalc'),
+    btnQuiz: document.getElementById('btnQuiz'),
+    playPause: document.getElementById('playPause'),
+    reset: document.getElementById('reset'),
+  };
+  const modal = { root: document.getElementById('modal'), close: document.getElementById('closeModal'), body: document.getElementById('modalBody'), title: document.getElementById('modalTitle'), footer: document.getElementById('modalFooter'), submitQuiz: document.getElementById('submitQuiz'), retryQuiz: document.getElementById('retryQuiz'), closeQuiz: document.getElementById('closeQuiz') };
+  const hint = document.getElementById('hint');
+  const g = 9.8;
+  let showForces=false, running=true, lastT=0, bgOffset=0, v=0, blink=0;
+  let autoStopped=false;
+  let audioCtx=null;
+
+  function positiveAxisIsUp(){
+    const m = ui.motion.value;
+    if(m==='up') return true;
+    if(m==='down' || m==='freefall') return false;
+    return true;
+  }
+  function signedAccelerationByUserAxis(){
+    const aMag = parseFloat(ui.accel.value)||0;
+    if(aMag===0 || ui.kinematics.value!=='accel') return 0;
+    const axisUp = positiveAxisIsUp();
+    const accelIsUp = (ui.accelDir.value==='up');
+    const sameDir = (axisUp===accelIsUp);
+    return sameDir ? +aMag : -aMag;
+  }
+  function toWorldUp(a_user){
+    const axisUp = positiveAxisIsUp();
+    return axisUp ? a_user : -a_user;
+  }
+
+  function refreshAccelUI(){
+    const kin = ui.kinematics.value;
+    const motion = ui.motion.value;
+    const isStop = motion==='stop';
+    const isFree = motion==='freefall';
+
+    ui.v0Wrap.classList.toggle('hidden', isStop===true);
+    ui.accelDirWrap.style.display = (kin==='accel' && !isStop && !isFree) ? '' : 'none';
+    ui.accelLabelBlue.style.display = (kin==='accel' && !isStop) ? '' : 'none';
+
+    if(isStop){
+      ui.accel.value = 0; ui.accel.disabled = true; ui.kinematics.value = 'const';
+      ui.v0.value = 0;
+    } else if(isFree){
+      ui.kinematics.value = 'accel';
+      ui.accelDir.value = 'down';
+      ui.accel.value = 9.8;
+      ui.accel.disabled = true;
+    } else {
+      ui.accel.disabled = (kin==='const');
+      if(kin==='const') ui.accel.value = 0;
+    }
+  }
+  function resetAll(){
+    autoStopped=false;
+    // ปลดล็อกการเล่น
+    running=true;
+    document.getElementById('playPause').classList.toggle('active',running);
+
+    ui.motion.value = 'stop';
+    ui.kinematics.value = 'const';
+    ui.accel.value = 0;
+    ui.accelDir.value = 'up';
+    ui.mass.value = 60;
+    ui.v0.value = 0;
+    showForces = false;
+    running = true;
+    v = 0; bgOffset = 0; blink = 0; lastT = 0;
+    refreshAccelUI();
+    hint.textContent = 'สถานะ: หยุดนิ่ง';
+    if(window.MathJax) MathJax.typesetPromise && MathJax.typesetPromise();
+  }
+
+  function beepStop(){
+    try{
+      if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+      const o = audioCtx.createOscillator();
+      const gNode = audioCtx.createGain();
+      o.type = 'sine';
+      o.frequency.value = 880;
+      gNode.gain.value = 0.12;
+      o.connect(gNode); gNode.connect(audioCtx.destination);
+      o.start();
+      o.stop(audioCtx.currentTime + 0.22);
+    }catch(e){}
+  }
+
+  function triggerAutoStop(){
+    if(autoStopped) return;
+    autoStopped = true;
+    running = false;
+    document.getElementById('playPause').classList.toggle('active',running);
+    v = 0;
+    bgVInited = false;
+    // กลับสู่โหมด "ลิฟต์หยุดนิ่ง" เพื่อให้ค่าคำนวณกลับเป็นกรณีหยุดนิ่งทันที
+    ui.motion.value = 'stop';
+    refreshAccelUI();
+    beepStop();
+  }
+
+  refreshAccelUI();
+
+  function fitDPI(){ const ratio=Math.max(1,Math.floor(window.devicePixelRatio||1));
+    const w=canvas.parentElement.clientWidth; const h=canvas.parentElement.clientHeight;
+    canvas.width=Math.max(1,Math.round(w*ratio)); canvas.height=Math.max(1,Math.round(h*ratio));
+    canvas.style.width=w+'px'; canvas.style.height=h+'px'; ctx.setTransform(ratio,0,0,ratio,0,0);
+  }
+  function clear(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    // พื้นหลังลายเส้น (นอกลิฟต์) เคลื่อนด้วย bgOffset
+    fillPatternRect(0,0,canvas.clientWidth,canvas.clientHeight,bgOffset);
+  }
+
+  function makeStripeCanvas(){
+    const p=document.createElement('canvas');
+    p.width=48; p.height=32; // ระยะเส้นห่างขึ้น
+    const pc=p.getContext('2d');
+    pc.fillStyle='#ffffff'; pc.fillRect(0,0,p.width,p.height);
+    pc.strokeStyle='rgba(125,211,252,0.35)'; pc.lineWidth=2;
+    pc.beginPath(); pc.moveTo(-6,2); pc.lineTo(p.width+6,2); pc.stroke();
+    return p;
+  }
+  const stripeCanvas=makeStripeCanvas();
+  function fillPatternRect(x,y,w,h,offsetY){ const pw=stripeCanvas.width, ph=stripeCanvas.height;
+    const startY=y+((offsetY%ph)-ph);
+    for(let ty=startY;ty<y+h+ph;ty+=ph){ for(let tx=x;tx<x+w;tx+=pw){ ctx.drawImage(stripeCanvas,tx,ty); }}}
+
+  function drawElevator(x,y,w,h){
+    ctx.save();
+    // ภายในลิฟต์: พื้นเรียบ (ไม่เป็นลายเส้น)
+    ctx.fillStyle='#ffffff';
+    ctx.fillRect(x+3,y+3,w-6,h-6);
+    ctx.strokeStyle='#334155'; ctx.lineWidth=3; ctx.strokeRect(x,y,w,h);
+    ctx.restore();
+  }
+
+  function drawIndicators(E_X,E_Y,E_W){
+    let motion = ui.motion.value;
+    if(motion==='freefall') motion='down';
+    if(motion==='stop') return;
+    const cx = E_X + E_W - 36; const cy = E_Y + 24; const sz = 10;
+    const on = Math.sin(blink*6) > 0;
+    ctx.save();
+    ctx.fillStyle = '#11182722'; ctx.fillRect(cx-18, cy-16, 36, 32);
+    ctx.beginPath(); ctx.moveTo(cx, cy-8); ctx.lineTo(cx-sz, cy+2); ctx.lineTo(cx+sz, cy+2); ctx.closePath();
+    ctx.fillStyle = (motion==='up' && (running? on:true)) ? '#fbbf24' : '#94a3b8'; ctx.fill();
+    ctx.beginPath(); ctx.moveTo(cx, cy+8); ctx.lineTo(cx-sz, cy-2); ctx.lineTo(cx+sz, cy-2); ctx.closePath();
+    ctx.fillStyle = (motion==='down' && (running? on:true)) ? '#fbbf24' : '#94a3b8'; ctx.fill();
+    ctx.restore();
+  }
+
+  function drawArrow(x1,y1,x2,y2,color,label,labelDy=0,lineWidth=3){
+    ctx.save();
+    ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=lineWidth;
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+    const dx=x2-x1, dy=y2-y1; const len=Math.hypot(dx,dy)||1; const ux=dx/len, uy=dy/len;
+    const ah=10, aw=6;
+    ctx.beginPath(); ctx.moveTo(x2,y2);
+    ctx.lineTo(x2-ux*ah-uy*aw, y2-uy*ah+ux*aw);
+    ctx.lineTo(x2-ux*ah+uy*aw, y2-uy*ah-ux*aw);
+    ctx.closePath(); ctx.fill();
+
+    if(label){
+      const mobile = window.matchMedia('(max-width: 860px)').matches;
+      const isBig = /^\s*(mg|N)/i.test(label);
+      const isA   = /^\s*a\s*=/.test(label);
+
+      // base font sizing + special bumps
+      const fontScale = mobile ? 0.3 : 1;
+      const base = isBig ? 24 : 12;
+      let bump = (mobile && isBig) ? 7 : 0;   // mg/N bump
+      if(mobile && isA) bump += 10;
+      if(!mobile && isA) bump += 5; // desktop +5px for a           // a label bigger +10px on mobile
+
+      ctx.font=((base*fontScale)+bump).toFixed(2)+'px ui-monospace,Menlo,Consolas,monospace';
+      ctx.textAlign='left';
+      ctx.textBaseline='middle';
+
+      // label offsets (mobile only)
+      let offX = 8, offY = labelDy;
+      if(mobile && isA){
+        offX += 12; // move label to the right of arrow
+        offY += (y1 + y2) / 2 - y2; // center label vertically on arrow
+      }        // move a label down 20px
+      if(mobile && /^\s*N\b/.test(label)){    // move N label up and right
+        offX += 15;
+        offY -= 30;
+      }
+
+      ctx.fillText(label, x2+offX, y2+offY);
+    }
+    ctx.restore();
+  }
+
+  function drawBanner(text, x, y){
+    ctx.save();
+    const isMobile = window.matchMedia('(max-width: 860px)').matches;
+    const isFreefall = /^\s*วัตถุตกอิสระ/.test(text);
+    const s = (isMobile && isFreefall) ? 0.7 : 1;
+    ctx.translate(x, y);
+    ctx.scale(s, s);
+    x = 0; y = 0;
+    ctx.font='bold 13px ui-monospace,Menlo,Consolas,monospace';
+    const padX=10, padY=6; const metrics=ctx.measureText(text);
+    const bw = metrics.width + padX*2; const bh = 28;
+    ctx.fillStyle='rgba(59,130,246,0.12)';
+    ctx.strokeStyle='#3b82f6'; ctx.lineWidth=1.5;
+    ctx.fillRect(x, y, bw, bh); ctx.strokeRect(x, y, bw, bh);
+    ctx.fillStyle='#1e293b'; ctx.textBaseline='middle'; ctx.fillText(text, x+padX, y+bh/2);
+    ctx.restore();
+  }
+
+  function drawShakeLines(centerX, bodyTop, size, phase){
+    const amp = size * 0.02, spread = size * 0.28, y0 = bodyTop + size*0.05;
+    ctx.save(); ctx.strokeStyle = '#0f172a'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+    for(let i=0;i<3;i++){ const yy=y0+i*size*0.08+Math.sin(phase*8+i)*2;
+      ctx.beginPath(); ctx.moveTo(centerX-spread-6+Math.sin(phase*20+i)*1.2, yy);
+      ctx.lineTo(centerX-spread-6-amp, yy+Math.cos(phase*24+i)*amp*0.5); ctx.stroke();}
+    for(let i=0;i<3;i++){ const yy=y0+i*size*0.08+Math.cos(phase*7+i)*2;
+      ctx.beginPath(); ctx.moveTo(centerX+spread+6+Math.sin(phase*18+i)*1.2, yy);
+      ctx.lineTo(centerX+spread+6+amp, yy+Math.sin(phase*22+i)*amp*0.5); ctx.stroke();}
+    const headY = bodyTop - size*0.12;
+    for(let i=0;i<3;i++){ const ang=(-0.6+i*0.6), r=size*0.22, bx=centerX+Math.cos(ang)*r, by=headY+Math.sin(ang)*r+Math.sin(phase*10+i)*2;
+      ctx.beginPath(); ctx.moveTo(bx,by); ctx.lineTo(bx+Math.cos(ang)*amp, by+Math.sin(ang)*amp); ctx.stroke();}
+    ctx.restore();
+  }
+
+  function drawScalePlatform(cx, top, size, readingN){
+    const width=size, height=size*0.5; const x=cx-width/2, y=top;
+    ctx.save();
+    ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--scale') || '#cbd5e1';
+    ctx.strokeStyle='#1f2937'; ctx.lineWidth=2;
+    ctx.fillRect(x,y,width,height); ctx.strokeRect(x,y,width,height);
+    const dispW=width*0.6, dispH=height*0.35; const dispX=cx-dispW/2, dispY=y+height*0.18;
+    ctx.fillStyle='#fff'; ctx.fillRect(dispX,dispY,dispW,dispH); ctx.strokeRect(dispX,dispY,dispW,dispH);
+    ctx.fillStyle='#0f172a'; ctx.font='bold 14px ui-monospace,Menlo,Consolas,monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText((readingN||0).toFixed(0)+' N', cx, dispY+dispH/2);
+    ctx.fillStyle='#0f172a'; ctx.font='12px ui-monospace,Menlo,Consolas,monospace'; ctx.textBaseline='alphabetic';
+    ctx.fillText('SCALE', cx, y+height+14);
+    ctx.restore();
+    return {x,y,width,height,size};
+  }
+
+  function drawPersonOnScale(scaleRect, faceMode='normal'){
+    const {x,y,size,width}=scaleRect;
+    const centerX=x+width/2, baseY=y;
+
+    const footW=size*0.18, footH=size*0.04;
+    const legW=size*0.10,  legH=size*0.30;
+    const bodyW=size*0.24, bodyH=size*0.32;
+    const armW=size*0.08,  armH=size*0.28;
+    const headR=size*0.12;
+
+    let jx=0, jy=0;
+    if(faceMode==='snap'){ jx=Math.sin(blink*40)*2+Math.cos(blink*27)*1.5; jy=Math.cos(blink*36)*2+Math.sin(blink*31)*1.2; }
+
+    ctx.save(); ctx.translate(jx,jy); ctx.fillStyle='#000';
+
+    const footY=baseY-footH;
+    ctx.fillRect(centerX-footW-6,footY,footW,footH);
+    ctx.fillRect(centerX+6,footY,footW,footH);
+
+    const legY=footY-legH;
+    ctx.fillRect(centerX-legW-6,legY,legW,legH);
+    ctx.fillRect(centerX+6,legY,legW,legH);
+
+    const bodyY=legY-bodyH;
+    ctx.fillRect(centerX-bodyW/2,bodyY,bodyW,bodyH);
+
+    const armY=bodyY+bodyH*0.10;
+    if(faceMode==='snap'){
+      ctx.fillRect(centerX-bodyW/2-armH-6, armY, armH, armW);
+      ctx.fillRect(centerX+bodyW/2+6,       armY, armH, armW);
+    } else {
+      ctx.fillRect(centerX-bodyW/2-armW-4,armY,armW,armH);
+      ctx.fillRect(centerX+bodyW/2+4,     armY,armW,armH);
+    }
+
+    const headCX=centerX, headCY=bodyY-headR-4;
+    ctx.beginPath(); ctx.arc(headCX,headCY,headR,0,Math.PI*2); ctx.fill();
+
+    ctx.fillStyle='#fff';
+    if(faceMode==='snap'){
+      const rEye=headR*0.20, eyeY=headCY-headR*0.18, eyeDx=headR*0.42;
+      ctx.beginPath(); ctx.arc(headCX-eyeDx,eyeY,rEye,0,Math.PI*2); ctx.arc(headCX+eyeDx,eyeY,rEye,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(headCX,headCY+headR*0.28,headR*0.24,0,Math.PI*2); ctx.fill();
+
+      ctx.save(); ctx.strokeStyle='#000'; ctx.lineWidth=3; ctx.lineCap='round';
+      const spikes=7, topY=headCY-headR-2;
+      for(let i=0;i<spikes;i++){ const t=(i/(spikes-1))-0.5, baseX=headCX+t*headR*1.4, len=headR*0.55*(1-Math.abs(t)*0.3);
+        ctx.beginPath(); ctx.moveTo(baseX,topY); ctx.lineTo(baseX + t*4, topY - len); ctx.stroke();}
+      ctx.restore();
+
+      drawShakeLines(centerX, bodyY, size, blink);
+    } else {
+      const eyeOffsetX=headR*0.4, eyeY=headCY-headR*0.2;
+      ctx.beginPath(); ctx.arc(headCX-eyeOffsetX,eyeY,headR*0.12,0,Math.PI*2);
+      ctx.arc(headCX+eyeOffsetX,eyeY,headR*0.12,0,Math.PI*2); ctx.fill();
+      ctx.strokeStyle='#fff'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(headCX-headR*0.4,headCY+headR*0.35); ctx.lineTo(headCX+headR*0.4,headCY+headR*0.35); ctx.stroke();
+    }
+
+    ctx.restore();
+    return {bodyTop:bodyY, headTop:(headCY-headR), headCX:headCX};
+  }
+
+  function computeN(motion,kinematics,accelDir,m){
+    if(motion==='freefall') return 0;
+    const a_user = signedAccelerationByUserAxis();
+    const a_worldUp = toWorldUp(a_user);
+    return Math.max(0, m*(g + a_worldUp));
+  }
+
+  function getKinematics(){
+    const motion = ui.motion.value;
+    const kin = ui.kinematics.value;
+    const v0 = parseFloat(ui.v0.value) || 0;
+    const a_user = signedAccelerationByUserAxis();
+    const axisUp = positiveAxisIsUp();
+
+    const pxPerMS=60;
+    if(motion==='stop') return {baseV:0,a:0};
+    if(motion==='freefall') return {baseV: (+1)*v0*pxPerMS, a: +g*pxPerMS};
+
+    const sgnV = (motion==='up')? +1 : -1;
+    const baseV = sgnV * v0 * pxPerMS;
+    const a_vis = axisUp ? a_user : -a_user;
+
+    return {baseV, a: a_vis*pxPerMS};
+  }
+
+  function renderCalc(){
+    const m = parseFloat(ui.mass.value);
+    const motion = ui.motion.value;
+
+    let a_user = 0, a_worldUp = 0;
+    if(motion==='freefall'){ a_worldUp = -g; }
+    else { a_user = signedAccelerationByUserAxis(); a_worldUp = toWorldUp(a_user); }
+
+    const N  = Math.max(0, m*(g + a_worldUp));
+
+    modal.title.textContent = 'วิธีคำนวณอย่างละเอียด';
+    modal.body.innerHTML = `
+      <p><span class="badge">กฎของนิวตัน</span></p>
+      <ol>
+        <li><b>กำหนดแกน:</b> ทิศขึ้นเป็นบวก (+)</li>
+        <li>$\\sum F = ma \\Rightarrow N - mg = ma$</li>
+        <li>$N = m(g+a)$</li>
+      </ol>
+      <p><span class="badge">แทนค่า</span></p>
+      <p>
+        $\\begin{aligned}
+        N &= m(g+a)\\\\
+          &= ${m.toFixed(1)}\\,(9.8 + ${a_worldUp.toFixed(2)})\\\\
+          &= ${N.toFixed(1)}\\,\\text{N}
+        \\end{aligned}$
+      </p>
+      ${(motion==='freefall')?'<p>ตกอิสระ ⇒ $a=-g$ ⇒ $N=0$</p>':''}
+      <p><i>$N$ คือแรงปฏิกิริยาที่ตาชั่งทำกับคน (ค่าที่ตาชั่งอ่านได้)</i></p>
+    `;
+    modal.footer.style.display='none';
+    modal.closeQuiz.style.display='none';
+    modal.root.classList.add('show');
+    if(window.MathJax) MathJax.typesetPromise && MathJax.typesetPromise();
+  }
+
+  const quiz = [
+    { q: 'มวล 60 kg อยู่ในลิฟต์เร่งขึ้น $a=2\\,\\text{m/s}^2$ ค่าที่ตาชั่งอ่านได้เท่าไร?', opts: ['588 N','708 N','480 N','0 N'], ans: 1, exp: 'ใช้ $N=m(g+a)=60(9.8+2)=708\\,\\text{N}$' },
+    { q: 'มวล 70 kg ลิฟต์เร่งลง $a=1.5\\,\\text{m/s}^2$ ค่า $N$ คือ', opts: ['686 N','735 N','574 N','0 N'], ans: 2, exp: '$N=m(g-a)=70(9.8-1.5)\\\\approx574\\,\\text{N}$' },
+    { q: 'มวล 55 kg ลิฟต์ความเร็วคงที่ ค่า $N$ เท่าไร', opts: ['0 N','539 N','604 N','490 N'], ans: 1, exp: 'ความเร็วคงที่ $a=0 \\Rightarrow N=mg=55\\times9.8=539\\,\\text{N}$' },
+    { q: 'สถานการณ์ใด $N=0$', opts: ['เร่งขึ้น','เร่งลง','หยุดนิ่ง','ลิฟต์ขาด'], ans: 3, exp: 'Free fall: ระบบเร่งลงด้วย $g$ ทำให้ไม่มีแรงกดบนตาชั่ง $\\Rightarrow N=0$' },
+    { q: 'เลือกข้อความถูกต้อง', opts: ['อ่านได้เสมอ $N=mg$','$N$ เป็นแรงโน้มถ่วง','$N$ คือแรงปฏิกิริยาและเปลี่ยนตาม $a$','$N$ ไม่ขึ้นกับมวล'], ans: 2, exp: '$N$ คือแรงปฏิกิริยาจากพื้น เปลี่ยนตามการเร่งของลิฟต์' },
+  ];
+
+  function openQuiz(){
+    modal.title.textContent = 'แบบฝึกหัด (ปรนัย)';
+    modal.footer.style.display='flex';
+    modal.submitQuiz.style.display='inline-block';
+    modal.retryQuiz.style.display='none';
+    modal.closeQuiz.style.display='inline-block';
+    modal.body.innerHTML = quiz.map((it,idx)=>{
+      const name = `q${idx}`;
+      const opts = it.opts.map((op,i)=>`<label style="display:flex;gap:6px;align-items:flex-start"><input type="radio" name="${name}" value="${i}"> <span>${op}</span></label>`).join('');
+      return `<div class="q"><h4>${idx+1}. ${it.q}</h4><div class="options">${opts}</div></div>`;
+    }).join('');
+    modal.body.scrollTop = 0;
+    modal.root.classList.add('show');
+    if(window.MathJax) MathJax.typesetPromise && MathJax.typesetPromise();
+  }
+
+  modal.submitQuiz.addEventListener('click', ()=>{
+    let score=0; const detail=[];
+    quiz.forEach((it,idx)=>{
+      const sel = modal.body.querySelector(`input[name=q${idx}]:checked`);
+      const pick = sel? parseInt(sel.value,10) : -1;
+      const ok = pick===it.ans; if(ok) score++;
+      detail.push(`<p><b>${idx+1}.</b> ${ok?'<span class=ok>ถูก</span>':'<span class=no>ผิด</span>'} — เฉลย: ${it.opts[it.ans]}<br><small>อธิบาย: ${it.exp}</small></p>`);
+    });
+    modal.body.innerHTML = `<p><span class="badge">คะแนน</span> ${score} / ${quiz.length}</p>` + detail.join('');
+    modal.submitQuiz.style.display='none';
+    modal.retryQuiz.style.display='inline-block';
+    if(window.MathJax) MathJax.typesetPromise && MathJax.typesetPromise();
+  });
+  modal.retryQuiz.addEventListener('click', openQuiz);
+  modal.close.addEventListener('click',()=>{ modal.root.classList.remove('show'); modal.footer.style.display='none'; modal.closeQuiz.style.display='none'; });
+  modal.closeQuiz.addEventListener('click',()=>{ modal.root.classList.remove('show'); modal.footer.style.display='none'; modal.closeQuiz.style.display='none'; });
+
+  let bgVInited=false;
+  function frame(t){
+    if(!lastT) lastT=t; const dt=Math.min(0.05,(t-lastT)/1000); lastT=t;
+    blink += dt;
+    if(running){
+      const k=getKinematics();
+      if(!bgVInited && (ui.motion.value!=='stop')){ v = k.baseV || 0; bgVInited=true; }
+
+      // อัปเดตความเร็ว: v = v + a dt  (หน่วย px/s)
+      const a = (k.a||0);
+      const vNew = v + a*dt;
+
+      // กรณี "เคลื่อนที่ขึ้น แต่เร่งลง" หรือ "เคลื่อนที่ลง แต่เร่งขึ้น" -> ช้าลงจนหยุด
+      const motion = ui.motion.value;
+      const kin = ui.kinematics.value;
+      const shouldCheckStop = (kin==='accel') && (motion==='up' || motion==='down') && Math.abs(a)>1e-9;
+
+      if(shouldCheckStop){
+        // ถ้าความเร่งสวนทิศกับความเร็ว (deceleration) และกำลังจะผ่านศูนย์ -> หยุด
+        const decel = (v!==0) && ((v>0 && a<0) || (v<0 && a>0));
+        const crossZero = (v>0 && vNew<=0) || (v<0 && vNew>=0);
+        if((decel && crossZero) || (Math.abs(vNew)<0.15 && decel)){
+          v = 0;
+          // ตรึงลายเส้น/การเคลื่อนที่ และกลับสู่โหมดหยุดนิ่ง + แจ้งเตือน
+          triggerAutoStop();
+        }else{
+          v = vNew;
+        }
+      }else{
+        v = vNew;
+      }
+
+      bgOffset += v * dt;
+    }
+    draw();
+    requestAnimationFrame(frame);
+  }
+
+  function draw(){
+    fitDPI(); clear();
+    const w=canvas.clientWidth,h=canvas.clientHeight;
+    let E_W=Math.max(200,Math.min(700,w*0.92)-100);
+    E_W = Math.max(200, E_W*0.80); // ลิฟต์แคบลงเหลือ 80%
+
+    const E_H=Math.max(280,Math.min(520,h*0.90)-100);
+    const E_X=(w-E_W)/2, E_Y=(h-E_H)/2+4;
+
+    drawElevator(E_X,E_Y,E_W,E_H);
+    drawIndicators(E_X,E_Y,E_W);
+
+    const floorY=E_Y+E_H-24;
+
+    const m=parseFloat(ui.mass.value);
+    const N=computeN(ui.motion.value,ui.kinematics.value,ui.accelDir.value,m);
+
+    const mobileScale = window.matchMedia('(max-width: 860px)').matches ? 1.8 : 1;
+    const scaleSize=Math.min(160,E_W*0.35)*mobileScale, scaleTop=floorY-(scaleSize*0.5);
+    const scaleRect=drawScalePlatform(E_X+E_W/2, scaleTop, scaleSize, N);
+    const parts=drawPersonOnScale(scaleRect, ui.motion.value==='freefall'?'snap':'normal');
+
+    if(showForces){
+      const mg = m*g;
+      const k=0.08;
+      const baseLen=Math.max(20, Math.min(120, mg*k/100));
+      const lenMg=Math.min(220, baseLen*2);
+      const lenN =Math.max(0, Math.min(220, lenMg * (mg>0 ? (N/mg) : 0)));
+      const mobileLen = window.matchMedia('(max-width: 860px)').matches ? 0.8 : 1;
+      const lenMg2 = lenMg * mobileLen;
+      const lenN2  = lenN  * mobileLen;
+      const cx = scaleRect.x + scaleRect.width/2;
+      const chestY = parts.bodyTop + 6;
+      const footY  = scaleRect.y - 2;
+      drawArrow(cx, chestY, cx, chestY + lenMg2, '#ef4444', 'mg '+mg.toFixed(1)+' N');
+      drawArrow(cx, footY,  cx, footY  - lenN2 , '#10b981', 'N '+N.toFixed(1)+' N', 50);
+
+      const motion = ui.motion.value;
+      let a_worldUp = 0, labelA='';
+      if(motion==='freefall'){ a_worldUp = -g; labelA='a = 9.8 m/s²'; }
+      else { a_worldUp = toWorldUp(signedAccelerationByUserAxis());
+             if(Math.abs(a_worldUp)>1e-6) labelA = 'a = ' + Math.abs(a_worldUp).toFixed(2) + ' m/s²'; }
+      if(labelA){
+        const isMobileA = window.matchMedia('(max-width: 860px)').matches;
+        const axX = (E_X + 6); // 6px from left edge of elevator
+        const axY = parts.headTop - 35; // move up total +30px from original
+        const aMag = Math.min(g, Math.abs(a_worldUp));
+        const baseA = 35; // baseline half-length
+        const lenA0 = Math.max(8, baseA * (aMag / g));
+        const lenA = isMobileA ? (lenA0 * 3) : (lenA0 * 3); // 3x longer on mobile
+        drawArrow(axX, axY, axX, axY + (a_worldUp<0? +lenA : -lenA), '#3b82f6', labelA, 0, 4);
+      }
+    }
+
+    if(ui.motion.value==='freefall'){
+      drawBanner('วัตถุตกอิสระ  N = 0  (เสมือนไร้แรงโน้มถ่วง)', E_X+12, E_Y+8);
+    }
+    if(autoStopped){
+      drawBanner('ลิฟต์หยุด', E_X+12, E_Y+44);
+    }
+
+    let motionTxt;
+    if(ui.motion.value==='stop') motionTxt='หยุดนิ่ง';
+    else if(ui.motion.value==='up') motionTxt='เคลื่อนที่ขึ้น';
+    else if(ui.motion.value==='down') motionTxt='เคลื่อนที่ลง';
+    else if(ui.motion.value==='freefall') motionTxt='กำลังลง (ตกอิสระ)';
+    hint.textContent = `สถานะ: ${motionTxt}`;
+    const sp=document.getElementById('statusPill');
+    if(sp){
+      if(autoStopped) sp.textContent='ลิฟต์หยุด';
+      else if(ui.motion.value==='up') sp.textContent='ลิฟต์กำลังขึ้น';
+      else if(ui.motion.value==='down') sp.textContent='ลิฟต์กำลังลง';
+      else if(ui.motion.value==='freefall') sp.textContent='ลิฟต์กำลังลง';
+      else sp.textContent='ลิฟต์หยุดนิ่ง';
+      if(window.matchMedia('(max-width: 860px)').matches){
+        sp.style.left = (E_X + E_W/2) + 'px';
+        sp.style.transform = 'translateX(-50%)';
+      } else {
+        sp.style.left = '50%';
+        sp.style.transform = 'translateX(-50%)';
+      }
+    }
+
+  }
+
+  window.addEventListener('resize', fitDPI);
+  modal.close.addEventListener('click',()=>{ modal.root.classList.remove('show'); modal.footer.style.display='none'; modal.closeQuiz.style.display='none'; });
+  document.getElementById('showCalc').addEventListener('click',renderCalc);
+  document.getElementById('btnQuiz').addEventListener('click', openQuiz);
+  document.getElementById('toggleForces').addEventListener('change',()=>{ showForces = document.getElementById('toggleForces').checked; });
+  document.getElementById('playPause').addEventListener('click',()=>{ running=!running; document.getElementById('playPause').classList.toggle('active',running); });
+  document.getElementById('reset').addEventListener('click', ()=>{ bgVInited=false; resetAll(); });
+  ui.motion.addEventListener('change', ()=>{ v=0; bgVInited=false; autoStopped=false; running=true; document.getElementById('playPause').classList.toggle('active',running); refreshAccelUI(); });
+  ui.kinematics.addEventListener('change', ()=>{ v=0; bgVInited=false; autoStopped=false; running=true; document.getElementById('playPause').classList.toggle('active',running); refreshAccelUI(); });
+  ui.v0.addEventListener('change', ()=>{ v=0; bgVInited=false; });
+
+  fitDPI(); resetAll(); requestAnimationFrame(frame);
+})();
+
+
+// --- Mobile toolbar relocation (below canvas) ---
+(function(){
+  const toolbar = document.getElementById('toolbar');
+  const controls = document.querySelector('.controls');
+  const mount = document.getElementById('toolbarMount');
+  if(!toolbar || !controls || !mount) return;
+
+  function relocate(){
+    const mobile = window.matchMedia('(max-width: 860px)').matches;
+    if(mobile){
+      if(toolbar.parentElement !== mount) mount.appendChild(toolbar);
+    }else{
+      if(toolbar.parentElement !== controls) controls.appendChild(toolbar);
+    }
+  }
+  window.addEventListener('resize', relocate, {passive:true});
+  relocate();
+})();
+
+// --- Stepper (+/-) for numeric inputs ---
+(function(){
+  function stepInput(input, dir){
+    const step = parseFloat(input.getAttribute('step') || '1') || 1;
+    const minAttr = input.getAttribute('min');
+    const maxAttr = input.getAttribute('max');
+    const min = (minAttr===null)? -Infinity : parseFloat(minAttr);
+    const max = (maxAttr===null)? Infinity : parseFloat(maxAttr);
+
+    const cur = parseFloat(input.value || '0') || 0;
+    let next = cur + (dir==='plus' ? step : -step);
+
+    // avoid float noise
+    const decimals = (String(step).split('.')[1] || '').length;
+    if(decimals>0) next = parseFloat(next.toFixed(decimals));
+
+    next = Math.min(max, Math.max(min, next));
+    input.value = String(next);
+    input.dispatchEvent(new Event('input', {bubbles:true}));
+    input.dispatchEvent(new Event('change', {bubbles:true}));
+  }
+
+  document.addEventListener('click', (e)=>{
+    const btn = e.target.closest('.stepper-btn');
+    if(!btn) return;
+    const wrap = btn.closest('.stepper');
+    const input = wrap ? wrap.querySelector('input') : null;
+    if(!input) return;
+    const dir = btn.getAttribute('data-stepper');
+    stepInput(input, dir);
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0ea5e9" />
+<title>PulleyLab — รอกเหนือแผ่นบน (เชือกหย่อน + คลื่นสะบัด)</title>
+<style>
+  :root{
+    --bg:#ffffff;
+    --wood1:#d8b792; --wood2:#eed2a8;
+    --ink:#0f172a; --muted:#475569; --line:#e5e7eb;
+    --pulley:#111111; --rope:#111111;
+    --m1:#d9ecff; --m2:#fff4cc;
+    --bracket:#b58900; --bracket-stroke:#0b2540;
+    --panel:#ffffff; --panelborder:#e5e7eb;
+    --accent:#0ea5e9; --green:#10b981; --red:#ef4444; --blue:#2563eb; --gold:#f59e0b;
+    --soft:#f1f5f9;
+  }
+  *{box-sizing:border-box}
+  html,body{
+    height:100%;margin:0;background:var(--bg);color:var(--ink);
+    font-family:system-ui,-apple-system,Segoe UI,Inter,Roboto,Arial
+  }
+
+  .wrap{
+    display:grid;
+    grid-template-columns:minmax(260px, 360px) 1fr;
+    gap:clamp(8px,2vw,16px);
+    align-items:start;
+    max-width:min(1200px, 96vw);
+    margin:12px auto;
+    padding:clamp(6px,1.5vw,12px);
+  }
+  @media(max-width:840px){
+    .wrap{grid-template-columns:1fr}
+    .row{grid-template-columns:1fr}
+  }
+  .card{
+    background:var(--panel);
+    border:1px solid var(--panelborder);
+    border-radius:14px;
+    padding:clamp(10px,2vw,14px);
+    box-shadow:0 1px 0 #00000008;
+  }
+  h1{font-size:clamp(16px,2.2vw,20px);margin:0 0 6px}
+  h2{font-size:clamp(15px,2vw,18px);margin:10px 0 6px}
+  label{display:block;font-size:clamp(13px,1.8vw,14px);margin:6px 0 4px;color:var(--muted)}
+  input[type="number"]{
+    width:100%;padding:12px 14px;border:1px solid var(--panelborder);border-radius:12px;font-size:clamp(15px,2.2vw,16px)
+  }
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  button{
+    padding:12px 16px;border:1px solid var(--panelborder);
+    border-radius:12px;background:#fff;cursor:pointer;
+    font-size:clamp(15px,2.2vw,16px);min-height:44px
+  }
+  button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  button.danger{background:#fff;border-color:#fca5a5;color:#b91c1c}
+  .ghost{background:#fff;border-color:#cbd5e1;color:#0f172a}
+  .soft{background:var(--soft);border-color:var(--panelborder);}
+
+  .stat{font-size:clamp(14px,2vw,15px);margin:4px 0}
+  .tag{display:inline-block;padding:2px 10px;border-radius:999px;border:1px solid var(--panelborder);font-size:clamp(12px,1.8vw,13px);color:var(--muted);margin-right:6px}
+  .eq{font-size:clamp(13px,1.9vw,15px);line-height:1.45;overflow-x:auto}
+  mjx-container{max-width:100%;overflow-x:auto;overflow-y:hidden}
+  .foot{font-size:clamp(12px,1.8vw,13px);color:var(--muted);margin-top:8px}
+  .foot a{color:#2563eb;text-decoration:none}
+  .foot a:hover{text-decoration:underline}
+  a{color:#2563eb;text-decoration:none}
+  a:hover{text-decoration:underline}
+  .note{
+    display:block;margin:6px 0 10px;padding:8px 10px;border:1px dashed var(--panelborder);
+    border-radius:10px;background:#fafafa;color:var(--muted);font-size:clamp(12px,1.9vw,14px)
+  }
+
+  svg{
+    width:100%;height:auto;border:1px solid var(--line);border-radius:12px;
+    background:#fff;user-select:none;touch-action:pan-x pan-y
+  }
+
+  /* Mobile extra controls (ใต้จอการทดลอง) */
+  .mobile-controls{
+    display:none;
+  }
+  #footEqMobile{
+    display:none;
+  }
+
+  /* Modal */
+  .modal.hidden{display:none}
+  .modal{
+    position:fixed;inset:0;background:#0f172a14;
+    backdrop-filter:saturate(120%) blur(4px);
+    display:flex;align-items:center;justify-content:center;
+    padding:12px;z-index:50
+  }
+  .modal .sheet{
+    width:min(980px,96vw);max-height:90vh;overflow:auto;
+    background:#fff;border:1px solid var(--panelborder);
+    border-radius:14px;box-shadow:0 10px 30px #0002;
+    padding:clamp(12px,2vw,18px)
+  }
+  .sheet h3{margin:0 0 10px;font-size:clamp(16px,2.2vw,20px)}
+  .sheet .desc{color:var(--muted);font-size:clamp(13px,1.9vw,14px);margin-bottom:10px}
+  .sheet .btnbar{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .sheet .close{background:#fff;border:1px solid #cbd5e1}
+
+  /* Pretty blocks */
+  .block{border:1px solid var(--panelborder);border-radius:12px;padding:12px;margin:10px 0}
+  .b-green{background:#ecfdf5;border-color:#bbf7d0}
+  .b-blue{ background:#eff6ff;border-color:#bfdbfe}
+  .b-gold{ background:#fffbeb;border-color:#fde68a}
+  .b-red{  background:#fef2f2;border-color:#fecaca}
+  .hl{background:#0ea5e91a;padding:0 6px;border-radius:6px}
+  .qcard{border:1px solid var(--panelborder);border-radius:12px;padding:12px;margin:10px 0;background:#fff}
+  .qhead{font-weight:600;margin-bottom:6px}
+  .opt{display:block;margin:6px 0}
+  .sol{margin-top:8px;display:none}
+
+  /* ==== Mobile layout: ซ่อนปุ่มบนแผงซ้าย และโชว์ปุ่ม+footnote ใต้จอทดลอง ==== */
+  @media(max-width:840px){
+    .controls button#toggleBtn,
+    .controls button#resetBtn{
+      display:none;
+    }
+    .mobile-controls{
+      display:flex;
+      gap:10px;
+      margin-top:12px;
+    }
+    .mobile-controls button{
+      flex:1;
+      padding:14px;
+      font-size:16px;
+      border-radius:12px;
+    }
+    /* ย้าย footnote ไปใต้ปุ่มเล่น/รีเซ็ต */
+    #footEq{
+      display:none;
+    }
+    #footEqMobile{
+      display:block;
+      margin-top:4px;
+    }
+  }
+</style>
+
+<!-- MathJax -->
+<script>window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']]}};</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <!-- LEFT PANEL -->
+  <div class="card">
+    <h1>ตั้งค่า & เล่นการทดลอง</h1>
+    <div class="note">เงื่อนไขแบบจำลอง: เชือกเบา • รอกเบา • รอกไม่มีความฝืด ⟶ <b>แรงตึงเชือกเท่ากันทั้งเส้น</b></div>
+
+    <div class="row">
+      <div>
+        <label>มวล $m_1$ (kg)</label>
+        <input id="m1Input" type="number" value="3.0" step="0.1" min="0.1" inputmode="decimal">
+      </div>
+      <div>
+        <label>มวล $m_2$ (kg)</label>
+        <input id="m2Input" type="number" value="4.0" step="0.1" min="0.1" inputmode="decimal">
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>สัมประสิทธิ์ความเสียดทานสถิต $&#92;mu_s$</label>
+        <input id="muSInput" type="number" value="0.35" step="0.01" min="0" max="1" inputmode="decimal">
+      </div>
+      <div>
+        <label>สัมประสิทธิ์ความเสียดทานจลน์ $&#92;mu_k$</label>
+        <input id="muKInput" type="number" value="0.25" step="0.01" min="0" max="1" inputmode="decimal">
+      </div>
+    </div>
+
+    <div class="controls">
+      <button id="toggleBtn" class="primary">▶ เล่น</button>
+      <button id="resetBtn" class="danger">↺ รีเซ็ต</button>
+      <button id="calcBtn" class="ghost">📘 แสดงการคำนวณ</button>
+      <button id="formulaBtn" class="ghost">📗 สูตรสำคัญ</button>
+      <button id="quizBtn" class="soft">📝 แบบฝึกหัด</button>
+    </div>
+
+    <h2>ผลลัพธ์ทันที</h2>
+    <div class="stat">สถานะ: <span id="status" class="tag">พร้อม</span></div>
+    <div class="stat">ความเร่งเฟสเชือกตึง $a$ = <b><span id="accel">0.0</span></b> m/s²</div>
+    <div class="stat">แรงตึงเชือก $T$ = <b><span id="tension">0.00</span></b> N</div>
+    <div class="stat">ความเร็วปัจจุบันของ $m_1$ = <b><span id="v1">0.00</span></b> m/s</div>
+    <div class="stat">ระยะที่ $m_2$ เหลือก่อนแตะพื้น = <b><span id="leftDrop">1.00</span></b> m</div>
+    <div class="stat">ระยะที่ $m_1$ เหลือก่อนชนรอก = <b><span id="leftGap">2.50</span></b> m</div>
+    <div class="stat">เชือกหย่อนสะสม $&#92;Delta &#92;ell$ = <b><span id="slack">0.00</span></b> m</div>
+
+    <h2>สมการ</h2>
+    <div class="eq" id="mainEq">
+      $$ a = &#92;frac{m_2 g - &#92;mu_k m_1 g}{m_1 + m_2}, &#92;qquad
+         T = m_1 a + &#92;mu_k m_1 g = m_2 g - m_2 a $$
+      หลัง $m_2$ แตะพื้น (เชือกหย่อน):
+      $$ a_{&#92;text{หลังแตะพื้น}} = -&#92;mu_k g, &#92;qquad T=0 $$
+    </div>
+
+    <div class="foot" id="footEq">
+      สเกลภาพ: $1&#92;,&#92;text{m}=100&#92;,&#92;text{px}$ •
+      ระยะเริ่มต้น: ผิวขวา $m_1$ ถึงรอก = $2.5&#92;,&#92;text{m}$ •
+      ฐาน $m_2$ ถึงพื้น = $1.0&#92;,&#92;text{m}$
+      <br />
+      ศึกษาเพิ่มเติมที่
+      <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener noreferrer">เพจคลายปมฟิสิกส์</a>
+    </div>
+  </div>
+
+  <!-- RIGHT: SVG SCENE -->
+  <div class="card">
+    <svg id="scene" viewBox="0 0 800 300" aria-label="ระบบรอก: m1 บนแผ่นบน, m2 แขวน, พร้อมเชือกโค้งตอนหย่อน">
+      <defs>
+        <linearGradient id="woodGrad" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%"  stop-color="var(--wood2)"/>
+          <stop offset="100%" stop-color="var(--wood1)"/>
+        </linearGradient>
+      </defs>
+
+      <!-- แผ่นไม้บน/ล่าง -->
+      <rect x="80" y="80" width="520" height="20" fill="url(#woodGrad)" stroke="#8b6a45"/>
+      <rect x="80" y="100" width="380" height="180" fill="url(#woodGrad)" stroke="#8b6a45"/>
+      <!-- เส้นพื้น -->
+      <line x1="60" y1="280" x2="80" y2="280" stroke="#9ca3af" stroke-width="2"/>
+      <line x1="460" y1="280" x2="780" y2="280" stroke="#9ca3af" stroke-width="2"/>
+
+      <!-- m1 -->
+      <g id="m1" transform="translate(280,20)">
+        <rect x="0" y="0" width="70" height="60" rx="8" fill="var(--m1)" stroke="var(--ink)"/>
+        <text x="35" y="36" text-anchor="middle" font-size="22" fill="var(--ink)">m<tspan dy="5" font-size="14">1</tspan></text>
+      </g>
+      <!-- จุดผูกเชือก m1 -->
+      <circle id="peg" cx="350" cy="50" r="3.5" fill="var(--rope)"/>
+
+      <!-- รอก -->
+      <g id="pulley" transform="translate(600,62)">
+        <g transform="translate(20,0) rotate(+30)">
+          <path d="M-20,-2 L-6,-6 L-1,34 L-20,40 Z" fill="var(--bracket)" stroke="var(--bracket-stroke)" stroke-width="1.6"/>
+          <circle cx="-7" cy="-3" r="3.2" fill="#fff" stroke="var(--bracket-stroke)" stroke-width="1.2"/>
+        </g>
+        <circle cx="0" cy="0" r="12" fill="var(--pulley)"/>
+        <circle cx="0" cy="0" r="3.2" fill="#fff"/>
+      </g>
+
+      <!-- เชือก -->
+      <path id="ropeTopPath" d="M 350 50 L 600 50" fill="none" stroke="var(--rope)" stroke-width="3" stroke-linecap="round"/>
+      <path id="ropeArc" d="M600,50 A12 12 0 0 1 612,62" fill="none" stroke="var(--rope)" stroke-width="3" stroke-linecap="round"/>
+      <path id="ropeDownPath" d="M 612 62 L 612 120" fill="none" stroke="var(--rope)" stroke-width="3" stroke-linecap="round"/>
+
+      <!-- m2 -->
+      <g id="m2" transform="translate(577,120)">
+        <rect x="0" y="0" width="70" height="60" rx="8" fill="var(--m2)" stroke="var(--ink)"/>
+        <text x="35" y="36" text-anchor="middle" font-size="22" fill="var(--ink)">m<tspan dy="5" font-size="14">2</tspan></text>
+      </g>
+
+      <text id="phaseText" x="90" y="22" font-size="14" fill="var(--muted)"></text>
+    </svg>
+
+    <!-- ปุ่มควบคุมสำหรับมือถือ: อยู่ใต้จอการทดลอง -->
+    <div id="mobileControls" class="mobile-controls">
+      <button id="toggleBtn_mobile" class="primary">▶ เล่น</button>
+      <button id="resetBtn_mobile" class="danger">↺ รีเซ็ต</button>
+    </div>
+
+    <!-- footnote สำหรับมือถือ (จะก็อปปี้ข้อความจาก footEq) -->
+    <div id="footEqMobile" class="foot"></div>
+  </div>
+</div>
+
+<!-- ===== Modal: แสดงการคำนวณ ===== -->
+<div id="calcModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="calcTitle">
+  <div class="sheet">
+    <h3 id="calcTitle">การคำนวณด้วยกฎของนิวตัน (Step-by-Step)</h3>
+    <div class="desc">สมมติทิศบวก: $m_1$ ไปขวา, $m_2$ ลงล่าง • ใช้ค่าปัจจุบันจากแผงตั้งค่า</div>
+    <div id="calcContent" class="eq"></div>
+    <div class="btnbar">
+      <button id="closeCalc" class="close">ปิดกลับสู่หน้าแรก</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Modal: สูตรสำคัญ ===== -->
+<div id="formulaModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="formulaTitle">
+  <div class="sheet">
+    <h3 id="formulaTitle">📗 สูตรสำคัญ</h3>
+    <div class="desc">สรุปกฎของนิวตัน • เงื่อนไขรอก/เชือกอุดมคติ • วิธีตั้งสมการหา $a,T$ • ก่อน/หลังแตะพื้น • เกณฑ์ไถล</div>
+
+    <div class="block b-blue">
+      <b class="hl">Newton’s 2nd Law</b><br/>
+      วัตถุแต่ละชิ้น: $\sum F = m a$ (ตั้งแกนให้ $+x$ ไปขวาสำหรับ $m_1$, $+y$ ลงล่างสำหรับ $m_2$)
+    </div>
+
+    <div class="block b-green">
+      <b class="hl">รอกเบา • เชือกเบา • รอกไร้ความฝืด</b><br/>
+      ⟶ <u>แรงตึงเชือกเท่ากันทั้งเส้น</u> (ใช้สัญลักษณ์ $T$ เดียวได้) และเชือกไม่ยืด (ความเร่งปลายเชือกเท่ากันในเฟสเชือกตึง)
+    </div>
+
+    <div class="block b-gold">
+      <b class="hl">ตั้งสมการหา $a$ และ $T$ (เฟสเชือกตึง)</b><br/>
+      บน $m_1$: $T - f_k = m_1 a$, โดย $f_k = \mu_k m_1 g$ (เมื่อไถลแล้ว)<br/>
+      บน $m_2$: $m_2 g - T = m_2 a$<br/>
+      แก้ระบบได้: $$ a = \frac{m_2 g - \mu_k m_1 g}{m_1 + m_2}, \qquad
+      T = m_1 a + \mu_k m_1 g = m_2 g - m_2 a $$
+    </div>
+
+    <div class="block b-blue">
+      <b class="hl">ก่อนแตะพื้น</b> (เชือกตึง): ใช้สูตร $a,T$ ข้างบน โดยเช็คก่อนว่าเริ่มเคลื่อนที่ไหมด้วย $$m_2 g \stackrel{?}{>} \mu_s m_1 g$$
+      ถ้าไม่ผ่าน ⟶ <b>ไม่ไถล</b>, $a=0$, $T=m_2 g$, และ $f_s = T \le \mu_s m_1 g$.
+    </div>
+
+    <div class="block b-blue">
+      <b class="hl">หลัง $m_2$ แตะพื้น</b> (เชือกหย่อน): $T=0$ และ $m_1$ เคลื่อนที่ช้าลงด้วยความเสียดทานจลน์ล้วน ๆ ⟶ $$ a_{\text{หลังแตะพื้น}} = -\mu_k g $$ (จนหยุดหรือชนรอก)
+    </div>
+
+    <div class="block b-red">
+      <b class="hl">วิเคราะห์ “จะไถลไหม?”</b><br/>
+      เปรียบเทียบ $m_2 g$ กับ $\mu_s m_1 g$<br/>
+      - ถ้า $m_2 g \le \mu_s m_1 g$ ⟶ <b>ไม่ไถล</b> (หยุดนิ่ง), ใช้ <u>เสียดทานสถิต</u><br/>
+      - ถ้า $m_2 g > \mu_s m_1 g$ ⟶ <b>เริ่มไถล</b>, ใช้ <u>เสียดทานจลน์</u> ในสูตร $a,T$
+    </div>
+
+    <div class="btnbar">
+      <button id="closeFormula" class="close">ปิด</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Modal: แบบฝึกหัด ===== -->
+<div id="quizModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="quizTitle">
+  <div class="sheet">
+    <h3 id="quizTitle">📝 แบบฝึกหัดเช็คคอนเซ็ปต์</h3>
+    <div class="desc">ตอบจากข้อความ/ตัวเลขที่ให้ แม้ไม่มีรูปก็เข้าใจได้ เลือกคำตอบ 1 ข้อ ต่อคำถาม</div>
+    <div id="quizContainer"></div>
+    <div class="btnbar">
+      <button id="gradeBtn" class="primary">ตรวจคำตอบ</button>
+      <button id="closeQuiz" class="close">ปิด</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  // ===== Constants & geometry =====
+  const SCALE = 100; // px per meter
+  const g = 9.81;
+
+  // Elements
+  const m1G = document.getElementById('m1');
+  const m2G = document.getElementById('m2');
+  const peg = document.getElementById('peg');
+  const ropeTopPath = document.getElementById('ropeTopPath');
+  const ropeDownPath = document.getElementById('ropeDownPath');
+
+  const statusEl = document.getElementById('status');
+  const accelEl = document.getElementById('accel');
+  const tensEl = document.getElementById('tension');
+  const v1El = document.getElementById('v1');
+  const leftDropEl = document.getElementById('leftDrop');
+  const leftGapEl = document.getElementById('leftGap');
+  const slackEl = document.getElementById('slack');
+  const phaseText = document.getElementById('phaseText');
+
+  const m1Input = document.getElementById('m1Input');
+  const m2Input = document.getElementById('m2Input');
+  const muSInput = document.getElementById('muSInput');
+  const muKInput = document.getElementById('muKInput');
+  const toggleBtn = document.getElementById('toggleBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const calcBtn = document.getElementById('calcBtn');
+
+  const formulaBtn = document.getElementById('formulaBtn');
+  const quizBtn = document.getElementById('quizBtn');
+
+  const calcModal = document.getElementById('calcModal');
+  const closeCalc = document.getElementById('closeCalc');
+  const calcContent = document.getElementById('calcContent');
+
+  const formulaModal = document.getElementById('formulaModal');
+  const closeFormula = document.getElementById('closeFormula');
+
+  const quizModal = document.getElementById('quizModal');
+  const closeQuiz = document.getElementById('closeQuiz');
+  const quizContainer = document.getElementById('quizContainer');
+  const gradeBtn = document.getElementById('gradeBtn');
+
+  // Mobile controls
+  const toggleBtnMobile = document.getElementById('toggleBtn_mobile');
+  const resetBtnMobile = document.getElementById('resetBtn_mobile');
+  const footEq = document.getElementById('footEq');
+  const footEqMobile = document.getElementById('footEqMobile');
+
+  // Geometry
+  const pulleyX = 600, pulleyY = 62;
+  const m1W = 70, m1H = 60, m2H = 60;
+  const groundY = 280;
+
+  // Distances
+  const initialGap_m = 2.5;  // m1 right face to pulley
+  const initialDrop_m = 1.0; // m2 bottom to ground
+
+  // State
+  let m1x_px, m1y_px = 20;
+  let m2x_px = 577, m2y_px;
+  let s1 = 0, s2 = 0;
+  let v = 0;
+  let a_phase1 = 0, T_phase1 = 0;
+  let playing = false, lastT = null;
+  let phase = 0; // 1: taut, 2: slack/coast, 3: stop
+  let s1_at_ground = 0, slack_m = 0;
+  let wobbleStart = null;
+
+  // ===== Setup positions =====
+  function setupInitialPositions(){
+    const gap_px = initialGap_m * SCALE;
+    const m1Right_px_target = pulleyX - gap_px;
+    m1x_px = m1Right_px_target - m1W;
+    m1G.setAttribute('transform', `translate(${m1x_px},${m1y_px})`);
+
+    const drop_px = initialDrop_m * SCALE;
+    m2y_px = groundY - drop_px - m2H;
+    m2G.setAttribute('transform', `translate(${m2x_px},${m2y_px})`);
+
+    peg.setAttribute('cx', (m1x_px + m1W));
+    peg.setAttribute('cy', 50);
+
+    drawTopRopeStraight();
+    drawDownRopeStraight();
+
+    s1=0; s2=0; v=0; a_phase1=0; T_phase1=0;
+    s1_at_ground=0; slack_m=0; phase=1; wobbleStart=null; lastT=null;
+    updateHUD();
+  }
+
+  // ===== Rope drawing =====
+  function drawTopRopeStraight(){
+    const x1=m1x_px+m1W, y=50, x2=pulleyX;
+    ropeTopPath.setAttribute('d',`M ${x1} ${y} L ${x2} ${y}`);
+  }
+  function drawDownRopeStraight(){
+    const x=pulleyX+12, y1=pulleyY, y2=m2y_px;
+    ropeDownPath.setAttribute('d',`M ${x} ${y1} L ${x} ${y2}`);
+  }
+  function drawTopRopeSag(slack_px, wobble_px){
+    const x1=m1x_px+m1W, x2=pulleyX, y=50;
+    const cx=(x1+x2)/2, cy=y + Math.min(40, slack_px*0.6) + (wobble_px||0);
+    ropeTopPath.setAttribute('d',`M ${x1} ${y} Q ${cx} ${cy} ${x2} ${y}`);
+  }
+  function drawDownRopeSag(slack_px, wobble_px){
+    const x=pulleyX+12, y1=pulleyY, y2=m2y_px;
+    const cx=x + Math.min(40, slack_px*0.5) + (wobble_px||0)*0.6;
+    const cy=(y1+y2)/2;
+    ropeDownPath.setAttribute('d',`M ${x} ${y1} Q ${cx} ${cy} ${x} ${y2}`);
+  }
+
+  // ===== Physics =====
+  function computePhase1(m1, m2, mu_s, mu_k){
+    const threshold = mu_s * m1 * g;
+    if (m2 * g <= threshold){
+      return { moving:false, a:0, T: m2*g, threshold };
+    }
+    const fk = mu_k * m1 * g;
+    const a = (m2 * g - fk) / (m1 + m2);
+    const T = m2 * g - m2 * a; // = m1*a + fk
+    return { moving:true, a, T, threshold, fk };
+  }
+
+  function fmtSigned1(x){
+    return (x>=0?'':'−') + Math.abs(x).toFixed(1);
+  }
+
+  // ===== HUD =====
+  function updateHUD(){
+    const leftDrop_m = Math.max(0, initialDrop_m - s2);
+    const leftGap_m  = Math.max(0, initialGap_m  - s1);
+    leftDropEl.textContent = leftDrop_m.toFixed(2);
+    leftGapEl .textContent = leftGap_m.toFixed(2);
+    accelEl   .textContent = fmtSigned1(a_phase1);
+    tensEl    .textContent = T_phase1.toFixed(2);
+    v1El      .textContent = v.toFixed(2);
+    slackEl   .textContent = Math.max(0, slack_m).toFixed(2);
+
+    if (phase===1){
+      statusEl.textContent='เชือกตึง: เฟส 1';
+      phaseText.textContent='เฟส 1 — เชือกตึง';
+    } else if (phase===2){
+      statusEl.textContent='เชือกหย่อน + สะบัด: เฟส 2';
+      phaseText.textContent='เฟส 2 — m2 แตะพื้น: เชือกหย่อนT=0';
+    } else if (phase===3){
+      statusEl.textContent='หยุด';
+      phaseText.textContent='หยุด — ชนรอกหรือหยุดนิ่ง';
+    } else {
+      statusEl.textContent='พร้อม';
+      phaseText.textContent='';
+    }
+    statusEl.className='tag';
+  }
+
+  function setM1X_by_s1(){
+    const newRight=(pulleyX - (initialGap_m - s1)*SCALE);
+    m1x_px=newRight - m1W;
+    m1G.setAttribute('transform',`translate(${m1x_px},${m1y_px})`);
+    peg.setAttribute('cx', m1x_px+m1W);
+  }
+  function setM2Y_by_s2(){
+    const newBottom=(groundY - (initialDrop_m - s2)*SCALE);
+    m2y_px=newBottom - m2H;
+    m2G.setAttribute('transform',`translate(${m2x_px},${m2y_px})`);
+  }
+
+  function currentWobble(ts){
+    if (wobbleStart===null) return 0;
+    const t=(ts - wobbleStart)/1000;
+    if (t<0) return 0;
+    return 25 * Math.exp(-2.0 * t) * Math.sin(2*Math.PI*6.0*t);
+  }
+  function updateRopes(ts){
+    if (phase===2){
+      const slack_px = slack_m * SCALE;
+      const wobble_px = currentWobble(ts);
+      drawTopRopeSag(slack_px, wobble_px);
+      drawDownRopeSag(slack_px, wobble_px);
+    } else {
+      drawTopRopeStraight();
+      drawDownRopeStraight();
+    }
+  }
+
+  // ===== Integrator =====
+  function step(dt, ts){
+    const m1 = Math.max(0.01, Number(m1Input.value));
+    const m2 = Math.max(0.01, Number(m2Input.value));
+    const mu_s = Math.max(0, Number(muSInput.value));
+    const mu_k = Math.max(0, Number(muKInput.value));
+
+    if (phase===1){
+      const info = computePhase1(m1, m2, mu_s, mu_k);
+      a_phase1 = info.a;
+      T_phase1 = info.T;
+      if (!info.moving){
+        v=0;
+        updateHUD();
+        updateRopes(ts);
+        return;
+      }
+
+      v += a_phase1 * dt;
+      const ds = v * dt;
+      s1 = Math.min(initialGap_m, s1 + ds);
+      s2 = Math.min(initialDrop_m, s2 + ds);
+      setM1X_by_s1();
+      setM2Y_by_s2();
+      updateHUD();
+      updateRopes(ts);
+
+      if (s1 >= initialGap_m){
+        v=0;
+        phase=3;
+        updateHUD();
+        updateRopes(ts);
+        return;
+      }
+      if (s2 >= initialDrop_m){
+        phase=2;
+        s1_at_ground = s1;
+        slack_m = 0;
+        wobbleStart = ts;
+        updateHUD();
+        updateRopes(ts);
+      }
+    } else if (phase===2){
+      const ak = -Math.sign(v || 1) * (Number(muKInput.value) * g);
+      v += ak * dt;
+      if (Math.abs(v) < 1e-4) v = 0;
+      const ds = v * dt;
+      s1 = Math.min(initialGap_m, Math.max(0, s1 + ds));
+      setM1X_by_s1();
+      slack_m = Math.max(0, s1 - s1_at_ground);
+      updateHUD();
+      updateRopes(ts);
+      if (s1 >= initialGap_m || v === 0){
+        phase=3;
+        updateHUD();
+        updateRopes(ts);
+      }
+    }
+  }
+
+  function tick(ts){
+    if (!playing){
+      lastT = null;
+      return;
+    }
+    if (lastT==null) lastT = ts;
+    const dt = Math.min(0.033, (ts - lastT)/1000); // ~30 FPS
+    lastT = ts;
+    step(dt, ts);
+    requestAnimationFrame(tick);
+  }
+
+  // ===== Controls =====
+  toggleBtn.addEventListener('click', ()=>{
+    playing = !playing;
+    toggleBtn.textContent = playing ? '⏸ หยุด' : '▶ เล่น';
+    if (toggleBtnMobile){
+      toggleBtnMobile.textContent = playing ? '⏸ หยุด' : '▶ เล่น';
+    }
+    if (playing) requestAnimationFrame(tick);
+  });
+
+  resetBtn.addEventListener('click', ()=>{
+    playing=false;
+    toggleBtn.textContent='▶ เล่น';
+    if (toggleBtnMobile){
+      toggleBtnMobile.textContent='▶ เล่น';
+    }
+    setupInitialPositions();
+  });
+
+  [m1Input,m2Input,muSInput,muKInput].forEach(el=>{
+    el.addEventListener('input', ()=>{
+      if (phase!==1){ updateHUD(); return; }
+      const info = computePhase1(+m1Input.value, +m2Input.value, +muSInput.value, +muKInput.value);
+      a_phase1 = info.a;
+      T_phase1 = info.T;
+      updateHUD();
+    });
+  });
+
+  // ===== Mobile Controls wiring =====
+  if (toggleBtnMobile && resetBtnMobile){
+    toggleBtnMobile.addEventListener('click', ()=>{
+      toggleBtn.click();
+    });
+    resetBtnMobile.addEventListener('click', ()=>{
+      resetBtn.click();
+    });
+  }
+
+  // ===== Step-by-step calculations modal =====
+  function toFixedTrim(x, n){ return Number(x).toFixed(n); }
+  function showCalculations(){
+    const m1 = Math.max(0.01, +m1Input.value);
+    const m2 = Math.max(0.01, +m2Input.value);
+    const mu_s = Math.max(0, +muSInput.value);
+    const mu_k = Math.max(0, +muKInput.value);
+
+    const info = computePhase1(m1, m2, mu_s, mu_k);
+    const move = info.moving;
+    const a = info.a || 0;
+    const T = info.T || (m2 * g);
+
+    let latex = `
+**ขั้นที่ 1: กำหนดแรง (FBD) และทิศทาง**
+\\[
+\\begin{aligned}
+&\\text{แกน } +x:~ m_1 \\text{ ไปขวา},\\quad +y:~ m_2 \\text{ ลงล่าง} \\\\
+&\\text{บน } m_1:~ T ~\\text{ไปขวา},~ f_k=\\mu_k m_1 g ~\\text{ต้าน (ซ้าย)} \\\\
+&\\text{บน } m_2:~ m_2 g ~\\text{ลง},~ T ~\\text{ขึ้น}
+\\end{aligned}
+\\]
+
+**ขั้นที่ 2: ตรวจเริ่มไถลหรือไม่ (เสียดทานสถิต)**
+\\[
+m_2 g ~${m2*g>mu_s*m1*g ? '>' : '\\\\le'}~ \\mu_s m_1 g
+\\quad\\Rightarrow\\quad
+${m2*g>mu_s*m1*g ? '\\\\text{เริ่มไถล}' : '\\\\text{ยังไม่ไถล (นิ่ง)}'}
+\\]
+\\[
+m_2 g = ${toFixedTrim(m2,2)}\\cdot ${toFixedTrim(g,2)} = ${toFixedTrim(m2*g,2)}\\,\\text{N},\\quad
+\\mu_s m_1 g = ${toFixedTrim(mu_s,2)}\\cdot ${toFixedTrim(m1,2)}\\cdot ${toFixedTrim(g,2)} = ${toFixedTrim(mu_s*m1*g,2)}\\,\\text{N}
+\\]
+`;
+
+    if(!move){
+      latex += `
+**สรุปเมื่อยังไม่ไถล**
+\\[
+a = 0,\\quad T = m_2 g = ${toFixedTrim(m2*g,2)}\\,\\text{N},\\quad f_s = T \\le \\mu_s m_1 g
+\\]
+`;
+    } else {
+      latex += `
+**ขั้นที่ 3: สมการนิวตัน (เชือกตึง ใช้เสียดทานจลน์ $\\mu_k$)**
+\\[
+\\begin{cases}
+\\text{บน } m_1:~ T - f_k = m_1 a,\\qquad f_k=\\mu_k m_1 g \\\\
+\\text{บน } m_2:~ m_2 g - T = m_2 a
+\\end{cases}
+\\]
+
+**ขั้นที่ 4: แก้ระบบหา \\(a\\) และ \\(T\\)**
+\\[
+a = \\frac{m_2 g - \\mu_k m_1 g}{m_1 + m_2},\\qquad
+T = m_1 a + \\mu_k m_1 g
+\\]
+
+**แทนค่าเชิงตัวเลข**
+\\[
+a = \\frac{${toFixedTrim(m2,2)}\\cdot ${toFixedTrim(g,2)} - ${toFixedTrim(mu_k,2)}\\cdot ${toFixedTrim(m1,2)}\\cdot ${toFixedTrim(g,2)}}{${toFixedTrim(m1,2)} + ${toFixedTrim(m2,2)}}
+= ${toFixedTrim(a,3)}\\;\\text{m/s}^2
+\\]
+\\[
+T = ${toFixedTrim(m1,2)}\\cdot (${toFixedTrim(a,3)}) + ${toFixedTrim(mu_k,2)}\\cdot ${toFixedTrim(m1,2)}\\cdot ${toFixedTrim(g,2)}
+= ${toFixedTrim(T,2)}\\;\\text{N}
+\\]
+`;
+    }
+
+    latex += `
+**หมายเหตุ (หลัง $m_2$ แตะพื้น: เชือกหย่อน)**\\\\
+เชือกไม่ตึง $\\Rightarrow~ T=0$ และ $m_1$ เคลื่อนที่ช้าลงด้วยแรงเสียดทานจลน์เพียงอย่างเดียว
+\\[
+a_{\\text{หลังแตะพื้น}} = -\\mu_k g = -${toFixedTrim(mu_k,2)}\\cdot ${toFixedTrim(g,2)} = ${toFixedTrim(-mu_k*g,3)}\\;\\text{m/s}^2,\\qquad T=0
+\\]
+`;
+
+    calcContent.innerHTML = latex;
+    calcModal.classList.remove('hidden');
+    if (window.MathJax && MathJax.typesetPromise) {
+      MathJax.typesetPromise([calcContent]);
+    }
+  }
+  calcBtn.addEventListener('click', showCalculations);
+  closeCalc.addEventListener('click', ()=> calcModal.classList.add('hidden'));
+  calcModal.addEventListener('click', (e)=>{
+    if(e.target===calcModal) calcModal.classList.add('hidden');
+  });
+
+  // ===== สูตรสำคัญ modal =====
+  formulaBtn.addEventListener('click', ()=>{
+    formulaModal.classList.remove('hidden');
+    if (window.MathJax?.typesetPromise)
+      MathJax.typesetPromise([formulaModal]);
+  });
+  closeFormula.addEventListener('click', ()=> formulaModal.classList.add('hidden'));
+  formulaModal.addEventListener('click', (e)=>{
+    if(e.target.id==='formulaModal') e.currentTarget.classList.add('hidden');
+  });
+
+  // ===== Quiz engine =====
+  function solveSystem(m1,m2,mu_s,mu_k){
+    const slides = m2*g > mu_s*m1*g;
+    if (!slides){
+      return {
+        slides:false,
+        a:0,
+        T:m2*g,
+        explain:`ยังไม่ไถลเพราะ $m_2 g \\le \\mu_s m_1 g$. ดังนั้น $a=0,~T=m_2 g,~f_s=T \\le \\mu_s m_1 g$`
+      };
+    }
+    const a = (m2*g - mu_k*m1*g)/(m1+m2);
+    const T = m1*a + mu_k*m1*g;
+    return {
+      slides:true,
+      a,
+      T,
+      explain:`เริ่มไถลเพราะ $m_2 g > \\mu_s m_1 g$. ใช้เสียดทานจลน์ $\\mu_k$ แล้วได้
+      $a=\\dfrac{m_2 g - \\mu_k m_1 g}{m_1+m_2}$ และ $T=m_1 a + \\mu_k m_1 g$.`
+    };
+  }
+
+  function makeNumericQ(id, m1,m2,mu_s,mu_k){
+    const ans = solveSystem(m1,m2,mu_s,mu_k);
+    const a = +ans.a.toFixed(2), T = +ans.T.toFixed(2);
+    const aChoices = [
+      a,
+      +(m2*g/(m1+m2)).toFixed(2),
+      +((m2*g-mu_s*m1*g)/(m1+m2)).toFixed(2),
+      0
+    ];
+    const TChoices = [
+      T,
+      +(m2*g).toFixed(2),
+      +(mu_k*m1*g).toFixed(2),
+      +((m1+m2)*g).toFixed(2)
+    ];
+    return {
+      id,
+      stem: `ให้ $m_1=${m1}\\,\\text{kg},~m_2=${m2}\\,\\text{kg},~\\mu_s=${mu_s},~\\mu_k=${mu_k},~g=9.81\\,\\text{m/s}^2$.
+      ระบบเริ่มจากหยุดนิ่ง โดยสมมติ $m_2$ มีแนวโน้มลงล่าง จงหา <b>ความเร่ง $a$</b> และ <b>แรงตึงเชือก $T$</b> (ขณะเชือกตึง).`,
+      options: [
+        `A) $a=${aChoices[0]}\\,\\text{m/s}^2,~T=${TChoices[0]}\\,\\text{N}$`,
+        `B) $a=${aChoices[1]}\\,\\text{m/s}^2,~T=${TChoices[1]}\\,\\text{N}$`,
+        `C) $a=${aChoices[2]}\\,\\text{m/s}^2,~T=${TChoices[2]}\\,\\text{N}$`,
+        `D) $a=${aChoices[3]}\\,\\text{m/s}^2,~T=${TChoices[3]}\\,\\text{N}$`
+      ],
+      correct: 0,
+      solution: `
+**วิเคราะห์:** ${ans.explain}
+\\[
+a = ${a.toFixed(2)}\\,\\text{m/s}^2,\\qquad T=${T.toFixed(2)}\\,\\text{N}
+\\]
+`
+    };
+  }
+
+  function makeStaticQ(id, m1,m2,mu_s){
+    let _m2 = m2;
+    if (_m2*g > mu_s*m1*g){
+      _m2 = +(mu_s*m1 - 0.05).toFixed(2);
+    }
+    const T = _m2*g;
+    return {
+      id,
+      stem: `กำหนด $m_1=${m1}\\,\\text{kg},~m_2=${_m2}\\,\\text{kg},~\\mu_s=${mu_s},~g=9.81\\,\\text{m/s}^2$.
+      กรณีระบบ <b>ไม่ไถล (หยุดนิ่ง)</b> เลือกค่าที่ถูกต้องสำหรับ $a$ และ $T$.`,
+      options: [
+        `A) $a=0,~T=${T.toFixed(2)}\\,\\text{N}$`,
+        `B) $a=0,~T=\\mu_s m_1 g$`,
+        `C) $a=\\dfrac{m_2 g - \\mu_s m_1 g}{m_1+m_2},~T=m_2 g - m_2 a$`,
+        `D) $a=0,~T=0$`
+      ],
+      correct: 0,
+      solution: `
+เพราะ $m_2 g \\le \\mu_s m_1 g$ จึงไม่ไถล: $a=0$. แรงในเชือกสมดุลน้ำหนักของ $m_2$:
+\\[
+T = m_2 g = ${T.toFixed(2)}\\,\\text{N}.
+\\]
+ดังนั้นตัวเลือก A ถูกต้อง.`
+    };
+  }
+
+  function makeSymbolicQ(id){
+    return {
+      id,
+      stem: `กรณีเริ่มไถลแล้ว (เชือกตึง) โดยใช้ความเสียดทานจลน์ $\\mu_k$ จงเลือกนิพจน์ที่ถูกต้องสำหรับ $a$ และ $T$.`,
+      options: [
+        `A) $a=\\dfrac{m_2 g - \\mu_k m_1 g}{m_1+m_2},\\quad T=m_1 a + \\mu_k m_1 g$`,
+        `B) $a=\\dfrac{m_2 g + \\mu_k m_1 g}{m_1+m_2},\\quad T=m_1 a - \\mu_k m_1 g$`,
+        `C) $a=\\dfrac{m_2 g}{m_1+m_2},\\quad T=m_2 g$`,
+        `D) $a=0,\\quad T=\\mu_k m_1 g$`
+      ],
+      correct: 0,
+      solution: `ตั้งสมการบน $m_1:~T-\\mu_k m_1 g=m_1 a$ และบน $m_2:~m_2 g - T=m_2 a$ แก้ได้
+\\[
+a=\\frac{m_2 g - \\mu_k m_1 g}{m_1+m_2},\\quad T=m_1 a + \\mu_k m_1 g.
+\\]
+จึงเป็นตัวเลือก A`
+    };
+  }
+
+  function renderQuiz(){
+    const qs = [
+      makeNumericQ('Q1', 3,4,0.35,0.25),
+      makeNumericQ('Q2', 2.5,3.8,0.20,0.15),
+      makeStaticQ('Q3', 5.0, 1.0, 0.35),
+      makeSymbolicQ('Q4'),
+    ];
+    let html = '';
+    qs.forEach((q, idx)=>{
+      html += `
+      <div class="qcard" data-id="${q.id}" data-correct="${q.correct}">
+        <div class="qhead">ข้อ ${idx+1}.</div>
+        <div class="eq">${q.stem}</div>
+        <label class="opt"><input type="radio" name="${q.id}" value="0"> ${q.options[0]}</label>
+        <label class="opt"><input type="radio" name="${q.id}" value="1"> ${q.options[1]}</label>
+        <label class="opt"><input type="radio" name="${q.id}" value="2"> ${q.options[2]}</label>
+        <label class="opt"><input type="radio" name="${q.id}" value="3"> ${q.options[3]}</label>
+        <div class="sol eq" id="sol-${q.id}">
+          <div><b>เฉลย:</b> ตัวเลือก ${['A','B','C','D'][q.correct]}</div>
+          ${q.solution}
+        </div>
+      </div>`;
+    });
+    quizContainer.innerHTML = html;
+    if (window.MathJax?.typesetPromise) MathJax.typesetPromise([quizContainer]);
+  }
+
+  quizBtn.addEventListener('click', ()=>{
+    renderQuiz();
+    quizModal.classList.remove('hidden');
+  });
+  closeQuiz.addEventListener('click', ()=> quizModal.classList.add('hidden'));
+  quizModal.addEventListener('click', (e)=>{
+    if(e.target===quizModal) quizModal.classList.add('hidden');
+  });
+
+  gradeBtn.addEventListener('click', ()=>{
+    const cards = quizContainer.querySelectorAll('.qcard');
+    let score = 0, total = cards.length;
+    cards.forEach(card=>{
+      const id = card.getAttribute('data-id');
+      const correct = +card.getAttribute('data-correct');
+      const chosen = quizContainer.querySelector(`input[name="${id}"]:checked`);
+      const sol = document.getElementById(`sol-${id}`);
+      if (chosen && +chosen.value === correct){
+        score++;
+        card.style.borderColor='#86efac';
+      } else {
+        card.style.borderColor='#fecaca';
+      }
+      sol.style.display = 'block';
+    });
+    let summary = document.getElementById('quiz-summary');
+    if (!summary){
+      summary = document.createElement('div');
+      summary.id = 'quiz-summary';
+      summary.className = 'block b-green';
+      quizContainer.prepend(summary);
+    }
+    summary.innerHTML = `<b>คะแนน:</b> ${score}/${total}  — ${score===total? 'เยี่ยมมาก! ✅':'ทบทวนจุดที่พลาดแล้วลองใหม่ 💪'}`;
+    if (window.MathJax?.typesetPromise) MathJax.typesetPromise([quizContainer]);
+  });
+
+  // ===== First render =====
+  document.addEventListener('DOMContentLoaded', ()=>{
+    // ก็อปปี้ footnote ไปตัวสำหรับมือถือ
+    if (footEq && footEqMobile){
+      footEqMobile.innerHTML = footEq.innerHTML;
+    }
+    if (window.MathJax?.typesetPromise) {
+      const nodes = [document.getElementById('mainEq'), footEq, footEqMobile].filter(Boolean);
+      MathJax.typesetPromise(nodes);
+    }
+  });
+
+  setupInitialPositions();
+  const info0 = computePhase1(+m1Input.value, +m2Input.value, +muSInput.value, +muKInput.value);
+  a_phase1 = info0.a || 0;
+  T_phase1 = info0.T || (+m2Input.value*g);
+  updateHUD();
+  updateRopes(performance.now());
+})();
+</script>
+</body>
+</html>
