@@ -1,0 +1,473 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Conical Pendulum Mini Lab — ลูกตุ้มกรวยคว่ำ (ลูกเดียว)</title>
+<style>
+  :root{
+    --ink:#0f172a;--muted:#475569;--panel:#f8fafc;--line:#e5e7eb;--accent:#0ea5e9;
+  }
+  body{margin:0;background:#fff;font-family:Inter,system-ui,Arial,sans-serif;color:var(--ink)}
+  .wrap{
+    max-width:1100px;
+    margin:18px auto;
+    padding:12px;
+    display:grid;
+    grid-template-columns:1fr 360px;
+    gap:16px;
+  }
+  .card{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:12px;
+    box-shadow:0 6px 18px rgba(2,6,23,.06);
+  }
+  .pad{padding:14px}
+  h1{margin:0 0 8px;font-size:20px}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  input[type=range]{width:100%}
+  .val{min-width:68px;text-align:right;font-variant-numeric:tabular-nums}
+  .val-input{display:flex;align-items:center;justify-content:flex-end;gap:4px}
+  .val-input input[type=text]{
+    width:64px;padding:4px 6px;border-radius:8px;border:1px solid var(--line);
+    font-size:13px;font-variant-numeric:tabular-nums;text-align:right;background:#fff;color:var(--ink);
+  }
+  .val-input .unit{font-size:12px;color:#475569}
+  .step-btn{
+    border-radius:6px;border:1px solid var(--line);background:#fff;padding:2px 6px;
+    font-size:12px;line-height:1;cursor:pointer;color:var(--ink)
+  }
+  .g-row,.L-row{justify-content:flex-start;gap:4px}
+  .Llabel1{color:#0ea5e9;font-weight:700}
+  button{
+    background:var(--accent);color:#fff;border:0;border-radius:10px;padding:10px 14px;font-weight:600;cursor:pointer
+  }
+  button.secondary{background:#0f172a10;color:var(--ink)}
+  .callout{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:10px}
+  .small{font-size:12px;color:#64748b}
+  a.brand{color:#0ea5e9;text-decoration:none;border-bottom:1px dashed #0ea5e9}
+  #mobileTitle{display:none;margin:12px auto 0;max-width:1100px;padding:0 12px;font-size:22px}
+  #viewCard{order:1;}
+  #controlCard{order:2;}
+  @media (min-width:901px){
+    .btn-row-top{gap:10px;}
+    .btn-row-top button{flex:1 1 0;}
+  }
+  @media (max-width:900px){
+    .wrap{display:flex;flex-direction:column-reverse;}
+    #viewCard,#controlCard{order:0;}
+    .btn-row{justify-content:flex-start;gap:8px;flex-wrap:wrap;}
+    #mobileTitle{display:block;}
+    #controlCard h1{display:none;}
+  }
+</style>
+<script>
+  window.MathJax = {
+    tex:{
+      inlineMath:[["\\(","\\)"],["$","$"]],
+      displayMath:[["\\[","\\]"]]
+    },
+    options:{skipHtmlTags:['script','noscript','style','textarea','pre','code']}
+  };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+</head>
+<body>
+
+<h1 id="mobileTitle">ลูกตุ้มกรวยคว่ำ</h1>
+
+<div class="wrap">
+  <div class="card pad" id="controlCard">
+    <h1>ลูกตุ้มกรวยคว่ำ</h1>
+
+    <div id="primarySliders">
+      <div class="row L-row">
+        <span class="Llabel1">L</span>
+        <span class="val val-input">
+          <button class="step-btn" data-target="L" data-dir="dec">−</button>
+          <input id="L" type="text" data-step="0.01" value="1.00" />
+          <span class="unit">m</span>
+          <button class="step-btn" data-target="L" data-dir="inc">+</button>
+          <span id="Lval" style="display:none">1.00</span>
+        </span>
+      </div>
+
+      <div style="margin-top:6px">
+        <div class="row g-row">
+          <strong>g</strong>
+          <span class="val val-input">
+            <button class="step-btn" data-target="g" data-dir="dec">−</button>
+            <input id="g" type="text" data-step="0.1" value="9.8" />
+            <span class="unit">m/s²</span>
+            <button class="step-btn" data-target="g" data-dir="inc">+</button>
+            <span id="gval" style="display:none">9.8</span>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:6px;gap:6px;justify-content:flex-start">
+      <strong>โหมดปรับ</strong>
+      <label style="display:flex;align-items:center;gap:4px;font-size:13px">
+        <input type="radio" name="mode" value="theta">
+        <span>มุม θ</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:4px;font-size:13px">
+        <input type="radio" name="mode" value="omega" checked>
+        <span>อัตราเร็วเชิงมุม ω</span>
+      </label>
+    </div>
+
+    <div id="thetaBlock" style="margin-top:6px">
+      <div id="theta1Block">
+        <div class="row">
+          <strong>θ</strong>
+          <span class="val"><span id="T1val">30</span>°</span>
+        </div>
+        <input id="theta1" type="range" min="5" max="70" step="1" value="30"/>
+      </div>
+    </div>
+
+    <div id="omegaBlock" style="margin-top:6px;display:none">
+      <div id="omega1Block">
+        <div class="row">
+          <strong>ω</strong>
+          <span class="val"><span id="Omega1val">3.40</span> rad/s</span>
+        </div>
+        <input id="omega1Slider" type="range" min="3.15" max="15" step="0.05" value="3.4"/>
+      </div>
+    </div>
+
+    <div style="margin-top:6px;display:flex;align-items:center;gap:6px">
+      <label style="display:flex;align-items:center;gap:4px;font-size:13px">
+        <input type="checkbox" id="showForces">
+        <span>แสดงเวกเตอร์ของแรง</span>
+      </label>
+    </div>
+
+    <div class="row btn-row btn-row-top" style="margin-top:10px;gap:10px">
+      <button id="play">เล่น</button>
+      <button id="reset" class="secondary">รีเซ็ต</button>
+      <button id="toggleInfo" class="secondary">แสดงรายละเอียด</button>
+    </div>
+    <div class="row" style="margin-top:8px;gap:10px;justify-content:flex-start">
+      <button id="openFormula" class="secondary">สูตรสำคัญ</button>
+    </div>
+
+    <div id="formulaPanel" class="card pad" style="display:none;margin-top:10px">
+      <div class="row">
+        <strong>สูตรสำคัญ</strong>
+        <button id="closeFormula" class="secondary">ปิด</button>
+      </div>
+      <div style="margin-top:8px;line-height:1.7">
+        <div>\( r = L\sin\theta,\; h = L\cos\theta \)</div>
+        <div>\( T\cos\theta = mg,\; T\sin\theta = m\dfrac{v^{2}}{r} \)</div>
+        <div>\( \omega = \sqrt{\dfrac{g}{L\cos\theta}} = \sqrt{\dfrac{g}{h}},\; v = \omega L\sin\theta = \omega r \)</div>
+        <div class="callout">ถ้า \(h\) คงที่ ⇒ \(\omega\) จะคงเดิม แม้ \(L\) และ \(\theta\) จะเปลี่ยนได้</div>
+      </div>
+    </div>
+
+    <div class="small" style="margin-top:10px">
+      ศึกษาเพิ่มเติมได้ที่
+      <a class="brand" href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">
+        เพจ คลายปมฟิสิกส์
+      </a>
+    </div>
+  </div>
+
+  <div class="card pad" id="viewCard" style="position:relative">
+    <svg id="view" viewBox="0 0 600 500" style="width:100%;height:auto;display:block">
+      <defs>
+        <marker id="arrowHeadRed" markerWidth="10" markerHeight="10" refX="6" refY="3" orient="auto" markerUnits="strokeWidth">
+          <path d="M0,0 L0,6 L6,3 z" fill="#ef4444"/>
+        </marker>
+        <marker id="arrowHeadBlue" markerWidth="10" markerHeight="10" refX="6" refY="3" orient="auto" markerUnits="strokeWidth">
+          <path d="M0,0 L0,6 L6,3 z" fill="#3b82f6"/>
+        </marker>
+      </defs>
+
+      <rect x="180" y="48" width="240" height="12" rx="6" fill="#0f172a"/>
+      <circle cx="300" cy="60" r="4" fill="#0f172a"/>
+
+      <ellipse id="pathEllipse" cx="300" cy="300" rx="140" ry="28"
+               fill="none" stroke="#0ea5e9" stroke-dasharray="6 6" stroke-opacity=".6"/>
+      <line id="string" x1="300" y1="60" x2="440" y2="300" stroke="#1e293b" stroke-width="2.2"/>
+      <circle id="bob" cx="440" cy="300" r="14" fill="#3b82f6" stroke="#1d4ed8" stroke-width="2"/>
+
+      <g id="info" style="display:none">
+        <line id="hLine" x1="300" y1="60" x2="300" y2="300"
+              stroke="#0ea5e9" stroke-width="1.2" stroke-dasharray="5 4"/>
+        <text id="hLabel" x="306" y="180" font-size="12" fill="#0ea5e9">h</text>
+
+        <text id="Llabel" x="0" y="0" font-size="12" fill="#334155">L</text>
+        <text id="thetaVal" x="320" y="100" font-size="12" fill="#334155">θ = --°</text>
+
+        <line id="Tvec" x1="0" y1="0" x2="0" y2="0"
+              stroke="#ef4444" stroke-width="3" marker-end="url(#arrowHeadRed)"/>
+        <text id="Tlabel" x="0" y="0" font-size="12" fill="#ef4444">T</text>
+        <line id="mgvec" x1="0" y1="0" x2="0" y2="0"
+              stroke="#3b82f6" stroke-width="3" marker-end="url(#arrowHeadBlue)"/>
+        <text id="mgLabel" x="0" y="0" font-size="12" fill="#3b82f6">mg</text>
+
+        <text id="theta1Txt" x="490" y="40" font-size="12" fill="#0ea5e9">θ = --°</text>
+        <text id="h1Txt"     x="490" y="56" font-size="12" fill="#0ea5e9">h = -- m</text>
+        <text id="omegaTxt"  x="490" y="72" font-size="12" fill="#0ea5e9">ω = -- rad/s</text>
+        <text id="velTxt"    x="490" y="88" font-size="12" fill="#0ea5e9">v = -- m/s</text>
+      </g>
+    </svg>
+    <div style="position:absolute;right:10px;bottom:10px;font-size:12px;color:#64748b">
+      ω = <span id="omega">–</span> rad/s,
+      v = <span id="vel">–</span> m/s
+    </div>
+  </div>
+</div>
+
+<script>
+(()=>{
+  function $(s){return document.querySelector(s);}
+  function set(el, attrs){for(const k in attrs){el.setAttribute(k, attrs[k]);}}
+  function deg2rad(d){return d*Math.PI/180;}
+  function rad2deg(r){return r*180/Math.PI;}
+  function clamp(v,min,max){return Math.min(max,Math.max(min,v));}
+
+  const L=$('#L'), g=$('#g');
+  const theta1=$('#theta1'), omega1Slider=$('#omega1Slider');
+  const T1val=$('#T1val'), Omega1val=$('#Omega1val');
+  const playBtn=$('#play'), resetBtn=$('#reset');
+  const toggleInfoBtn=$('#toggleInfo');
+  const openFormulaBtn=$('#openFormula'), closeFormulaBtn=$('#closeFormula');
+  const formulaPanel=$('#formulaPanel');
+  const modeRadios=document.querySelectorAll('input[name="mode"]');
+  const showForces=$('#showForces');
+  const thetaContainer=$('#thetaBlock'), omegaContainer=$('#omegaBlock');
+
+  const ellipseEl=$('#pathEllipse');
+  const stringEl=$('#string');
+  const bobEl=$('#bob');
+  const infoG=$('#info');
+  const hLine=$('#hLine'), hLabel=$('#hLabel');
+  const Llabel=$('#Llabel'), thetaVal=$('#thetaVal');
+  const Tvec=$('#Tvec'), mgvec=$('#mgvec');
+  const Tlabel=$('#Tlabel'), mgLabel=$('#mgLabel');
+  const omegaFooter=$('#omega'), velFooter=$('#vel');
+  const theta1Txt=$('#theta1Txt'), h1Txt=$('#h1Txt'), omegaTxt=$('#omegaTxt'), velTxt=$('#velTxt');
+
+  const pivot={x:300,y:60};
+  const pxPerM=200;
+  let controlMode='omega';
+  let phi=0;
+  let running=false;
+  let last=null;
+
+  function updateControlMode(){
+    const sel=document.querySelector('input[name="mode"]:checked');
+    controlMode=sel ? sel.value : 'omega';
+    if(controlMode==='theta'){
+      thetaContainer.style.display='block';
+      omegaContainer.style.display='none';
+    }else{
+      thetaContainer.style.display='none';
+      omegaContainer.style.display='block';
+    }
+  }
+
+  function computePend(){
+    let Lstr=L.value.trim().replace(',','.');
+    if(Lstr===''){ return null; }
+    let Lm=parseFloat(Lstr);
+    if(!isFinite(Lm)) Lm=1;
+    Lm=clamp(Lm,0.2,2);
+    L.value=Lm.toFixed(2);
+
+    let gStr=g.value.trim().replace(',','.');
+    if(gStr===''){ return null; }
+    let gg=parseFloat(gStr);
+    if(!isFinite(gg)) gg=9.8;
+    gg=clamp(gg,1,15);
+    g.value=gg.toFixed(1);
+
+    let th, thDeg, omegaUse;
+    if(controlMode==='omega'){
+      omegaUse=Math.max(3.15, parseFloat(omega1Slider.value)||3.15);
+      omega1Slider.value=omegaUse.toFixed(2);
+
+      let cosTh=gg/(omegaUse*omegaUse*Lm);
+      if(!isFinite(cosTh)) cosTh=1;
+      if(cosTh>1){ cosTh=1; }
+      if(cosTh<0.05) cosTh=0.05;
+
+      th=Math.acos(cosTh);
+      thDeg=rad2deg(th);
+      theta1.value=thDeg.toFixed(0);
+    }else{
+      thDeg=parseFloat(theta1.value)||5;
+      thDeg=clamp(thDeg,5,70);
+      theta1.value=thDeg.toFixed(0);
+      th=deg2rad(thDeg);
+      const cosTh=Math.cos(th);
+      omegaUse=Math.sqrt(gg/(Lm*cosTh));
+      omega1Slider.value=omegaUse.toFixed(2);
+    }
+
+    const r=Lm*Math.sin(th);
+    const h=Lm*Math.cos(th);
+    const v=omegaUse*r;
+    const rx=r*pxPerM, ry=Math.max(16, rx*0.2), yLevel=pivot.y + h*pxPerM;
+    set(ellipseEl,{cx:pivot.x,cy:yLevel,rx:rx,ry:ry});
+
+    let spinOmega = omegaUse;
+    if(controlMode==='omega' && Math.abs(thDeg) < 0.5){ spinOmega = 0; }
+
+    T1val.textContent=thDeg.toFixed(0);
+    Omega1val.textContent=omegaUse.toFixed(2);
+    theta1Txt.textContent=`θ = ${thDeg.toFixed(0)}°`;
+    h1Txt.textContent=`h = ${h.toFixed(2)} m`;
+    omegaTxt.textContent=`ω = ${omegaUse.toFixed(2)} rad/s`;
+    velTxt.textContent=`v = ${v.toFixed(2)} m/s`;
+
+    set(hLine,{x1:pivot.x,x2:pivot.x,y1:pivot.y,y2:yLevel});
+    hLabel.textContent=`h = ${h.toFixed(2)} m`;
+    hLabel.setAttribute('x',pivot.x+6);
+    hLabel.setAttribute('y',(pivot.y+yLevel)/2-4);
+
+    omegaFooter.textContent=omegaUse.toFixed(2);
+    velFooter.textContent=v.toFixed(2);
+
+    return {Lm,th,gg,r,h,omega:omegaUse,spinOmega,rx,ry,yLevel};
+  }
+
+  function draw(p1){
+    const showF = showForces.checked && infoG.style.display!=='none';
+    if(!p1){
+      Tvec.style.display=Tlabel.style.display=mgvec.style.display=mgLabel.style.display='none';
+      return;
+    }
+    const x=pivot.x + p1.rx*Math.cos(phi);
+    const y=p1.yLevel + p1.ry*Math.sin(phi);
+    set(stringEl,{x1:pivot.x,y1:pivot.y,x2:x,y2:y});
+    set(bobEl,{cx:x,cy:y});
+
+    const mx=(pivot.x+x)/2,my=(pivot.y+y)/2;
+    Llabel.setAttribute('x',mx+10);
+    Llabel.setAttribute('y',my-6);
+    Llabel.textContent=`L = ${parseFloat(L.value||"0").toFixed(2)} m`;
+
+    thetaVal.textContent=`θ = ${parseFloat(theta1.value||"0").toFixed(0)}°`;
+
+    const dx=pivot.x-x, dy=pivot.y-y;
+    const len=Math.hypot(dx,dy);
+    const ux=dx/len || 0, uy=dy/len || 0;
+    const m=0.10;
+    const T=(m*p1.gg)/(Math.cos(p1.th) || 1);
+    const base=40;
+    const tLen=base*(T/(m*p1.gg));
+
+    if(showF){
+      set(Tvec,{x1:x,y1:y,x2:x+ux*tLen,y2:y+uy*tLen});
+      Tlabel.setAttribute('x',x+ux*tLen/2+10);
+      Tlabel.setAttribute('y',y+uy*tLen/2);
+      Tlabel.textContent='T';
+
+      const mgLen=base;
+      set(mgvec,{x1:x,y1:y,x2:x,y2:y+mgLen});
+      mgLabel.setAttribute('x',x+10);
+      mgLabel.setAttribute('y',y+mgLen/2);
+      mgLabel.textContent='mg';
+
+      Tvec.style.display=Tlabel.style.display=mgvec.style.display=mgLabel.style.display='';
+    }else{
+      Tvec.style.display=Tlabel.style.display=mgvec.style.display=mgLabel.style.display='none';
+    }
+  }
+
+  function tick(ts){
+    if(!running){last=ts;return;}
+    if(last==null) last=ts;
+    const dt=Math.min(0.05,(ts-last)/1000);
+    last=ts;
+
+    const p1=computePend();
+    if(p1) phi+=p1.spinOmega*dt;
+    draw(p1);
+    requestAnimationFrame(tick);
+  }
+
+  function syncUI(){
+    const p1=computePend();
+    draw(p1);
+  }
+
+  [theta1,omega1Slider].forEach(el=>el.addEventListener('input',syncUI));
+  [L,g].forEach(el=>el.addEventListener('change',syncUI));
+
+  document.querySelectorAll('.step-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const targetId=btn.dataset.target;
+      const dir=btn.dataset.dir==='dec'?-1:1;
+      const input=document.getElementById(targetId);
+      let val=parseFloat((input.value||"").replace(',','.'));
+      if(isNaN(val)){ val = targetId==='g'?9.8:1.0; }
+      const step = targetId==='g'?0.1:0.01;
+      val += dir*step;
+      if(targetId==='g'){
+        val=clamp(val,1,15);
+        input.value=val.toFixed(1);
+      }else{
+        val=clamp(val,0.2,2);
+        input.value=val.toFixed(2);
+      }
+      syncUI();
+    });
+  });
+
+  modeRadios.forEach(r=>r.addEventListener('change',()=>{updateControlMode();syncUI();}));
+  showForces.addEventListener('change',syncUI);
+
+  playBtn.addEventListener('click',()=>{
+    running=!running;
+    playBtn.textContent=running?'หยุด':'เล่น';
+    if(running) requestAnimationFrame(tick);
+  });
+
+  resetBtn.addEventListener('click',()=>{
+    running=false;
+    phi=0;
+    playBtn.textContent='เล่น';
+    L.value="1.00";
+    g.value="9.8";
+    theta1.value="30";
+    showForces.checked=false;
+    document.querySelector('input[name="mode"][value="omega"]').checked=true;
+    updateControlMode();
+    const Lm0=parseFloat(L.value), th0=deg2rad(parseFloat(theta1.value)), gg0=parseFloat(g.value);
+    const omega0=Math.sqrt(gg0/(Lm0*Math.cos(th0)));
+    omega1Slider.value=omega0.toFixed(2);
+    syncUI();
+  });
+
+  toggleInfoBtn.addEventListener('click',()=>{
+    const vis=infoG.style.display!=='none';
+    infoG.style.display=vis?'none':'block';
+    toggleInfoBtn.textContent=vis?'แสดงรายละเอียด':'ซ่อนรายละเอียด';
+    syncUI();
+  });
+
+  openFormulaBtn.addEventListener('click',()=>{
+    formulaPanel.style.display='block';
+    if(window.MathJax){MathJax.typesetPromise([formulaPanel]);}
+  });
+  closeFormulaBtn.addEventListener('click',()=>{formulaPanel.style.display='none';});
+
+  window.addEventListener('load',()=>{
+    const Lm0=parseFloat(L.value), th0=deg2rad(parseFloat(theta1.value)), gg0=parseFloat(g.value);
+    const omega0=Math.sqrt(gg0/(Lm0*Math.cos(th0)));
+    omega1Slider.value=omega0.toFixed(2);
+    updateControlMode();
+    syncUI();
+    if(window.MathJax){MathJax.typesetPromise();}
+  });
+})();
+</script>
+</body>
+</html>
