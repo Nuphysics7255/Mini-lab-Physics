@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Mini Lab จุดสะเทินระหว่างจุดประจุ 2 จุด</title>
+  <style>
+    :root{
+      --blue:#2f6fd6;
+      --blue2:#204d7c;
+      --card:#ffffff;
+      --soft:#edf3fb;
+      --line:#d9e3ef;
+      --red:#e53935;
+      --light-red:#ff9e9b;
+      --neg:#2d7ff9;
+      --light-blue:#8fc2ff;
+      --ink:#222;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: "Noto Sans Thai","Tahoma",system-ui,sans-serif;
+      color:#18324d;
+      background:linear-gradient(180deg,#f8fbff 0%,#eef4fb 100%);
+    }
+    .wrap{
+      width:min(1100px,calc(100vw - 20px));
+      margin:18px auto;
+      padding-bottom:max(120px,calc(120px + env(safe-area-inset-bottom)));
+    }
+    .title{
+      display:flex;
+      align-items:center;
+      gap:14px;
+      margin-bottom:16px;
+    }
+    .title .icon{
+      width:58px;height:58px;border-radius:18px;
+      display:grid;place-items:center;
+      background:#edf3fb;border:1px solid #dbe6f2;
+      font-size:30px;
+    }
+    .title h1{
+      margin:0;
+      line-height:1.1;
+      font-size:clamp(24px,3.5vw,40px);
+      color:var(--blue);
+      font-weight:900;
+    }
+    .title h2{
+      margin:3px 0 0;
+      line-height:1.15;
+      font-size:clamp(20px,3vw,32px);
+      color:var(--blue2);
+      font-weight:900;
+    }
+    .layout{
+      display:grid;
+      grid-template-columns: minmax(0,1.45fr) minmax(300px,.95fr);
+      gap:16px;
+      align-items:start;
+    }
+    .card{
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:24px;
+      box-shadow:0 10px 26px rgba(34,76,120,.08);
+      overflow:hidden;
+    }
+    .lab-card{padding:12px}
+    .panel{padding:14px}
+    .pillrow{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+    .pill{
+      background:#edf3fb;border:1px solid #dbe6f2;color:#315d8a;
+      padding:10px 16px;border-radius:999px;font-weight:800;font-size:17px;
+    }
+    .subhead{font-size:18px;font-weight:900;color:#214d7c;margin:0 0 10px}
+    .fieldset{border:none;padding:0;margin:0 0 14px}
+    .chargeRow{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;margin-bottom:10px}
+    .chargeLabel{font-weight:800}
+    select,button{
+      font:inherit;border-radius:16px;border:1.5px solid #cfdceb;padding:10px 12px;
+      background:#fff;color:#204d7c;
+    }
+    button{
+      cursor:pointer;font-weight:800;background:#edf3fb;
+    }
+    button:hover{filter:brightness(.98)}
+    .legend{display:grid;gap:8px;margin-top:8px}
+    .legend div{display:flex;align-items:center;gap:10px;font-size:15px;line-height:1.5}
+    .sw{width:26px;height:6px;border-radius:999px;display:inline-block}
+    .note{
+      margin-top:12px;padding:12px 14px;border-radius:18px;
+      background:#fff8ef;border:1px solid #f0d0a2;color:#8d5b0b;font-size:15px;line-height:1.55;
+    }
+    .status{
+      margin-top:12px;padding:12px 14px;border-radius:18px;
+      background:#eff9ee;border:1px solid #b8dfb0;color:#2d6b1f;font-weight:800;line-height:1.55;
+      min-height:52px;
+    }
+    .footer-link{
+      margin-top:14px;text-align:center;font-size:15px;color:#355d8c;
+    }
+    .footer-link a{color:#2f6fd6}
+    svg{width:100%;height:auto;display:block;background:linear-gradient(180deg,#ffffff 0%,#f7fbff 100%);border-radius:18px;touch-action:none}
+    .help{font-size:14px;color:#57779a;line-height:1.6;margin:0}
+    input[type="range"]{width:100%;accent-color:#7ea7d8}
+
+    @media (max-width: 860px){
+      .lab-card{
+        position: sticky;
+        top: 8px;
+        z-index: 3;
+      }
+      .lab-card svg{
+        touch-action: none;
+      }
+      .panel{
+        max-height: calc(100vh - 24px);
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+    }
+    @media (max-width: 860px){
+      .layout{grid-template-columns:1fr}
+      .title .icon{width:46px;height:46px;font-size:24px;border-radius:14px}
+      .title h1{font-size:clamp(20px,6vw,30px)}
+      .title h2{font-size:clamp(18px,5.4vw,26px)}
+    }
+    @media (max-width: 560px){
+      .wrap{width:calc(100vw - 12px);margin:8px auto}
+      .lab-card{padding:8px}
+      .panel{padding:12px}
+      .chargeRow{grid-template-columns:1fr 1fr;}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="title">
+      <div class="icon">⚡</div>
+      <div>
+        <h1>Mini Lab</h1>
+        <h2>จุดสะเทินระหว่างจุดประจุ 2 จุด</h2>
+      </div>
+    </div>
+
+    <div class="layout">
+      <div class="card lab-card">
+        <svg id="lab" viewBox="0 0 760 460" aria-label="mini lab electric field">
+          <defs>
+            <marker id="arrowRed" markerWidth="12" markerHeight="12" refX="9" refY="6" orient="auto" markerUnits="userSpaceOnUse">
+              <path d="M0,0 L12,6 L0,12 z" fill="#ff9e9b"></path>
+            </marker>
+            <marker id="arrowBlue" markerWidth="12" markerHeight="12" refX="9" refY="6" orient="auto" markerUnits="userSpaceOnUse">
+              <path d="M0,0 L12,6 L0,12 z" fill="#8fc2ff"></path>
+            </marker>
+            <marker id="arrowBlack" markerWidth="12" markerHeight="12" refX="9" refY="6" orient="auto" markerUnits="userSpaceOnUse">
+              <path d="M0,0 L12,6 L0,12 z" fill="#222"></path>
+            </marker>
+            <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#94aac3" flood-opacity="0.35"/>
+            </filter>
+          </defs>
+          <rect x="0" y="0" width="760" height="460" rx="20" fill="transparent"></rect>
+          <g id="grid"></g>
+          <line x1="40" y1="230" x2="720" y2="230" stroke="#e3edf7" stroke-width="2" stroke-dasharray="6 8"></line>
+          <text x="52" y="216" fill="#7b93af" font-size="16" font-weight="700">แนวระหว่างประจุ</text>
+
+          <g id="neutralBadge">
+            <rect x="255" y="20" width="250" height="40" rx="18" fill="#eef9ee" stroke="#b8dfb0"></rect>
+            <text id="neutralText" x="380" y="46" text-anchor="middle" fill="#2d6b1f" font-size="18" font-weight="800">ลากจุดสีดำเพื่อหาจุดที่ E_net = 0</text>
+          </g>
+
+          <g id="e1Group">
+            <line id="e1Line" x1="0" y1="0" x2="0" y2="0" stroke="#ff9e9b" stroke-width="6" stroke-linecap="round" marker-end="url(#arrowRed)"></line>
+            <text id="e1Label" x="0" y="0" fill="#ff9e9b" font-size="16" font-weight="900">E_1</text>
+          </g>
+          <g id="e2Group">
+            <line id="e2Line" x1="0" y1="0" x2="0" y2="0" stroke="#8fc2ff" stroke-width="6" stroke-linecap="round" marker-end="url(#arrowBlue)"></line>
+            <text id="e2Label" x="0" y="0" fill="#8fc2ff" font-size="16" font-weight="900">E_2</text>
+          </g>
+          <g id="enetGroup">
+            <line id="enetLine" x1="0" y1="0" x2="0" y2="0" stroke="#222" stroke-width="3" stroke-linecap="round" marker-end="url(#arrowBlack)"></line>
+            <text id="enetLabel" x="0" y="0" fill="#222" font-size="16" font-weight="900">E_net</text>
+          </g>
+
+          <g id="q1" style="cursor:grab" filter="url(#softShadow)"><circle class="hitarea" cx="220" cy="230" r="34" fill="transparent" pointer-events="all"></circle>
+            <circle id="q1Body" cx="220" cy="230" r="30" fill="#e53935"></circle>
+            <text id="q1Sign" x="220" y="242" text-anchor="middle" fill="#fff" font-size="38" font-weight="900">+</text>
+            <text id="q1Tag" x="220" y="282" text-anchor="middle" fill="#355b80" font-size="18" font-weight="800">q₁</text>
+          </g>
+          <g id="q2" style="cursor:grab" filter="url(#softShadow)"><circle class="hitarea" cx="540" cy="230" r="34" fill="transparent" pointer-events="all"></circle>
+            <circle id="q2Body" cx="540" cy="230" r="30" fill="#2d7ff9"></circle>
+            <text id="q2Sign" x="540" y="242" text-anchor="middle" fill="#fff" font-size="38" font-weight="900">−</text>
+            <text id="q2Tag" x="540" y="282" text-anchor="middle" fill="#355b80" font-size="18" font-weight="800">q₂</text>
+          </g>
+
+          <g id="probe" style="cursor:grab"><circle class="hitarea" cx="380" cy="140" r="28" fill="transparent" pointer-events="all"></circle>
+            <circle id="probeFlash" cx="380" cy="140" r="28" fill="#39d353" opacity="0"></circle>
+            <circle id="probeCore" cx="380" cy="140" r="6" fill="#111"></circle>
+            <circle id="probeRing" cx="380" cy="140" r="18" fill="transparent" stroke="#8f99a7" stroke-opacity=".8" stroke-width="3"></circle>
+          </g>
+        </svg>
+      </div>
+
+      <div class="card panel">
+        <div class="subhead">ตั้งค่าชนิดและขนาดของประจุ</div>
+        <div class="fieldset">
+          <div class="chargeRow">
+            <div class="chargeLabel">q₁</div>
+            <select id="type1">
+              <option value="1">ประจุบวก (+)</option>
+              <option value="-1">ประจุลบ (−)</option>
+            </select>
+          </div>
+          <div class="chargeRow" style="grid-template-columns:72px 1fr 74px;">
+            <div class="chargeLabel">|q₁|</div>
+            <input id="mag1" type="range" min="1" max="9" step="1" value="4" />
+            <div id="mag1Val" class="pill" style="padding:8px 12px;font-size:15px;text-align:center">4</div>
+          </div>
+          <div class="chargeRow">
+            <div class="chargeLabel">q₂</div>
+            <select id="type2">
+              <option value="1">ประจุบวก (+)</option>
+              <option value="-1" selected>ประจุลบ (−)</option>
+            </select>
+          </div>
+          <div class="chargeRow" style="grid-template-columns:72px 1fr 74px;">
+            <div class="chargeLabel">|q₂|</div>
+            <input id="mag2" type="range" min="1" max="9" step="1" value="4" />
+            <div id="mag2Val" class="pill" style="padding:8px 12px;font-size:15px;text-align:center">4</div>
+          </div>
+        </div>
+
+        <div class="subhead">คำอธิบายลูกศรสนามไฟฟ้า</div>
+        <div class="legend">
+          <div><span class="sw" style="background:#ff9e9b"></span> <strong style="color:#ff9e9b">E₁</strong> = สนามไฟฟ้าย่อยจาก q₁</div>
+          <div><span class="sw" style="background:#8fc2ff"></span> <strong style="color:#8fc2ff">E₂</strong> = สนามไฟฟ้าย่อยจาก q₂</div>
+          <div><span class="sw" style="background:#222"></span> <strong style="color:#222">E_net</strong> = สนามไฟฟ้าลัพธ์ที่จุดสนใจ</div>
+        </div>
+
+        <div class="note">
+          ลองเลือกชนิดและขนาดของประจุ แล้วลาก <strong>จุดสีดำ</strong> ไปสังเกตทิศของสนามไฟฟ้าย่อยและสนามไฟฟ้าลัพธ์<br>
+          เมื่อขนาดของสนามจากทั้งสองประจุหักล้างกันจน <strong>E_net ≈ 0</strong> จุดนั้นคือ <strong>จุดสะเทิน</strong>
+        </div>
+
+        <div class="note" style="background:#f4f7f7;border-left:4px solid #8f44fd;border-top:none;border-right:none;border-bottom:none;color:#1f2e40;border-radius:0 16px 16px 0;">
+          <strong>ตำแหน่งของจุดสะเทินที่เกิดจากจุดประจุ 2 ประจุ แบ่งเป็น 2 กรณี</strong><br><br>
+          1. ประจุชนิดเดียวกัน จุดสะเทินจะอยู่ระหว่างประจุทั้งสอง และจะอยู่ใกล้กับประจุที่มีค่าน้อยกว่า (ถ้า <strong>q₁ = q₂</strong> จุดสะเทินจะอยู่ตรงกลาง)<br>
+          2. ประจุต่างชนิด จุดสะเทินจะอยู่นอกช่วงระหว่างประจุทั้งสอง และจะอยู่ใกล้กับประจุที่มีค่าน้อยกว่า (ถ้า <strong>q₁ = q₂</strong> ไม่เกิดจุดสะเทิน)
+        </div>
+
+        <div id="status" class="status">ตอนนี้ยังไม่ใช่จุดสะเทิน — ลองลากจุดสีดำต่อไป</div>
+        <p class="help">ปรับขนาด |q₁| และ |q₂| แล้วลองดูว่า จุดสะเทินจะเลื่อนไปใกล้ประจุที่มีค่าน้อยกว่าอย่างไร</p>
+
+        <div class="footer-link">ศึกษาเพิ่มเติมที่<a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener noreferrer">เพจคลายปมฟิสิกส์</a></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const svg = document.getElementById('lab');
+    const grid = document.getElementById('grid');
+    const statusEl = document.getElementById('status');
+    const neutralText = document.getElementById('neutralText');
+
+    const charge1 = { x:220, y:230, s:1, m:4, g:document.getElementById('q1') };
+    const charge2 = { x:540, y:230, s:-1, m:4, g:document.getElementById('q2') };
+    const probe = { x:380, y:140, g:document.getElementById('probe') };
+    const labBounds = { minX:60, maxX:700, minY:76, maxY:396 };
+
+    const e1Line = document.getElementById('e1Line');
+    const e2Line = document.getElementById('e2Line');
+    const enetLine = document.getElementById('enetLine');
+    const e1Label = document.getElementById('e1Label');
+    const e2Label = document.getElementById('e2Label');
+    const enetLabel = document.getElementById('enetLabel');
+
+    const q1Body = document.getElementById('q1Body');
+    const q2Body = document.getElementById('q2Body');
+    const q1Sign = document.getElementById('q1Sign');
+    const q2Sign = document.getElementById('q2Sign');
+    const q1Tag = document.getElementById('q1Tag');
+    const q2Tag = document.getElementById('q2Tag');
+    const probeRing = document.getElementById('probeRing');
+    const probeHit = probe.g.querySelector('.hitarea');
+    const probeCore = document.getElementById('probeCore');
+    const type1 = document.getElementById('type1');
+    const type2 = document.getElementById('type2');
+    const mag1 = document.getElementById('mag1');
+    const mag2 = document.getElementById('mag2');
+    const mag1Val = document.getElementById('mag1Val');
+    const mag2Val = document.getElementById('mag2Val');
+    const probeFlash = document.getElementById('probeFlash');
+
+    function makeGrid(){
+      let s='';
+      for(let x=40;x<=720;x+=40){ s += `<line x1="${x}" y1="40" x2="${x}" y2="420" stroke="#eef4fa" stroke-width="1"/>`; }
+      for(let y=40;y<=420;y+=40){ s += `<line x1="40" y1="${y}" x2="720" y2="${y}" stroke="#eef4fa" stroke-width="1"/>`; }
+      grid.innerHTML=s;
+    }
+    makeGrid();
+
+    function setChargeVisual(charge, body, signEl){
+      const positive = charge.s > 0;
+      body.setAttribute('fill', positive ? '#e53935' : '#2d7ff9');
+      signEl.textContent = positive ? '+' : '−';
+    }
+
+    function setGroupPos(g,x,y){
+      const circles = g.querySelectorAll('circle');
+      circles.forEach(c => { c.setAttribute('cx',x); c.setAttribute('cy',y); });
+      const texts = g.querySelectorAll('text');
+      if(g.id==='probe'){
+        const flash = g.querySelector('#probeFlash'); if(flash){ flash.setAttribute('cx',x); flash.setAttribute('cy',y); }
+        const core = g.querySelector('#probeCore'); if(core){ core.setAttribute('cx',x); core.setAttribute('cy',y); }
+        const ring = g.querySelector('#probeRing'); if(ring){ ring.setAttribute('cx',x); ring.setAttribute('cy',y); }
+      }else{
+        texts[0].setAttribute('x',x); texts[0].setAttribute('y',y+12);
+        texts[1].setAttribute('x',x); texts[1].setAttribute('y',y+52);
+      }
+    }
+
+    function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
+
+    function applyMobileTouchTargets(){
+      const mobile = window.matchMedia('(max-width: 860px)').matches;
+      if(probeHit){
+        probeHit.setAttribute('r', mobile ? '165' : '28');
+      }
+      svg.style.touchAction = 'none';
+    }
+
+
+    function svgPoint(evt){
+      const pt = svg.createSVGPoint();
+      pt.x = evt.clientX; pt.y = evt.clientY;
+      return pt.matrixTransform(svg.getScreenCTM().inverse());
+    }
+
+    function fieldFrom(charge, p){
+      const dx = p.x - charge.x;
+      const dy = p.y - charge.y;
+      const r2 = dx*dx + dy*dy;
+      const minR2 = 18*18;
+      const safeR2 = Math.max(r2, minR2);
+      const r = Math.sqrt(safeR2);
+      const scale = 600000; // visual only
+      const mag = scale * charge.m / safeR2;
+      const ux = dx / r;
+      const uy = dy / r;
+      const dir = charge.s > 0 ? 1 : -1;
+      return { x: dir * mag * ux, y: dir * mag * uy, mag };
+    }
+
+    function arrowTo(line, label, x, y, vx, vy, colorType, scale, opts={}){
+      const mag = Math.hypot(vx, vy);
+      const hideWhenZero = !!opts.hideWhenZero;
+      if(hideWhenZero && mag < 1e-9){
+        line.style.display = 'none';
+        label.style.display = 'none';
+        return;
+      }
+      line.style.display = '';
+      label.style.display = '';
+      const dx = vx * scale;
+      const dy = vy * scale;
+      const x2 = x + dx;
+      const y2 = y + dy;
+      const ux = mag > 1e-6 ? vx / mag : 0;
+      const uy = mag > 1e-6 ? vy / mag : 0;
+      line.setAttribute('x1', x);
+      line.setAttribute('y1', y);
+      line.setAttribute('x2', x2);
+      line.setAttribute('y2', y2);
+      label.setAttribute('x', x2 + (ux>=0 ? 10 : -34));
+      label.setAttribute('y', y2 + (uy>=0 ? -8 : 22));
+      if(colorType === 'red'){
+        line.setAttribute('stroke','#ff9e9b'); line.setAttribute('marker-end','url(#arrowRed)'); label.setAttribute('fill','#ff9e9b');
+      }else if(colorType === 'blue'){
+        line.setAttribute('stroke','#8fc2ff'); line.setAttribute('marker-end','url(#arrowBlue)'); label.setAttribute('fill','#8fc2ff');
+      }else{
+        line.setAttribute('stroke','#222'); line.setAttribute('marker-end','url(#arrowBlack)'); label.setAttribute('fill','#222');
+      }
+    }
+
+    let wasNeutral = false;
+
+    function playDing(){
+      try{
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const now = ctx.currentTime;
+        const osc1 = ctx.createOscillator();
+        const osc2 = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc1.type = 'sine'; osc2.type = 'triangle';
+        osc1.frequency.setValueAtTime(1046, now);
+        osc2.frequency.setValueAtTime(1318, now);
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(0.18, now + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.45);
+        osc1.connect(gain); osc2.connect(gain); gain.connect(ctx.destination);
+        osc1.start(now); osc2.start(now + 0.02);
+        osc1.stop(now + 0.42); osc2.stop(now + 0.45);
+      }catch(e){}
+    }
+
+    function flashNeutral(){
+      probeFlash.setAttribute('opacity','0.78');
+      probeFlash.setAttribute('r','16');
+      let start = null;
+      function anim(ts){
+        if(!start) start = ts;
+        const t = Math.min(1, (ts-start)/420);
+        const r = 16 + 28*t;
+        const op = 0.78*(1-t);
+        probeFlash.setAttribute('r', String(r));
+        probeFlash.setAttribute('opacity', String(op));
+        if(t < 1) requestAnimationFrame(anim);
+      }
+      requestAnimationFrame(anim);
+    }
+
+
+    function fitNeutralBox(){
+      const badge = document.getElementById('neutralBadge');
+      const rect = badge.querySelector('rect');
+      const text = document.getElementById('neutralText');
+      const bbox = text.getBBox();
+      const paddingX = 18;
+      const paddingY = 10;
+      rect.setAttribute('x', String(bbox.x - paddingX));
+      rect.setAttribute('y', String(bbox.y - paddingY));
+      rect.setAttribute('width', String(bbox.width + paddingX * 2));
+      rect.setAttribute('height', String(bbox.height + paddingY * 2));
+    }
+
+    function update(){
+      setGroupPos(charge1.g, charge1.x, charge1.y);
+      setGroupPos(charge2.g, charge2.x, charge2.y);
+      setGroupPos(probe.g, probe.x, probe.y);
+      setChargeVisual(charge1,q1Body,q1Sign);
+      setChargeVisual(charge2,q2Body,q2Sign);
+
+      const r1 = (20 + charge1.m * 3.2) * 0.7;
+      const r2 = (20 + charge2.m * 3.2) * 0.7;
+      q1Body.setAttribute('r', r1);
+      q2Body.setAttribute('r', r2);
+      charge1.g.querySelector('.hitarea').setAttribute('r', Math.max(34, r1 + 18));
+      charge2.g.querySelector('.hitarea').setAttribute('r', Math.max(34, r2 + 18));
+      probe.g.querySelector('.hitarea').setAttribute('r', 28);
+      q1Sign.setAttribute('font-size', Math.round(r1 * 1.25));
+      q2Sign.setAttribute('font-size', Math.round(r2 * 1.25));
+      q1Sign.setAttribute('y', charge1.y + r1 * 0.38);
+      q2Sign.setAttribute('y', charge2.y + r2 * 0.38);
+      q1Tag.setAttribute('x', charge1.x); q1Tag.setAttribute('y', charge1.y + r1 + 22);
+      q2Tag.setAttribute('x', charge2.x); q2Tag.setAttribute('y', charge2.y + r2 + 22);
+      probeRing.setAttribute('cx', probe.x); probeRing.setAttribute('cy', probe.y);
+      probeCore.setAttribute('cx', probe.x); probeCore.setAttribute('cy', probe.y);
+
+      const E1 = fieldFrom(charge1, probe);
+      const E2 = fieldFrom(charge2, probe);
+      const En = { x:E1.x+E2.x, y:E1.y+E2.y };
+
+      const maxMag = Math.max(Math.hypot(E1.x, E1.y), Math.hypot(E2.x, E2.y), Math.hypot(En.x, En.y), 1);
+      const arrowScale = 118 / maxMag;
+
+      arrowTo(e1Line,e1Label,probe.x,probe.y,E1.x,E1.y, charge1.s>0 ? 'red' : 'blue', arrowScale);
+      arrowTo(e2Line,e2Label,probe.x,probe.y,E2.x,E2.y, charge2.s>0 ? 'red' : 'blue', arrowScale);
+      mag1Val.textContent = charge1.m;
+      mag2Val.textContent = charge2.m;
+
+      const between = (probe.x > Math.min(charge1.x, charge2.x) && probe.x < Math.max(charge1.x, charge2.x));
+      const nearAxis = Math.abs(probe.y - ((charge1.y+charge2.y)/2)) < 18;
+
+      function netFieldXExact(x){
+        const dx1 = x - charge1.x;
+        const dx2 = x - charge2.x;
+        const eps = 1e-6;
+        if(Math.abs(dx1) < eps || Math.abs(dx2) < eps) return null;
+        const f1 = charge1.s * charge1.m * dx1 / Math.pow(Math.abs(dx1), 3);
+        const f2 = charge2.s * charge2.m * dx2 / Math.pow(Math.abs(dx2), 3);
+        return f1 + f2;
+      }
+
+      function bisectRoot(a, b){
+        let fa = netFieldXExact(a);
+        let fb = netFieldXExact(b);
+        if(fa === null || fb === null || fa * fb > 0) return null;
+        for(let i=0;i<80;i++) {
+          const m = (a + b) / 2;
+          const fm = netFieldXExact(m);
+          if(fm === null) return null;
+          if(Math.abs(fm) < 1e-10 || Math.abs(b - a) < 1e-4) return m;
+          if(fa * fm <= 0){ b = m; fb = fm; }
+          else { a = m; fa = fm; }
+        }
+        return (a + b) / 2;
+      }
+
+      function getNeutralRoots(){
+        const left = Math.min(charge1.x, charge2.x);
+        const right = Math.max(charge1.x, charge2.x);
+        const gap = 2;
+        const intervals = [
+          [labBounds.minX, left - gap],
+          [left + gap, right - gap],
+          [right + gap, labBounds.maxX]
+        ];
+        const roots = [];
+        for(const [start, end] of intervals){
+          if(end <= start) continue;
+          const step = 2;
+          let prevX = start;
+          let prevF = netFieldXExact(prevX);
+          for(let x = start + step; x <= end; x += step){
+            const fx = netFieldXExact(x);
+            if(prevF === null || fx === null){ prevX = x; prevF = fx; continue; }
+            if(prevF === 0){ roots.push(prevX); }
+            else if(prevF * fx < 0){
+              const root = bisectRoot(prevX, x);
+              if(root !== null) roots.push(root);
+            }
+            prevX = x;
+            prevF = fx;
+          }
+        }
+        return roots.filter((x, i, arr) => arr.findIndex(v => Math.abs(v - x) < 0.8) === i);
+      }
+
+      const neutralRoots = getNeutralRoots();
+      let snapped = false;
+      let nearestRoot = null;
+      let nearestDist = Infinity;
+      if(Math.abs(probe.y - 230) < 26){
+        for(const rootX of neutralRoots){
+          const dist = Math.hypot(probe.x - rootX, probe.y - 230);
+          if(dist < nearestDist){
+            nearestDist = dist;
+            nearestRoot = rootX;
+          }
+        }
+        if(nearestRoot !== null && nearestDist < 16){
+          probe.x = nearestRoot;
+          probe.y = 230;
+          snapped = true;
+        }
+      }
+
+      const isNeutral = neutralRoots.some(rootX => Math.abs(probe.x - rootX) < 0.6 && Math.abs(probe.y - 230) < 0.6);
+      if(isNeutral){
+        arrowTo(enetLine,enetLabel,probe.x,probe.y,0,0,'black', arrowScale, {hideWhenZero:true});
+        statusEl.textContent = 'ตอนนี้ E_net = 0 → จุดนี้เป็นจุดสะเทิน';
+        statusEl.style.background = '#eff9ee';
+        statusEl.style.borderColor = '#b8dfb0';
+        statusEl.style.color = '#2d6b1f';
+        neutralText.textContent = 'ตอนนี้ E_net = 0 → จุดนี้เป็นจุดสะเทิน';
+        if(!wasNeutral){ playDing(); flashNeutral(); }
+      } else {
+        arrowTo(enetLine,enetLabel,probe.x,probe.y,En.x,En.y,'black', arrowScale);
+        let msg = 'ตอนนี้ยังไม่ใช่จุดสะเทิน — ลองลากจุดสีดำต่อไป';
+        if(charge1.s === charge2.s && between && nearAxis){
+          msg = 'ประจุชนิดเดียวกัน: จุดสะเทินจะอยู่ระหว่างประจุ';
+        } else if(charge1.s !== charge2.s) {
+          msg = 'ประจุต่างชนิด: ระหว่างประจุสนามมักเสริมกัน ลองหาไกลออกไปด้านนอก';
+        }
+        if(snapped){ msg = 'ระบบดูดเข้าจุดสะเทินแล้ว'; }
+        statusEl.textContent = msg;
+        statusEl.style.background = '#eff5fd';
+        statusEl.style.borderColor = '#c9dbf1';
+        statusEl.style.color = '#244d79';
+        neutralText.textContent = 'ลากจุดสีดำเพื่อหาจุดที่ E_net = 0';
+      }
+      fitNeutralBox();
+      wasNeutral = isNeutral;
+    }
+
+    function attachDrag(obj, opts={}){
+      let dragging = false;
+      let dragOffsetX = 0;
+      let dragOffsetY = 0;
+      obj.g.addEventListener('pointerdown', e => {
+        e.preventDefault();
+        const p = svgPoint(e);
+        const mobile = window.matchMedia('(max-width: 860px)').matches;
+        if(obj===probe && mobile){
+          dragOffsetX = obj.x - p.x;
+          dragOffsetY = obj.y - p.y - 42;
+        }else{
+          dragOffsetX = obj.x - p.x;
+          dragOffsetY = obj.y - p.y;
+        }
+        dragging = true;
+        obj.g.setPointerCapture(e.pointerId);
+      });
+      obj.g.addEventListener('pointermove', e => {
+        if(!dragging) return;
+        e.preventDefault();
+        const p = svgPoint(e);
+        obj.x = clamp(p.x + dragOffsetX, labBounds.minX, labBounds.maxX);
+        obj.y = clamp(p.y + dragOffsetY, labBounds.minY, labBounds.maxY);
+        if(opts.lockY) obj.y = opts.lockY;
+        if(obj===charge1){ obj.x = Math.min(obj.x, charge2.x - 90); }
+        if(obj===charge2){ obj.x = Math.max(obj.x, charge1.x + 90); }
+        update();
+      });
+      const end = ()=> dragging=false;
+      obj.g.addEventListener('pointerup', end);
+      obj.g.addEventListener('pointercancel', end);
+      obj.g.addEventListener('lostpointercapture', end);
+    }
+
+    attachDrag(charge1,{lockY:230});
+    attachDrag(charge2,{lockY:230});
+    attachDrag(probe);
+
+    type1.addEventListener('change', e => { charge1.s = Number(e.target.value); update(); });
+    type2.addEventListener('change', e => { charge2.s = Number(e.target.value); update(); });
+    mag1.addEventListener('input', e => { charge1.m = Number(e.target.value); update(); });
+    mag2.addEventListener('input', e => { charge2.m = Number(e.target.value); update(); });
+
+    applyMobileTouchTargets();
+    window.addEventListener('resize', applyMobileTouchTargets);
+
+    update();
+    fitNeutralBox();
+  </script>
+</body>
+</html>

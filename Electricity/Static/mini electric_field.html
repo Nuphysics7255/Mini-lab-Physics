@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mini Lab : สนามไฟฟ้าของจุดประจุ</title>
+<style>
+body{margin:0;font-family:Arial,sans-serif;text-align:center;background:#fff;}
+h1{color:#2f6fd6;font-size:26px;margin:12px;font-weight:800;}
+canvas{border:1px solid #ddd;border-radius:12px;background:#f7f7f7;touch-action:none;}
+.controls{margin:10px;}
+button{padding:10px 16px;margin:5px;border:none;border-radius:10px;background:#eee;font-size:15px;font-weight:700;cursor:pointer;}
+button.formula-btn{background:#ffd9a8;color:#8a4b00;}
+button.close-btn{background:#e9eef5;color:#335b84;}
+.slider{width:260px;}
+.info{font-size:16px;margin-top:8px;}
+.overlay{position:fixed;inset:0;background:#fff7eb;display:none;z-index:20;overflow:auto;padding:20px 16px 110px;box-sizing:border-box;}
+.overlay.show{display:block;}
+.overlay-inner{max-width:900px;margin:0 auto;text-align:left;}
+.overlay h2{color:#c86a00;font-size:30px;margin:12px 0 18px;font-weight:900;text-align:center;}
+.formula-card{background:#fff;border:2px solid #f2c48b;border-radius:18px;padding:16px 18px;margin:14px 0;box-shadow:0 4px 14px rgba(0,0,0,.05);}
+.formula-card h3{margin:0 0 10px;color:#a95d00;font-size:20px;}
+.formula-card p{margin:8px 0;font-size:18px;line-height:1.7;color:#333;}
+.formula-eq{font-size:24px;font-weight:800;color:#1f4e8c;text-align:center;margin:12px 0;}
+.overlay-topbar{position:sticky;top:0;display:flex;justify-content:flex-end;padding-top:max(8px, env(safe-area-inset-top));background:#fff7eb;z-index:5;}
+@media (max-width: 700px){
+  h1{font-size:22px;}
+  canvas{width:min(92vw,540px);height:auto;}
+  .overlay{padding-bottom:140px;}
+  .overlay h2{font-size:24px;}
+  .formula-card p{font-size:16px;}
+  .formula-eq{font-size:20px;}
+}
+</style>
+</head>
+<body>
+
+<h1>Mini Lab : สนามไฟฟ้าของจุดประจุ</h1>
+<canvas id="canvas" width="540" height="540"></canvas>
+
+<div class="controls">
+<button onclick="toggleCharge()">สลับ + / −</button>
+<button onclick="resetLab()">รีเซ็ต</button>
+<button class="formula-btn" onclick="openFormula()">สูตรสำคัญ</button><br>
+q = <input id="qSlider" class="slider" type="range" min="1" max="5" value="3">
+</div>
+
+<div class="info" id="info"></div>
+
+<script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+const info = document.getElementById("info");
+
+let sign = 1;
+let charge = 3;
+const center = { x: 270, y: 270 };
+let probe = { x: 400, y: 270 };
+let dragging = false;
+
+canvas.onmousedown=()=>dragging=true;
+canvas.onmouseup=()=>dragging=false;
+canvas.onmousemove=(e)=>{
+ if(!dragging) return;
+ const r=canvas.getBoundingClientRect();
+ probe.x=(e.clientX-r.left)*(canvas.width/r.width);
+ probe.y=(e.clientY-r.top)*(canvas.height/r.height);
+};
+
+function toggleCharge(){sign*=-1;}
+function resetLab(){sign=1;charge=3;probe={x:400,y:270};}
+
+document.getElementById("qSlider").oninput=function(){charge=this.value;};
+
+function drawArrow(x1,y1,x2,y2,alpha){
+ const ang=Math.atan2(y2-y1,x2-x1);
+ ctx.strokeStyle=`rgba(255,0,0,${alpha})`;
+ ctx.fillStyle=`rgba(255,0,0,${alpha})`;
+ ctx.lineWidth=2;
+
+ ctx.beginPath();
+ ctx.moveTo(x1,y1);
+ ctx.lineTo(x2,y2);
+ ctx.stroke();
+
+ const s=8;
+ ctx.beginPath();
+ ctx.moveTo(x2,y2);
+ ctx.lineTo(x2-s*Math.cos(ang-Math.PI/6),y2-s*Math.sin(ang-Math.PI/6));
+ ctx.lineTo(x2-s*Math.cos(ang+Math.PI/6),y2-s*Math.sin(ang+Math.PI/6));
+ ctx.closePath();
+ ctx.fill();
+}
+
+function drawField(){
+ const step=60;
+ for(let y=40;y<500;y+=step){
+  for(let x=40;x<500;x+=step){
+    let dx=x-center.x;
+    let dy=y-center.y;
+    let dist=Math.hypot(dx,dy);
+    if(dist<50) continue;
+
+    let r=dist/60;
+    let E=9*charge/(r*r);
+
+    let ux=dx/dist;
+    let uy=dy/dist;
+    let dir=sign>0?1:-1;
+
+    let len=Math.min(22,Math.max(10,E));
+
+    // normalize intensity (ใกล้เข้ม ไกลจาง)
+    let alpha=Math.min(1,Math.max(0.15,E/10));
+
+    drawArrow(x,y,x+dir*ux*len,y+dir*uy*len,alpha);
+  }
+ }
+}
+
+function draw(){
+ ctx.clearRect(0,0,canvas.width,canvas.height);
+
+ drawField();
+
+ ctx.setLineDash([5,5]);
+ ctx.beginPath();
+ ctx.moveTo(center.x,center.y);
+ ctx.lineTo(probe.x,probe.y);
+ ctx.strokeStyle="#aaa";
+ ctx.stroke();
+ ctx.setLineDash([]);
+
+ ctx.beginPath();
+ ctx.arc(center.x,center.y,18,0,Math.PI*2);
+ ctx.fillStyle=sign>0?"red":"blue";
+ ctx.fill();
+
+ ctx.fillStyle="white";
+ ctx.font="bold 22px Arial";
+ ctx.fillText(sign>0?"+":"−",center.x-6,center.y+7);
+
+ ctx.beginPath();
+ ctx.arc(probe.x,probe.y,6,0,Math.PI*2);
+ ctx.fillStyle="black";
+ ctx.fill();
+
+ let dx=probe.x-center.x;
+ let dy=probe.y-center.y;
+ let dist=Math.hypot(dx,dy);
+ let r=dist/60;
+ let E=9*charge/(r*r);
+
+ let ux=dx/dist;
+ let uy=dy/dist;
+ let dir=sign>0?1:-1;
+
+ let len=Math.min(60,E*2);
+ drawArrow(probe.x,probe.y,probe.x+dir*ux*len,probe.y+dir*uy*len,1);
+
+ ctx.fillStyle="red";
+ ctx.font="bold 16px Arial";
+ ctx.fillText("E",probe.x+10,probe.y-10);
+
+ info.innerHTML="r = "+r.toFixed(2)+" m | E = "+E.toFixed(2);
+
+ requestAnimationFrame(draw);
+}
+
+draw();
+</script>
+
+
+<div id="formulaOverlay" class="overlay" aria-hidden="true">
+  <div class="overlay-topbar">
+    <button class="close-btn" onclick="closeFormula()">ปิด กลับสู่หน้าทดลอง</button>
+  </div>
+  <div class="overlay-inner">
+    <h2>สูตรสำคัญ</h2>
+
+    <div class="formula-card">
+      <h3>1) นิยามของสนามไฟฟ้า</h3>
+      <p>สนามไฟฟ้า คือ ปริมาณที่ใช้บอกว่า ณ ตำแหน่งนั้น ถ้านำประจุบวกทดสอบขนาดเล็กไปวางไว้ จะถูกแรงไฟฟ้ากระทำมากน้อยเพียงใดต่อประจุ 1 คูลอมบ์</p>
+      <div class="formula-eq">E = F / q</div>
+      <p>ดังนั้น <b>E</b> คือแรงไฟฟ้าต่อหนึ่งหน่วยประจุทดสอบ</p>
+    </div>
+
+    <div class="formula-card">
+      <h3>2) ขนาดของสนามไฟฟ้าของจุดประจุ</h3>
+      <div class="formula-eq">E = kq / r²</div>
+      <p>โดยที่ <b>k</b> คือค่าคงที่คูลอมบ์, <b>q</b> คือขนาดของประจุต้นกำเนิด และ <b>r</b> คือระยะจากประจุไปยังจุดที่ต้องการพิจารณาสนามไฟฟ้า</p>
+      <p>จากสูตรจะเห็นว่า เมื่ออยู่ใกล้ประจุมากขึ้น สนามไฟฟ้าจะมีค่ามากขึ้น และเมื่ออยู่ไกลออกไป สนามไฟฟ้าจะลดลงตามกำลังสองของระยะ</p>
+    </div>
+
+    <div class="formula-card">
+      <h3>3) ทิศทางของสนามไฟฟ้า</h3>
+      <p>ทิศของสนามไฟฟ้าคือทิศของแรงที่กระทำต่อ <b>ประจุบวกทดสอบ</b></p>
+      <p>• ถ้าต้นกำเนิดเป็น <b>ประจุบวก</b> สนามไฟฟ้า <b>พุ่งออกจากประจุ</b></p>
+      <p>• ถ้าต้นกำเนิดเป็น <b>ประจุลบ</b> สนามไฟฟ้า <b>พุ่งเข้าหาประจุ</b></p>
+      <p>สรุปง่าย ๆ : <b>บวกผลักออก ลบดึงเข้า</b></p>
+    </div>
+  </div>
+</div>
+
+<script>
+function openFormula(){
+  document.getElementById('formulaOverlay').classList.add('show');
+  document.body.style.overflow='hidden';
+}
+function closeFormula(){
+  document.getElementById('formulaOverlay').classList.remove('show');
+  document.body.style.overflow='';
+}
+</script>
+
+</body>
+</html>

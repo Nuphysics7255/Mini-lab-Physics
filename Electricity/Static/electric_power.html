@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>ไฟฟ้าสถิต: อำนาจไฟฟ้า (FULL lab + mission + quiz v3)</title>
+<style>
+  :root{
+    --bg:#ffffff;
+    --ink:#0f172a;
+    --line:#cbd5e1;
+    --panel:#f8fafc;
+    --panelBorder:#94a3b8;
+
+    --ballPlusFill:#dbeafe;
+    --ballMinusFill:#ffedd5;
+    --rodPlusFill:#dbeafe;
+    --rodMinusFill:#ffedd5;
+
+    --plusColor:#2563eb;
+    --minusColor:#f97316;
+
+    --ropeColor:#1e40af;
+    --outlineBall:#1e293b;
+    --Fcolor:#ef4444;
+    --ceilingBlock:#5b4632;
+
+    --popupBg:#e0f2fe;
+    --popupBorder:#0284c7;
+    --popupText:#0c4a6e;
+
+    --btnMission:#f472b6;  /* pink */
+    --btnQuizBg:#e2eef6;   /* pale blue */
+    --btnQuizBorder:#93c5fd;
+    --btnExplain:#fb923c;  /* orange */
+    --btnExplainText:#7c2d12;
+  }
+
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Thai",sans-serif;
+    margin:0;
+    padding:16px;
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+  }
+
+  header h1{
+    font-size:1rem;
+    font-weight:700;
+    margin:0;
+    color:var(--plusColor); /* blue title */
+  }
+
+  .layout{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;}
+  .controls{
+    background:var(--panel);
+    border:1px solid var(--panelBorder);
+    border-radius:14px;
+    padding:12px 16px;
+    min-width:260px;
+    max-width:340px;
+    font-size:14px;
+  }
+
+  fieldset{border:1px solid var(--line);border-radius:10px;margin-bottom:12px;padding:8px 12px 10px;}
+  legend{font-size:0.8rem;color:#475569;}
+  .row{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0;}
+
+  button.select-btn{
+    flex:1;
+    border:1px solid var(--line);
+    background:#fff;
+    border-radius:10px;
+    padding:8px 10px;
+    font-size:0.85rem;
+    cursor:pointer;
+  }
+  button.select-btn.active[data-charge="+"]{background:var(--ballPlusFill);border-color:var(--plusColor);color:var(--plusColor);font-weight:700;}
+  button.select-btn.active[data-charge="-"]{background:var(--ballMinusFill);border-color:var(--minusColor);color:var(--minusColor);font-weight:700;}
+  button.select-btn.active[data-charge="0"]{background:#0f172a;border-color:#0f172a;color:#fff;font-weight:700;}
+
+  .status-box{
+    background:#fff;
+    border:1px solid var(--panelBorder);
+    border-radius:10px;
+    padding:10px 12px;
+    font-size:0.9rem;
+    min-height:3.2em;
+  }
+
+  .actionRow{
+    display:flex;
+    gap:10px;
+    margin-top:10px;
+    flex-wrap:wrap;
+  }
+
+  .btn-pill{
+    border:none;
+    border-radius:999px;
+    padding:10px 14px;
+    font-size:0.9rem;
+    font-weight:700;
+    cursor:pointer;
+    display:inline-flex;
+    align-items:center;
+    gap:10px;
+    box-shadow:0 2px 0 rgba(0,0,0,.08);
+    user-select:none;
+  }
+
+  .btn-mission{background:var(--btnMission); color:#fff;}
+  .btn-quiz{
+    background:var(--btnQuizBg);
+    border:1px solid var(--btnQuizBorder);
+    color:#0f172a;
+  }
+
+  .btn-explain{
+    width:100%;
+    border:none;
+    border-radius:999px;
+    background:var(--btnExplain);
+    color:var(--btnExplainText);
+    font-size:0.95rem;
+    font-weight:800;
+    padding:12px 14px;
+    cursor:pointer;
+    margin-top:8px;
+    box-shadow:0 2px 0 rgba(0,0,0,.08);
+  }
+
+  .canvasWrap{
+    flex:1;
+    border:1px solid var(--line);
+    border-radius:14px;
+    background:#fff;
+    position:relative;
+    padding:12px;
+    min-width:320px;
+  }
+
+  canvas{width:100%;height:auto;max-width:520px;display:block;background:#ffffff;margin:0 auto;}
+
+  /* Mission banner under canvas, transparent, close only */
+  .missionBanner{
+    display:none;
+    margin:12px auto 0;
+    max-width:520px;
+    border:1px solid var(--line);
+    border-radius:12px;
+    background:transparent;
+    padding:10px 12px;
+    position:relative;
+    font-size:0.92rem;
+    line-height:1.6;
+    color:#334155;
+  }
+  .missionClose{
+    position:absolute;
+    top:6px;
+    right:8px;
+    border:none;
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:4px 8px;
+    cursor:pointer;
+    font-weight:700;
+  }
+
+  footer{
+    text-align:center;
+    font-size:0.9rem;
+    color:#475569;
+    border-top:1px solid var(--line);
+    padding-top:8px;
+  }
+  footer a{color:#2563eb;text-decoration:underline;}
+
+  /* Explain popup */
+  .popup-overlay{position:fixed;inset:0;background:#0005;backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;padding:16px;z-index:9999;}
+  .popup-card{background:var(--popupBg);border:2px solid #fb923c;color:var(--popupText);border-radius:16px;max-width:520px;width:100%;box-shadow:0 20px 40px #0008;font-size:0.95rem;line-height:1.55;position:relative;padding:16px 20px;}
+  .popup-card h2{font-size:1.05rem;font-weight:800;margin:0 0 8px;color:var(--popupText);}
+  .popup-card p{margin:0 0 8px;}
+  .popup-close{position:absolute;top:8px;right:10px;background:#fff;border:1px solid var(--popupBorder);border-radius:10px;color:var(--popupText);font-size:0.85rem;padding:6px 10px;cursor:pointer;font-weight:700;}
+
+  /* Quiz modal */
+  .quiz-overlay{
+    position:fixed; inset:0;
+    background:#0006;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:16px;
+    z-index:10000;
+  }
+  .quiz-card{
+    width:min(720px, 96vw);
+    background:var(--btnQuizBg);
+    border:2px solid #b6d8ff;
+    border-radius:22px;
+    box-shadow:0 24px 60px rgba(0,0,0,.35);
+    padding:18px 18px 16px;
+  }
+  .quiz-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;}
+  .quiz-title{display:flex;align-items:center;gap:10px;font-weight:900;font-size:1.15rem;color:#0f172a;}
+  .quiz-close{border:1px solid #60a5fa;background:#fff;color:#0f172a;border-radius:12px;padding:6px 12px;font-weight:800;cursor:pointer;}
+  .quiz-q{font-size:1.02rem;font-weight:800;margin:10px 0 10px;}
+  .choice{
+    width:100%;
+    text-align:left;
+    background:#fff;
+    border:1px solid #9fb7d0;
+    border-radius:14px;
+    padding:12px 14px;
+    font-size:1rem;
+    font-weight:700;
+    cursor:pointer;
+    margin:10px 0;
+  }
+  .quiz-feedback{margin-top:10px;font-size:1rem;line-height:1.55;}
+  .ok{color:#15803d;font-weight:900;}
+  .hint{color:#c2410c;font-weight:800;}
+  .explain{color:#0f172a;font-weight:700;}
+  .quiz-next{
+    margin-top:14px;
+    width:100%;
+    padding:14px 16px;
+    border:none;
+    border-radius:16px;
+    background:#c8f0d6;
+    color:#14532d;
+    font-weight:900;
+    font-size:1.05rem;
+    cursor:pointer;
+  }
+  .quiz-next:disabled{background:#dbe7df;color:#64748b;cursor:not-allowed;}
+
+  /* Mobile fixed bar under experiment */
+  .mobileBar{
+    display:none;
+  }
+  @media (max-width: 700px){
+    .desktopActions{display:none;} /* hide desktop buttons on mobile */
+    .mobileBar{
+      display:flex;
+      position:fixed;
+      left:0; right:0;
+      bottom:0;
+      gap:10px;
+      padding:10px 12px;
+      background:#fff;
+      border-top:1px solid var(--line);
+      z-index:11000;
+      justify-content:space-between;
+    }
+    .mobileBar .btn-pill,
+    .mobileBar .btn-explain{
+      flex:1;
+      width:auto;
+      margin:0;
+      justify-content:center;
+    }
+    body{padding-bottom:92px;} /* safe area for bar */
+  }
+</style>
+</head>
+<body>
+<header><h1>ไฟฟ้าสถิต: อำนาจไฟฟ้า</h1></header>
+
+<div class="layout">
+  <section class="controls">
+    <fieldset><legend>สถานะประจุของลูกตุ้ม (ตัวนำ)</legend>
+      <div class="row" id="ballButtons">
+        <button class="select-btn" data-target="ball" data-charge="+">บวก (+)</button>
+        <button class="select-btn" data-target="ball" data-charge="-">ลบ (−)</button>
+        <button class="select-btn" data-target="ball" data-charge="0">เป็นกลาง (0)</button>
+      </div>
+    </fieldset>
+
+    <fieldset><legend>ประจุของแท่ง PVC</legend>
+      <div class="row" id="rodButtons">
+        <button class="select-btn" data-target="rod" data-charge="+">บวก (+)</button>
+        <button class="select-btn" data-target="rod" data-charge="-">ลบ (−)</button>
+      </div>
+    </fieldset>
+
+    <fieldset><legend>แรงระหว่างกัน</legend><div class="status-box" id="physicsStatus">-</div></fieldset>
+
+    <!-- Desktop buttons -->
+    <div class="desktopActions">
+      <div class="actionRow">
+        <button class="btn-pill btn-mission" id="openMission">🎯 ภารกิจ</button>
+        <button class="btn-pill btn-quiz" id="openQuiz">🧠 Quiz Concept Check</button>
+      </div>
+      <button class="btn-explain" id="openExplain">📘 อธิบายเนื้อหา</button>
+    </div>
+  </section>
+
+  <section class="canvasWrap">
+    <canvas id="scene"></canvas>
+
+    <div class="missionBanner" id="missionBanner">
+      <button class="missionClose" id="missionClose">❌</button>
+      <div id="missionContent"></div>
+    </div>
+  </section>
+</div>
+
+<!-- Mobile fixed bar (under experiment) -->
+<div class="mobileBar" id="mobileBar">
+  <button class="btn-pill btn-mission" id="openMission_m">🎯 ภารกิจ</button>
+  <button class="btn-pill btn-quiz" id="openQuiz_m">🧠 Quiz</button>
+  <button class="btn-explain" id="openExplain_m">📘 อธิบาย</button>
+</div>
+
+<footer>
+  ศึกษาเพิ่มเติมที่ <a href="https://www.facebook.com/resolvephysics" target="_blank">เพจคลายปมฟิสิกส์</a>
+</footer>
+
+<!-- Explain popup -->
+<div class="popup-overlay" id="popupOverlay">
+  <div class="popup-card">
+    <button class="popup-close" id="closeExplain">ปิด</button>
+    <h2>📘 อธิบายเนื้อหา</h2>
+    <p><b>ประจุชนิดเดียวกัน</b> → ผลักกัน</p>
+    <p><b>ประจุต่างชนิด</b> → ดูดกัน</p>
+    <p><b>วัตถุเป็นกลาง (ตัวนำ)</b> อยู่ใกล้วัตถุมีประจุ → เกิด <b>การเหนี่ยวนำ</b><br>
+       ด้านใกล้มีประจุตรงข้าม → ดูดแรงมากกว่าแรงผลักด้านไกล → ผลรวมเป็นแรงดูด</p>
+  </div>
+</div>
+
+<!-- Quiz modal -->
+<div class="quiz-overlay" id="quizOverlay">
+  <div class="quiz-card" role="dialog" aria-modal="true">
+    <div class="quiz-top">
+      <div class="quiz-title">🧠 Quiz Concept Check</div>
+      <button class="quiz-close" id="quizClose">ปิด</button>
+    </div>
+
+    <div class="quiz-q" id="quizQ"></div>
+    <div id="quizChoices"></div>
+    <div class="quiz-feedback" id="quizFeedback"></div>
+
+    <button class="quiz-next" id="quizNext" disabled>ข้อต่อไป</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  // ====== Lab logic ======
+  let ballCharge = "+";   // start as +
+  let rodCharge  = "+";
+
+  const physicsStatusEl = document.getElementById("physicsStatus");
+  const scene = document.getElementById("scene"), ctx = scene.getContext("2d");
+
+  const LOGICAL_W=520, LOGICAL_H=400;
+  const cxBase=200, cyTop=40, ropeL=140, rBall=45;
+  const rodX=360, rodY=180, rodW=90, rodH=40;
+
+  function setupChargeButtons(groupId, targetKey){
+    const group = document.getElementById(groupId);
+    const btns = group.querySelectorAll("button.select-btn");
+    function updateActive(){
+      btns.forEach(btn=>{
+        const c = btn.dataset.charge;
+        btn.classList.toggle("active", (targetKey==="ball"?ballCharge:rodCharge)===c);
+      });
+    }
+    btns.forEach(btn=>btn.addEventListener("click", ()=>{
+      const c = btn.dataset.charge;
+      if(targetKey==="ball") ballCharge = c;
+      if(targetKey==="rod")  rodCharge  = c;
+      updateActive();
+      draw();
+    }));
+    updateActive();
+  }
+  setupChargeButtons("ballButtons","ball");
+  setupChargeButtons("rodButtons","rod");
+
+  const popupOverlay = document.getElementById("popupOverlay");
+  const openExplainDesktop = document.getElementById("openExplain");
+  const openExplainMobile  = document.getElementById("openExplain_m");
+  function openExplain(){ popupOverlay.style.display="flex"; }
+  if(openExplainDesktop) openExplainDesktop.onclick = openExplain;
+  if(openExplainMobile)  openExplainMobile.onclick  = openExplain;
+
+  document.getElementById("closeExplain").onclick = ()=> popupOverlay.style.display="none";
+  popupOverlay.addEventListener("click", e=>{ if(e.target===popupOverlay) popupOverlay.style.display="none"; });
+
+  function getForceType(b,r){
+    if(b==="0") return "attract";
+    if(b===r)   return "repel";
+    return "attract";
+  }
+  function describeForce(b,r){
+    if(b==="0") return "ดูดกัน (เหนี่ยวนำ)";
+    if(b===r)   return "ผลักกัน";
+    return "ดูดกัน";
+  }
+  function getBallOffset(b,r){
+    return getForceType(b,r)==="attract" ? 30 : -30;
+  }
+  function v(n,f){
+    const x = getComputedStyle(document.documentElement).getPropertyValue(n);
+    return (x && x.trim()) || f;
+  }
+  function drawArrow(x1,y1,x2,y2,c,lbl){
+    ctx.save();
+    ctx.strokeStyle=c; ctx.fillStyle=c; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+    const ang=Math.atan2(y2-y1,x2-x1), ah=10;
+    ctx.beginPath();
+    ctx.moveTo(x2,y2);
+    ctx.lineTo(x2-ah*Math.cos(ang-Math.PI/6), y2-ah*Math.sin(ang-Math.PI/6));
+    ctx.lineTo(x2-ah*Math.cos(ang+Math.PI/6), y2-ah*Math.sin(ang+Math.PI/6));
+    ctx.closePath(); ctx.fill();
+    if(lbl){
+      ctx.font="14px system-ui";
+      ctx.textAlign = x2>x1 ? "left" : "right";
+      ctx.textBaseline="middle";
+      ctx.fillText(lbl, x2+(x2>x1?4:-4), y2);
+    }
+    ctx.restore();
+  }
+  function drawPVC(){
+    const fill = rodCharge==="+" ? v("--rodPlusFill","#dbeafe") : v("--rodMinusFill","#ffedd5");
+    ctx.lineWidth=2; ctx.strokeStyle="#475569"; ctx.fillStyle=fill;
+    ctx.beginPath(); ctx.rect(rodX,rodY,rodW,rodH); ctx.fill(); ctx.stroke();
+    ctx.font="20px system-ui"; ctx.textAlign="center"; ctx.textBaseline="middle";
+    ctx.fillStyle = rodCharge==="+" ? v("--plusColor","#2563eb") : v("--minusColor","#f97316");
+    ctx.fillText(rodCharge==="+"?"+":"−", rodX+rodW/2, rodY+rodH/2);
+    ctx.font="14px system-ui"; ctx.fillStyle="#475569"; ctx.textBaseline="top";
+    ctx.fillText("แท่ง PVC", rodX+rodW/2, rodY+rodH+6);
+  }
+  function drawInducedSide(cx,cy,r,side,sign){
+    const angs=[];
+    if(side==="right"){ for(let a=-40;a<=40;a+=20) angs.push(a*Math.PI/180); }
+    else{ for(let a=140;a<=220;a+=20) angs.push(a*Math.PI/180); }
+    const color = sign==="+" ? v("--plusColor","#2563eb") : v("--minusColor","#f97316");
+    angs.forEach(a=>{
+      const rr=r*0.8, x=cx+rr*Math.cos(a), y=cy+rr*Math.sin(a);
+      ctx.beginPath(); ctx.fillStyle=color; ctx.arc(x,y,6,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle="#fff"; ctx.font="10px system-ui"; ctx.textAlign="center"; ctx.textBaseline="middle";
+      ctx.fillText(sign, x, y+0.5);
+    });
+  }
+  function drawBall(cx,cy){
+    let fill="#fff";
+    if(ballCharge==="+") fill=v("--ballPlusFill","#dbeafe");
+    if(ballCharge==="-") fill=v("--ballMinusFill","#ffedd5");
+    ctx.lineWidth=3; ctx.strokeStyle=v("--outlineBall","#1e293b");
+    ctx.beginPath(); ctx.arc(cx,cy,rBall,0,Math.PI*2);
+    ctx.fillStyle=fill; ctx.fill(); ctx.stroke();
+    if(ballCharge==="+"||ballCharge==="-"){
+      ctx.font="24px system-ui"; ctx.textAlign="center"; ctx.textBaseline="middle";
+      ctx.fillStyle = ballCharge==="+" ? v("--plusColor","#2563eb") : v("--minusColor","#f97316");
+      ctx.fillText(ballCharge==="+"?"+":"−", cx, cy);
+    }else{
+      const near = rodCharge==="+" ? "−" : "+";
+      const far  = rodCharge==="+" ? "+" : "−";
+      drawInducedSide(cx,cy,rBall,"right",near);
+      drawInducedSide(cx,cy,rBall,"left",far);
+    }
+  }
+  function drawFnet(cx,cy){
+    const t=getForceType(ballCharge,rodCharge), len=50, offset=10, c=v("--Fcolor","#ef4444");
+    if(t==="attract") drawArrow(cx+offset,cy,cx+offset+len,cy,c,"Fnet");
+    else             drawArrow(cx-offset,cy,cx-offset-len,cy,c,"Fnet");
+  }
+  function draw(){
+    ctx.clearRect(0,0,scene.width,scene.height);
+    const off=getBallOffset(ballCharge,rodCharge), cx=cxBase+off, cy=cyTop+ropeL;
+
+    ctx.lineWidth=3; ctx.strokeStyle="#000";
+    ctx.beginPath(); ctx.moveTo(cxBase-70,cyTop); ctx.lineTo(cxBase+70,cyTop); ctx.stroke();
+    ctx.fillStyle=v("--ceilingBlock","#5b4632"); ctx.fillRect(cxBase-18,cyTop,36,18);
+
+    ctx.lineWidth=2; ctx.strokeStyle=v("--ropeColor","#1e40af");
+    ctx.beginPath(); ctx.moveTo(cxBase,cyTop+18); ctx.lineTo(cx,cy-rBall); ctx.stroke();
+
+    drawPVC(); drawBall(cx,cy); drawFnet(cx,cy);
+    physicsStatusEl.textContent = describeForce(ballCharge,rodCharge);
+  }
+  function resize(){
+    const ratio=window.devicePixelRatio||1;
+    const dispW=scene.clientWidth;
+    const dispH=dispW*(LOGICAL_H/LOGICAL_W);
+    scene.width=dispW*ratio; scene.height=dispH*ratio;
+    ctx.setTransform(scene.width/LOGICAL_W,0,0,scene.height/LOGICAL_H,0,0);
+    draw();
+  }
+  window.addEventListener("resize", resize);
+  resize();
+
+  // ====== Mission banner (close only) ======
+  const missionBanner = document.getElementById("missionBanner");
+  const missionContent = document.getElementById("missionContent");
+  const missionClose  = document.getElementById("missionClose");
+  const openMissionDesktop = document.getElementById("openMission");
+  const openMissionMobile  = document.getElementById("openMission_m");
+
+  const missionText = `ลองตั้งลูกตุ้มเป็น บวก ลบ และ เป็นกลาง
+เปลี่ยนประจุแท่ง PVC แล้วสังเกตการเคลื่อนที่
+สรุปว่าชนิดของประจุสัมพันธ์กับแรงอย่างไร`;
+
+  function renderMission(){
+    const lines = missionText.split("\n").map(s=>s.trim());
+    missionContent.innerHTML = `${lines.map(l=>`${l}<br>`).join("")}`;
+  }
+  renderMission();
+
+  function openMission(){
+    missionBanner.style.display="block";
+  }
+  if(openMissionDesktop) openMissionDesktop.onclick = openMission;
+  if(openMissionMobile)  openMissionMobile.onclick  = openMission;
+
+  missionClose.onclick = ()=>{ missionBanner.style.display="none"; };
+
+  // ====== Quiz ======
+  const quizOverlay = document.getElementById("quizOverlay");
+  const quizClose = document.getElementById("quizClose");
+  const quizQ = document.getElementById("quizQ");
+  const quizChoices = document.getElementById("quizChoices");
+  const quizFeedback = document.getElementById("quizFeedback");
+  const quizNext = document.getElementById("quizNext");
+
+  const openQuizDesktop = document.getElementById("openQuiz");
+  const openQuizMobile  = document.getElementById("openQuiz_m");
+
+  const quiz = [
+    { q:"ข้อ 1) ถ้าลูกตุ้มเป็น + และแท่ง PVC เป็น + จะเกิดอะไรขึ้น?",
+      choices:["A) ดูด","B) ผลัก","C) ไม่เกิดแรง","D) สลับไปมา"],
+      correct:1,
+      hint:"Hint: เครื่องหมายเหมือนกัน (+ กับ +) จะเป็นแบบไหน?",
+      explain:"ประจุเหมือนกัน → ผลักกัน"
+    },
+    { q:"ข้อ 2) ถ้าลูกตุ้มเป็น − และแท่ง PVC เป็น + จะเกิดอะไรขึ้น?",
+      choices:["A) ดูด","B) ผลัก","C) ไม่เกิดแรง","D) ขึ้นกับมวล"],
+      correct:0,
+      hint:"Hint: ประจุต่างชนิดจะ…?",
+      explain:"ประจุต่างชนิด → ดูดกัน"
+    },
+    { q:"ข้อ 3) ถ้าลูกตุ้มเป็นกลาง (0) และแท่ง PVC มีประจุ จะเกิดอะไรขึ้น?",
+      choices:["A) ไม่เกิดแรง เพราะเป็นกลาง","B) ผลักเสมอ","C) ดูด (เพราะเหนี่ยวนำ)","D) ดูดเฉพาะเมื่อแท่งเป็นบวก"],
+      correct:2,
+      hint:"Hint: วัตถุเป็นกลาง (ตัวนำ) สามารถเกิดการ ‘เหนี่ยวนำ’ ได้",
+      explain:"เกิดการเหนี่ยวนำ → ด้านใกล้มีประจุตรงข้าม → ถูกดูด"
+    },
+    { q:"ข้อ 4) ทำไมแรงดูดจากการเหนี่ยวนำจึงมากกว่าแรงผลักด้านไกล?",
+      choices:["A) เพราะประจุรวมเพิ่มขึ้น","B) เพราะแรงไฟฟ้าลดลงตามระยะทาง","C) เพราะมวลเปลี่ยน","D) เพราะแท่งมีสนามเป็นศูนย์"],
+      correct:1,
+      hint:"Hint: แรงไฟฟ้า ‘ขึ้นกับระยะทาง’ ด้านใกล้กับด้านไกลไม่เท่ากัน",
+      explain:"แรงไฟฟ้าลดลงเมื่อระยะห่างมากขึ้น → ด้านใกล้แรงมากกว่า"
+    },
+    { q:"ข้อ 5) เปรียบเทียบขนาดแรงที่แท่ง PVC กระทำต่อลูกตุ้ม กับแรงที่ลูกตุ้มกระทำต่อแท่ง PVC",
+      choices:["A) แรงที่แท่งทำต่อลูกตุ้มมากกว่า","B) แรงที่ลูกตุ้มทำต่อแท่งมากกว่า","C) ขนาดเท่ากัน (ทิศตรงข้าม)","D) เท่ากันเฉพาะกรณีดูดเท่านั้น"],
+      correct:2,
+      hint:"Hint: กฎข้อ 3 ของนิวตัน — แรงกิริยา/ปฏิกิริยา มีขนาด…?",
+      explain:"กฎข้อ 3 ของนิวตัน → แรงที่กระทำต่อกันมีขนาดเท่ากัน แต่ทิศตรงข้าม"
+    }
+  ];
+
+  let qi = 0;
+  let answeredCorrect = false;
+
+  function renderQuiz(){
+    const item = quiz[qi];
+    answeredCorrect = false;
+    quizQ.textContent = item.q;
+    quizChoices.innerHTML = "";
+    quizFeedback.innerHTML = "";
+    quizNext.disabled = true;
+    item.choices.forEach((txt, idx)=>{
+      const b = document.createElement("button");
+      b.className = "choice";
+      b.textContent = txt;
+      b.onclick = ()=> choose(idx);
+      quizChoices.appendChild(b);
+    });
+  }
+
+  function choose(idx){
+    if(answeredCorrect) return;
+    const item = quiz[qi];
+    if(idx === item.correct){
+      answeredCorrect = true;
+      quizFeedback.innerHTML = `<div class="ok">ถูกต้อง ✅</div><div class="explain">${item.explain}</div>`;
+      quizNext.disabled = false;
+    }else{
+      quizFeedback.innerHTML = `<div class="hint">${item.hint}</div>`;
+    }
+  }
+
+  function openQuiz(){
+    qi = 0;
+    quizOverlay.style.display = "flex";
+    renderQuiz();
+  }
+  function closeQuiz(){ quizOverlay.style.display = "none"; }
+
+  if(openQuizDesktop) openQuizDesktop.onclick = openQuiz;
+  if(openQuizMobile)  openQuizMobile.onclick  = openQuiz;
+  quizClose.onclick = closeQuiz;
+  quizOverlay.addEventListener("click", (e)=>{ if(e.target===quizOverlay) closeQuiz(); });
+
+  quizNext.onclick = ()=>{
+    if(qi < quiz.length-1){
+      qi++;
+      renderQuiz();
+    }else{
+      quizQ.textContent = "จบ Quiz 🎉";
+      quizChoices.innerHTML = "";
+      quizFeedback.innerHTML = `<div class="ok">ทำครบทุกข้อแล้ว ✅</div>`;
+      quizNext.disabled = true;
+    }
+  };
+})();
+</script>
+</body>
+</html>

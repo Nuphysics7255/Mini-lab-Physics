@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Mini Lab : กฎของคูลอมบ์</title>
+  <style>
+    :root{
+      --blue:#2f6fd6;
+      --blue2:#204d7c;
+      --panel:#ffffff;
+      --line:#dbe5f1;
+      --bg:#f6f9fc;
+      --text:#1f2d3d;
+      --muted:#58708a;
+      --plus:#e85d5d;
+      --minus:#4b86ff;
+      --f1:#2aa86b;
+      --f2:#f39c32;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans Thai", sans-serif;
+      color:var(--text);
+      background:linear-gradient(180deg,#f8fbff 0%, #f2f7fc 100%);
+    }
+    .wrap{
+      width:min(960px, calc(100vw - 20px));
+      margin:0 auto;
+      padding: max(12px, env(safe-area-inset-top)) 0 calc(24px + env(safe-area-inset-bottom));
+    }
+    .head{
+      display:flex;
+      gap:12px;
+      align-items:center;
+      padding:8px 4px 14px;
+    }
+    .icon{
+      width:54px;height:54px;border-radius:16px;
+      display:grid;place-items:center;
+      background:#edf3fb;border:1px solid var(--line);font-size:28px;
+      flex:0 0 auto;
+    }
+    .title-top{font-size:clamp(22px,3.6vw,38px);font-weight:900;color:var(--blue);line-height:1.05}
+    .title-bottom{font-size:clamp(18px,3vw,30px);font-weight:900;color:var(--blue2);line-height:1.1;margin-top:2px}
+    .grid{display:grid;grid-template-columns:1.08fr .92fr;gap:16px}
+    .card{
+      background:var(--panel);border:1px solid var(--line);border-radius:24px;box-shadow:0 10px 28px rgba(35,72,120,.08);
+    }
+    .lab{padding:12px}
+    canvas{
+      width:100%;height:auto;display:block;background:linear-gradient(180deg,#ffffff 0%, #fbfdff 100%);
+      border:1px solid #e3ecf6;border-radius:20px;touch-action:none;
+    }
+    .controls{padding:14px}
+    .pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+    .pill{padding:8px 12px;border-radius:999px;background:#edf3fb;color:#2e5f93;font-weight:800;font-size:15px;border:1px solid var(--line)}
+    .row{margin-bottom:14px}
+    .label-line{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:7px}
+    .label{font-weight:800;font-size:16px;color:#234873}
+    .val{font-weight:900;font-size:15px;color:#2f6fd6;background:#f5f9ff;border:1px solid #dce8f4;padding:6px 10px;border-radius:12px;min-width:92px;text-align:center}
+    input[type="range"]{width:100%;accent-color:#6da5dc}
+    .note{font-size:14px;color:var(--muted);line-height:1.55;background:#f9fbfe;border:1px solid #e6eef7;border-radius:16px;padding:11px 12px}
+    .insight{margin-top:12px;display:grid;gap:10px}
+    .mini{
+      border-radius:18px;border:1px solid var(--line);padding:12px 14px;background:#fcfdff;
+    }
+    .mini h3{margin:0 0 6px;font-size:16px;color:#234873}
+    .mini p{margin:0;font-size:15px;line-height:1.6}
+    .strong{font-weight:900}
+    .footer-link{margin-top:12px;font-size:14px;color:#5d7690}
+    .footer-link a{color:#2f6fd6;text-decoration:underline}
+    .formula-box{padding:12px 14px;margin-bottom:10px;background:#eef4ff;border:1px solid #d6e4ff;border-radius:16px;color:#123d70;text-align:center;overflow-x:auto;-webkit-overflow-scrolling:touch}
+    .formula-main{font-size:28px;font-weight:800;line-height:1.2;margin-bottom:4px}
+    .formula-k{font-size:15px;font-weight:700;color:#4f6782;line-height:1.35}
+    @media (max-width: 780px){
+      .wrap{width:min(100vw - 14px, 960px)}
+      .grid{grid-template-columns:1fr}
+      .head{padding:6px 2px 10px}
+      .icon{width:46px;height:46px;font-size:24px;border-radius:14px}
+      .controls{padding:12px}
+      .label{font-size:15px}
+      .val{font-size:14px;min-width:88px}
+    }
+  </style>
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['\\(', '\\)'], ['$', '$']] },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+</head>
+<body>
+  <div class="wrap">
+    <div class="head">
+      <div class="icon">⚡</div>
+      <div>
+        <div class="title-top">Mini Lab</div>
+        <div class="title-bottom">กฎของคูลอมบ์</div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <section class="card lab">
+        <div id="formulaBox" class="formula-box">
+          <div class="formula-main">\( F = k \dfrac{|q_1 q_2|}{r^2} \)</div>
+          <div class="formula-k">\( k = 9 \times 10^9 \, \mathrm{N \cdot m^2 / C^2} \)</div>
+        </div>
+        <canvas id="cv" width="820" height="430" aria-label="Coulomb mini lab"></canvas>
+        <div class="footer-link">ศึกษาเพิ่มเติมที่<a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener noreferrer">เพจคลายปมฟิสิกส์</a></div>
+      </section>
+
+      <aside class="card controls">
+        <div class="pills">
+          <div class="pill">ลากประจุเพื่อเปลี่ยนระยะ r</div>
+       
+        </div>
+
+        <div class="row">
+          <div class="label-line">
+            <div class="label">q₁</div>
+            <div class="val" id="q1v">+3 μC</div>
+          </div>
+          <input id="q1" type="range" min="-5" max="5" step="1" value="3">
+        </div>
+
+        <div class="row">
+          <div class="label-line">
+            <div class="label">q₂</div>
+            <div class="val" id="q2v">+3 μC</div>
+          </div>
+          <input id="q2" type="range" min="-5" max="5" step="1" value="3">
+        </div>
+
+        <div class="row">
+          <div class="label-line">
+            <div class="label">ระยะ r</div>
+            <div class="val" id="rv">3.20 m</div>
+          </div>
+          <div class="note">จุดสำคัญของ lab นี้คือสังเกตว่า <span class="strong">ชนิดประจุ</span> ทำให้เกิดแรงดูดหรือแรงผลัก และ <span class="strong">ขนาดประจุ/ระยะห่าง</span> ทำให้ลูกศรแรงยาวขึ้นหรือสั้นลง</div>
+        </div>
+
+        <div class="insight">
+          <div class="mini">
+            <h3>สรุปที่สังเกตได้</h3>
+            <p id="modeText">ประจุชนิดเดียวกัน → <span class="strong">แรงผลัก</span></p>
+          </div>
+          <div class="mini">
+            <h3>ความสัมพันธ์ของขนาดแรง</h3>
+            <p id="magText">เมื่อ |q₁q₂| มากขึ้น แรงจะมากขึ้น และเมื่อ r มากขึ้น แรงจะลดลง</p>
+          </div>
+          <div class="mini">
+            <h3>แรงคู่กิริยา–ปฏิกิริยา</h3>
+            <p id="pairText">แรงที่ q₁ กระทำต่อ q₂ และแรงที่ q₂ กระทำต่อ q₁ มี <span class="strong">ขนาดเท่ากัน</span> แต่ <span class="strong">ทิศตรงข้าม</span></p>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const cv = document.getElementById('cv');
+  const ctx = cv.getContext('2d');
+  const q1Input = document.getElementById('q1');
+  const q2Input = document.getElementById('q2');
+  const q1v = document.getElementById('q1v');
+  const q2v = document.getElementById('q2v');
+  const rv = document.getElementById('rv');
+  const modeText = document.getElementById('modeText');
+
+  const W = cv.width, H = cv.height;
+  const cy = H * 0.58;
+  const minX = 120, maxX = W - 120, minGap = 110;
+  const chargeR = 26;
+  let q1 = 3, q2 = 3;
+  let x1 = 280, x2 = 540;
+  let dragging = null;
+
+  function fmtCharge(q){
+    return `${q >= 0 ? '+' : ''}${q} μC`;
+  }
+
+  function fmtForce(F){
+    return `${F.toFixed(2)} N`;
+  }
+
+  function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+
+  function getForceMag(){
+    const rPx = Math.abs(x2 - x1);
+    const r = rPx / 80; // m
+    const k = 9;
+    const mag = k * Math.abs(q1*q2) / (r*r); // scaled conceptual value
+    return { r, mag };
+  }
+
+  function arrow(xa, ya, xb, yb, color, label){
+    const ang = Math.atan2(yb-ya, xb-xa);
+    const head = 12;
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(xa, ya); ctx.lineTo(xb, yb); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(xb, yb);
+    ctx.lineTo(xb - head*Math.cos(ang - Math.PI/6), yb - head*Math.sin(ang - Math.PI/6));
+    ctx.lineTo(xb - head*Math.cos(ang + Math.PI/6), yb - head*Math.sin(ang + Math.PI/6));
+    ctx.closePath();
+    ctx.fill();
+    ctx.font = 'bold 18px system-ui, sans-serif';
+    ctx.fillText(label, (xa+xb)/2 - 16, ya - 12);
+  }
+
+  function drawCharge(x, y, q){
+    const fill = q >= 0 ? '#e85d5d' : '#4b86ff';
+    ctx.beginPath();
+    ctx.arc(x,y,chargeR,0,Math.PI*2);
+    ctx.fillStyle = fill;
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#ffffff';
+    ctx.stroke();
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 28px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(q >= 0 ? '+' : '−', x, y-1);
+    ctx.font = 'bold 18px system-ui, sans-serif';
+    ctx.fillStyle = '#26415c';
+    ctx.fillText(q >= 0 ? 'q₁' : 'q₂', -999, -999); // noop keep font warm
+  }
+
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+
+    const bg = ctx.createLinearGradient(0,0,0,H);
+    bg.addColorStop(0,'#ffffff');
+    bg.addColorStop(1,'#f9fcff');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0,0,W,H);
+
+    // subtle grid
+    ctx.strokeStyle = '#eef3f8';
+    ctx.lineWidth = 1;
+    for(let x=40;x<W;x+=60){ ctx.beginPath(); ctx.moveTo(x,20); ctx.lineTo(x,H-20); ctx.stroke(); }
+
+    // distance line
+    ctx.strokeStyle = '#8aa9c8';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([8,8]);
+    ctx.beginPath();
+    ctx.moveTo(x1, cy); ctx.lineTo(x2, cy); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // r bracket label
+    const mid = (x1+x2)/2;
+    ctx.fillStyle = '#32587f';
+    ctx.font = 'bold 18px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('r', mid, cy - 18);
+
+    // force arrows
+    const { r, mag } = getForceMag();
+    const sameSign = (q1 === 0 || q2 === 0) ? null : (Math.sign(q1) === Math.sign(q2));
+    const len = q1 === 0 || q2 === 0 ? 0 : clamp(28 + mag * 9, 28, 130);
+
+    // labels under charges
+    ctx.fillStyle = '#284865';
+    ctx.font = 'bold 18px system-ui, sans-serif';
+    ctx.fillText(`q₁ ${fmtCharge(q1)}`, x1, cy + 58);
+    ctx.fillText(`q₂ ${fmtCharge(q2)}`, x2, cy + 58);
+
+    if(len > 0){
+      if(sameSign){
+        arrow(x1 - 10, cy - 52, x1 - len, cy - 52, '#2aa86b', 'F');
+        arrow(x2 + 10, cy - 52, x2 + len, cy - 52, '#f39c32', 'F');
+      }else{
+        arrow(x1 + 10, cy - 52, x1 + len, cy - 52, '#2aa86b', 'F');
+        arrow(x2 - 10, cy - 52, x2 - len, cy - 52, '#f39c32', 'F');
+      }
+
+      ctx.textAlign = 'center';
+      ctx.font = 'bold 18px system-ui, sans-serif';
+      ctx.fillStyle = '#2aa86b';
+      ctx.fillText(`F₁₂ = ${fmtForce(mag)}`, x1, cy - 102);
+      ctx.fillStyle = '#f39c32';
+      ctx.fillText(`F₂₁ = ${fmtForce(mag)}`, x2, cy - 102);
+    } else {
+      ctx.textAlign = 'center';
+      ctx.font = 'bold 18px system-ui, sans-serif';
+      ctx.fillStyle = '#7a8fa6';
+      ctx.fillText('F₁₂ = 0.00 N', x1, cy - 102);
+      ctx.fillText('F₂₁ = 0.00 N', x2, cy - 102);
+    }
+
+    drawCharge(x1, cy, q1);
+    drawCharge(x2, cy, q2);
+
+    // charge labels above
+    ctx.fillStyle = '#35587d';
+    ctx.font = 'bold 20px system-ui, sans-serif';
+    ctx.fillText('q₁', x1, cy - 78);
+    ctx.fillText('q₂', x2, cy - 78);
+
+    // center statement
+    ctx.textAlign = 'left';
+    ctx.font = 'bold 17px system-ui, sans-serif';
+    ctx.fillStyle = '#5d7690';
+    ctx.fillText('ลากประจุซ้ายหรือขวาเพื่อเปลี่ยนระยะห่าง', 24, 34);
+
+    rv.textContent = `${r.toFixed(2)} m`;
+    q1v.textContent = fmtCharge(q1);
+    q2v.textContent = fmtCharge(q2);
+
+    if(q1 === 0 || q2 === 0){
+      modeText.innerHTML = 'ถ้าอย่างน้อยหนึ่งประจุเป็น <span class="strong">0</span> จะไม่เกิดแรงไฟฟ้าระหว่างกัน';
+    } else if(sameSign){
+      modeText.innerHTML = 'ประจุชนิดเดียวกัน → <span class="strong">แรงผลัก</span>';
+    } else {
+      modeText.innerHTML = 'ประจุต่างชนิด → <span class="strong">แรงดูด</span>';
+    }
+  }
+
+  function pointerPos(e){
+    const rect = cv.getBoundingClientRect();
+    const t = e.touches ? e.touches[0] : e;
+    const x = (t.clientX - rect.left) * (cv.width / rect.width);
+    const y = (t.clientY - rect.top) * (cv.height / rect.height);
+    return {x,y};
+  }
+
+  function hit(x,y,cx,cy,r){
+    return (x-cx)*(x-cx) + (y-cy)*(y-cy) <= r*r;
+  }
+
+  function start(e){
+    const p = pointerPos(e);
+    if(hit(p.x,p.y,x1,cy,chargeR+12)) dragging = 'q1';
+    else if(hit(p.x,p.y,x2,cy,chargeR+12)) dragging = 'q2';
+  }
+
+  function move(e){
+    if(!dragging) return;
+    e.preventDefault();
+    const p = pointerPos(e);
+    if(dragging === 'q1'){
+      x1 = clamp(p.x, minX, x2 - minGap);
+    } else {
+      x2 = clamp(p.x, x1 + minGap, maxX);
+    }
+    draw();
+  }
+
+  function end(){ dragging = null; }
+
+  q1Input.addEventListener('input', () => { q1 = Number(q1Input.value); draw(); });
+  q2Input.addEventListener('input', () => { q2 = Number(q2Input.value); draw(); });
+  cv.addEventListener('mousedown', start);
+  window.addEventListener('mousemove', move);
+  window.addEventListener('mouseup', end);
+  cv.addEventListener('touchstart', start, {passive:true});
+  window.addEventListener('touchmove', move, {passive:false});
+  window.addEventListener('touchend', end);
+  window.addEventListener('resize', draw);
+
+  window.addEventListener('load', () => {
+    if (window.MathJax && window.MathJax.typesetPromise) {
+      window.MathJax.typesetPromise([document.getElementById('formulaBox')]).catch(() => {});
+    }
+  });
+
+  draw();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Mini Lab ศักย์ไฟฟ้าและเส้นสมศักย์ของจุดประจุ</title>
+<style>
+  :root{
+    --bg:#ffffff;
+    --ink:#12324f;
+    --muted:#5f7691;
+    --blue:#2f6fd6;
+    --blue2:#204d7c;
+    --pill:#edf3fb;
+    --border:#d8e3ef;
+    --soft:#f8fbff;
+    --orange:#fff1dd;
+    --orange-b:#f2c98b;
+    --orange-ink:#9a6500;
+    --gray:#eef2f6;
+    --gray-b:#cbd5e1;
+    --green:#f0fdf4;
+    --green-b:#bbf7d0;
+    --red:#ef4444;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family:system-ui,"Noto Sans Thai",sans-serif;
+    background:var(--bg);
+    color:var(--ink);
+    min-height:100vh;
+  }
+  .page{
+    width:min(1080px,calc(100vw - 18px));
+    margin:0 auto;
+    padding:18px 0 calc(120px + env(safe-area-inset-bottom));
+  }
+  .hero{
+    display:flex; align-items:center; justify-content:center; gap:12px;
+    margin:2px 0 14px;
+  }
+  .hero-icon{
+    width:58px; height:58px; flex:0 0 58px; border-radius:18px;
+    background:linear-gradient(180deg,#eef5ff,#ddeafd);
+    border:1px solid #cfe0f8; display:grid; place-items:center; font-size:31px;
+  }
+  .title-wrap{text-align:center}
+  .title-top{
+    color:var(--blue); font-weight:900; font-size:clamp(24px,3.5vw,43px); line-height:1.05;
+  }
+  .title-bottom{
+    color:var(--blue2); font-weight:900; font-size:clamp(21px,3vw,36px); line-height:1.15; margin-top:4px;
+  }
+  .layout{
+    display:grid; grid-template-columns:minmax(0,1.7fr) minmax(280px,1fr); gap:14px; align-items:start;
+  }
+  .card{
+    background:var(--soft); border:1px solid var(--border); border-radius:24px; box-shadow:0 6px 18px rgba(24,62,110,.06);
+  }
+  .lab-card{padding:12px}
+  .canvas-wrap{
+    background:#fff; border:1px solid #dbe7f2; border-radius:20px; overflow:hidden;
+  }
+  canvas{display:block; width:100%; height:auto; background:#ffffff; touch-action:none;}
+  .canvas-note{
+    padding:10px 12px; font-size:14px; color:var(--muted); line-height:1.55;
+    border-top:1px solid #ecf2f8;
+  }
+  .right-col{display:flex; flex-direction:column; gap:12px}
+  .panel{padding:12px 12px 14px}
+  .panel h3{
+    margin:0 0 10px; font-size:18px; color:#2d5f90; font-weight:900;
+    display:flex; align-items:center; gap:8px;
+  }
+  .chip{
+    display:inline-flex; align-items:center; gap:8px; background:var(--pill); color:#2e5f93; border:1px solid var(--border);
+    border-radius:999px; padding:10px 16px; font-size:16px; font-weight:800;
+  }
+  .stack{display:flex; flex-direction:column; gap:10px}
+  .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+  .toggle{
+    display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:18px; border:1px solid var(--border); background:#fff;
+  }
+  .toggle input{width:18px; height:18px}
+  .seg{
+    display:flex; background:#fff; border:1px solid var(--border); border-radius:18px; padding:4px;
+  }
+  .seg button{
+    border:none; background:transparent; color:#486688; font-weight:900; padding:10px 16px; border-radius:14px; cursor:pointer;
+  }
+  .seg button.active{background:#e7f0fb; color:#1f4f8b}
+  .slider-box{
+    background:#fff; border:1px solid var(--border); border-radius:18px; padding:12px;
+  }
+  .slider-head{display:flex; justify-content:space-between; gap:10px; align-items:center; margin-bottom:10px}
+  .slider-head .label{font-weight:800; color:#234e7a}
+  .slider-head .value{font-weight:900; color:#0f172a}
+  input[type="range"]{
+    width:100%; accent-color:#5a91d9;
+  }
+  .btns{display:flex; gap:10px; flex-wrap:wrap}
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:48px; padding:0 16px;
+    border-radius:16px; font-weight:900; border:1px solid transparent; cursor:pointer; font-size:15px;
+  }
+  .btn.gray{background:var(--gray); border-color:var(--gray-b); color:#475569}
+  .btn.orange{background:var(--orange); border-color:var(--orange-b); color:var(--orange-ink)}
+  .readout{
+    display:grid; grid-template-columns:1fr 1fr; gap:10px;
+  }
+  .read{
+    background:#fff; border:1px solid var(--border); border-radius:18px; padding:12px;
+  }
+  .read .k{font-size:13px; color:var(--muted); margin-bottom:4px}
+  .read .v{font-size:18px; font-weight:900; color:#10253b}
+  .callout{
+    background:var(--green); border:1px solid var(--green-b); border-radius:18px; padding:12px 14px; line-height:1.6; font-size:15px;
+  }
+  .formula{
+    display:none; background:var(--orange); border:1px solid var(--orange-b); border-radius:18px; padding:14px; line-height:1.7; font-size:15px;
+  }
+  .formula.show{display:block}
+  .formula .eq{font-weight:900; color:#7c4900}
+  .foot{
+    margin-top:12px; text-align:center; color:#4d6d8d; font-size:14px;
+  }
+  .foot a{color:#2563eb; text-decoration:underline}
+
+  .formula-page{
+    position:fixed; inset:0; z-index:9999; display:none;
+    background:#fff7eb; padding:24px 16px calc(120px + env(safe-area-inset-bottom));
+    overflow:auto;
+  }
+  .formula-page.show{display:block}
+  .formula-shell{
+    width:min(980px, calc(100vw - 18px)); margin:0 auto;
+  }
+  .formula-topbar{
+    position:sticky; top:calc(8px + env(safe-area-inset-top)); z-index:10;
+    display:flex; justify-content:flex-end; margin-bottom:14px;
+  }
+  .close-formula-btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    min-height:48px; padding:0 18px; border-radius:16px;
+    font-weight:900; font-size:15px; cursor:pointer;
+    background:#eef2f6; border:1px solid #cbd5e1; color:#475569;
+    box-shadow:0 6px 18px rgba(24,62,110,.08);
+  }
+  .formula-page-card{
+    background:#fff1dd; border:1px solid #f2c98b; border-radius:24px;
+    padding:20px 18px; box-shadow:0 8px 22px rgba(24,62,110,.06);
+  }
+  .formula-page-title{
+    color:#9a6500; font-weight:900; font-size:clamp(26px,4vw,40px);
+    line-height:1.1; margin:0 0 16px;
+  }
+  .formula-page-body{
+    color:#12324f; font-size:clamp(18px,2.1vw,27px); line-height:1.8; font-weight:800;
+  }
+  .formula-page-body .eq{color:#9a6500; font-weight:900; font-size:clamp(24px,3.1vw,38px); line-height:1.5;}
+  @media (max-width: 860px){
+    .layout{grid-template-columns:1fr}
+  }
+  @media (max-width: 640px){
+    .page{width:min(100vw - 12px, 1000px); padding-bottom:calc(130px + env(safe-area-inset-bottom));}
+    .hero{gap:10px; align-items:flex-start}
+    .hero-icon{width:46px;height:46px;flex-basis:46px;font-size:24px;border-radius:15px}
+    .title-top{font-size:clamp(20px,6vw,30px)}
+    .title-bottom{font-size:clamp(18px,5.4vw,26px)}
+    .readout{grid-template-columns:1fr}
+    .panel h3{font-size:17px}
+    .canvas-note{font-size:13px}
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="hero">
+    <div class="hero-icon">⚡</div>
+    <div class="title-wrap">
+      <div class="title-top">Mini Lab</div>
+      <div class="title-bottom">ศักย์ไฟฟ้าและเส้นสมศักย์ของจุดประจุ</div>
+    </div>
+  </div>
+
+  <div class="layout">
+    <div class="card lab-card">
+      <div class="canvas-wrap">
+        <canvas id="cv" width="760" height="560"></canvas>
+        <div class="canvas-note">
+          ลาก <b>จุดดำ</b> เพื่อสำรวจตำแหน่งต่าง ๆ รอบจุดประจุ • วงเส้นปะสีเหลืองคือ <b>เส้นสมศักย์ที่ผ่านจุดสำรวจ</b> • ถ้าติ๊กเปิด เส้นสนามไฟฟ้าจะแสดงให้เห็นว่าแนวสนาม <b>ตั้งฉาก</b> กับเส้นสมศักย์
+        </div>
+      </div>
+    </div>
+
+    <div class="right-col">
+      <div class="card panel">
+        <h3>🎛️ ปรับค่า</h3>
+        <div class="stack">
+          <div class="row">
+            
+          </div>
+          <div class="seg" id="signSeg">
+            <button data-sign="1" class="active">ประจุบวก +q</button>
+            <button data-sign="-1">ประจุลบ −q</button>
+          </div>
+          <div class="slider-box">
+            <div class="slider-head"><div class="label">ขนาดประจุ</div><div class="value" id="qLabel">+3 μC</div></div>
+            <input id="qRange" type="range" min="1" max="8" step="1" value="3" />
+          </div>
+          <label class="toggle"><input type="checkbox" id="showField" checked /> แสดงเส้นสนามไฟฟ้า</label>
+          <div class="btns">
+            <button class="btn gray" id="resetBtn">🔄 รีเซ็ต</button>
+            <button class="btn orange" id="formulaBtn">Σ สูตรสำคัญ</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card panel">
+        <h3>📍 ค่าที่จุดสำรวจ</h3>
+        <div class="readout">
+          <div class="read"><div class="k">ระยะจากจุดประจุ</div><div class="v" id="rOut">0.78 m</div></div>
+          <div class="read"><div class="k">ศักย์ไฟฟ้า V</div><div class="v" id="vOut">34.6 kV</div></div>
+          <div class="read"><div class="k">ขนาดสนามไฟฟ้า E</div><div class="v" id="eOut">44.2 kN/C</div></div>
+          <div class="read"><div class="k">ความสัมพันธ์</div><div class="v" id="relOut">ตั้งฉาก 90°</div></div>
+        </div>
+        <div class="callout" style="margin-top:10px">
+          แนวคิดสำคัญ: เมื่อเลื่อนไปบนเส้นสมศักย์เดียวกัน ค่า <b>V</b> จะคงเดิม แต่ทิศของสนามไฟฟ้า <b>E</b> จะชี้ตั้งฉากออกจากเส้นสมศักย์เสมอ
+        </div>
+      </div>
+    </div>
+
+
+  <div class="formula-page" id="formulaPage" aria-hidden="true">
+    <div class="formula-shell">
+      <div class="formula-topbar">
+        <button class="close-formula-btn" id="closeFormulaPage">❌ ปิด กลับสู่หน้าทดลอง</button>
+      </div>
+      <div class="formula-page-card">
+        <h2 class="formula-page-title">สูตรสำคัญ</h2>
+        <div class="formula-page-body">
+          <div><b>สำหรับจุดประจุ</b></div>
+          <div class="eq">\(V = k\dfrac{q}{r}\)</div>
+          <div class="eq">\(E = k\dfrac{|q|}{r^2}\)</div>
+          <div>เส้นสมศักย์คือเส้นที่มีค่า <b>V</b> เท่ากันทุกจุด</div>
+          <div>สนามไฟฟ้าจะมีทิศจากศักย์สูงไปศักย์ต่ำ และ <b>ตั้งฉาก</b> กับเส้นสมศักย์</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">ศึกษาเพิ่มเติมที่ <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">เพจคลายปมฟิสิกส์</a></div>
+</div>
+
+<script>
+(() => {
+  const cv = document.getElementById('cv');
+  const ctx = cv.getContext('2d');
+  const DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+
+  function fitCanvas(){
+    const wrap = cv.parentElement;
+    const cssW = Math.min(760, wrap.clientWidth);
+    const cssH = Math.round(cssW * 560 / 760);
+    cv.style.width = cssW + 'px';
+    cv.style.height = cssH + 'px';
+    cv.width = Math.round(cssW * DPR);
+    cv.height = Math.round(cssH * DPR);
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    state.w = cssW;
+    state.h = cssH;
+    state.cx = cssW/2;
+    state.cy = cssH/2;
+    if(!state.probeInitialized){
+      state.probe.x = state.cx + Math.min(120, cssW*0.22);
+      state.probe.y = state.cy - Math.min(90, cssW*0.16);
+      state.probeInitialized = true;
+    }
+    clampProbe();
+    draw();
+  }
+
+  const state = {
+    w:760, h:560, cx:380, cy:280,
+    sign:1,
+    q:3,
+    showField:true,
+    probe:{x:500,y:200},
+    probeInitialized:false,
+    dragging:false,
+    kDraw:10, // visual scaling, not SI rendering size
+    metersPerPx:0.005,
+    chargeRadius:18
+  };
+
+  const qRange = document.getElementById('qRange');
+  const qLabel = document.getElementById('qLabel');
+  const showField = document.getElementById('showField');
+  const rOut = document.getElementById('rOut');
+  const vOut = document.getElementById('vOut');
+  const eOut = document.getElementById('eOut');
+  const relOut = document.getElementById('relOut');
+  const formulaBtn = document.getElementById('formulaBtn');
+  const formulaPage = document.getElementById('formulaPage');
+  const closeFormulaPage = document.getElementById('closeFormulaPage');
+
+  function clampProbe(){
+    const m = 24;
+    let dx = state.probe.x - state.cx;
+    let dy = state.probe.y - state.cy;
+    const minR = 48;
+    const r = Math.hypot(dx,dy) || 1;
+    if(r < minR){
+      dx = dx/r * minR;
+      dy = dy/r * minR;
+      state.probe.x = state.cx + dx;
+      state.probe.y = state.cy + dy;
+    }
+    state.probe.x = Math.max(m, Math.min(state.w-m, state.probe.x));
+    state.probe.y = Math.max(m, Math.min(state.h-m, state.probe.y));
+  }
+
+  function fmt(x, unit){
+    const ax = Math.abs(x);
+    if(ax >= 1e6) return (x/1e6).toFixed(2).replace(/\.00$/,'') + ' M' + unit;
+    if(ax >= 1e3) return (x/1e3).toFixed(2).replace(/\.00$/,'') + ' k' + unit;
+    return x.toFixed(2).replace(/\.00$/,'') + ' ' + unit;
+  }
+
+  function valueAtProbe(){
+    const dx = state.probe.x - state.cx;
+    const dy = state.probe.y - state.cy;
+    const rPx = Math.hypot(dx,dy);
+    const rM = rPx * state.metersPerPx;
+    const qC = state.sign * state.q * 1e-6;
+    const k = 9e9;
+    const V = k * qC / rM;
+    const E = k * Math.abs(qC) / (rM*rM);
+    rOut.textContent = rM.toFixed(2) + ' m';
+    vOut.textContent = fmt(V,'V');
+    eOut.textContent = fmt(E,'N/C');
+    relOut.textContent = 'ตั้งฉาก 90°';
+    qLabel.textContent = (state.sign>0?'+':'−') + state.q + ' μC';
+  }
+
+  function line(x1,y1,x2,y2,w,color,dash){
+    ctx.save();
+    ctx.lineWidth=w; ctx.strokeStyle=color; if(dash) ctx.setLineDash(dash); ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); ctx.restore();
+  }
+  function circle(x,y,r,stroke,fill,w=1,dash){
+    ctx.save(); ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); if(fill){ctx.fillStyle=fill; ctx.fill();} if(stroke){ctx.lineWidth=w; ctx.strokeStyle=stroke; if(dash) ctx.setLineDash(dash); ctx.stroke();} ctx.restore();
+  }
+  function text(str,x,y,opts={}){
+    ctx.save();
+    ctx.font = opts.font || '700 15px system-ui, sans-serif';
+    ctx.fillStyle = opts.color || '#12324f';
+    ctx.textAlign = opts.align || 'center';
+    ctx.textBaseline = opts.base || 'middle';
+    if(opts.bg){
+      const padX=8,padY=5;
+      const m=ctx.measureText(str);
+      const w=m.width+padX*2,h=24;
+      const tx = opts.align==='left' ? x : opts.align==='right' ? x-w : x-w/2;
+      roundRect(tx,y-h/2,w,h,10,opts.bg,opts.border||'#d8e3ef');
+    }
+    ctx.fillText(str,x,y);
+    ctx.restore();
+  }
+  function roundRect(x,y,w,h,r,fill,stroke){
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(x+r,y);
+    ctx.arcTo(x+w,y,x+w,y+h,r);
+    ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r);
+    ctx.arcTo(x,y,x+w,y,r);
+    if(fill){ctx.fillStyle=fill; ctx.fill();}
+    if(stroke){ctx.lineWidth=1; ctx.strokeStyle=stroke; ctx.stroke();}
+    ctx.restore();
+  }
+  function arrow(x1,y1,x2,y2,color,width=2,head=10,alpha=1){
+    const ang = Math.atan2(y2-y1,x2-x1);
+    ctx.save();
+    ctx.globalAlpha=alpha;
+    ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=width;
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x2,y2);
+    ctx.lineTo(x2-head*Math.cos(ang-Math.PI/8), y2-head*Math.sin(ang-Math.PI/8));
+    ctx.lineTo(x2-head*Math.cos(ang+Math.PI/8), y2-head*Math.sin(ang+Math.PI/8));
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+
+  function drawGrid(){
+    ctx.save();
+    ctx.fillStyle='#ffffff';
+    ctx.fillRect(0,0,state.w,state.h);
+    ctx.strokeStyle='#edf3fb'; ctx.lineWidth=1;
+    const step=28;
+    for(let x=0;x<=state.w;x+=step){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,state.h); ctx.stroke(); }
+    for(let y=0;y<=state.h;y+=step){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(state.w,y); ctx.stroke(); }
+    ctx.restore();
+  }
+
+  function drawEquipotentials(){
+    const dx = state.probe.x - state.cx;
+    const dy = state.probe.y - state.cy;
+    const r = Math.hypot(dx,dy);
+    circle(state.cx,state.cy,r,'rgba(250,204,21,.98)',null,2.6,[10,7]);
+
+    const qC = state.sign * state.q * 1e-6;
+    const k = 9e9;
+    const rM = r * state.metersPerPx;
+    const V = k * qC / rM;
+
+    const lx = state.cx + (dx/r) * Math.min(r + 18, Math.max(28, r - 8));
+    const ly = state.cy + (dy/r) * Math.min(r + 18, Math.max(28, r - 8));
+    text(`V = ${fmt(V,'V')}`, lx, ly - 18, {bg:'#fffbea', border:'#fde68a', color:'#a16207'});
+  }
+
+  function drawFieldLines(){
+    if(!state.showField) return;
+    const dirs = 16;
+    const sign = state.sign;
+    for(let i=0;i<dirs;i++){
+      const a = i*Math.PI*2/dirs;
+      const ux = Math.cos(a), uy=Math.sin(a);
+      let prevR = 40;
+      for(let s=0;s<6;s++){
+        const r1 = prevR + s*35;
+        const r2 = r1 + 22;
+        const x1 = state.cx + ux*(sign>0?r1:r2);
+        const y1 = state.cy + uy*(sign>0?r1:r2);
+        const x2 = state.cx + ux*(sign>0?r2:r1);
+        const y2 = state.cy + uy*(sign>0?r2:r1);
+        const alpha = Math.max(.18, .9 - r1/280);
+        arrow(x1,y1,x2,y2,'rgba(239,68,68,'+alpha+')',1.8,8,1);
+      }
+    }
+    text('เส้นสนามไฟฟ้า', state.cx-175, state.cy-185, {bg:'#fff1f2', border:'#fecdd3', color:'#dc2626'});
+  }
+
+  function drawCharge(){
+    const fill = state.sign>0 ? '#fee2e2' : '#dbeafe';
+    const stroke = state.sign>0 ? '#ef4444' : '#2563eb';
+    circle(state.cx,state.cy,state.chargeRadius,stroke,fill,2.5);
+    text(state.sign>0?'+':'−',state.cx,state.cy+1,{font:'900 28px system-ui, sans-serif',color:stroke});
+    text((state.sign>0?'+':'−') + state.q + ' μC', state.cx, state.cy+42, {bg:'#ffffff', border:'#d8e3ef', color:'#234e7a'});
+  }
+
+  function drawProbeAndVectors(){
+    const dx = state.probe.x - state.cx;
+    const dy = state.probe.y - state.cy;
+    const r = Math.hypot(dx,dy) || 1;
+
+    circle(state.probe.x,state.probe.y,7,'#111827','#111827',1.5);
+    text('จุดสำรวจ', state.probe.x + 14, state.probe.y + 20, {align:'left', color:'#1f3d5a'});
+  }
+
+  function draw(){
+    valueAtProbe();
+    drawGrid();
+    drawEquipotentials();
+    drawFieldLines();
+    drawCharge();
+    drawProbeAndVectors();
+  }
+
+  function pointerPos(ev){
+    const rect = cv.getBoundingClientRect();
+    const t = ev.touches ? ev.touches[0] : ev;
+    return {x:t.clientX-rect.left,y:t.clientY-rect.top};
+  }
+
+  function hitProbe(p){
+    return Math.hypot(p.x-state.probe.x,p.y-state.probe.y) <= 18;
+  }
+
+  function onDown(ev){
+    const p = pointerPos(ev);
+    if(hitProbe(p)){
+      state.dragging = true;
+      ev.preventDefault();
+    }
+  }
+  function onMove(ev){
+    if(!state.dragging) return;
+    const p = pointerPos(ev);
+    state.probe.x = p.x;
+    state.probe.y = p.y;
+    clampProbe();
+    draw();
+    ev.preventDefault();
+  }
+  function onUp(){ state.dragging = false; }
+
+  cv.addEventListener('mousedown', onDown);
+  window.addEventListener('mousemove', onMove);
+  window.addEventListener('mouseup', onUp);
+  cv.addEventListener('touchstart', onDown, {passive:false});
+  window.addEventListener('touchmove', onMove, {passive:false});
+  window.addEventListener('touchend', onUp);
+
+  qRange.addEventListener('input', ()=>{ state.q = +qRange.value; draw(); });
+  showField.addEventListener('change', ()=>{ state.showField = showField.checked; draw(); });
+  document.querySelectorAll('#signSeg button').forEach(btn => {
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('#signSeg button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      state.sign = +btn.dataset.sign;
+      draw();
+    });
+  });
+  document.getElementById('resetBtn').addEventListener('click', ()=>{
+    state.sign = 1; state.q = 3; state.showField = true;
+    qRange.value = 3; showField.checked = true;
+    document.querySelectorAll('#signSeg button').forEach((b,i)=> b.classList.toggle('active', i===0));
+    state.probe.x = state.cx + Math.min(120, state.w*0.22);
+    state.probe.y = state.cy - Math.min(90, state.w*0.16);
+    draw();
+  });
+  formulaBtn.addEventListener('click', ()=>{ formulaPage.classList.add('show'); formulaPage.setAttribute('aria-hidden','false'); document.body.style.overflow='hidden'; });
+  closeFormulaPage.addEventListener('click', ()=>{ formulaPage.classList.remove('show'); formulaPage.setAttribute('aria-hidden','true'); document.body.style.overflow=''; });
+
+  window.addEventListener('resize', fitCanvas);
+  fitCanvas();
+})();
+</script>
+<script>
+window.MathJax = { tex: { inlineMath: [['\\(','\\)']] }, svg: { fontCache: 'global' } };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+</body>
+</html>

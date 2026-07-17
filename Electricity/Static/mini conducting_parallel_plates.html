@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>mini lab สนามไฟฟ้าของแผ่นตัวนำคู่ขนาน — เวกเตอร์ E, F, mg, a, v</title>
+
+<!-- MathJax สำหรับเรนเดอร์สมการ -->
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+<style>
+  :root{
+    --ink:#0f172a; --bg:#ffffff; --plate:#e9e9ea; --border:#0b2a4a;
+    --plus:#e11d48; --minus:#2563eb; --E:#ef4444; --Fpos:#ef4444; --Fneg:#2563eb;
+    --mg:#111111; --a:#16a34a; --v:#7c3aed; --panel:#ffffffee; --ghost:#9ca3af;
+    --accent1:#0ea5e9; --accent2:#f43f5e; --accent3:#22c55e; --accent4:#a855f7;
+    --card:#ffffff; --cardBorder:#dbeafe;
+  }
+  *{box-sizing:border-box;user-select:none}
+  html,body{height:100%}
+  body{
+    margin:0; display:grid; place-items:center; min-height:100svh; background:var(--bg);
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, "Noto Sans Thai", sans-serif;
+    color:var(--ink);
+  }
+  .wrap{width:min(1100px, 96vw); padding:16px; text-align:center;}
+  .plate{height:64px; background:var(--plate); border:3px solid var(--border); border-radius:6px; position:relative; margin:0 auto; width:640px; z-index:2;}
+  .row{position:absolute; inset:0; display:flex; align-items:center; justify-content:space-evenly; padding:0 16px;}
+  .sym{font-weight:800; font-size:22px; line-height:1;}
+  .plus{color:var(--plus)} .minus{color:var(--minus)}
+  .spacer{height:320px; position:relative;}
+  #overlay{position:absolute; inset:0; pointer-events:none; z-index:6;}
+  .test-charge{position:absolute; width:24px; height:24px; border-radius:50%; display:grid; place-items:center; color:#fff; font-weight:700; cursor:grab; z-index:5;}
+  .test-charge.pos{background:var(--plus)} .test-charge.neg{background:var(--minus)}
+  .ghost-charge{position:absolute; width:18px; height:18px; border-radius:50%; background:var(--ghost); opacity:.85; z-index:4; pointer-events:none;}
+  .controls{margin-top:16px; display:flex; flex-wrap:wrap; gap:12px; justify-content:center; align-items:center}
+  .stepper{display:inline-flex; align-items:center; gap:4px}
+  .stepper button{width:28px;height:28px; line-height:1; padding:0; touch-action:manipulation;}
+  label{font-size:14px; display:flex; align-items:center; gap:6px}
+  input[type="number"]{width:120px;}
+  button,select,input[type="number"],input[type="range"]{padding:8px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px; background:#f8fafc;}
+  button{cursor:pointer;} button:hover{background:#eef2ff;}
+  .note{margin-top:8px; font-size:12px; color:#0f172a}
+  .hidden{display:none !important}
+  .result{margin-top:10px; display:flex; gap:12px; flex-wrap:wrap; justify-content:center; font-size:13px; background:#f8fafc; border:1px solid #e5e7eb; padding:8px 10px; border-radius:10px;}
+  .ver{position:fixed; right:10px; bottom:10px; font:12px/1 system-ui; background:#eef2ff; border:1px solid #c7d2fe; padding:4px 8px; border-radius:8px; color:#3730a3; z-index:15}
+
+  /* ปุ่มหลักพิเศษ */
+  .primary{background:#3b82f6; color:#fff; border-color:#3b82f6;}
+  .primary:hover{background:#2563eb;}
+
+  /* แผง v */
+  .vel-panel{
+    position:fixed; right:12px; top:12px;
+    display:flex; flex-direction:column; gap:8px;
+    background:var(--panel); padding:12px;
+    border:1px solid #e5e7eb; border-radius:12px; backdrop-filter:blur(8px);
+    max-width:min(44ch, 92vw); z-index:9999;
+  }
+  .vel-panel h3{margin:0;font-size:14px}
+  .vel-actions{display:flex;gap:8px;flex-wrap:wrap}
+
+  /* ===== แผง “สูตรสำคัญ” ===== */
+  .formula-overlay{
+    position:fixed; inset:0; background:rgba(15,23,42,0.5); display:flex; align-items:center; justify-content:center; z-index:10000;
+  }
+  .formula-card{
+    width:min(920px, 94vw); max-height:90vh; overflow:auto;
+    background:var(--card);
+    border:2px solid var(--cardBorder);
+    border-radius:16px;
+    box-shadow:0 20px 60px rgba(2,6,23,.35);
+  }
+  .formula-head{
+    padding:16px 18px;
+    border-bottom:1px solid var(--cardBorder);
+    background:linear-gradient(90deg, rgba(14,165,233,.12), rgba(244,63,94,.12), rgba(34,197,94,.12), rgba(168,85,247,.12));
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+  }
+  .formula-head h2{margin:0; font-size:18px}
+  .formula-body{padding:18px; display:grid; gap:16px}
+  .fx-grid{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px}
+  .fx{
+    background:#ffffff;
+    border:1.5px solid #e2e8f0;
+    border-radius:14px; padding:12px 14px; text-align:left;
+  }
+  .fx h3{margin:0 0 8px 0; font-size:16px}
+  .fx p{margin:6px 0; font-size:14px}
+  .tag{display:inline-block; font-size:12px; padding:3px 8px; border-radius:999px; border:1px solid #e2e8f0; background:#f8fafc}
+  .c1 .tag{border-color:#bae6fd; background:#e0f2fe}     /* ฟ้า */
+  .c2 .tag{border-color:#fecaca; background:#fee2e2}     /* แดง */
+  .c3 .tag{border-color:#bbf7d0; background:#dcfce7}     /* เขียว */
+  .fx .mj{font-size:18px} /* ขยายสมการให้เด่น */
+  .formula-foot{padding:14px 18px; border-top:1px solid var(--cardBorder); display:flex; justify-content:flex-end}
+  .btn-close{background:#0f172a; color:#fff; border-color:#0f172a}
+  .btn-close:hover{background:#111827}
+
+  @media (max-width:900px){
+    .fx-grid{grid-template-columns:1fr}
+  }
+
+  /* มือถือ: แผง v ไม่ทับการทดลอง */
+  @media (max-width:700px){
+
+    /* แผง v: ให้ติดใกล้กับแถบแสดงผล Δx/Δy (ไม่ปล่อยช่องว่างยาว ๆ) */
+    .vel-panel{
+      position:fixed;
+      left:12px;
+      right:12px;
+      bottom:72px; /* อยู่เหนือปุ่มล่าง */
+      top:auto;    /* ยกเลิก top เดิม */
+
+      width:auto;
+      max-width:unset;
+
+      border-radius:12px;
+      z-index:10050;
+
+      backdrop-filter:blur(8px);
+      box-shadow:0 8px 24px rgba(0,0,0,0.12);
+
+      max-height:50vh; /* ไม่ให้สูงเกินไป */
+      overflow:auto;
+      -webkit-overflow-scrolling:touch;
+    }
+    /* กันแถบปุ่มล่างบังเนื้อหา */
+    body{ padding-bottom:120px; }
+
+    .wrap{ padding-bottom:120px; }
+  }
+
+
+/* ===== Title ===== */
+.main-title{
+  margin:0 0 14px 0;
+  font-size: 19px;
+  font-weight:900;
+  color:#1d4ed8; /* น้ำเงิน */
+  text-align:center;
+}
+
+/* ===== Button styling per request ===== */
+.btn-reset{ background:#9ca3af !important; color:#fff !important; border-color:#9ca3af !important; }
+.btn-reset:hover{ background:#6b7280 !important; }
+.btn-formula{ background:#fed7aa !important; border-color:#fdba74 !important; }
+.btn-formula:hover{ background:#fdba74 !important; }
+.btn-vel{ border:2px solid #a855f7 !important; }
+
+/* ===== Formula as full-page (มาตรฐานเพจ) ===== */
+.formula-overlay{
+  position:fixed; inset:0;
+  background:#ffffff;  /* ไม่เป็นมืด */
+  display:flex; align-items:stretch; justify-content:stretch;
+  z-index:10000;
+}
+.formula-card{
+  width:100vw; height:100svh; max-height:none; overflow:auto;
+  border:none; border-radius:0;
+  box-shadow:none;
+  padding-bottom:120px; /* กันจอมือถือบัง */
+}
+.formula-head{
+  position:sticky; top:0; z-index:2;
+  background:#ffffff;
+  border-bottom:1px solid var(--cardBorder);
+}
+.btn-close{
+  position:fixed; top:12px; right:12px; z-index:10001;
+  background:#0f172a; color:#fff; border-color:#0f172a;
+  border-radius:999px;
+}
+
+/* ===== Mobile layout adjustments ===== */
+.mobile-bar{ display:none; }
+@media (max-width:700px){
+/* ลดขนาดจอทดลองลง ~ครึ่งหนึ่ง และให้จอทดลองอยู่กับที่ (sticky) */
+#simArea{
+  position:sticky;
+  top:0;
+  z-index:60;
+  background:#ffffff;
+  padding-top:8px;
+  padding-bottom:8px;
+}
+/* ปรับขนาดจอทดลอง (แผ่น + ช่องว่าง) ให้เล็กลง */
+.plate{ height:52px; }
+.spacer{ height:160px; }
+
+/* ให้แผงควบคุมเลื่อนขึ้นลงได้ (scroll) */
+#controls{
+  position:relative;   /* ยกเลิก sticky เดิม */
+  top:auto;
+  z-index:1;
+  max-height:calc(100svh - 360px); /* เผื่อพื้นที่จอทดลอง + แถบปุ่มล่าง */
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;
+}
+
+  /* ซ่อนปุ่มเล่น/รีเซ็ต/สูตรสำคัญในแผงเดิม แล้วใช้แถบล่างแทน */
+/* ซ่อนปุ่มเล่น/รีเซ็ต/สูตรสำคัญในแผงเดิม แล้วใช้แถบล่างแทน */
+  #playBtn, #resetBtn, #showFormulasBtn{ display:none !important; }
+
+  /* แถบล่าง fixed */
+  .mobile-bar{
+    display:flex;
+    position:fixed;
+    left:0; right:0; bottom:0;
+    padding:10px 12px;
+    gap:10px;
+    background:#ffffffee;
+    backdrop-filter:blur(8px);
+    border-top:1px solid #e5e7eb;
+    z-index:9999;
+  }
+  .mobile-bar button{ flex:1; height:44px; border-radius:12px; }
+
+  /* เว้นที่ว่างล่าง 120px ตามมาตรฐาน */
+  .wrap{ padding-bottom:120px; }
+  body{ padding-bottom:120px; }
+}
+
+
+/* ===== กลุ่มสีของแผงควบคุม ===== */
+.control-group{
+  display:inline-flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:8px;
+  padding:8px 10px;
+  border-radius:12px;
+  border:1.5px solid transparent;
+  background:#ffffff;
+}
+.group-electric{ color:#2563eb; border-color:#bfdbfe; background:#eff6ff; }
+.group-charge{ color:#dc2626; border-color:#fecaca; background:#fef2f2; }
+.group-mass{ color:#16a34a; border-color:#bbf7d0; background:#f0fdf4; }
+.group-electric label,.group-charge label,.group-mass label{ font-weight:700; }
+.mass-note{
+  width:100%;
+  color:#16a34a;
+  font-weight:800;
+  font-size:13px;
+  margin-top:4px;
+  padding:6px 10px;
+  border:1px solid #bbf7d0;
+  background:#f0fdf4;
+  border-radius:10px;
+}
+.draggable-label{
+  cursor:move;
+  pointer-events:auto;
+  paint-order:stroke;
+  stroke:#ffffff;
+  stroke-width:3px;
+  stroke-linejoin:round;
+}
+
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1 class="main-title">mini lab สนามไฟฟ้าของแผ่นตัวนำคู่ขนาน</h1>
+    
+    <div id="simArea">
+<div class="plate top" id="plateTop"><div class="row" id="rowTop"></div></div>
+    <div class="spacer" id="gap">
+      <svg id="overlay" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="arrowE" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L7,3.5 L0,7 Z" fill="var(--E)"/></marker>
+          <marker id="arrowFpos" markerWidth="8" markerHeight="8" refX="7" refY="3.5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L8,3.5 L0,7 Z" fill="var(--Fpos)"/></marker>
+          <marker id="arrowFneg" markerWidth="8" markerHeight="8" refX="7" refY="3.5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L8,3.5 L0,7 Z" fill="var(--Fneg)"/></marker>
+          <marker id="arrowmg" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L7,3 L0,6 Z" fill="var(--mg)"/></marker>
+          <marker id="arrowa" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L7,3 L0,6 Z" fill="var(--a)"/></marker>
+          <marker id="arrowv" markerWidth="8" markerHeight="8" refX="7" refY="3.5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L8,3.5 L0,7 Z" fill="var(--v)"/></marker>
+        </defs>
+        <g id="Efield"></g>
+        <g id="trace"></g>
+        <g id="vectors">
+          <line id="Fline" x1="0" y1="0" x2="0" y2="0" stroke="var(--Fpos)" stroke-width="2" marker-end="url(#arrowFpos)" opacity="0" />
+          <text id="Flabel" class="draggable-label" x="0" y="0" font-size="11" fill="var(--Fpos)" opacity="0">F = 0 mN</text>
+          <line id="mgline" x1="0" y1="0" x2="0" y2="0" stroke="var(--mg)" stroke-width="2" marker-end="url(#arrowmg)" opacity="0" />
+          <text id="mglabel" class="draggable-label" x="0" y="0" font-size="11" fill="var(--mg)" opacity="0">mg = 0 mN</text>
+          <line id="aline" x1="0" y1="0" x2="0" y2="0" stroke="var(--a)" stroke-width="2" marker-end="url(#arrowa)" opacity="0" />
+          <text id="alabel" class="draggable-label" x="0" y="0" font-size="11" fill="var(--a)" opacity="0">a = 0 m/s²</text>
+          <line id="vline" x1="0" y1="0" x2="0" y2="0" stroke="var(--v)" stroke-width="2.2" marker-end="url(#arrowv)" opacity="0" />
+          <text id="vlabel" class="draggable-label" x="0" y="0" font-size="11" fill="var(--v)" opacity="0">v</text>
+        </g>
+      </svg>
+      <div class="test-charge pos" id="testCharge">+</div>
+      <!-- ghost: โชว์เฉพาะตอนกดเล่น -->
+      <div class="ghost-charge hidden" id="startCharge" title="ตำแหน่งเริ่มต้น"></div>
+    </div>
+    <div class="plate bottom" id="plateBottom"><div class="row" id="rowBottom"></div></div>
+
+    
+    </div>
+<div style="margin-top:8px">
+      <button type="button" id="toggleControls">ซ่อนแผงตั้งค่า</button>
+    </div>
+
+    <div class="controls" id="controls">
+      <button type="button" id="togglePolarity">สลับขั้วแผ่น</button>
+      <button type="button" id="toggleE">แสดง/ซ่อน เวกเตอร์สนาม E</button>
+      <button type="button" id="toggleForces">แสดง แรง & ความเร่ง</button>
+      <button type="button" id="toggleVelPanel" class="btn-vel" aria-expanded="false">ขนาดและทิศทางของความเร็ว</button>
+      <button type="button" id="playBtn" class="primary btn-play">▶ เล่น</button>
+      <button type="button" id="resetBtn" class="btn-reset">รีเซ็ต</button>
+      <!-- ปุ่มสูตรสำคัญ -->
+      <button type="button" id="showFormulasBtn" class="btn-formula">📘 สูตรสำคัญ</button>
+
+      <span class="control-group group-electric">
+      <label>โหมดปรับ:
+        <select id="modeSelect">
+          <option value="E">ปรับสนามไฟฟ้า E</option>
+          <option value="Vd">ปรับความต่างศักย์ V และระยะห่าง d</option>
+        </select>
+      </label>
+
+      <span id="ctrlE" class="mode-block">
+        <label>สนามไฟฟ้า (N/C):
+          <span class="stepper">
+            <button type="button" id="eDec">−</button>
+            <input type="number" id="fieldValue" value="1000" step="10">
+            <button type="button" id="eInc">+</button>
+          </span>
+        </label>
+      </span>
+
+      <span id="ctrlVd" class="mode-block hidden">
+        <label>ความต่างศักย์ (V):
+          <span class="stepper">
+            <button type="button" id="voltDec">−</button>
+            <input type="number" id="voltage" value="10" step="0.5">
+            <button type="button" id="voltInc">+</button>
+          </span>
+        </label>
+        <label>ระยะห่าง (m):
+          <span class="stepper">
+            <button type="button" id="distDec">−</button>
+            <input type="number" id="distance" value="0.1" step="0.01">
+            <button type="button" id="distInc">+</button>
+          </span>
+        </label>
+        <label>E (N/C): <input type="number" id="fieldFromVd" value="1000" readonly></label>
+      </span>
+      </span>
+
+      <span class="control-group group-charge">
+      <label>ประจุทดสอบ:
+        <select id="chargeType">
+          <option value="pos">บวก</option>
+          <option value="neg">ลบ</option>
+        </select>
+      </label>
+
+      <label>ขนาดประจุ (µC):
+        <span class="stepper">
+          <button type="button" id="chargeDec">−</button>
+          <input type="number" id="chargeSize" value="5" step="0.1">
+          <button type="button" id="chargeInc">+</button>
+        </span>
+      </label>
+      </span>
+
+      <span class="control-group group-mass">
+      <label>โหมดกรอกค่า:
+        <select id="inputSelect">
+          <option value="mass">กรอกมวล</option>
+          <option value="weight">กรอกน้ำหนัก</option>
+        </select>
+      </label>
+
+      <span id="ctrlMass" class="mode-block">
+        <label>มวล (มิลลิกรัม mg):
+          <span class="stepper">
+            <button type="button" id="massDec">−</button>
+            <input type="number" id="mass" value="500" step="10">
+            <button type="button" id="massInc">+</button>
+          </span>
+        </label>
+      </span>
+
+      <span id="ctrlWeight" class="mode-block hidden">
+        <label>น้ำหนัก (mN):
+          <span class="stepper">
+            <button type="button" id="wDec">−</button>
+            <input type="number" id="weightN" value="4.900" step="0.1">
+            <button type="button" id="wInc">+</button>
+          </span>
+        </label>
+      </span>
+
+      <label>ความยาวแผ่น (cm):
+        <span class="stepper">
+          <button type="button" id="plateDec">−</button>
+          <input type="number" id="plateLenCm" value="64.0" step="5">
+          <button type="button" id="plateInc">+</button>
+        </span>
+      </label>
+
+      <label>ค่า g (m/s²):
+        <select id="gSelect">
+          <option value="9.8" selected>9.8</option>
+          <option value="10">10.0</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="result">
+      <span id="dxField">Δx(field) = 0.000 m</span>
+      <span id="dyField">Δy(field) = 0.000 m</span>
+    
+</div>
+
+<!-- Mobile bottom bar -->
+<div class="mobile-bar" id="mobileBar" aria-label="แถบปุ่มด้านล่าง (มือถือ)">
+  <button type="button" id="mPlay" class="primary">▶ เล่น</button>
+  <button type="button" id="mReset" class="btn-reset">รีเซ็ต</button>
+  <button type="button" id="mFormula" class="btn-formula">📘 สูตรสำคัญ</button>
+</div>
+</div>
+
+    <div id="velPanelSlot"></div>
+
+    <div class="note">ศึกษาเพิ่มเติมที่ <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">เพจคลายปมฟิสิกส์</a></div>
+  </div>
+
+  <!-- แผงตั้งค่า v -->
+  <div class="vel-panel hidden" id="velPanel" role="dialog" aria-modal="false" aria-labelledby="vTitle">
+    <h3 id="vTitle">ตั้งค่าเวกเตอร์ความเร็วเริ่มต้น (v)</h3>
+    <label>ความเร็ว (m/s):
+      <span class="stepper">
+        <button type="button" id="vDec">−</button>
+        <input type="number" id="vMag" value="0.000" step="0.1" />
+        <button type="button" id="vInc">+</button>
+      </span>
+    </label>
+    <label>มุม (°): 
+      <span class="stepper">
+        <button type="button" id="angDec">−</button>
+        <input type="number" id="vAng" value="0" step="1" />
+        <button type="button" id="angInc">+</button>
+      </span>
+      <small>0° = ขวา, 90° = ขึ้น</small>
+    </label>
+    <label><input type="checkbox" id="showV" checked/> แสดงลูกศรความเร็ว v</label>
+    <div class="vel-actions">
+      <button id="closeVel" type="button" style="background:#ef4444;color:#fff;border-color:#ef4444">ปิดแผง</button>
+    </div>
+  </div>
+
+  <!-- แผง “สูตรสำคัญ” -->
+  <div class="formula-overlay hidden" id="formulaOverlay" role="dialog" aria-modal="true" aria-labelledby="formulaTitle">
+    <div class="formula-card">
+      <div class="formula-head">
+        <h2 id="formulaTitle">📘 สูตรสำคัญ</h2>
+</div>
+      <div class="formula-body">
+        <div class="fx-grid">
+          <!-- สนามไฟฟ้า -->
+          <section class="fx c1" aria-labelledby="hE">
+            <h3 id="hE">สนามไฟฟ้าระหว่างแผ่นตัวนำ</h3>
+            <p class="mj">\( \displaystyle E = \frac{\Delta V}{d} \) &nbsp; (เมื่อแผ่นคู่ขนานและสนามสม่ำเสมอ)</p>
+            <p class="mj">\( \displaystyle \vec F_E = q\,\vec E \)</p>
+         
+          </section>
+
+          <!-- ความเร่ง -->
+          <section class="fx c2" aria-labelledby="hA">
+            <h3 id="hA">ความเร่งของประจุ (แนวดิ่ง)</h3>
+            <p class="mj">\( \displaystyle a_y = \frac{\sum F_y}{m} \)</p>
+           
+          </section>
+
+          <!-- การกระจัด / สมการการเคลื่อนที่ -->
+          <section class="fx c3" aria-labelledby="hK">
+            <h3 id="hK">การกระจัด</h3>
+            <p class="mj">\( \displaystyle \vec v(t) = \vec v_0 + \vec a\,t \)</p>
+            <p class="mj">\( \displaystyle \vec s(t) = \vec v_0 t + \tfrac{1}{2}\vec a t^2 \)</p>
+            <p class="mj">\( \displaystyle v^2 = v_0^2 + 2\,\vec a \cdot \vec s \)</p>
+            <p><span class="tag">Note</span> ในเขตที่ไม่มีสนาม (\(E=0\)) ⇒ \(\vec a = (0, g)\)</p>
+          </section>
+        </div>
+
+        <!-- หมายเหตุเสริมเล็กน้อย -->
+        <section class="fx" style="border-color:#fde68a;background:#fffbeb">
+          <h3 style="margin:0 0 8px 0">หน่วยและการแปลงที่ใช้บ่อย</h3>
+          <p class="mj">\( \;1~\mu\text{C} = 1\times10^{-6}\text{ C}\), &nbsp; \(1~\text{g} = 10^{-3}\text{ kg}\)</p>
+         </section>
+      </div>
+      <div class="formula-foot">
+        <button type="button" id="closeFormulaBtn" class="btn-close">ปิด</button>
+      </div>
+    </div>
+  </div>
+
+  
+
+<script>
+/* ===== Trace settings ===== */
+const TRACE_WIDTH = 0.8;
+const TRACE_DASH  = '6 16';
+const TRACE_MIN_PX = 14;
+
+/* ===== Defaults ===== */
+const DEFAULTS = {
+  mode: 'E',
+  E: 1000,
+  voltage: 10,
+  distance: 0.1,
+  chargeType: 'pos',
+  chargeSize: 5.0,
+  inputMode: 'mass',
+  mass: 500.0,
+  weightN: 4.900,
+  plateLen: 64.0,
+  g: 9.8,
+  vMag: 0.000,
+  vAng: 0,
+  showV: true,
+  topPlus: true,
+  Evisible: true,
+  forcesVisible: false
+};
+
+/* ===== Helpers ===== */
+function r3(v){ return Math.round((v+Number.EPSILON)*1000)/1000; }
+function fmt3(v){ return (Math.abs(v) < 0.0005 ? 0 : v).toFixed(3); }
+function fmtMN(n){ return fmt3(n*1000); }
+function roundInputOnBlur(el, min=-Infinity, max=Infinity, on){
+  if(!el) return; const fix=()=>{ let v=parseFloat(el.value)||0; v=Math.min(max,Math.max(min,v)); v=r3(v); el.value=v.toFixed(3); if(on) on(); };
+  el.addEventListener('blur', fix); el.addEventListener('change', fix);
+}
+function attachHoldStepper(decBtn, incBtn, inputEl, step=1, min=-Infinity, max=Infinity, onChange){
+  if(!inputEl) return; let timer=null, dir=0, active=false;
+  const changeOnce=()=>{ const v=parseFloat(inputEl.value)||0; let nv=v+dir*step; nv=Math.min(max,Math.max(min,nv)); nv=r3(nv); inputEl.value=nv.toFixed(3); if(onChange) onChange(); };
+  const start=(d)=>{ if(active){ stop(); } dir=d; active=true; changeOnce(); timer=setInterval(changeOnce,120); };
+  const stop=()=>{ if(!active) return; clearInterval(timer); timer=null; active=false; };
+  const bind=(el,d)=>{ if(!el) return; const se=(e)=>{e.preventDefault(); start(d)}; el.addEventListener('pointerdown',se); el.addEventListener('pointerup',stop); el.addEventListener('pointercancel',stop); el.addEventListener('mouseleave',stop); el.addEventListener('mousedown',se); el.addEventListener('mouseup',stop); el.addEventListener('touchstart',se,{passive:false}); el.addEventListener('touchend',stop);
+    el.addEventListener('touchcancel',stop);
+    el.addEventListener('pointerleave',stop);
+    el.addEventListener('pointerout',stop); };
+  bind(decBtn,-1); bind(incBtn,1);
+  ['pointerup','pointercancel','pointerleave','pointerout','mouseup','touchend','touchcancel','visibilitychange','blur'].forEach(ev=>{ window.addEventListener(ev,stop,{passive:true}); document.addEventListener(ev,stop,{passive:true}); });
+}
+
+/* ===== DOM ===== */
+const topRow = document.getElementById('rowTop');
+const bottomRow = document.getElementById('rowBottom');
+const plateTop = document.getElementById('plateTop');
+const plateBottom = document.getElementById('plateBottom');
+const test = document.getElementById('testCharge');
+const ghost = document.getElementById('startCharge');
+const overlay = document.getElementById('overlay');
+const traceGroup = document.getElementById('trace');
+const controls = document.getElementById('controls');
+const toggleControls = document.getElementById('toggleControls');
+const togglePolarity = document.getElementById('togglePolarity');
+const toggleE = document.getElementById('toggleE');
+const toggleForces = document.getElementById('toggleForces');
+const toggleVelPanel = document.getElementById('toggleVelPanel');
+const velPanel = document.getElementById('velPanel');
+const velPanelSlot = document.getElementById('velPanelSlot');
+const closeVel = document.getElementById('closeVel');
+const playBtn = document.getElementById('playBtn');
+const resetBtn = document.getElementById('resetBtn');
+const modeSelect = document.getElementById('modeSelect');
+const chargeType = document.getElementById('chargeType');
+const chargeSize = document.getElementById('chargeSize');
+const inputSelect = document.getElementById('inputSelect');
+const ctrlMass = document.getElementById('ctrlMass');
+const ctrlWeight = document.getElementById('ctrlWeight');
+const mass = document.getElementById('mass');
+const weightN = document.getElementById('weightN');
+const gSelect = document.getElementById('gSelect');
+const fieldValue = document.getElementById('fieldValue');
+const ctrlVd = document.getElementById('ctrlVd');
+const voltage = document.getElementById('voltage');
+const distance = document.getElementById('distance');
+const fieldFromVd = document.getElementById('fieldFromVd');
+const gap = document.getElementById('gap');
+const plateLenCm = document.getElementById('plateLenCm');
+const plateDec = document.getElementById('plateDec');
+const plateInc = document.getElementById('plateInc');
+const Fline = document.getElementById('Fline');
+const Flabel = document.getElementById('Flabel');
+const mgline = document.getElementById('mgline');
+const mglabel = document.getElementById('mglabel');
+const aline = document.getElementById('aline');
+const alabel = document.getElementById('alabel');
+const vline = document.getElementById('vline');
+const vlabel = document.getElementById('vlabel');
+const dxField = document.getElementById('dxField');
+const dyField = document.getElementById('dyField');
+const vMag = document.getElementById('vMag');
+const vAng = document.getElementById('vAng');
+const vDec = document.getElementById('vDec');
+const vInc = document.getElementById('vInc');
+const angDec = document.getElementById('angDec');
+const angInc = document.getElementById('angInc');
+const showV = document.getElementById('showV');
+const showFormulasBtn = document.getElementById('showFormulasBtn');
+const formulaOverlay = document.getElementById('formulaOverlay');
+const closeFormulaBtn = document.getElementById('closeFormulaBtn');
+
+// Mobile bar buttons
+const mPlay = document.getElementById('mPlay');
+const mReset = document.getElementById('mReset');
+const mFormula = document.getElementById('mFormula');
+
+
+/* ===== State ===== */
+let lastAy = 0;
+const PX_PER_M = 80;
+let topPlus = true;
+let Evisible = true;
+let forcesVisible = false;
+let playing=false, vx=0, vy=0, lastT=0;
+let fieldDx=0, fieldDy=0;
+let lastTracePt = null;
+
+/* ===== Draggable SVG labels ===== */
+const labelOffsets = { F:{x:0,y:0}, mg:{x:0,y:0}, a:{x:0,y:0}, v:{x:0,y:0} };
+function attachDraggableLabel(el, key){
+  if(!el) return;
+  let active=false, sx=0, sy=0, ox=0, oy=0;
+  el.addEventListener('pointerdown', (e)=>{
+    e.preventDefault(); e.stopPropagation();
+    active=true; sx=e.clientX; sy=e.clientY;
+    ox=labelOffsets[key].x; oy=labelOffsets[key].y;
+    try{ el.setPointerCapture(e.pointerId); }catch(_){}
+  });
+  el.addEventListener('pointermove', (e)=>{
+    if(!active) return;
+    labelOffsets[key].x = ox + (e.clientX - sx);
+    labelOffsets[key].y = oy + (e.clientY - sy);
+    updateForces();
+  });
+  const stop=()=>{ active=false; };
+  el.addEventListener('pointerup', stop);
+  el.addEventListener('pointercancel', stop);
+}
+
+
+/* ===== Plates ===== */
+function renderPlatesFixed(polarityTopPlus){
+  const n=9; 
+  rowTop.innerHTML = rowBottom.innerHTML = '';
+  for(let i=0;i<n;i++){
+    const sT=document.createElement('span'); const sB=document.createElement('span');
+    sT.className='sym '+(polarityTopPlus?'plus':'minus'); sT.textContent=polarityTopPlus?'+':'−';
+    sB.className='sym '+(polarityTopPlus?'minus':'plus'); sB.textContent=polarityTopPlus?'−':'+'; 
+    rowTop.appendChild(sT); rowBottom.appendChild(sB);
+  }
+}
+const renderPlatesRef = renderPlatesFixed; // ใช้ชื่อสั้นด้านล่าง
+function renderPlates(p){ renderPlatesRef(p); }
+
+/* ===== Physics helpers ===== */
+function getG(){ const v = parseFloat(gSelect.value)||9.8; return r3(v); }
+function getE(){
+  if(modeSelect.value==='E'){
+    const Euser=r3(parseFloat(fieldValue.value)||0); fieldValue.value=Euser.toFixed(3); return Euser;
+  } else {
+    const V=r3(parseFloat(voltage.value)||0); const d=Math.max(0.001,r3(parseFloat(distance.value)||0));
+    const E=r3(V/d); fieldFromVd.value=E.toFixed(3); voltage.value=V.toFixed(3); distance.value=d.toFixed(3); return E;
+  }
+}
+function getMassKgAndWeightN(){
+  const gVal=getG();
+  if(inputSelect.value==='mass'){
+    const m_mg = Math.max(0, parseFloat(mass.value)||0);
+    const m_kg = m_mg * 1e-6;
+    return {m_kg, wN:m_kg*gVal};
+  } else {
+    const w_mN = Math.max(0, parseFloat(weightN.value)||0);
+    const wN = w_mN * 1e-3;
+    const m_kg = gVal>0 ? wN/gVal : 0;
+    return {m_kg, wN};
+  }
+}
+
+/* ===== Draw E ===== */
+function drawE(){
+  const w = overlay.viewBox.baseVal.width || overlay.clientWidth;
+  const h = overlay.viewBox.baseVal.height || overlay.clientHeight;
+  let Eg = document.getElementById('Efield');
+  if(!Eg){ Eg = document.createElementNS('http://www.w3.org/2000/svg','g'); Eg.id='Efield'; overlay.insertBefore(Eg, traceGroup); }
+  Eg.innerHTML='';
+  const gapRect = gap.getBoundingClientRect();
+  const topRect = plateTop.getBoundingClientRect();
+  let xL = Math.max(0, topRect.left - gapRect.left);
+  let xR = Math.min(w, topRect.right - gapRect.left);
+  const sidePad=14, topPad=10; xL+=sidePad; xR-=sidePad; if(xR<=xL){Eg.setAttribute('opacity',0);return;}
+  const usableW = xR-xL;
+  const isMobile = window.matchMedia('(max-width:700px)').matches;
+  const denom = isMobile ? 70 : 110;
+  const minCols = isMobile ? 6 : 3;
+  const cols=Math.max(minCols, Math.round(usableW/denom));
+  for(let c=0;c<cols;c++){
+    const x = xL + (cols===1?0:c*(usableW/(cols-1)));
+    const y1 = topPlus ? topPad : (h-topPad);
+    const y2 = topPlus ? (h-topPad) : topPad;
+    const line=document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1',x); line.setAttribute('y1',y1); line.setAttribute('x2',x); line.setAttribute('y2',y2);
+    line.setAttribute('stroke','var(--E)'); line.setAttribute('stroke-width','3'); line.setAttribute('stroke-opacity','0.35'); line.setAttribute('marker-end','url(#arrowE)');
+    Eg.appendChild(line);
+    const tx=document.createElementNS('http://www.w3.org/2000/svg','text');
+    tx.setAttribute('x', x+8); tx.setAttribute('y', (y1+y2)/2); tx.setAttribute('fill','var(--E)'); tx.setAttribute('fill-opacity','0.45'); tx.setAttribute('font-size','12'); tx.textContent='E';
+    Eg.appendChild(tx);
+  }
+  Eg.setAttribute('opacity', (Evisible && Math.abs(getE())>=1e-12) ? 1 : 0);
+}
+
+/* ===== Vel panel ===== */
+function showVel(){
+  velPanel.classList.remove('hidden');
+  toggleVelPanel.setAttribute('aria-expanded','true');
+  // มือถือ: เลื่อนให้เห็นทั้งแผง
+  if (window.matchMedia('(max-width:700px)').matches) {
+    setTimeout(()=>{ velPanel.scrollIntoView({behavior:'smooth', block:'center'}); }, 60);
+  }
+}
+function hideVel(){ velPanel.classList.add('hidden'); toggleVelPanel.setAttribute('aria-expanded','false'); }
+toggleVelPanel.addEventListener('click', showVel, {passive:true});
+closeVel.addEventListener('click', hideVel, {passive:true});
+
+/* ซ่อน/แสดงแผงหลัก */
+toggleControls.textContent = 'ซ่อนแผงตั้งค่า';
+toggleControls.onclick = ()=>{
+  const isHidden = controls.classList.contains('hidden');
+  if(isHidden){ controls.classList.remove('hidden'); toggleControls.textContent = 'ซ่อนแผงตั้งค่า'; }
+  else { controls.classList.add('hidden'); hideVel(); toggleControls.textContent = 'แสดงแผงตั้งค่า'; }
+};
+
+/* ปุ่มหลัก */
+togglePolarity.addEventListener('click', ()=>{ topPlus=!topPlus; renderPlates(topPlus); drawE(); updateForces(); }, {passive:true});
+toggleE.addEventListener('click', ()=>{ Evisible=!Evisible; drawE(); updateForces(); }, {passive:true});
+toggleForces.addEventListener('click', ()=>{ forcesVisible=!forcesVisible; renderForceVisibility(); updateForces(); }, {passive:true});
+
+/* ===== Drag test charge (ghost เฉพาะเล่น) ===== */
+let dragging=false, offsetX=12, offsetY=12;
+test.addEventListener('pointerdown',e=>{ e.preventDefault(); dragging=true; });
+window.addEventListener('pointerup',()=>dragging=false);
+window.addEventListener('pointercancel',()=>dragging=false);
+window.addEventListener('pointermove',e=>{ if(dragging) moveCharge(e.clientX,e.clientY); });
+test.addEventListener('touchstart',e=>{ e.preventDefault(); dragging=true; }, {passive:false});
+window.addEventListener('touchend',()=>dragging=false);
+window.addEventListener('touchmove', e=>{ if(!dragging) return; const t=e.touches[0]; moveCharge(t.clientX,t.clientY); }, {passive:false});
+
+function moveCharge(cx,cy){
+  const g=gap.getBoundingClientRect();
+  const x=cx-g.left-offsetX; const y=cy-g.top-offsetY;
+  test.style.left=Math.min(Math.max(0,x),g.width-24)+'px';
+  test.style.top =Math.min(Math.max(0,y),g.height-24)+'px';
+  updateForces();
+}
+
+/* ===== Ghost helpers ===== */
+function placeGhostAtCurrent(){
+  const x=(parseFloat(test.style.left)||0)+12;
+  const y=(parseFloat(test.style.top)||0)+12;
+  ghost.style.left = (x-9)+'px';
+  ghost.style.top  = (y-9)+'px';
+}
+function showGhost(show){
+  ghost.classList.toggle('hidden', !show);
+}
+
+/* ===== Charge type ===== */
+function applyChargeType(){
+  const val = chargeType.value;
+  test.classList.toggle('pos', val==='pos');
+  test.classList.toggle('neg', val==='neg');
+  test.textContent = (val==='pos') ? '+' : '−';
+  updateForces();
+}
+chargeType.addEventListener('change', applyChargeType, {passive:true});
+
+/* ===== Forces & vectors ===== */
+function renderForceVisibility(){
+  const vis = forcesVisible?1:0;
+  /* F จะถูกซ่อนอัตโนมัติเมื่อ F=0 (จัดการใน updateForces) */
+  mgline.setAttribute('opacity',vis); mglabel.setAttribute('opacity',vis);
+  aline.setAttribute('opacity',vis);  alabel.setAttribute('opacity',vis);
+  toggleForces.textContent = forcesVisible ? 'ซ่อน แรง & ความเร่ง' : 'แสดง แรง & ความเร่ง';
+}
+function getGVal(){ return parseFloat(gSelect.value)||9.8; }
+function getMassKgAndWeightN_(){ const gVal=getGVal(); if(inputSelect.value==='mass'){ const m_mg=Math.max(0,parseFloat(mass.value)||0); const m_kg=m_mg*1e-6; return {m_kg, wN:m_kg*gVal}; } else { const wN=Math.max(0,parseFloat(weightN.value)||0)*1e-3; const m_kg=gVal>0?wN/gVal:0; return {m_kg, wN}; } }
+function updateForces(){
+  const gRect=gap.getBoundingClientRect();
+  const tx=(parseFloat(test.style.left)||0)+12, ty=(parseFloat(test.style.top)||0)+12;
+
+  const topRect=plateTop.getBoundingClientRect();
+  const xL=Math.max(0, topRect.left - gRect.left) + 14;
+  const xR=Math.min(gRect.width, topRect.right - gRect.left) - 14;
+  const insideField = (tx>=xL && tx<=xR);
+  const dirEy = topPlus ? 1 : -1;
+
+  const q_uC=parseFloat(chargeSize.value)||0; const q = q_uC*1e-6;
+  const E = getE(); drawE();
+  const {m_kg, wN:mgN} = getMassKgAndWeightN();
+
+  const signQ = (chargeType.value==='pos')? 1 : -1;
+  const Fe = insideField ? q*E : 0;
+  const showF = forcesVisible && (Math.abs(Fe) > 1e-15);
+
+  const Fy = signQ*dirEy*Fe; // + ลง
+  const mg = mgN;            // + ลง
+
+  const gVal=getG();
+  const ay = (m_kg>0) ? ( insideField ? ((Fy+mg)/m_kg) : gVal ) : 0;
+  lastAy = ay;
+
+  const startX = tx, startY = ty;
+  const kTarget = 320;
+  const maxMag = Math.max(Math.abs(Fy), mg, 1e-9);
+  let kF = kTarget / maxMag; kF = Math.min(Math.max(kF, 20), 8000);
+  const ka = 20/3;
+
+  const Fy_px = Fy * kF; const Fy_y2 = startY + Fy_px;
+  Fline.setAttribute('x1',startX); Fline.setAttribute('y1',startY); Fline.setAttribute('x2',startX); Fline.setAttribute('y2',Fy_y2);
+  Fline.setAttribute('stroke', signQ>0? 'var(--Fpos)':'var(--Fneg)');
+  Fline.setAttribute('marker-end', signQ>0? 'url(#arrowFpos)':'url(#arrowFneg)');
+  Flabel.setAttribute('x', startX + 6 + labelOffsets.F.x);
+  Flabel.setAttribute('y', Fy_y2 + (Fy_px>=0?14:-8) + labelOffsets.F.y);
+  Flabel.setAttribute('fill', signQ>0? 'var(--Fpos)':'var(--Fneg)');
+  Flabel.textContent = `F = ${fmtMN(Math.abs(Fe))} mN`;
+  Fline.setAttribute('opacity', showF?1:0);
+  Flabel.setAttribute('opacity', showF?1:0);
+
+  const mg_px = mg * kF; const mg_y2 = startY + mg_px;
+  mgline.setAttribute('x1',startX+2); mgline.setAttribute('y1',startY-2); mgline.setAttribute('x2',startX+2); mgline.setAttribute('y2',mg_y2);
+  mglabel.setAttribute('x', startX+2 + labelOffsets.mg.x); mglabel.setAttribute('y', mg_y2+14 + labelOffsets.mg.y);
+  mglabel.textContent = `mg = ${fmtMN(mg)} mN`;
+
+  // ลูกศรความเร่ง: ให้ทิศถูกต้องเสมอ แม้ค่า a จะน้อยมาก
+  // ระบบพิกัด SVG: y เพิ่มลงล่าง ดังนั้น ay < 0 คือเร่งขึ้น
+  const aAbs = Math.abs(ay);
+  const minALen = 28;
+  const maxALen = 90;
+  const aLen = aAbs > 1e-12 ? Math.min(maxALen, Math.max(minALen, aAbs * ka * 0.5)) : 0;
+  const aDir = ay >= 0 ? 1 : -1;
+  const a_y1 = startY - 2;
+  const a_y2 = a_y1 + aDir * aLen;
+  aline.setAttribute('x1',startX+68); aline.setAttribute('y1',a_y1); aline.setAttribute('x2',startX+68); aline.setAttribute('y2',a_y2);
+  const a_midY = (a_y1 + a_y2) / 2;
+  alabel.setAttribute('x', startX + 78 + labelOffsets.a.x);
+  alabel.setAttribute('y', a_midY + 20 + labelOffsets.a.y);
+  alabel.textContent = `a = ${fmt3(Math.abs(ay))} m/s²`;
+  aline.setAttribute('opacity', (forcesVisible && aAbs > 1e-12) ? 1 : 0);
+  alabel.setAttribute('opacity', (forcesVisible && aAbs > 1e-12) ? 1 : 0);
+
+  const kv = 20; // 1 m/s = 20 px
+  const v_show = showV.checked;
+  const v_px = vx*kv, v_py = vy*kv;
+  const v_speed = Math.hypot(vx, vy);
+
+  // หางลูกศรความเร็ว v เริ่มที่จุดศูนย์กลางของวงกลมประจุ
+  const vBaseX = startX;
+  vline.setAttribute('x1',vBaseX); vline.setAttribute('y1',startY);
+  vline.setAttribute('x2',vBaseX + v_px); vline.setAttribute('y2',startY + v_py);
+  vlabel.setAttribute('x', vBaseX + v_px + 6 + labelOffsets.v.x); vlabel.setAttribute('y', startY + v_py + labelOffsets.v.y);
+  vlabel.textContent = `v = ${v_speed.toFixed(2)} m/s`;
+
+  // ถ้า v = 0 ไม่ต้องแสดงลูกศรความเร็ว
+  const v_visible = v_show && (v_speed > 1e-9);
+  vline.setAttribute('opacity', v_visible ? 1 : 0);
+  vlabel.setAttribute('opacity', v_visible ? 1 : 0);
+}
+
+/* ===== Mode & Player ===== */
+function applyMode(){ const isE = modeSelect.value==='E'; document.getElementById('ctrlE').classList.toggle('hidden', !isE); ctrlVd.classList.toggle('hidden', isE); updateForces(); }
+modeSelect.onchange=applyMode;
+function applyInputMode(){
+  const useMass = inputSelect.value === 'mass';
+  ctrlMass.classList.toggle('hidden', !useMass);
+  ctrlWeight.classList.toggle('hidden', useMass);
+  if(useMass){
+    const gVal = getG();
+    const w_mN = Math.max(0, parseFloat(weightN.value)||0);
+    const m_mg = gVal>0 ? (w_mN*1e-3/gVal)*1e6 : 0;
+    if(isFinite(m_mg) && m_mg>0) mass.value = m_mg.toFixed(3);
+  }else{
+    const m_mg = Math.max(0, parseFloat(mass.value)||0);
+    const w_mN = m_mg*1e-6*getG()*1000;
+    if(isFinite(w_mN)) weightN.value = w_mN.toFixed(3);
+  }
+  updateForces();
+}
+inputSelect.addEventListener('change', applyInputMode, {passive:true});
+
+function step(ts){
+  if(!playing){ lastT=ts; return; }
+  const dt=Math.min(0.033,(ts-(lastT||ts))/1000);
+  lastT=ts;
+  updateForces();
+  const ay=lastAy;
+  vy += ay*dt;
+  const gRect=gap.getBoundingClientRect();
+  let x=(parseFloat(test.style.left)||0)+12, y=(parseFloat(test.style.top)||0)+12;
+  let nx = x + vx*dt*PX_PER_M;
+  let ny = y + vy*dt*PX_PER_M;
+  const minX=12, maxX=gRect.width-12, minY=12, maxY=gRect.height-12;
+
+  const topRect=plateTop.getBoundingClientRect();
+  const xL=Math.max(0, topRect.left - gRect.left) + 14;
+  const xR=Math.min(gRect.width, topRect.right - gRect.left) - 14;
+  const insideBefore = (x>=xL && x<=xR);
+  const insideAfter  = (nx>=xL && nx<=xR);
+  const hasE = Math.abs(getE()) >= 1e-12;
+  if(hasE && (insideBefore || insideAfter)){
+    fieldDx += (nx - x)/PX_PER_M;
+    fieldDy += -(ny - y)/PX_PER_M;
+    dxField.textContent = `Δx(field) = ${fieldDx.toFixed(3)} m`;
+    dyField.textContent = `Δy(field) = ${fieldDy.toFixed(3)} m`;
+  }
+
+  if (playing) {
+    if (lastTracePt) {
+      const dist = Math.hypot(nx - lastTracePt.x, ny - lastTracePt.y);
+      if (dist >= TRACE_MIN_PX) {
+        const seg = document.createElementNS('http://www.w3.org/2000/svg','line');
+        seg.setAttribute('x1', lastTracePt.x); seg.setAttribute('y1', lastTracePt.y);
+        seg.setAttribute('x2', nx);           seg.setAttribute('y2', ny);
+        seg.setAttribute('stroke', '#64748b');
+        seg.setAttribute('stroke-width', String(TRACE_WIDTH));
+        seg.setAttribute('stroke-dasharray', TRACE_DASH);
+        seg.setAttribute('stroke-linecap', 'round');
+        seg.setAttribute('opacity', '0.6');
+        traceGroup.appendChild(seg);
+        lastTracePt = {x:nx, y:ny};
+      }
+    } else {
+      lastTracePt = {x:nx, y:ny};
+    }
+  }
+
+  let stopped = false;
+  if(ny < minY){ ny = minY; stopped = true; }
+  else if(ny > maxY){ ny = maxY; stopped = true; }
+  if(hasE && insideBefore && !insideAfter){
+    if(nx < xL) nx = xL; if(nx > xR) nx = xR; stopped = true;
+  }
+  if(nx < minX) nx = minX; if(nx > maxX) nx = maxX;
+
+  test.style.left = (nx-12)+'px';
+  test.style.top  = (ny-12)+'px';
+
+  if(stopped){
+    playing = false; playBtn.textContent = '▶ เล่น';
+    showV.checked = true; forcesVisible = false; renderForceVisibility(); updateForces();
+  }
+}
+function loop(ts){ step(ts); requestAnimationFrame(loop); } requestAnimationFrame(loop);
+
+playBtn.onclick=()=>{ 
+  playing=!playing; 
+  playBtn.textContent=playing?'⏸ หยุด':'▶ เล่น'; 
+  if(playing){ 
+    placeGhostAtCurrent();
+    showGhost(true);
+    traceGroup.innerHTML='';
+    const x=(parseFloat(test.style.left)||0)+12, y=(parseFloat(test.style.top)||0)+12; 
+    lastTracePt={x,y}; 
+  }
+  updateForces(); 
+};
+
+/* ===== Velocity inputs ===== */
+function applyVelocityFromInputs(){
+  const v = parseFloat(vMag.value)||0;
+  const ang = (parseFloat(vAng.value)||0) * Math.PI/180;
+  vx =  v*Math.cos(ang);
+  vy = -v*Math.sin(ang);
+  updateForces();
+}
+attachHoldStepper(vDec, vInc, vMag, parseFloat(vMag.step)||0.1, 0, Infinity, ()=>applyVelocityFromInputs());
+attachHoldStepper(angDec, angInc, vAng, parseFloat(vAng.step)||1, -360, 360, ()=>applyVelocityFromInputs());
+showV.onchange=()=>updateForces();
+
+/* ===== Plate length & rounding ===== */
+function clampPlateCm(cm){
+  const gapRect=gap.getBoundingClientRect();
+  const maxPx = Math.max(80, gapRect.width - 40);
+  const isMobile = window.matchMedia('(max-width:700px)').matches;
+  const scale = isMobile ? 5 : 10;
+  const maxCm = Math.floor(maxPx/scale);
+  return Math.min(Math.max(cm, 20), maxCm);
+}
+function setPlateLengthFromCm(cm){
+  const isMobile = window.matchMedia('(max-width:700px)').matches;
+  const scale = isMobile ? 5 : 10; // มือถือ: ลดสเกลลงครึ่งหนึ่ง
+  const px = Math.max(60, cm*scale);
+  plateTop.style.width = px+'px';
+  plateBottom.style.width = px+'px';
+  syncSVG();
+}
+function applyPlateLen(){
+  let cm = parseFloat(plateLenCm.value)||64; cm = clampPlateCm(cm);
+  plateLenCm.value = cm.toFixed(1); setPlateLengthFromCm(cm);
+}
+attachHoldStepper(plateDec, plateInc, plateLenCm, parseFloat(plateLenCm.step)||5, 10, 10000, applyPlateLen);
+
+// ===== Steppers for main controls (E, V, d, q, m, W) =====
+const eDec = document.getElementById('eDec');
+const eInc = document.getElementById('eInc');
+const voltDec = document.getElementById('voltDec');
+const voltInc = document.getElementById('voltInc');
+const distDec = document.getElementById('distDec');
+const distInc = document.getElementById('distInc');
+const chargeDec = document.getElementById('chargeDec');
+const chargeInc = document.getElementById('chargeInc');
+const massDec = document.getElementById('massDec');
+const massInc = document.getElementById('massInc');
+const wDec = document.getElementById('wDec');
+const wInc = document.getElementById('wInc');
+
+// E field (N/C)
+attachHoldStepper(eDec, eInc, fieldValue, parseFloat(fieldValue.step)||10, -1e9, 1e9, ()=>updateForces());
+// V and d (V, m)
+attachHoldStepper(voltDec, voltInc, voltage, parseFloat(voltage.step)||0.5, 0, 1e9, ()=>updateForces());
+attachHoldStepper(distDec, distInc, distance, parseFloat(distance.step)||0.01, 0.001, 1e9, ()=>updateForces());
+// charge size (µC)
+attachHoldStepper(chargeDec, chargeInc, chargeSize, parseFloat(chargeSize.step)||0.1, -1e9, 1e9, ()=>updateForces());
+// mass (mg = milligram)
+attachHoldStepper(massDec, massInc, mass, parseFloat(mass.step)||10, 0, 1e9, ()=>updateForces());
+// weight (mN)
+attachHoldStepper(wDec, wInc, weightN, parseFloat(weightN.step)||0.1, 0, 1e9, ()=>updateForces());
+
+roundInputOnBlur(fieldValue,-Infinity,Infinity,()=>updateForces());
+roundInputOnBlur(voltage,0,Infinity,()=>updateForces());
+roundInputOnBlur(distance,0.001,Infinity,()=>updateForces());
+roundInputOnBlur(chargeSize,-Infinity,Infinity,()=>updateForces());
+roundInputOnBlur(mass,0,Infinity,()=>{ updateForces(); });
+roundInputOnBlur(weightN,0,Infinity,()=>{ updateForces(); });
+roundInputOnBlur(vMag,0,Infinity,applyVelocityFromInputs);
+roundInputOnBlur(vAng,-360,360,applyVelocityFromInputs);
+
+/* ===== SVG/ตำแหน่ง ===== */
+function centerCharge(){
+  const g = gap.getBoundingClientRect();
+  const topRect = plateTop.getBoundingClientRect();
+
+  // ขอบเขตสนาม (ตามแผ่น) เพื่อให้เริ่มต้น “อยู่ในสนามไฟฟ้า”
+  let xL = Math.max(0, topRect.left - g.left) + 14;
+  let xR = Math.min(g.width, topRect.right - g.left) - 14;
+
+  // fallback กันกรณีคำนวณ rect เพี้ยนบนมือถือบางเครื่อง
+  if(!isFinite(xL) || !isFinite(xR) || (xR - xL) < 40){
+    xL = 14;
+    xR = g.width - 14;
+  }
+
+  const xMid = (xL + xR) / 2;
+  test.style.left = (xMid - 12) + 'px';
+  test.style.top  = (g.height/2 - 12) + 'px';
+}
+function syncSVG(){ const r=gap.getBoundingClientRect(); overlay.setAttribute('viewBox',`0 0 ${r.width} ${r.height}`); drawE(); updateForces(); }
+
+/* ===== Reset ===== */
+function resetAll(){
+  playing = false; playBtn.textContent = '▶ เล่น';
+
+  topPlus = DEFAULTS.topPlus;
+  Evisible = DEFAULTS.Evisible;
+  forcesVisible = DEFAULTS.forcesVisible;
+
+  modeSelect.value = DEFAULTS.mode;
+  fieldValue.value = DEFAULTS.E.toFixed(3);
+  voltage.value = DEFAULTS.voltage.toFixed(3);
+  distance.value = DEFAULTS.distance.toFixed(3);
+  fieldFromVd.value = DEFAULTS.E.toFixed(3);
+  document.getElementById('ctrlE').classList.toggle('hidden', DEFAULTS.mode!=='E');
+  ctrlVd.classList.toggle('hidden', DEFAULTS.mode==='E');
+
+  chargeType.value = DEFAULTS.chargeType;
+  applyChargeType();
+  chargeSize.value = DEFAULTS.chargeSize.toFixed(3);
+
+  inputSelect.value = DEFAULTS.inputMode;
+  ctrlMass.classList.toggle('hidden', inputSelect.value!=='mass');
+  ctrlWeight.classList.toggle('hidden', inputSelect.value!=='weight');
+  mass.value = DEFAULTS.mass.toFixed(3);
+  weightN.value = DEFAULTS.weightN.toFixed(3);
+
+  gSelect.value = String(DEFAULTS.g);
+  plateLenCm.value = DEFAULTS.plateLen.toFixed(1);
+  setPlateLengthFromCm(DEFAULTS.plateLen);
+
+  vMag.value = DEFAULTS.vMag.toFixed(3);
+  vAng.value = String(DEFAULTS.vAng);
+  showV.checked = DEFAULTS.showV;
+  vx = 0; vy = 0;
+
+  hideVel();
+  controls.classList.remove('hidden');
+  toggleControls.textContent = 'ซ่อนแผงตั้งค่า';
+
+  renderForceVisibility();
+
+  renderPlates(topPlus);
+  syncSVG();
+
+  traceGroup.innerHTML = '';
+  lastTracePt = null;
+  fieldDx = 0; fieldDy = 0;
+  Object.keys(labelOffsets).forEach(k=>{ labelOffsets[k].x=0; labelOffsets[k].y=0; });
+  dxField.textContent = 'Δx(field) = 0.000 m';
+  dyField.textContent = 'Δy(field) = 0.000 m';
+
+  centerCharge();
+  showGhost(false); // ซ่อน ghost หลังรีเซ็ต
+  updateForces();
+}
+
+/* ===== Formulas panel control ===== */
+
+function openFormulas(){
+  // เปิดเป็น “หน้าใหม่เต็มจอ” (ซ่อนหน้า Lab ชั่วคราว)
+  document.querySelector('.wrap')?.classList.add('hidden');
+  formulaOverlay.classList.remove('hidden');
+  window.scrollTo({top:0, behavior:'instant'});
+
+  // ให้ MathJax typeset ใหม่ในแผง (ครอบคลุมกรณีโหลด async)
+  if (window.MathJax && MathJax.typesetPromise) {
+    MathJax.typesetPromise([formulaOverlay]).catch(()=>{});
+  }
+}
+function closeFormulas(){
+  formulaOverlay.classList.add('hidden');
+  document.querySelector('.wrap')?.classList.remove('hidden');
+  window.scrollTo({top:0, behavior:'instant'});
+}
+showFormulasBtn.addEventListener('click', openFormulas, {passive:true});
+closeFormulaBtn.addEventListener('click', closeFormulas, {passive:true});
+formulaOverlay.addEventListener('click', (e)=>{ if(e.target===formulaOverlay) closeFormulas(); }, {passive:true});
+window.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && !formulaOverlay.classList.contains('hidden')) closeFormulas(); });
+
+/* ===== Init ===== */
+window.addEventListener('load', ()=>{
+  attachDraggableLabel(Flabel, 'F');
+  attachDraggableLabel(mglabel, 'mg');
+  attachDraggableLabel(alabel, 'a');
+  attachDraggableLabel(vlabel, 'v');
+  /* mobile: move vel panel into slot */
+  if (velPanelSlot && window.matchMedia('(max-width:700px)').matches) {
+    velPanelSlot.appendChild(velPanel);
+  }
+  renderPlates(topPlus);
+  // ให้ layout เข้าที่ก่อน แล้วค่อยจัดประจุให้อยู่ “ในสนามไฟฟ้า” (กันเพี้ยนบนมือถือบางเครื่อง)
+  syncSVG();
+  resetAll();
+  requestAnimationFrame(()=>{
+    centerCharge();
+    requestAnimationFrame(()=>centerCharge());
+    syncSVG();
+  });
+});
+new ResizeObserver(syncSVG).observe(gap);
+
+/* ปุ่มรีเซ็ต */
+resetBtn.onclick = (e)=>{ e.preventDefault(); resetAll(); };
+
+// Mobile bottom bar mirrors main buttons
+if(mPlay) mPlay.addEventListener('click', ()=>playBtn.click(), {passive:true});
+if(mReset) mReset.addEventListener('click', (e)=>{ e.preventDefault(); resetAll(); }, {passive:true});
+if(mFormula) mFormula.addEventListener('click', ()=>openFormulas(), {passive:true});
+
+</script>
+</body>
+</html>

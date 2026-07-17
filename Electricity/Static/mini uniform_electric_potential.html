@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mini Lab: ความต่างศักย์ในสนามไฟฟ้าสม่ำเสมอ</title>
+<style>
+  :root{--blue:#2f6fd6;--blue2:#204d7c;--soft:#edf3fb;--orange:#fff3e6;--orange-b:#f0c998}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Arial,"Noto Sans Thai",sans-serif;background:#fff;color:#1f2937}
+  .wrap{max-width:980px;margin:0 auto;padding:18px 14px 120px}
+  h1{margin:0 0 12px;text-align:center;color:var(--blue);font-size:clamp(22px,3vw,34px);font-weight:900}
+  .card{background:#fff;border:1px solid #d9e2ec;border-radius:18px;padding:12px;box-shadow:0 8px 24px rgba(0,0,0,.05)}
+  canvas{display:block;width:100%;height:auto;border:1px solid #d7dce3;border-radius:14px;touch-action:none;background:#fff}
+  .controls{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:12px}
+  button{border:none;border-radius:14px;padding:10px 14px;font-size:15px;font-weight:700;cursor:pointer}
+  .btn-toggle{background:#dbeafe;color:#1d4ed8}.btn-reset{background:#e5e7eb;color:#374151}.btn-formula{background:#ffe4c4;color:#8b4d00}
+  .readout{margin-top:12px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+  .pill{background:var(--soft);border:1px solid #dbe6f2;border-radius:14px;padding:10px 12px;text-align:center}
+  .pill .k{font-size:12px;color:#5b7ca6;margin-bottom:4px}.pill .v{font-size:18px;font-weight:800;color:var(--blue2)}
+  .formulaBox{margin-top:12px;background:var(--orange);border:1px solid var(--orange-b);border-radius:18px;padding:14px;display:none}
+  .formulaBox.show{display:block}
+  .formulaBox h2{margin:0 0 10px;color:#9a6500;font-size:20px}
+  .eqWrap{display:grid;gap:8px;margin-bottom:10px}
+  .eqLine{font-size:clamp(16px,1.92vw,23px);line-height:1.6;color:#111827;text-align:center;white-space:nowrap;overflow-x:auto;overflow-y:hidden;padding:2px 0}
+  .eqWord{font-size:clamp(12px,1.5vw,18px);text-align:left;color:#111827;padding-left:12px}
+  .explain{font-size:15px;line-height:1.7}
+  .footer{margin-top:14px;text-align:center;font-size:14px;color:#4b5563}
+  .footer a{color:#2563eb}
+  @media (max-width:700px){.readout{grid-template-columns:repeat(2,minmax(0,1fr))}.wrap{padding-bottom:140px}.eqLine{font-size:clamp(22px,6vw,30px)}.eqWord{font-size:clamp(18px,4.8vw,24px);padding-left:0}}
+</style>
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)'], ['$', '$']] },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <h1>Mini Lab: ความต่างศักย์ระหว่างจุด 2 จุดในสนามไฟฟ้าสม่ำเสมอ</h1>
+  <div class="card">
+    <canvas id="cv" width="920" height="460" aria-label="uniform electric field mini lab"></canvas>
+    <div class="controls">
+      <button class="btn-toggle" id="toggleBtn">🔁 สลับทิศสนามไฟฟ้า</button>
+      <button class="btn-reset" id="resetBtn">🔄 รีเซ็ต</button>
+      <button class="btn-formula" id="formulaBtn">📘 สูตรสำคัญ</button>
+    </div>
+    <div class="readout">
+      <div class="pill"><div class="k">ขนาดสนามไฟฟ้า</div><div class="v" id="eOut">100 N/C</div></div>
+      <div class="pill"><div class="k">ระยะระหว่างจุด</div><div class="v" id="sOut">0 m</div></div>
+      <div class="pill"><div class="k">มุมกับสนามไฟฟ้า</div><div class="v" id="thetaOut">0°</div></div>
+      <div class="pill"><div class="k">s cosθ</div><div class="v" id="sxOut">0 m</div></div>
+      <div class="pill"><div class="k">ความต่างศักย์ ΔV = V<sub>B</sub> − V<sub>A</sub></div><div class="v" id="dvOut">0 V</div></div>
+    </div>
+    <div class="formulaBox" id="formulaBox">
+      <h2>📘 สูตรสำคัญ</h2>
+      <div class="eqWrap">
+        <div class="eqLine">\( \Delta V = V_B - V_A = -\vec{E}\cdot\vec{s} \)</div>
+        <div class="eqWord">หรือ</div>
+        <div class="eqLine">\( \Delta V = V_B - V_A = -Es\cos\theta \)</div>
+      </div>
+      <div class="explain">
+        <b>เรื่องเครื่องหมายของ \(s\cos\theta\)</b><br>
+        ถ้า θ เป็น<b>มุมป้าน</b> จะได้ \(\cos\theta &lt; 0\) ดังนั้น \(s\cos\theta\) จะติดลบเองตามธรรมชาติ และเมื่อแทนในสมการ \(\Delta V = -E s\cos\theta\) เครื่องหมายของ ΔV จะออกมาถูกต้องอัตโนมัติ<br><br>
+        <b>อธิบายแนวคิด</b><br>
+        ในสนามไฟฟ้าสม่ำเสมอ ความต่างศักย์ระหว่างจุด A และ B ขึ้นกับการกระจัด \(\vec{s}\) เทียบกับทิศของสนามไฟฟ้า \(\vec{E}\)<br><br>
+        - ถ้าจาก A ไป B ไป <b>ตามทิศสนามไฟฟ้า</b> จะได้ \(\Delta V &lt; 0\) ศักย์ไฟฟ้าลดลง<br>
+        - ถ้าจาก A ไป B ไป <b>สวนทิศสนามไฟฟ้า</b> จะได้ \(\Delta V &gt; 0\) ศักย์ไฟฟ้าเพิ่มขึ้น<br>
+        - ถ้าเส้น AB <b>ตั้งฉาก</b> กับสนามไฟฟ้า จะได้ \(\theta = 90^\circ\) ทำให้ \(\cos\theta = 0\) จึงได้ \(\Delta V = 0\)<br><br>
+        <small>กำหนด E = 100 N/C และใช้สเกล 100 px = 1 m</small>
+      </div>
+    </div>
+  </div>
+  <div class="footer">ศึกษาเพิ่มเติมที่เพจ <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener noreferrer">คลายปมฟิสิกส์</a></div>
+</div>
+<script>
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+const state = {A:{x:360,y:320}, B:{x:530,y:205}, drag:null, fieldDir:1, E:100};
+const PX_PER_M = 100;
+const HIT_R=34, SNAP_DEG=8;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+function getPos(e){const r=cv.getBoundingClientRect(); const t=e.touches?e.touches[0]:e; return {x:(t.clientX-r.left)*(cv.width/r.width), y:(t.clientY-r.top)*(cv.height/r.height)}}
+const dist=(p,q)=>Math.hypot(p.x-q.x,p.y-q.y);
+function normalizeSignedRad(a){while(a<=-Math.PI) a+=2*Math.PI; while(a>Math.PI) a-=2*Math.PI; return a;}
+function lockBToSpecialAngles(){
+  const A=state.A,B=state.B; let dx=B.x-A.x, dy=B.y-A.y; const r=Math.hypot(dx,dy); if(r<1) return;
+  const fieldAngle=state.fieldDir>0?0:Math.PI; let rel=normalizeSignedRad(Math.atan2(dy,dx)-fieldAngle);
+  const absDeg=Math.abs(rel*180/Math.PI); const sign=rel<0?-1:1; let target=null;
+  if(absDeg<=SNAP_DEG) target=0; else if(Math.abs(absDeg-90)<=SNAP_DEG) target=sign*Math.PI/2; else if(Math.abs(absDeg-180)<=SNAP_DEG) target=Math.PI;
+  if(target!==null){const ang=fieldAngle+target; B.x=clamp(A.x+r*Math.cos(ang),40,cv.width-40); B.y=clamp(A.y+r*Math.sin(ang),40,cv.height-40);}
+}
+function startDrag(e){const p=getPos(e); if(dist(p,state.A)<=HIT_R) state.drag='A'; else if(dist(p,state.B)<=HIT_R) state.drag='B';}
+function moveDrag(e){if(!state.drag) return; e.preventDefault(); const p=getPos(e); const node=state[state.drag]; node.x=clamp(p.x,40,cv.width-40); node.y=clamp(p.y,40,cv.height-40); lockBToSpecialAngles(); draw();}
+function endDrag(){state.drag=null;}
+cv.addEventListener('mousedown',startDrag); window.addEventListener('mousemove',moveDrag); window.addEventListener('mouseup',endDrag);
+cv.addEventListener('touchstart',startDrag,{passive:false}); cv.addEventListener('touchmove',moveDrag,{passive:false}); cv.addEventListener('touchend',endDrag);
+function drawArrowHead(x,y,ang,color,head=12){ctx.fillStyle=color; ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x-head*Math.cos(ang-Math.PI/7), y-head*Math.sin(ang-Math.PI/7)); ctx.lineTo(x-head*Math.cos(ang+Math.PI/7), y-head*Math.sin(ang+Math.PI/7)); ctx.closePath(); ctx.fill();}
+function dashedLineArrow(x1,y1,x2,y2,color='#9ca3af'){
+  const ang=Math.atan2(y2-y1,x2-x1); const startPad=18, endPad=24;
+  const sx=x1+startPad*Math.cos(ang), sy=y1+startPad*Math.sin(ang);
+  const ex=x2-endPad*Math.cos(ang), ey=y2-endPad*Math.sin(ang);
+  ctx.save(); ctx.setLineDash([8,7]); ctx.strokeStyle=color; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(sx,sy); ctx.lineTo(ex,ey); ctx.stroke(); ctx.restore();
+  drawArrowHead(ex,ey,ang,color,11);
+}
+function drawField(){
+  const x1=64, x2=cv.width-64, color='rgba(220,38,38,0.23)'; ctx.lineWidth=2; ctx.strokeStyle=color;
+  for(let y=64;y<=cv.height-54;y+=58){ctx.beginPath(); ctx.moveTo(x1,y); ctx.lineTo(x2,y); ctx.stroke(); if(state.fieldDir>0) drawArrowHead(x2,y,0,color,12); else drawArrowHead(x1,y,Math.PI,color,12);}
+  ctx.fillStyle='rgba(185,28,28,0.75)'; ctx.font='bold 20px Arial'; ctx.fillText('E = '+state.E.toFixed(0)+' N/C', state.fieldDir>0?cv.width-158:28, 38);
+}
+function drawPoint(p,fill){ctx.beginPath(); ctx.arc(p.x,p.y,9,0,Math.PI*2); ctx.fillStyle=fill; ctx.fill(); ctx.beginPath(); ctx.arc(p.x,p.y,16,0,Math.PI*2); ctx.strokeStyle='rgba(107,114,128,.45)'; ctx.lineWidth=1.5; ctx.stroke();}
+function drawProjection(A,B){
+  const px=B.x, py=A.y;
+  ctx.save();
+  ctx.setLineDash([5,5]);
+  ctx.strokeStyle='rgba(59,130,246,0.55)';
+  ctx.lineWidth=1.4;
+  ctx.beginPath();
+  ctx.moveTo(A.x,A.y);
+  ctx.lineTo(px,py);
+  ctx.stroke();
+  ctx.restore();
+  const sxm = Math.abs(B.x - A.x) / PX_PER_M;
+  ctx.save();
+  ctx.fillStyle='rgba(37,99,235,0.9)';
+  const isMobileBlue = window.innerWidth <= 700; ctx.font=`bold ${isMobileBlue?18:13}px Arial`;
+  ctx.textAlign='center';
+  ctx.textBaseline='bottom';
+  const midxProj = (A.x+B.x)/2;
+  const yProj = A.y - 6 + 30;
+  const sProjSigned = (state.fieldDir*(B.x - A.x)/PX_PER_M);
+  ctx.fillText('s cosθ = ' + sProjSigned.toFixed(2) + ' m', midxProj, yProj);
+  ctx.fillStyle = 'rgba(22,101,52,0.95)';
+  ctx.fillText('ΔV = ' + (-state.E * sProjSigned).toFixed(1) + ' V', midxProj, yProj + 16);
+  ctx.restore();
+  ctx.save();
+  ctx.setLineDash([5,5]);
+  ctx.strokeStyle='rgba(234,179,8,0.9)';
+  ctx.lineWidth=1.5;
+  ctx.beginPath();
+  ctx.moveTo(B.x,B.y);
+  ctx.lineTo(px,py);
+  ctx.stroke();
+  ctx.restore();
+  ctx.fillStyle='rgba(161,98,7,0.95)';
+  const isMobile = window.innerWidth <= 700; ctx.font=`bold ${isMobile?16:14}px Arial`;
+  ctx.textAlign='left';
+  ctx.textBaseline='bottom';
+  ctx.fillText('เส้นสมศักย์', px+8, (B.y+py)/2 - 4 + 20);
+}
+function drawSubscriptText(base, sub, x, y, color, align='left'){
+  ctx.save();
+  ctx.fillStyle=color;
+  ctx.textAlign=align;
+  ctx.textBaseline='alphabetic';
+  const isMobile = window.innerWidth <= 700; ctx.font=`bold ${isMobile?17:15}px Arial`;
+  ctx.fillText(base, x, y);
+  const baseW=ctx.measureText(base).width;
+  ctx.font=`bold ${isMobile?13:11}px Arial`;
+  let subX;
+  if(align==='right') subX=x+4;
+  else if(align==='center') subX=x+baseW/2+4;
+  else subX=x+baseW+4;
+  ctx.fillText(sub, subX, y+4);
+  ctx.restore();
+}
+function drawTransparentText(text, x, y, color, align='left'){ctx.save(); const isMobile = window.innerWidth <= 700; ctx.font=`bold ${isMobile?17:15}px Arial`; ctx.fillStyle=color; ctx.textAlign=align; ctx.textBaseline='middle'; ctx.fillText(text,x,y); ctx.restore();}
+function drawAngle(A,B){const dx=B.x-A.x, dy=B.y-A.y; const angAB=Math.atan2(dy,dx); const angE=state.fieldDir>0?0:Math.PI; let delta=normalizeSignedRad(angAB-angE); const r=42; ctx.save(); ctx.strokeStyle='#2563eb'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(A.x,A.y,r,angE,angE+delta, delta<0); ctx.stroke(); ctx.restore(); drawTransparentText(`θ = ${Math.abs(delta*180/Math.PI).toFixed(1)}°`, A.x+8, A.y-28, '#2563eb', 'left'); return Math.abs(delta)*180/Math.PI;}
+function draw(){
+  ctx.clearRect(0,0,cv.width,cv.height);
+  drawField();
+  const A=state.A, B=state.B;
+  drawProjection(A,B);
+  dashedLineArrow(A.x,A.y,B.x,B.y);
+
+  // label s (สีเทา) บนเส้นปะ A→B
+  const midxAB = (A.x + B.x) / 2;
+  const midyAB = (A.y + B.y) / 2;
+  ctx.save();
+  ctx.fillStyle = '#6b7280'; // gray
+  const isMobileGray = window.innerWidth <= 700; ctx.font = `bold ${isMobileGray?19:14}px Arial`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'bottom';
+  ctx.fillText('s = ' + (Math.hypot(B.x - A.x, B.y - A.y) / PX_PER_M).toFixed(2) + ' m', midxAB, midyAB - 6);
+  ctx.restore();
+
+  drawPoint(A,'#111827');
+  drawPoint(B,'#111827');
+  const dxpix=B.x-A.x, dypix=B.y-A.y;
+  const s=Math.hypot(dxpix,dypix)/PX_PER_M;
+  const thetaDeg=drawAngle(A,B);
+  const sAlongField=(state.fieldDir*dxpix)/PX_PER_M;
+  const dV=-state.E*sAlongField;
+  const midx=(A.x+B.x)/2, midy=(A.y+B.y)/2;
+  drawTransparentText('A', A.x-24, A.y-22, '#111827', 'right');
+  drawSubscriptText('V', 'A', A.x-25, A.y, '#111827', 'right');
+  drawTransparentText('B', B.x+18, B.y-23, '#111827', 'left');
+  drawSubscriptText('V', 'B', B.x+18, B.y+2, '#111827', 'left');
+  
+  document.getElementById('eOut').textContent=`${state.E.toFixed(0)} N/C`;
+  document.getElementById('sOut').textContent=`${s.toFixed(2)} m`;
+  document.getElementById('thetaOut').textContent=`${thetaDeg.toFixed(1)}°`;
+  document.getElementById('sxOut').textContent=`${sAlongField.toFixed(2)} m`;
+  document.getElementById('dvOut').textContent=`${dV.toFixed(1)} V`;
+}
+document.getElementById('toggleBtn').addEventListener('click',()=>{state.fieldDir*=-1; lockBToSpecialAngles(); draw();});
+document.getElementById('resetBtn').addEventListener('click',()=>{state.A={x:360,y:320}; state.B={x:530,y:205}; state.fieldDir=1; draw();});
+document.getElementById('formulaBtn').addEventListener('click',()=>{const box=document.getElementById('formulaBox'); box.classList.toggle('show'); if(box.classList.contains('show') && window.MathJax){MathJax.typesetPromise([box]);}});
+draw();
+</script>
+</body>
+</html>

@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>การทดลองสนามไฟฟ้า — multi-probe + draggable labels + สูตรสำคัญ + แบบฝึกหัด (v3 • scroll-fixed)</title>
+<style>
+  :root{ --bg:#ffffff; --ink:#0f172a; --muted:#475569; --grid:#e5e7eb; --red:#ef4444; --blue:#2563eb; --purple:#7c3aed; --panel:#ffffff; --line:#cbd5e1; }
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Thai",Arial,sans-serif}
+  header{position:sticky;top:0;background:#ffffffcc;backdrop-filter:blur(6px);border-bottom:1px solid var(--line);padding:10px 14px;z-index:3}
+  h1{margin:0;font-size:18px}
+
+  .headWrap{display:flex;flex-direction:column;gap:2px}
+  .title{margin:0;font-size:20px;color:var(--blue)}
+  .subtitle{font-size:12px;font-weight:300;color:#94a3b8}
+
+  .wrap{
+    display:grid;
+    grid-template-columns:clamp(240px,30vw,320px) 1fr;
+    grid-template-rows:auto 1fr;
+    grid-template-areas:
+      "top canvas"
+      "bottom canvas";
+    gap:12px;
+    min-height:100dvh;
+    padding:12px;
+    align-items:start;
+  }
+  #topControls{grid-area:top;align-self:start}
+  #bottomControls{grid-area:bottom;align-self:start}
+  .canvasWrap{grid-area:canvas}
+  @media (max-width:700px){
+    .wrap{
+      grid-template-columns:1fr;
+      grid-template-rows:auto auto auto;
+      grid-template-areas:
+        "top"
+        "canvas"
+        "bottom";
+    }
+    .canvasWrap{height:24dvh; min-height:220px}
+    .canvasWrap #board{touch-action:none}
+    .row3{grid-template-columns:minmax(96px,1fr) minmax(86px,120px) minmax(96px,1fr); gap:10px}
+    .row3 input[type="number"],.row3 select,.row3 button{width:100%; min-width:0; box-sizing:border-box; padding:6px 8px; font-size:13px}
+    .row3 input[type="number"]{max-width:110px}
+    .row3 button{white-space:nowrap}
+    .btnDelCharge{font-size:12px; padding:6px 6px}
+  
+  }
+
+  /* Buttons color (Resolve standard) */
+  .btn-field{background:#dbeafe;border-color:#bfdbfe}
+  .btn-probe{background:#f1f5f9;border-color:#e2e8f0}
+  .btn-reset{background:#e5e7eb;border-color:#d1d5db}
+  .btn-formula{background:#ffedd5;border-color:#fed7aa}
+  .btn-exercise{background:#dcfce7;border-color:#bbf7d0}
+
+  /* Mission panel (slide-down) */
+  .missionWrap{margin-top:10px}
+  .missionPanel{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#ffffff}
+  .missionHead{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line);background:#fff}
+  .missionTitle{display:flex;align-items:center;gap:8px;font-weight:700}
+  .missionBody{padding:12px}
+  .missionBody p{margin:8px 0}
+  .missionQ{font-weight:700;color:#0f172a}
+  .missionChoices{display:grid;gap:8px;margin-top:10px}
+  .choiceBtn{width:100%;text-align:left;padding:10px 12px;border-radius:12px;border:1px solid #cbd5e1;background:#fff;cursor:pointer}
+  .choiceBtn:hover{filter:brightness(0.98)}
+  .missionFeedback{margin-top:10px;padding:10px 12px;border-radius:12px;border:1px solid #e5e7eb;background:#f8fafc}
+  .missionFeedback.ok{border-color:#bbf7d0;background:#f0fdf4}
+  .missionFeedback.bad{border-color:#fecaca;background:#fef2f2}
+  .missionActions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .missionActions .pill{flex:1 1 140px}
+  .missionActionsRow{display:flex;gap:8px;margin-top:10px}
+  .missionActionsRow .pill{flex:1}
+  .btn-hint{background:#e5e7eb;border-color:#d1d5db}
+  .btn-next{background:#dcfce7;border-color:#bbf7d0}
+  .btn-mission{background:#ffffff;border-color:#e2e8f0}
+  .btn-addcharge{background:#ffffff;border-color:#2563eb}
+  .btn-toggleCharges{background:#ffffff;border-color:#cbd5e1}
+  .chargesHeader{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+  .chargesHeader .note{margin:0}
+
+
+  .navPanel{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .controlsPanel{border-radius:12px}
+  .resolveLink{color:#2563eb;text-decoration:underline}
+
+    .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+  .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:6px}
+  label{font-size:12px;color:var(--muted)}
+  input[type="number"],select,button{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);font-size:14px}
+  button{cursor:pointer}
+  .pill{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--line);border-radius:999px;background:#fff}
+  .legend{display:flex;flex-wrap:wrap;gap:8px;font-size:13px;color:var(--muted)}
+  .legend .dot{width:10px;height:10px;border-radius:50%}
+  .canvasWrap{position:relative;border:1px solid var(--line);border-radius:12px;overflow:hidden;height:92dvh}
+  .canvasWrap #board{display:block;width:100%;height:100%;background:#fff;touch-action:none}
+  .note{font-size:12px;color:var(--muted)}
+  .chargeBadge{display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border-radius:999px;border:1px solid var(--line)}
+  .radioRow{display:flex;gap:8px;align-items:center}
+
+  /* ==== Modal (scroll-fixed) ==== */
+  .modal{position:fixed;inset:0;display:none;z-index:50}
+  .modal.open{display:block}
+  .modal-backdrop{position:absolute;inset:0;background:rgba(15,23,42,.45);backdrop-filter:blur(2px)}
+  .modal-panel{position:relative;max-width:960px;width:min(92vw,960px);max-height:90vh;margin:5vh auto;background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 20px 40px rgba(2,6,23,.25);overflow:hidden;display:flex;flex-direction:column}
+  .modal-head{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line);background:linear-gradient(90deg,#f8fafc,#eef2ff);position:sticky;top:0;z-index:1}
+  .modal-head h2{margin:0;font-size:20px;color:#111827}
+  .modal-close{border:1px solid var(--line);background:#fff;border-radius:10px;padding:8px 12px}
+  .modal-body{flex:1 1 auto;padding:18px 20px 24px;overflow:auto;-webkit-overflow-scrolling:touch;line-height:1.7}
+
+  /* Fullscreen สูตรสำคัญ / แบบฝึกหัด */
+  .modal-panel.fullscreen{
+    width:100vw; height:100vh; max-width:none; max-height:none;
+    margin:0; border-radius:0; border-left:0; border-right:0;
+  }
+  .modal-panel.fullscreen .modal-head{position:sticky; top:0}
+  .modal-close.floating{
+    position:fixed;
+    top:calc(env(safe-area-inset-top) + 10px);
+    right:calc(env(safe-area-inset-right) + 10px);
+    width:34px; height:34px;
+    border-radius:999px;
+    padding:0;
+    display:flex; align-items:center; justify-content:center;
+    font-weight:700;
+    z-index:60;
+  }
+  .neutral-illus{
+    width:200px; max-width:100%;
+    height:auto;
+    display:block;
+    margin:10px auto 0;
+  }
+
+  .k-badge{display:inline-block;border-radius:999px;padding:3px 10px;border:1px solid var(--line);font-size:12px;color:var(--muted);margin:6px 8px 8px 0}
+  .formula-card{border:1px solid #e5e7eb;border-left:4px solid var(--purple);border-radius:12px;padding:14px 16px;margin:10px 0;background:#fafaff}
+  .formula{font-size:22px;margin:10px 0}
+  .hint{font-size:14px;color:var(--muted)}
+  .mcq{border:1px solid #e5e7eb;border-radius:12px;padding:12px 14px;margin:10px 0}
+  .mcq h3{margin:0 0 8px 0;font-size:16px}
+  .mcq label{display:flex;gap:8px;align-items:flex-start;margin:6px 0;font-size:14px;color:var(--ink)}
+  .scoreBox{display:flex;align-items:center;gap:10px;margin:10px 0;padding:10px;border-radius:10px;background:#f8fafc;border:1px solid #e5e7eb}
+  .explain{margin-top:8px;color:#334155;font-size:14px}
+
+  /* ===== Mobile hotfix v4 (prevent overlap + keep lab visible) ===== */
+  .row3 > div{min-width:0}
+  .row3 input, .row3 select, .row3 button{width:100%; box-sizing:border-box}
+  .row3 button{max-width:100%}
+
+  @media (max-width:700px){
+    /* Controls layout: 3 columns, prevent overlap */
+    .row3{grid-template-columns:88px 88px 1fr !important; gap:10px !important;}
+    .row3 label{font-size:12px !important;}
+    .row3 input[type="number"], .row3 select{font-size:13px !important; padding:6px 8px !important;}
+    .row3 button{font-size:13px !important; padding:6px 8px !important; white-space:nowrap;}
+
+    /* Lab area must always have real height on mobile */
+    .canvasWrap{height:24dvh !important; min-height:220px !important;}
+    .canvasWrap #board{touch-action:none !important;}
+  }
+
+
+/* --- Mini figures in Formula (E direction) --- */
+.ef-explain{margin:0 0 10px;color:#1f2937;font-size:16px;line-height:1.55}
+.ef-explain .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace}
+.ef-mini-figs{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start;margin-top:10px}
+.ef-mini-figs figure{margin:0;border:1px solid rgba(0,0,0,0.10);border-radius:12px;padding:8px;background:transparent}
+.ef-mini-figs img{display:block;width:200px;max-width:min(200px,90vw);height:auto;border-radius:8px}
+.ef-mini-figs figcaption{font-size:13px;color:#374151;margin-top:6px;line-height:1.35}
+@media (max-width:520px){
+  .ef-mini-figs{flex-direction:column}
+  .ef-mini-figs img{width:200px;max-width:90vw}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="headWrap">
+    <h1 class="title">การทดลองสนามไฟฟ้า</h1>
+    <div class="subtitle">เลือก/ลากประจุ (q₁,q₂,q₃), จุดสนใจ (probe), แสดง E และเวกเตอร์ผลลัพธ์</div>
+  </div>
+</header>
+
+
+<div class="wrap">
+  <section class="panel controlsPanel" id="topControls">
+    
+    <div class="chargesHeader">
+      <p class="note" style="font-weight:700;color:#0f172a">ตั้งค่าประจุ (q)</p>
+      <button id="btnToggleCharges" class="pill btn-toggleCharges" type="button" aria-pressed="true" style="padding:8px 12px">ซ่อน</button>
+    </div>
+    <div id="chargesSection"></div>
+</section>
+
+  <main class="canvasWrap">
+    <svg id="board" viewBox="-600 -400 1200 800" xmlns="http://www.w3.org/2000/svg" aria-label="สนามไฟฟ้า">
+      <defs>
+        <pattern id="smallGrid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="var(--grid)" stroke-width="1"/></pattern>
+        <pattern id="grid" width="100" height="100" patternUnits="userSpaceOnUse">
+          <rect width="100" height="100" fill="url(#smallGrid)"/><path d="M 100 0 L 0 0 0 100" fill="none" stroke="#d1d5db" stroke-width="1"/>
+        </pattern>
+        <marker id="arrowRed" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L10,3 L0,6 Z" fill="var(--red)"/></marker>
+        <marker id="arrowBlue" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L10,3 L0,6 Z" fill="var(--blue)"/></marker>
+        <marker id="arrowPurple" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L10,3 L0,6 Z" fill="var(--purple)"/></marker>
+      </defs>
+      <rect x="-600" y="-400" width="1200" height="800" fill="url(#grid)" />
+      <g id="rLines"></g><g id="eVectors"></g><g id="sumVector" style="display:none"></g><g id="objects"></g>
+    </svg>
+  </main>
+
+  <section class="panel controlsPanel" id="bottomControls">
+    <div id="actionsSection">
+      <div class="row" style="grid-template-columns:1fr 1fr">
+        <button id="btnToggleField" class="pill btn-field" aria-pressed="false" style="background:#dbeafe;border-color:#bfdbfe"><strong>แสดงสนามไฟฟ้า</strong></button>
+        <button id="btnAddProbe" class="pill btn-probe" style="background:#f1f5f9;border-color:#e2e8f0"><strong>เพิ่ม probe</strong></button>
+      </div>
+
+      <div class="row" style="grid-template-columns:1fr 1fr">
+        <div class="radioRow">
+          <input id="toggleSum" type="checkbox" />
+          <label for="toggleSum">แสดงเวกเตอร์ลัพธ์ (E_net)</label>
+        </div>
+        <button id="btnReset" class="pill btn-reset" title="รีเซ็ตกลับค่าเริ่มต้น" style="background:#e5e7eb;border-color:#d1d5db">รีเซ็ตค่าเริ่มต้น</button>
+      </div>
+
+      <div class="panel navPanel">
+        <button id="btnMission" class="pill btn-mission" style="background:#ffffff;border-color:#e2e8f0">
+          <strong><span aria-hidden="true" style="color:#ec4899">🎯</span> ภารกิจ</strong>
+        </button>
+      </div>
+      <div class="missionWrap">
+        <div id="missionPanel" class="missionPanel" style="max-height:0;transition:max-height .28s ease;overflow:hidden" aria-hidden="true">
+          <div class="missionHead">
+            <div class="missionTitle"><span aria-hidden="true" style="color:#ec4899">🎯</span> ภารกิจ</div>
+            <button id="btnCloseMission" class="pill" type="button" style="padding:6px 10px;min-width:0">✕</button>
+          </div>
+          <div class="missionBody">
+            <div class="note" id="missionCounter" style="margin-bottom:6px"></div>
+            <div class="missionQ" id="missionQuestion"></div>
+            <div class="missionChoices" id="missionChoices"></div>
+            <div id="missionFeedback" class="missionFeedback" style="display:none"></div>
+
+            <div class="missionActionsRow">
+              <button id="btnHint" class="pill btn-hint" type="button" style="background:#e5e7eb;border-color:#d1d5db">Hint</button>
+              <button id="btnNextMission" class="pill btn-next" type="button" style="background:#dcfce7;border-color:#bbf7d0">ภารกิจถัดไป</button>
+            </div>
+            <div id="missionHint" class="note" style="margin-top:8px;display:none"></div>
+          </div>
+        </div>
+      </div>
+
+</div>
+
+    <div id="linkSection" class="panel" style="margin-top:12px">
+      <p class="note">ศึกษาเพิ่มเติมที่ <a class="resolveLink" href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener noreferrer">เพจคลายปมฟิสิกส์</a></p>
+    </div>
+  </section>
+</div>
+
+
+<script>
+document.addEventListener('DOMContentLoaded',()=>{ (function(){
+  const k = 8.9875517923e9;
+  const M_PER_PX = 0.01, PX_PER_M = 1/M_PER_PX; // 1px = 1cm
+  const ARROW_SCALE = (5 * 0.00005) * 0.2; // สเกลลูกศร (สั้นลง 0.2 เท่า)
+  const MAX_CHARGES = 10;
+
+  const IS_MOBILE = window.matchMedia('(max-width:700px)').matches;
+  const FONT_SCALE = IS_MOBILE ? 2 : 1;
+  const HIT_SCALE = IS_MOBILE ? 2 : 1;
+
+  // ===== Helpers =====
+  const svg = document.getElementById('board');
+  // Mobile: zoom-in 2× by shrinking viewBox (so objects appear bigger)
+  if(IS_MOBILE){ svg.setAttribute('viewBox','-300 -200 600 400'); }
+  const rLinesG = document.getElementById('rLines');
+  const eVectorsG = document.getElementById('eVectors');
+  const sumVectorG = document.getElementById('sumVector');
+  const objectsG = document.getElementById('objects');
+
+  const toggleSum = document.getElementById('toggleSum');
+  const btnToggleField = document.getElementById('btnToggleField');
+  const btnAddProbe = document.getElementById('btnAddProbe');
+  const btnReset = document.getElementById('btnReset');
+
+  const chargesSection = document.getElementById('chargesSection');
+
+  function mToPx(m){ return m * PX_PER_M; }
+  function pxToM(px){ return px * M_PER_PX; }
+  function vecLen(x,y){ return Math.hypot(x,y); }
+  function fmtQ(microC){
+    const v = Number(microC||0);
+    const abs=Math.abs(v);
+    let s;
+    if(abs>=100) s=v.toFixed(0);
+    else if(abs>=10) s=v.toFixed(1);
+    else s=v.toFixed(2);
+    s=s.replace(/\.00$/,'').replace(/(\.\d)0$/,'$1');
+    return s + ' μC';
+  }
+  function fmtE(x){ return (Math.abs(x)>=1e3 || Math.abs(x)<1e-2)? x.toExponential(2): x.toFixed(2); }
+  function svgEl(name, attrs){ const el=document.createElementNS('http://www.w3.org/2000/svg',name); for(const k in attrs) el.setAttribute(k,attrs[k]); return el; }
+  function subNum(n){
+    const map = {'0':'₀','1':'₁','2':'₂','3':'₃','4':'₄','5':'₅','6':'₆','7':'₇','8':'₈','9':'₉'};
+    return String(n).split('').map(ch=>map[ch]||ch).join('');
+  }
+  function qLabel(id){ return 'q' + subNum(id); }
+  function rLabel(i){ return 'r' + subNum(i); }
+  function eLabel(i){ return 'E' + subNum(i); }
+
+  // ===== State (scalable charges) =====
+  const PRESETS = [
+    { microC:  1.0, x_m:-2.0, y_m: 0.0, enabled:true  },
+    { microC: -3.0, x_m: 0.6, y_m: 0.3, enabled:true  },
+    { microC:  1.5, x_m: 0.0, y_m:-0.5, enabled:true  },
+  ];
+
+  let charges = [];
+  let nextChargeId = 1;
+
+  let probes = [];
+  let activeProbeIndex = 0;
+
+  let SHOW_FIELD = false;
+
+  // offsets for draggable labels (per probe, per charge)
+  let labelOffsetE = [];   // [pIndex][chargeIndex] => {x,y}
+  let labelOffsetSUM = []; // [pIndex] => {x,y}
+
+  function ensureOffsets(pIndex){
+    if(!labelOffsetE[pIndex]) labelOffsetE[pIndex] = [];
+    for(let i=0;i<charges.length;i++){
+      if(!labelOffsetE[pIndex][i]) labelOffsetE[pIndex][i] = {x:0,y:0};
+    }
+    if(!labelOffsetSUM[pIndex]) labelOffsetSUM[pIndex] = {x:0,y:0};
+  }
+
+  function getQ_C(charge){ return (charge.microC || 0) * 1e-6; }
+
+  // ===== UI: Charge Controls (render) =====
+  function renderChargeControls(){
+    chargesSection.innerHTML = '';
+
+    // Header note already outside (btnToggleCharges)
+
+    if(charges.length===0){
+      const empty = document.createElement('div');
+      empty.className = 'note';
+      empty.textContent = 'ยังไม่มีประจุ — กด “เพิ่มประจุ” เพื่อเริ่ม';
+      chargesSection.appendChild(empty);
+    }
+
+    // Render all charges in order
+    for(let i=0;i<charges.length;i++){
+      const c = charges[i];
+      const card = makeChargeCard(c);
+      if(i>0) card.style.marginTop = '12px';
+      chargesSection.appendChild(card);
+    }
+
+    // Add button (ต้องอยู่ใต้ประจุล่าสุดเสมอ)
+    const addWrap = document.createElement('div');
+    addWrap.className = 'panel';
+    addWrap.style.marginTop = '12px';
+    addWrap.style.display = 'flex';
+    addWrap.style.gap = '8px';
+    addWrap.style.alignItems = 'center';
+
+    const btnAddCharge = document.createElement('button');
+    btnAddCharge.id = 'btnAddCharge';
+    btnAddCharge.className = 'pill btn-addcharge';
+    btnAddCharge.type = 'button';
+    // inline to guarantee color even if external css overrides
+    btnAddCharge.style.background = '#ffffff';
+    btnAddCharge.style.borderColor = '#2563eb';
+    btnAddCharge.style.borderWidth = '1px';
+    btnAddCharge.innerHTML = '<strong>เพิ่มประจุ</strong>';
+    btnAddCharge.addEventListener('click', ()=>{
+      addCharge();
+    });
+
+    const tip = document.createElement('span');
+    tip.className = 'note';
+    tip.textContent = `เพิ่มได้สูงสุด ${MAX_CHARGES} ประจุ`;
+
+    addWrap.appendChild(btnAddCharge);
+    addWrap.appendChild(tip);
+    chargesSection.appendChild(addWrap);
+
+    // disable add if max
+    btnAddCharge.disabled = charges.length >= MAX_CHARGES;
+    btnAddCharge.style.opacity = btnAddCharge.disabled ? '0.55' : '1';
+    btnAddCharge.style.cursor = btnAddCharge.disabled ? 'not-allowed' : 'pointer';
+  }
+
+  function makeChargeCard(charge){
+    const card = document.createElement('div');
+    card.className = 'panel';
+    card.setAttribute('data-charge-id', charge.id);
+
+    const head = document.createElement('div');
+    head.className = 'row';
+    head.style.gridTemplateColumns = '1fr 1fr';
+
+    const badge = document.createElement('div');
+    badge.className = 'chargeBadge';
+    badge.innerHTML = `<strong>${qLabel(charge.id)}</strong>`;
+
+    const enableWrap = document.createElement('div');
+    enableWrap.className = 'radioRow';
+    const en = document.createElement('input');
+    en.type = 'checkbox';
+    en.checked = !!charge.enabled;
+    const enLab = document.createElement('label');
+    enLab.textContent = 'ใช้งาน';
+    enableWrap.appendChild(en);
+    enableWrap.appendChild(enLab);
+
+    head.appendChild(badge);
+    head.appendChild(enableWrap);
+
+    const row1 = document.createElement('div');
+    row1.className = 'row3';
+
+    // sign
+    const signBox = document.createElement('div');
+    const signLab = document.createElement('label');
+    signLab.textContent = 'ชนิด';
+    const signSel = document.createElement('select');
+    signSel.innerHTML = `<option value="+">+</option><option value="-">−</option>`;
+    signSel.value = (charge.microC>=0)?'+':'-';
+    signBox.appendChild(signLab);
+    signBox.appendChild(signSel);
+
+    // magnitude
+    const magBox = document.createElement('div');
+    const magLab = document.createElement('label');
+    magLab.textContent = 'ขนาด (µC)';
+    const magInp = document.createElement('input');
+    magInp.type = 'number';
+    magInp.step = '0.1';
+    magInp.value = Math.abs(charge.microC||0);
+    magBox.appendChild(magLab);
+    magBox.appendChild(magInp);
+
+    // delete
+    const delBox = document.createElement('div');
+    const delLab = document.createElement('label');
+    delLab.textContent = 'ลบ';
+    const delBtn = document.createElement('button');
+    delBtn.textContent = `ลบ ${qLabel(charge.id)}`;
+    delBox.appendChild(delLab);
+    delBox.appendChild(delBtn);
+
+    row1.appendChild(signBox);
+    row1.appendChild(magBox);
+    row1.appendChild(delBox);
+
+    const row2 = document.createElement('div');
+    row2.className = 'row3';
+
+    const xBox = document.createElement('div');
+    const xLab = document.createElement('label');
+    xLab.textContent = 'x (m)';
+    const xInp = document.createElement('input');
+    xInp.type = 'number';
+    xInp.step = '0.1';
+    xInp.value = pxToM(charge.x).toFixed(2);
+    xInp.setAttribute('data-role','x');
+    xBox.appendChild(xLab);
+    xBox.appendChild(xInp);
+
+    const yBox = document.createElement('div');
+    const yLab = document.createElement('label');
+    yLab.textContent = 'y (m)';
+    const yInp = document.createElement('input');
+    yInp.type = 'number';
+    yInp.step = '0.1';
+    yInp.value = pxToM(charge.y).toFixed(2);
+    yInp.setAttribute('data-role','y');
+    yBox.appendChild(yLab);
+    yBox.appendChild(yInp);
+
+    const setBox = document.createElement('div');
+    const setLab = document.createElement('label');
+    setLab.textContent = 'ตั้งพิกัด';
+    const setBtn = document.createElement('button');
+    setBtn.textContent = 'ตั้งค่า';
+    setBox.appendChild(setLab);
+    setBox.appendChild(setBtn);
+
+    row2.appendChild(xBox);
+    row2.appendChild(yBox);
+    row2.appendChild(setBox);
+
+    card.appendChild(head);
+    card.appendChild(row1);
+    card.appendChild(row2);
+
+    // listeners
+    function syncMicroC(){
+      const s = (signSel.value === '+') ? 1 : -1;
+      const mag = Math.abs(parseFloat(magInp.value || '0'));
+      charge.microC = s * mag;
+    }
+    en.addEventListener('change', ()=>{ charge.enabled = !!en.checked; draw(); });
+    signSel.addEventListener('change', ()=>{ syncMicroC(); draw(); });
+    magInp.addEventListener('input', ()=>{ syncMicroC(); draw(); });
+
+    setBtn.addEventListener('click', ()=>{
+      const xm = parseFloat(xInp.value || '0');
+      const ym = parseFloat(yInp.value || '0');
+      charge.x = mToPx(xm);
+      charge.y = mToPx(ym);
+      draw();
+    });
+    xInp.addEventListener('input', ()=>{ /* do nothing until set */ });
+    yInp.addEventListener('input', ()=>{ /* do nothing until set */ });
+
+    delBtn.addEventListener('click', ()=>{
+      // remove this charge
+      const idx = charges.findIndex(c=>c.id===charge.id);
+      if(idx>=0){
+        charges.splice(idx,1);
+        // reset offsets because charge indices changed
+        labelOffsetE = [];
+        renderChargeControls();
+        draw();
+      }
+    });
+
+    return card;
+  }
+
+  function addCharge(){
+    if(charges.length >= MAX_CHARGES) return;
+
+    const preset = PRESETS[Math.min(charges.length, PRESETS.length-1)];
+    const id = nextChargeId++;
+
+    // For q2, q3 use preset positions; for later, spread out
+    let microC = preset ? preset.microC : 1.0;
+    let x_m = preset ? preset.x_m : (0.3 + 0.15*(charges.length));
+    let y_m = preset ? preset.y_m : (-0.2 - 0.12*(charges.length));
+
+    // For q2/q3 specifically, use their preset; for beyond preset length, generate
+    if(charges.length >= PRESETS.length){
+      microC = (charges.length%2===0)? 2.0 : -2.0;
+      x_m = 0.35 + 0.15*(charges.length-2);
+      y_m = 0.25 - 0.15*(charges.length-2);
+    }
+
+    charges.push({ id, microC, x:mToPx(x_m), y:mToPx(y_m), enabled:true });
+    renderChargeControls();
+    draw();
+  }
+
+  // ===== Draw =====
+  function draw(){
+    rLinesG.innerHTML=''; eVectorsG.innerHTML=''; sumVectorG.innerHTML=''; objectsG.innerHTML='';
+
+    // charges
+    charges.forEach((c)=>{
+      if(!c.enabled) return;
+      const color=(c.microC>=0)?'var(--red)':'var(--blue)';
+      const signChar=(c.microC>=0)?'+':'−';
+      const g=svgEl('g',{class:'charge','data-id':c.id});
+      g.innerHTML=`
+        <circle cx="${c.x}" cy="${c.y}" r="${22*HIT_SCALE}" fill="#0000" />
+        <circle cx="${c.x}" cy="${c.y}" r="${16*FONT_SCALE}" fill="#fff" stroke="${color}" stroke-width="3" />
+        <text x="${c.x}" y="${c.y}" font-size="${22*FONT_SCALE}" fill="${color}" text-anchor="middle" dominant-baseline="middle">${signChar}</text>
+        <text x="${c.x}" y="${c.y + 49 + (IS_MOBILE?15:0)}" font-size="${(14*FONT_SCALE)-(IS_MOBILE?3:0)}" fill="#334155" text-anchor="middle">${qLabel(c.id)} = ${fmtQ(c.microC)}</text>`;
+      objectsG.appendChild(g);
+    });
+
+    // probes
+    probes.forEach((p,i)=>{
+      const g=svgEl('g',{class:'probeDot','data-probe':i});
+      const fill=i===activeProbeIndex?'#cbd5e1':'#e5e7eb';
+      const stroke=i===activeProbeIndex?'#475569':'#94a3b8';
+      const label=(i===activeProbeIndex?'probe':'probe')+(probes.length>1?` ${i+1}`:'');
+      g.innerHTML=`
+        <circle cx="${p.x}" cy="${p.y}" r="${16*HIT_SCALE}" fill="#0000" />
+        <circle cx="${p.x}" cy="${p.y}" r="${7*FONT_SCALE}" fill="${fill}" stroke="${stroke}" stroke-width="2" />
+        <text x="${p.x}" y="${p.y-14}" font-size="${14*FONT_SCALE - (IS_MOBILE?5:0)}" fill="#334155" text-anchor="middle">${label}</text>`;
+      objectsG.appendChild(g);
+    });
+
+    if(!SHOW_FIELD) return;
+
+    // fields for all probes
+    probes.forEach((probe,pIndex)=>{
+      ensureOffsets(pIndex);
+
+      let ExSum=0, EySum=0;
+      let eIndex = 0;
+
+      charges.forEach((c)=>{
+        if(!c.enabled) return;
+        eIndex++;
+
+        const dx=probe.x-c.x, dy=probe.y-c.y;
+        const r_px=Math.hypot(dx,dy);
+        const r_m=vecLen(pxToM(dx),pxToM(dy));
+        if(r_m<1e-9) return;
+
+        const midx=(probe.x+c.x)/2, midy=(probe.y+c.y)/2;
+        const distText=`${rLabel(eIndex)} = ${r_m.toFixed(2)} m`;
+        rLinesG.insertAdjacentHTML('beforeend', `<g>
+          <line x1="${c.x}" y1="${c.y}" x2="${probe.x}" y2="${probe.y}" stroke="#94a3b8" stroke-width="2" stroke-dasharray="6 6" />
+          <text x="${midx}" y="${midy-6}" text-anchor="middle" font-size="${14*FONT_SCALE - (IS_MOBILE?3:0)}" fill="#64748b" paint-order="stroke" stroke="#ffffff" stroke-width="3">${distText}</text>
+          <text x="${midx}" y="${midy-6}" text-anchor="middle" font-size="${14*FONT_SCALE - (IS_MOBILE?3:0)}" fill="#64748b">${distText}</text>
+        </g>`);
+
+        const qC=getQ_C(c);
+        const E_mag=k*Math.abs(qC)/(r_m*r_m);
+        const Ex=(qC>=0?1:-1)*E_mag*(dx/r_px);
+        const Ey=(qC>=0?1:-1)*E_mag*(dy/r_px);
+        ExSum+=Ex; EySum+=Ey;
+
+        const lenPx=ARROW_SCALE*E_mag*1000;
+        const color=(qC>=0)?'var(--red)':'var(--blue)';
+        const norm=Math.hypot(Ex,Ey)||1;
+        const dirx=Ex/norm, diry=Ey/norm;
+        const ex=probe.x+lenPx*dirx, ey=probe.y+lenPx*diry;
+
+        eVectorsG.insertAdjacentHTML('beforeend', `<g>
+          <line x1="${probe.x}" y1="${probe.y}" x2="${ex}" y2="${ey}" stroke="${color}" stroke-width="3" marker-end="url(#${qC>=0?'arrowRed':'arrowBlue'})" />
+        </g>`);
+
+        // label base positions (cycle a few offsets)
+        const baseChoices = [{x:-30,y:-30},{x:30,y:30},{x:0,y:-10},{x:-20,y:28},{x:24,y:-18}];
+        const base = baseChoices[(eIndex-1) % baseChoices.length];
+
+        const off = (labelOffsetE[pIndex][eIndex-1] || {x:0,y:0});
+        const labelX=ex+base.x+off.x, labelY=ey+base.y+off.y;
+
+        const gLabel = svgEl('g', {class:'dragLabel', 'data-kind':'E', 'data-probe':pIndex, 'data-idx':(eIndex-1)});
+        gLabel.innerHTML = `
+          <rect x="${labelX-6}" y="${labelY-18}" width="160" height="40" rx="6" ry="6" fill="none" stroke="transparent"></rect>
+          <text x="${labelX}" y="${labelY}" font-size="${18*FONT_SCALE - (IS_MOBILE?10:0)}" fill="${color}" text-anchor="start">${eLabel(eIndex)} = ${fmtE(E_mag)} N/C</text>
+        `;
+        eVectorsG.appendChild(gLabel);
+      });
+
+      if(toggleSum.checked){
+        const Emag=Math.hypot(ExSum,EySum);
+        const dirx=(Emag>0)?ExSum/Emag:1, diry=(Emag>0)?EySum/Emag:0;
+        const lenPx=ARROW_SCALE*Emag*1000;
+        const ex=probe.x+lenPx*dirx, ey=probe.y+lenPx*diry;
+
+        const off = labelOffsetSUM[pIndex];
+        const sx=ex+0+off.x, sy=ey-8+off.y;
+        const sx2=ex+0+off.x, sy2=ey+12+off.y;
+
+        sumVectorG.style.display='block';
+        sumVectorG.insertAdjacentHTML('beforeend', `<g>
+          <line x1="${probe.x}" y1="${probe.y}" x2="${ex}" y2="${ey}" stroke="var(--purple)" stroke-width="4" marker-end="url(#arrowPurple)" />
+        </g>`);
+
+        const gSum = svgEl('g', {class:'dragLabel', 'data-kind':'SUM', 'data-probe':pIndex});
+        gSum.innerHTML = `
+          <rect x="${sx-6}" y="${sy-18}" width="170" height="40" rx="6" ry="6" fill="none" stroke="transparent"></rect>
+          <text x="${sx}" y="${sy}" font-size="${18*FONT_SCALE - (IS_MOBILE?10:0)}" fill="var(--purple)" text-anchor="start">E<tspan baseline-shift="sub" font-size="${Math.max(12*FONT_SCALE,12)}">net</tspan> = ${fmtE(Emag)} N/C</text>
+          
+        `;
+        sumVectorG.appendChild(gSum);
+      }
+    });
+  }
+
+  // ===== Dragging (charges, probes, labels) =====
+  let drag=null, lastPt=null;
+  const svgElRoot=document.getElementById('board');
+
+  svgElRoot.addEventListener('pointerdown',(e)=>{
+    const pt=clientToSvg(e); lastPt=pt;
+    const labelNode = e.target.closest && e.target.closest('.dragLabel');
+    if(labelNode){
+      const kind = labelNode.getAttribute('data-kind');
+      const pIndex = parseInt(labelNode.getAttribute('data-probe'));
+      const idx = labelNode.hasAttribute('data-idx') ? parseInt(labelNode.getAttribute('data-idx')) : null;
+      drag = {type:'label', kind, pIndex, idx};
+      svgElRoot.setPointerCapture(e.pointerId);
+      return;
+    }
+    const g=e.target.closest && e.target.closest('#objects g');
+    if(!g) return;
+    if(g.classList.contains('probeDot')){
+      const idx=parseInt(g.getAttribute('data-probe'));
+      activeProbeIndex=idx;
+      drag={type:'probe', idx, dx:probes[idx].x-pt.x, dy:probes[idx].y-pt.y};
+      svgElRoot.setPointerCapture(e.pointerId);
+      draw(); return;
+    }
+    if(g.classList.contains('charge')){
+      const id=parseInt(g.getAttribute('data-id'));
+      const c=charges.find(x=>x.id===id);
+      if(!c) return;
+      drag={type:'charge', id, dx:c.x-pt.x, dy:c.y-pt.y};
+      svgElRoot.setPointerCapture(e.pointerId);
+      return;
+    }
+  });
+
+  svgElRoot.addEventListener('pointermove',(e)=>{
+    if(!drag) return;
+    const pt=clientToSvg(e);
+    if(drag.type==='probe'){
+      const p=probes[drag.idx];
+      p.x=pt.x+drag.dx; p.y=pt.y+drag.dy; draw(); return;
+    }
+    if(drag.type==='charge'){
+      const c=charges.find(x=>x.id===drag.id);
+      if(!c) return;
+      c.x=pt.x+drag.dx; c.y=pt.y+drag.dy;
+
+      // reflect into UI inputs (best-effort)
+      const card = chargesSection.querySelector(`[data-charge-id="${c.id}"]`);
+      if(card){
+        const xin = card.querySelector('input[data-role="x"]');
+        const yin = card.querySelector('input[data-role="y"]');
+        if(xin) xin.value = pxToM(c.x).toFixed(2);
+        if(yin) yin.value = pxToM(c.y).toFixed(2);
+      }
+      draw(); return;
+    }
+    if(drag.type==='label'){
+      const dx = pt.x - lastPt.x;
+      const dy = pt.y - lastPt.y;
+      if(drag.kind==='E'){
+        ensureOffsets(drag.pIndex);
+        const off = labelOffsetE[drag.pIndex][drag.idx];
+        off.x += dx; off.y += dy;
+      }else if(drag.kind==='SUM'){
+        ensureOffsets(drag.pIndex);
+        const off = labelOffsetSUM[drag.pIndex];
+        off.x += dx; off.y += dy;
+      }
+      lastPt = pt;
+      draw(); return;
+    }
+  });
+
+  window.addEventListener('pointerup',(e)=>{ drag=null; if(e.pointerId) try{ svgElRoot.releasePointerCapture(e.pointerId);}catch{} });
+
+  function clientToSvg(evt){
+    const pt=svgElRoot.createSVGPoint(); pt.x=evt.clientX; pt.y=evt.clientY;
+    const ctm=svgElRoot.getScreenCTM().inverse();
+    return pt.matrixTransform(ctm);
+  }
+
+  // ===== Controls =====
+  if(btnToggleField){
+    btnToggleField.addEventListener('click', ()=>{
+      SHOW_FIELD=!SHOW_FIELD;
+      btnToggleField.setAttribute('aria-pressed', SHOW_FIELD?'true':'false');
+      btnToggleField.innerHTML = `<strong>${SHOW_FIELD?'ซ่อนสนามไฟฟ้า':'แสดงสนามไฟฟ้า'}</strong>`;
+      draw();
+    });
+  }
+
+  if(btnAddProbe){
+    btnAddProbe.addEventListener('click', ()=>{
+      const last=probes[activeProbeIndex]||{x:mToPx(0),y:mToPx(0)};
+      probes.push({x:last.x+20,y:last.y+20});
+      activeProbeIndex=probes.length-1;
+      ensureOffsets(activeProbeIndex);
+      draw();
+    });
+  }
+
+  toggleSum.addEventListener('change', draw);
+  btnReset.addEventListener('click', resetAll);
+
+  function resetAll(){
+    charges = [{
+      id: 1,
+      microC: PRESETS[0].microC,
+      x: mToPx(PRESETS[0].x_m),
+      y: mToPx(PRESETS[0].y_m),
+      enabled: true
+    }];
+    nextChargeId = 2;
+
+    probes = [{ x:mToPx(0), y:mToPx(0) }];
+    activeProbeIndex = 0;
+
+    SHOW_FIELD = false;
+    toggleSum.checked = false;
+
+    labelOffsetE = [];
+    labelOffsetSUM = [];
+    ensureOffsets(0);
+
+    btnToggleField.setAttribute('aria-pressed','false');
+    btnToggleField.innerHTML = `<strong>แสดงสนามไฟฟ้า</strong>`;
+
+    renderChargeControls();
+    draw();
+  }
+
+  // init
+  resetAll();
+
+  // สูตรสำคัญและแบบฝึกหัดถูกตัดออกเพื่อลดขนาดไฟล์ โดยไม่กระทบ Lab
+
+
+  // ===== Toggle charge panel (hide/show) =====
+  const btnToggleCharges = document.getElementById('btnToggleCharges');
+  const chargesHeader = document.querySelector('.chargesHeader');
+  let chargesVisible = true;
+  if(btnToggleCharges){
+    btnToggleCharges.addEventListener('click', ()=>{
+      chargesVisible = !chargesVisible;
+      chargesSection.style.display = chargesVisible ? '' : 'none';
+      btnToggleCharges.textContent = chargesVisible ? 'ซ่อน' : 'แสดง';
+      btnToggleCharges.setAttribute('aria-pressed', chargesVisible ? 'true' : 'false');
+    });
+  }
+
+  // ===== Missions (slide-down under experiment) =====
+  const btnMission = document.getElementById('btnMission');
+  const missionPanel = document.getElementById('missionPanel');
+  const btnCloseMission = document.getElementById('btnCloseMission');
+  const missionCounter = document.getElementById('missionCounter');
+  const missionQuestion = document.getElementById('missionQuestion');
+  const missionChoices = document.getElementById('missionChoices');
+  const missionFeedback = document.getElementById('missionFeedback');
+  const btnHint = document.getElementById('btnHint');
+  const btnNextMission = document.getElementById('btnNextMission');
+  const missionHint = document.getElementById('missionHint');
+
+  const MISSIONS = [
+    {
+      q: 'ถ้าเป็นประจุบวก (+) ทิศของสนามไฟฟ้าที่ probe เป็นอย่างไร?',
+      choices: ['ชี้เข้าหาประจุ', 'ชี้ออกจากประจุ', 'ไม่มีทิศ'],
+      correct: 1,
+      hint: 'นึกว่าเอา “ประจุทดสอบบวก” ไปวางที่ probe → แรงชี้ทิศไหน สนามก็ชี้ทิศนั้น'
+    },
+    {
+      q: 'ถ้าเป็นประจุลบ (−) ทิศของสนามไฟฟ้าที่ probe เป็นอย่างไร?',
+      choices: ['ชี้ออกจากประจุ', 'ชี้เข้าหาประจุ', 'ไม่มีทิศ'],
+      correct: 1,
+      hint: 'ประจุลบดึงประจุทดสอบบวกให้ “เข้าหา” ตัวมัน'
+    },
+    {
+      q: 'เมื่อ probe อยู่ไกลออกไป ขนาดสนามไฟฟ้าเป็นอย่างไร?',
+      choices: ['มากขึ้น', 'เท่าเดิม', 'ลดลงตาม 1/r²'],
+      correct: 2,
+      hint: 'ดูรูปแบบสมการ E แปรผกผันกับ r²'
+    },
+    {
+      q: 'ประจุบวก 2 ประจุ (ขนาดต่างกัน) จุดที่สนามลัพธ์เป็นศูนย์อยู่ที่ใด?',
+      choices: ['อยู่ “ระหว่าง” ประจุทั้งสอง', 'อยู่ “นอกช่วง” ระหว่างประจุ', 'ไม่มีจุดศูนย์'],
+      correct: 0,
+      hint: 'ประจุ “ชนิดเดียวกัน” สนามจะหันคนละทิศกันเฉพาะ “ตรงกลาง”'
+    },
+    {
+      q: 'ข้อก่อนหน้า จุดที่สนามลัพธ์เป็นศูนย์จะอยู่ใกล้ประจุใด?',
+      choices: ['ใกล้ประจุที่มากกว่า', 'ใกล้ประจุที่น้อยกว่า'],
+      correct: 1,
+      hint: 'ให้ E₁ = E₂ → ตัวที่ “น้อยกว่า” ต้องอยู่ใกล้กว่าเพื่อให้ทันกัน'
+    },
+    {
+      q: 'ประจุบวกและลบ (ขนาดต่างกัน) จุดที่สนามลัพธ์เป็นศูนย์อยู่ที่ใด?',
+      choices: ['อยู่ “ระหว่าง” ประจุทั้งสอง', 'อยู่ “นอกช่วง” ระหว่างประจุ', 'ไม่มีจุดศูนย์'],
+      correct: 1,
+      hint: 'ประจุต่างชนิด “ระหว่างกลาง” สนามมักไปทิศเดียวกัน จึงไม่หักล้าง'
+    },
+    {
+      q: 'ข้อก่อนหน้า จุดศูนย์จะอยู่ใกล้ประจุใด?',
+      choices: ['ใกล้ประจุที่มากกว่า', 'ใกล้ประจุที่น้อยกว่า'],
+      correct: 1,
+      hint: 'หลักเดียวกัน: ตัวที่น้อยกว่า ต้องอยู่ใกล้กว่าเพื่อให้สนามทันกัน'
+    }
+  ];
+
+  let missionIndex = 0;
+
+  function openMission(){
+    missionPanel.style.maxHeight = '0';
+    missionPanel.setAttribute('aria-hidden','false');
+    // allow transition
+    requestAnimationFrame(()=>{
+      missionPanel.style.maxHeight = missionPanel.scrollHeight + 'px';
+    });
+  }
+  function closeMission(){
+    missionPanel.style.maxHeight = '0';
+    missionPanel.setAttribute('aria-hidden','true');
+    // also reset hint visibility (optional)
+    setTimeout(()=>{ if(missionPanel.style.maxHeight==='0px' || missionPanel.style.maxHeight==='0'){} }, 250);
+  }
+
+  function renderMission(){
+    const m = MISSIONS[missionIndex];
+    missionCounter.textContent = `ภารกิจ ${missionIndex+1}/${MISSIONS.length}`;
+    missionQuestion.textContent = m.q;
+
+    missionChoices.innerHTML = '';
+    missionFeedback.style.display = 'none';
+    missionFeedback.className = 'missionFeedback';
+    missionHint.style.display = 'none';
+    missionHint.textContent = m.hint;
+
+    m.choices.forEach((txt, idx)=>{
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'choiceBtn';
+      b.textContent = `${String.fromCharCode(65+idx)}) ${txt}`;
+      b.addEventListener('click', ()=>{
+        const ok = idx === m.correct;
+        missionFeedback.style.display = '';
+        missionFeedback.className = 'missionFeedback ' + (ok?'ok':'bad');
+        missionFeedback.innerHTML = ok
+          ? '<strong style="color:#16a34a">ถูกต้อง</strong> ✅'
+          : '<strong style="color:#dc2626">ยังไม่ถูก</strong> ❌ ลองดู Hint แล้วตอบใหม่';
+        // resize panel to fit new content
+        missionPanel.style.maxHeight = missionPanel.scrollHeight + 'px';
+      });
+      missionChoices.appendChild(b);
+    });
+
+    // keep panel height updated
+    missionPanel.style.maxHeight = missionPanel.scrollHeight + 'px';
+  }
+
+  if(btnMission){
+    btnMission.addEventListener('click', ()=>{
+      const hidden = missionPanel.getAttribute('aria-hidden') === 'true' || missionPanel.style.maxHeight==='0px' || missionPanel.style.maxHeight==='0';
+      if(hidden){
+        openMission();
+        renderMission();
+      }else{
+        closeMission();
+      }
+    });
+  }
+  if(btnCloseMission){
+    btnCloseMission.addEventListener('click', closeMission);
+  }
+  if(btnHint){
+    btnHint.addEventListener('click', ()=>{
+      missionHint.style.display = (missionHint.style.display==='none') ? '' : 'none';
+      missionPanel.style.maxHeight = missionPanel.scrollHeight + 'px';
+    });
+  }
+  if(btnNextMission){
+    btnNextMission.addEventListener('click', ()=>{
+      missionIndex = (missionIndex+1) % MISSIONS.length;
+      renderMission();
+    });
+  }
+
+})();});
+</script>
+
+</body>
+</html>

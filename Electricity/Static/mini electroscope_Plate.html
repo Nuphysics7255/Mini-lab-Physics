@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Mini Lab : อิเล็กโทรสโคป — การเหนี่ยวนำประจุ</title>
+<style>
+  :root{
+    --blue:#2f6fd6; --blue2:#204d7c; --soft:#edf3fb; --line:#d8e3ef;
+    --orange:#ffe4c4; --green:#e8f6e8; --gray:#eef2f6; --text:#1f2d3d;
+    --plus:#e45757; --minus:#2f6fd6;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0; min-height:100%; font-family:system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif; color:var(--text); background:linear-gradient(180deg,#f7fbff,#eef5ff);}
+  body{padding: max(14px, env(safe-area-inset-top)) 14px max(130px, env(safe-area-inset-bottom)); overflow-x:hidden;}
+  .wrap{max-width:1160px; margin:0 auto;}
+  header{text-align:center; margin:4px auto 12px;}
+  h1{margin:0; color:var(--blue); font-size:clamp(25px,3.5vw,42px); line-height:1.15; font-weight:900;}
+  .subtitle{margin-top:4px; color:var(--blue2); font-size:clamp(17px,2vw,22px); font-weight:800;}
+  .topbar{display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin:12px 0;}
+  button{border:0; border-radius:18px; padding:10px 14px; font-weight:800; font-size:15px; cursor:pointer; box-shadow:0 3px 0 rgba(0,0,0,.12); color:#21364d; user-select:none; touch-action:manipulation;}
+  button:active{transform:translateY(2px); box-shadow:0 1px 0 rgba(0,0,0,.12)}
+  .play{background:#5aa8f0;color:white}.reset{background:#e6eaef}.formula{background:var(--orange)}.missionBtn{background:#fff;color:#a14b76;border:1px solid #ffd2e5}
+  .main{display:grid; grid-template-columns:minmax(0,1.5fr) minmax(290px,.75fr); gap:14px; align-items:start;}
+  .card{background:white; border:1px solid var(--line); border-radius:26px; box-shadow:0 12px 30px rgba(42,88,130,.11); overflow:hidden;}
+  .labCard{position:relative; min-height:610px; padding:10px;}
+  .canvasBox{position:relative; width:100%; height:590px; border-radius:22px; overflow:hidden; background:linear-gradient(180deg,#f9fcff 0%,#eaf4ff 100%); border:1px solid #d9e8f5; touch-action:none;}
+  canvas{width:100%; height:100%; display:block;}
+  .hintPanel{position:absolute; left:14px; top:14px; cursor:grab; touch-action:none; max-width:min(470px, calc(100% - 28px)); background:rgba(255,255,255,.92); border:1px solid #dbe6f0; border-radius:18px; padding:12px 42px 12px 14px; box-shadow:0 8px 18px rgba(41,75,110,.12); font-size:14px; line-height:1.45; z-index:5;}
+  .hintPanel:active{cursor:grabbing;}
+  .hintPanel b{color:#1f5f9a}.hintClose{position:absolute; right:7px; top:7px; width:28px; height:28px; border-radius:12px; padding:0; background:#edf3fb; box-shadow:none; color:#45688f; font-size:18px;}
+  .floatingStatus{position:absolute; right:14px; top:14px; z-index:4; background:rgba(255,255,255,.92); border:1px solid #dbe6f0; border-radius:18px; padding:10px 12px; font-size:14px; font-weight:800; color:#24527c; box-shadow:0 8px 18px rgba(41,75,110,.1); max-width:270px;}
+  .controls{padding:16px; display:grid; gap:13px;}
+  .controlTitle{font-size:20px; font-weight:900; color:#24527c; margin:0 0 2px;}
+  .seg{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+  .seg button{background:#f3f7fb; border:1.5px solid #d6e4f2; box-shadow:none;}
+  .seg button.active.pos{background:#ffeaea; border-color:#f0a4a4; color:#b83030;}
+  .seg button.active.neg{background:#eaf2ff; border-color:#8ab5f0; color:#235fb0;}
+  label{font-weight:800; color:#334e68; font-size:14px;}
+  input[type=range]{width:100%; accent-color:#2f6fd6;}
+  .readout{display:grid; gap:8px; background:#f7fbff; border:1px solid #d9e8f5; border-radius:18px; padding:12px; font-size:14px; line-height:1.45;}
+  .checkRow{display:flex; align-items:center; gap:9px; background:#f7fbff; border:1px solid #d9e8f5; border-radius:18px; padding:11px 12px; font-weight:900; color:#24527c;}
+  .checkRow input{width:20px; height:20px; accent-color:#2f6fd6;}
+  .readout span{font-weight:900}.red{color:#d94747}.blue{color:#2f6fd6}.green{color:#15803d}
+  .legend{display:flex; gap:10px; flex-wrap:wrap; font-size:13px; color:#52677e;}
+  .dot{display:inline-grid; place-items:center; width:18px; height:18px; border-radius:50%; color:white; font-weight:900; font-size:14px; margin-right:4px;}
+  .dot.plus{background:var(--plus)}.dot.minus{background:var(--minus)}
+  .formulaPage{display:none; position:fixed; inset:0; z-index:50; background:#fff4e5; overflow:auto; padding:max(18px, env(safe-area-inset-top)) 14px max(130px, env(safe-area-inset-bottom));}
+  .formulaInner{max-width:900px; margin:auto; background:#fffaf4; border:2px solid #f0c58c; border-radius:28px; padding:18px; box-shadow:0 16px 35px rgba(120,80,20,.12)}
+  .closeFixed{position:fixed; right:14px; top:max(12px, env(safe-area-inset-top)); width:48px; height:48px; border-radius:18px; background:#e7eef6; box-shadow:0 4px 0 rgba(0,0,0,.12); z-index:55; font-size:22px;}
+  .formulaInner h2{color:#9b5800; margin:0 0 12px; font-size:clamp(24px,3vw,36px)}
+  .formulaBox{background:#fff; border:1.5px solid #efc58f; border-radius:22px; padding:14px; margin:12px 0; line-height:1.65; font-size:17px;}
+  .formulaBox b{color:#123d70}.note{background:#fff7ee; border-left:6px solid #e99d42; padding:10px 12px; border-radius:14px;}
+  .bottomMobile{display:none; position:fixed; left:8px; right:8px; bottom:max(8px, env(safe-area-inset-bottom)); z-index:30; background:rgba(235,241,247,.78); backdrop-filter:blur(8px); border:1px solid #d8e3ef; border-radius:18px; padding:8px; gap:8px; grid-template-columns:1fr 1fr;}
+  .bottomMobile button{font-size:13px; padding:10px 6px; border-radius:14px;}
+  a{color:#1d64c8; font-weight:900;}
+  .brand{text-align:center; margin:18px 0 0; color:#31577c; font-size:14px;}
+  @media(max-width:860px){
+    body{padding-left:8px; padding-right:8px;}
+    .main{grid-template-columns:1fr;}
+    .controls.card{max-height:none;}
+    .labCard{min-height:auto; padding:6px;}
+    .canvasBox{height:min(62vh,560px); min-height:430px;}
+    .topbar{display:none}.bottomMobile{display:grid}.hintPanel{font-size:12px; padding:10px 36px 10px 11px}.floatingStatus{font-size:12px; max-width:190px; padding:8px 9px;}
+    .controlTitle{font-size:18px}.controls{padding:12px 10px 140px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Mini Lab : อิเล็กโทรสโคป</h1>
+    <div class="subtitle">การเหนี่ยวนำประจุ — ให้เม็ดประจุลบเคลื่อนที่เท่านั้น</div>
+  </header>
+  <div class="topbar">
+    <button id="resetBtn" class="reset">🔄 รีเซ็ต</button>
+    <button id="formulaBtn" class="formula">Σ สูตรสำคัญ</button>
+  </div>
+  <section class="main">
+    <div class="card labCard">
+      <div class="canvasBox" id="canvasBox">
+        <canvas id="labCanvas"></canvas>
+      </div>
+    </div>
+    <aside class="card controls">
+      <h2 class="controlTitle">ตั้งค่าการทดลอง</h2>
+      <div>
+        <label>ชนิดประจุของแท่งเหนี่ยวนำ</label>
+        <div class="seg">
+          <button id="rodPos" class="active pos">แท่งบวก +</button>
+          <button id="rodNeg">แท่งลบ −</button>
+        </div>
+      </div>
+      <div>
+        <label>ตำแหน่งแท่งเหนี่ยวนำ: <span id="distText" class="blue">ไกล</span></label>
+        <input id="distSlider" type="range" min="0" max="100" value="10" />
+      </div>
+      <label class="checkRow"><input id="showCharges" type="checkbox" /> แสดงประจุในอิเล็กโทรสโคป</label>
+      <div class="readout">
+        <div>ความใกล้ของแท่ง: <span id="nearPct" class="blue">10%</span></div>
+        <div>การกางของแผ่น: <span id="leafOpen" class="red">น้อย</span></div>
+        <div id="explainText">เริ่มต้นมีประจุบวกและประจุลบกระจายทั่วโลหะ แรงผลักที่แผ่นน้อย จึงหุบ</div>
+      </div>
+      <div class="legend">
+        <div><span class="dot plus">+</span>ประจุบวกตรึงอยู่กับเนื้อโลหะ</div>
+        <div><span class="dot minus">−</span>ประจุลบเคลื่อนที่ได้</div>
+      </div>
+      <div class="readout">
+        <div><span class="green">หลักสำคัญ</span> : ในโลหะ อิเล็กตรอนหรือประจุลบเป็นตัวเคลื่อนที่ ส่วนประจุบวกไม่ไหลตามแท่ง</div>
+      </div>
+    </aside>
+  </section>
+  <div class="brand">ศึกษาเพิ่มเติมที่ <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">เพจคลายปมฟิสิกส์</a></div>
+</div>
+
+<div class="bottomMobile">
+  <button id="resetBtnM" class="reset">🔄 รีเซ็ต</button>
+  <button id="formulaBtnM" class="formula">Σ สูตร</button>
+</div>
+
+<section class="formulaPage" id="formulaPage">
+  <button class="closeFixed" id="closeFormula">❌</button>
+  <div class="formulaInner">
+    <h2>Σ สูตรสำคัญ / หลักการ</h2>
+    <div class="formulaBox">
+      <b>1) อิเล็กโทรสโคปตรวจการแยกประจุได้</b><br>
+      เมื่อนำแท่งมีประจุเข้าใกล้หัวโลหะ จะเกิดการจัดเรียงประจุใหม่ในอิเล็กโทรสโคป เรียกว่า <b>การเหนี่ยวนำไฟฟ้า</b>
+    </div>
+    <div class="formulaBox">
+      <b>2) ในโลหะ ประจุลบเป็นตัวเคลื่อนที่</b><br>
+      ประจุบวกในโครงโลหะถือว่าอยู่กับที่ ส่วนอิเล็กตรอนหรือเม็ดประจุลบสามารถไหลไปยังส่วนต่าง ๆ ของโลหะได้
+    </div>
+    <div class="formulaBox">
+      <b>3) ถ้าแท่งเหนี่ยวนำเป็นบวก</b><br>
+      ประจุลบถูกดึงขึ้นไปออกันที่หัวโลหะ ด้านล่างและแผ่นโลหะจึงมีประจุบวกส่วนเกินมากขึ้น แผ่นทั้งสองผลักกันและกางออก<br>
+      เมื่อดึงแท่งออก ประจุลบไหลกลับลงมา ทำให้ประจุบวกส่วนเกินที่แผ่นลดลง แผ่นหุบเข้า
+    </div>
+    <div class="formulaBox">
+      <b>4) ถ้าแท่งเหนี่ยวนำเป็นลบ</b><br>
+      ประจุลบถูกผลักลงไปออกันบริเวณแผ่นโลหะ ทำให้แผ่นทั้งสองมีประจุลบมากขึ้น แผ่นผลักกันและกางออก
+    </div>
+    <div class="note"><b>จุดที่ต้องระวัง:</b> แผ่นกางได้ทั้งกรณีแท่งบวกและแท่งลบ แต่สาเหตุการเคลื่อนที่ของประจุลบต่างกัน — แท่งบวกดึงประจุลบขึ้น ส่วนแท่งลบผลักประจุลบลง</div>
+  </div>
+</section>
+
+<script>
+const canvas = document.getElementById('labCanvas');
+const box = document.getElementById('canvasBox');
+const ctx = canvas.getContext('2d');
+const distSlider = document.getElementById('distSlider');
+const nearPct = document.getElementById('nearPct');
+const distText = document.getElementById('distText');
+const leafOpen = document.getElementById('leafOpen');
+const explainText = document.getElementById('explainText');
+const statusBox = {textContent:''};
+const rodPos = document.getElementById('rodPos');
+const rodNeg = document.getElementById('rodNeg');
+const showChargesEl = document.getElementById('showCharges');
+const hintPanel = null;
+let W=0,H=0,dpr=1;
+let rodCharge = 1; // +1 positive, -1 negative
+let near = 0.10;
+let targetNear = 0.10;
+let lastT = performance.now();
+let phase = 0;
+let dragMode = null;
+let dragStart = {x:0,y:0};
+let hintStart = {left:14, top:14};
+let currentRodRect = {x:0,y:0,w:0,h:0};
+
+function resize(){
+  const r = box.getBoundingClientRect();
+  dpr = Math.max(1, Math.min(2, window.devicePixelRatio||1));
+  W = Math.floor(r.width); H = Math.floor(r.height);
+  canvas.width = Math.floor(W*dpr); canvas.height = Math.floor(H*dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  draw();
+}
+window.addEventListener('resize', resize);
+
+function setRodCharge(c){
+  rodCharge=c;
+  rodPos.classList.toggle('active', c===1); rodPos.classList.toggle('pos', true);
+  rodNeg.classList.toggle('active', c===-1); rodNeg.classList.toggle('neg', true);
+  updateText(); draw();
+}
+rodPos.onclick=()=>setRodCharge(1); rodNeg.onclick=()=>setRodCharge(-1);
+distSlider.addEventListener('input', e=>{targetNear=clamp(Number(e.target.value)/100,0.02,maxNearAllowed()); near=targetNear; distSlider.value=Math.round(near*100); updateText(); draw();});
+
+function drawRoundRect(x,y,w,h,r,fill,stroke){
+  ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
+  if(fill){ctx.fillStyle=fill;ctx.fill();} if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=1.5;ctx.stroke();}
+}
+function circle(x,y,r,fill,stroke){ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fillStyle=fill;ctx.fill(); if(stroke){ctx.strokeStyle=stroke;ctx.stroke();}}
+function charge(x,y,type,alpha=1){
+  const isPlus=type==='+'; circle(x,y,9,isPlus?`rgba(228,87,87,${alpha})`:`rgba(47,111,214,${alpha})`,'rgba(255,255,255,.9)');
+  ctx.fillStyle='white'; ctx.font='900 15px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(isPlus?'+':'−',x,y+0.5);
+}
+function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
+function pointInRect(x,y,r){ return x>=r.x && x<=r.x+r.w && y>=r.y && y<=r.y+r.h; }
+function maxNearAllowed(){
+  const cx = W*0.52;
+  const minRodX = cx + 58; // เว้นช่องว่าง ไม่ให้แท่งแตะ/ทับหัวอิเล็กโทรสโคป
+  return clamp((W - 48 - minRodX)/(W*0.36), 0.08, 1);
+}
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  const cx=W*0.52, top=H*0.18, stemTop=top+55, stemBot=H*0.63, leafPivotY=stemBot-5;
+  const scale=Math.min(W/760,H/590);
+  // background grid
+  ctx.strokeStyle='rgba(80,120,160,.08)'; ctx.lineWidth=1;
+  for(let x=20;x<W;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for(let y=20;y<H;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+
+  // glass jar: กรอบขวดแก้วคงที่ ไม่ขยับหรือยืดหดตามแท่งเหนี่ยวนำ
+  const jarTop = stemTop + 18;
+  const jarBottom = Math.min(H - 28, leafPivotY + Math.min(150,H*.23) + 46);
+  const jarH = jarBottom - jarTop;
+  drawRoundRect(cx-142, jarTop, 284, jarH, 42, 'rgba(255,255,255,.26)', 'rgba(93,145,190,.68)');
+  ctx.save();
+  ctx.globalAlpha = .35;
+  ctx.fillStyle='rgba(185,225,255,.30)';
+  ctx.fillRect(cx-137, jarTop+8, 274, jarH-16);
+  ctx.strokeStyle='rgba(255,255,255,.75)';
+  ctx.lineWidth=3;
+  ctx.beginPath(); ctx.moveTo(cx-112, jarTop+24); ctx.lineTo(cx-112, jarBottom-28); ctx.stroke();
+  ctx.restore();
+
+  // rod position: far right to near top knob
+  const rodX = W - 48 - near*(W*0.36);
+  const rodY = top + 4;
+  currentRodRect = {x:rodX, y:rodY-72, w:42, h:155};
+  drawRoundRect(rodX, rodY-72, 42, 155, 20, rodCharge===1?'#ffdede':'#dceaff', rodCharge===1?'#df7777':'#6d9dde');
+  ctx.save(); ctx.translate(rodX+21, rodY+6); ctx.rotate(-Math.PI/2); ctx.fillStyle=rodCharge===1?'#b83030':'#235fb0'; ctx.font='900 17px system-ui'; ctx.textAlign='center'; ctx.fillText(rodCharge===1?'แท่งบวก +':'แท่งลบ −',0,4); ctx.restore();
+  for(let i=0;i<7;i++) charge(rodX+21, rodY-55+i*22, rodCharge===1?'+':'−',.95);
+
+  // electroscope metal
+  ctx.strokeStyle='#777'; ctx.lineCap='round'; ctx.lineWidth=8;
+  ctx.beginPath(); ctx.moveTo(cx, stemTop); ctx.lineTo(cx, stemBot); ctx.stroke();
+  circle(cx, stemTop-15, 34, '#d7dee8', '#8c99a8');
+  ctx.fillStyle='#4a5661'; ctx.font='800 13px system-ui'; ctx.textAlign='center'; ctx.fillText('หัวโลหะ', cx, stemTop-58);
+
+  // leaves open angle from near (both signs open, but mechanics slightly different)
+  const open = Math.min(1, Math.max(0, (near-0.04)/0.92));
+  const ang = (10 + open*34)*Math.PI/180;
+  const L = Math.min(150, H*.23);
+  const lx1 = cx - Math.sin(ang)*L, ly1 = leafPivotY + Math.cos(ang)*L;
+  const lx2 = cx + Math.sin(ang)*L, ly2 = leafPivotY + Math.cos(ang)*L;
+  ctx.strokeStyle='#c6a241'; ctx.lineWidth=10;
+  ctx.beginPath(); ctx.moveTo(cx, leafPivotY); ctx.lineTo(lx1,ly1); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx, leafPivotY); ctx.lineTo(lx2,ly2); ctx.stroke();
+  ctx.strokeStyle='#8b741f'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(cx, leafPivotY); ctx.lineTo(lx1,ly1); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx, leafPivotY); ctx.lineTo(lx2,ly2); ctx.stroke();
+
+  if(showChargesEl.checked){
+    // positive fixed charges distributed on metal/leaf: always same fixed positions
+    const plusPts = [
+      [cx-26,stemTop-18],[cx+5,stemTop-41],[cx+24,stemTop-8],[cx-6,stemTop+36],[cx+4,stemTop+88],[cx-6,stemTop+140],
+      [cx-10,leafPivotY+24],[cx+10,leafPivotY+24],
+      [cx-(Math.sin(ang)*L*.48), leafPivotY+(Math.cos(ang)*L*.48)],
+      [cx+(Math.sin(ang)*L*.48), leafPivotY+(Math.cos(ang)*L*.48)],
+      [lx1,ly1],[lx2,ly2]
+    ];
+    plusPts.forEach(p=>charge(p[0],p[1],'+',.93));
+
+    // negative mobile charges: คำนวณให้เม็ดอิเล็กตรอนอยู่บนโลหะเท่านั้น
+    // ไม่วาดลูกศรหรือแสงการไหล เพื่อให้ผู้เรียนโฟกัสที่ตำแหน่งเม็ดประจุ
+    const move = Math.min(1, near*1.12);
+    const knobPt = (u)=>[cx + Math.cos(-Math.PI*0.85 + u*Math.PI*1.7)*24, stemTop-15 + Math.sin(-Math.PI*0.85 + u*Math.PI*1.7)*24];
+    const stemPt = (u)=>[cx, stemTop + u*(stemBot-stemTop)];
+    const leafPt = (side,u)=>[cx + side*Math.sin(ang)*L*u, leafPivotY + Math.cos(ang)*L*u];
+    let negPts=[];
+    if(rodCharge===1){
+      // เริ่มต้นมีอิเล็กตรอนที่แผ่นล่างด้วย; เมื่อแท่งบวกเข้าใกล้ อิเล็กตรอนค่อย ๆ ไหลขึ้นตามโลหะเท่านั้น
+      const baseStemUs=[.86,.70,.54,.38,.22];
+      baseStemUs.forEach((u,i)=>negPts.push(stemPt(clamp(u*(1-move)+(.07+i*.025)*move,0,1))));
+      const leafBase=[[-1,.34],[-1,.58],[1,.34],[1,.58],[-1,.78],[1,.78]];
+      leafBase.forEach(([side,u],i)=>{
+        const upU = clamp(.10 + i*.055,0,1);
+        const leafP = leafPt(side,u);
+        const stemP = stemPt(upU);
+        const x = (1-move)*leafP[0] + move*stemP[0];
+        const y = (1-move)*leafP[1] + move*stemP[1];
+        negPts.push([x,y]);
+      });
+      [0.18,0.38,0.58].forEach((u,i)=>negPts.push(knobPt(clamp(u+.16*move,0,1))));
+    }else{
+      // แท่งลบ: ยิ่งเข้าใกล้ อิเล็กตรอนยิ่งถูกผลักลงมาตามแท่งโลหะสีเทา และไปออกันที่แผ่นล่างมากขึ้น
+      const stemUs=[.08,.18,.30,.43,.56,.68,.80];
+      stemUs.forEach((u,i)=>negPts.push(stemPt(clamp(u*(1-move)+(.74+i*.035)*move,0,1))));
+      const baseLeafUs=[.22,.36,.50,.64];
+      baseLeafUs.forEach(u=>{ negPts.push(leafPt(-1,u)); negPts.push(leafPt(1,u)); });
+      if(move>.22){ [.72,.84].forEach(u=>{ negPts.push(leafPt(-1,u)); negPts.push(leafPt(1,u)); }); }
+      if(move>.55){ [.18,.28,.90].forEach(u=>{ negPts.push(leafPt(-1,u)); negPts.push(leafPt(1,u)); }); }
+    }
+    negPts.slice(0,20).forEach((p,i)=>charge(p[0], p[1], '−', .97));
+  }
+
+  // ไม่มีป้ายคำบรรยายในจอทดลอง และไม่มีลูกศร/เส้นแสงบอกการไหล
+  // ให้สังเกตจากตำแหน่งเม็ดอิเล็กตรอนที่อยู่บนโลหะเท่านั้น
+}
+function updateText(){
+  nearPct.textContent = Math.round(near*100)+'%';
+  distText.textContent = near<.25?'ไกล':near<.65?'ปานกลาง':'ใกล้มาก';
+  leafOpen.textContent = near<.25?'น้อย':near<.65?'ปานกลาง':'มาก';
+  if(near<.18){
+    explainText.textContent = 'แท่งอยู่ไกล ประจุลบกระจายใกล้สมดุลกับประจุบวก แผ่นโลหะหุบ';
+    statusBox.textContent='แท่งยังอยู่ไกล → ประจุลบกระจายใกล้สมดุล แผ่นหุบ';
+  }else if(rodCharge===1){
+    explainText.textContent = 'แท่งบวกดึงประจุลบจากแผ่นให้ไหลขึ้นไปออกันที่ด้านบน ทำให้ด้านล่างมีประจุบวกส่วนเกินมากขึ้น แผ่นกางออก';
+    statusBox.textContent='แท่งบวกเข้าใกล้ → ประจุลบไหลขึ้น ด้านล่างบวกมากขึ้น แผ่นกาง';
+  }else{
+    explainText.textContent = 'แท่งลบผลักประจุลบให้ไหลลงไปออกันบริเวณแผ่นโลหะ ทำให้แผ่นทั้งสองมีประจุลบมากขึ้น จึงผลักกันและกางออก';
+    statusBox.textContent='แท่งลบเข้าใกล้ → ประจุลบไหลลงไปที่แผ่น แผ่นกาง';
+  }
+}
+function animate(t){
+  const dt=Math.min(.04,(t-lastT)/1000); lastT=t; phase += dt*5;
+updateText(); draw(); requestAnimationFrame(animate);
+}
+requestAnimationFrame(animate);
+function reset(){targetNear=near=.10; distSlider.value=10; setRodCharge(1); updateText(); draw();}
+['resetBtn','resetBtnM'].forEach(id=>document.getElementById(id).onclick=reset);
+const formulaPage=document.getElementById('formulaPage');
+['formulaBtn','formulaBtnM'].forEach(id=>document.getElementById(id).onclick=()=>formulaPage.style.display='block');
+document.getElementById('closeFormula').onclick=()=>formulaPage.style.display='none';
+
+function canvasPoint(e){
+  const r = box.getBoundingClientRect();
+  return {x:e.clientX-r.left, y:e.clientY-r.top};
+}
+box.addEventListener('pointerdown', (e)=>{
+  const p = canvasPoint(e);
+  if(pointInRect(p.x,p.y,currentRodRect)){
+    dragMode='rod';
+    box.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  }
+});
+box.addEventListener('pointermove', (e)=>{
+  if(dragMode!=='rod') return;
+  const p = canvasPoint(e);
+  // ล็อกให้แท่งเหนี่ยวนำเลื่อนได้เฉพาะแนวนอน และไม่ให้แตะทับอิเล็กโทรสโคป
+  const desiredRodX = clamp(p.x-currentRodRect.w/2, W-48-maxNearAllowed()*(W*.36), W-48-0.02*(W*.36));
+  targetNear = near = clamp((W-48-desiredRodX)/(W*.36), 0.02, maxNearAllowed());
+  distSlider.value = Math.round(near*100);
+  updateText(); draw();
+  e.preventDefault();
+});
+['pointerup','pointercancel','pointerleave'].forEach(ev=>box.addEventListener(ev,()=>{dragMode=null;}));
+
+
+showChargesEl.addEventListener('change', draw);
+resize(); updateText();
+</script>
+</body>
+</html>
