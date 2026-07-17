@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Mini Lab SHM</title>
+<style>
+  :root{
+    --bg:#ffffff;
+    --panel:#f3f4f6;
+    --line:#94a3b8;
+    --blue:#38bdf8;
+    --green:#22c55e;
+    --red:#ef4444;
+    --purple:#8b5cf6;
+    --text:#1e293b;
+    --glass:rgba(255,255,255,.12);
+    --glass-border:rgba(148,163,184,.18);
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Thai",sans-serif;
+    background:var(--bg);
+    color:var(--text);
+  }
+  .wrap{max-width:1100px;margin:0 auto;padding:18px 14px 28px;}
+  h1{margin:6px 0 8px;text-align:center;color:#3b82f6;font-size:clamp(30px,4vw,44px);line-height:1.05;}
+  .stageWrap{background:#fff;border:1px solid #dbe4ef;border-radius:22px;padding:10px;box-shadow:0 3px 16px rgba(15,23,42,.04);}
+  .stageBox{position:relative;width:100%;aspect-ratio:16/7.6;min-height:260px;background:var(--panel);border-radius:18px;overflow:hidden;}
+  canvas{display:block;width:100%;height:100%;}
+  .glass{position:absolute;top:12px;right:12px;background:var(--glass);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid var(--glass-border);border-radius:16px;padding:9px 11px;min-width:142px;box-shadow:0 2px 10px rgba(15,23,42,.04);}
+  .glass .row{display:flex;justify-content:space-between;gap:10px;margin:3px 0;font-size:clamp(10px,1.25vw,13px);}
+  .glass .k{font-style:italic;color:#64748b;opacity:.92}
+  .glass .v{font-weight:700;color:#0f172a}
+  .controls{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-top:12px;align-items:end;}
+  .ctrl{background:#fff;border:1px solid #dbe4ef;border-radius:16px;padding:10px 12px;}
+  .ctrl label{display:flex;justify-content:space-between;gap:8px;margin-bottom:6px;font-size:14px;font-weight:700;color:#334155;}
+  .ctrl input[type="range"]{width:100%}
+  .btn{height:44px;width:100%;border:none;border-radius:14px;background:#60a5fa;color:#fff;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 4px 10px rgba(59,130,246,.18);display:flex;align-items:center;justify-content:center;gap:8px;}
+  .btn.secondary{background:#94a3b8;box-shadow:0 4px 10px rgba(148,163,184,.18)}
+  .eyeIcon{width:18px;height:18px;display:inline-block;vertical-align:middle}
+  .eyeIcon path,.eyeIcon circle{vector-effect:non-scaling-stroke}
+  .hint{text-align:center;margin-top:10px;color:#64748b;font-size:14px;}
+  @media (max-width:900px){.controls{grid-template-columns:1fr 1fr 1fr}.controls .btnwrap{grid-column:span 1;}}
+  @media (max-width:560px){
+    .wrap{padding:14px 10px 28px}
+    .stageBox{aspect-ratio:16/10.6;min-height:320px}
+    .controls{position:static;left:auto;right:auto;bottom:auto;z-index:auto;grid-template-columns:1fr 1fr;background:transparent;backdrop-filter:none;padding:0;border-radius:0;box-shadow:none;border:none;margin-top:37px;}
+    .ctrl{padding:8px 10px;border-radius:14px}
+    .ctrl label{font-size:13px}
+    .btn{height:42px;border-radius:14px}
+    .glass{max-width:42vw;min-width:116px}
+    .glass .row{font-size:11px}
+    .eyeIcon{width:17px;height:17px}
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>SHM ของมวลติดปลายสปริง</h1>
+    <div class="stageWrap">
+      <div class="stageBox">
+        <canvas id="cv"></canvas>
+        <div class="glass" id="stats"></div>
+      </div>
+    </div>
+    <div class="controls">
+      <div class="ctrl">
+        <label><span>แอมพลิจูด A</span><span id="AVal">0.12 m</span></label>
+        <input id="A" type="range" min="0.04" max="0.18" step="0.01" value="0.12">
+      </div>
+      <div class="ctrl">
+        <label><span>มวล m</span><span id="mVal">1.0 kg</span></label>
+        <input id="m" type="range" min="0.5" max="3.0" step="0.1" value="1.0">
+      </div>
+      <div class="ctrl">
+        <label><span>ค่าคงที่สปริง k</span><span id="kVal">20 N/m</span></label>
+        <input id="k" type="range" min="5" max="40" step="1" value="20">
+      </div>
+      <div class="btnwrap"><button class="btn" id="toggleRun">⏸ หยุด</button></div>
+      <div class="btnwrap"><button class="btn secondary" id="toggleLabels">
+        <svg class="eyeIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M1.5 12s3.8-6 10.5-6 10.5 6 10.5 6-3.8 6-10.5 6S1.5 12 1.5 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="12" cy="12" r="3.2" stroke="currentColor" stroke-width="2"/>
+        </svg>
+        <span id="toggleLabelsText">ซ่อนป้าย</span>
+      </button></div>
+    </div>
+    <div class="hint">ปรับแอมพลิจูด <i>A</i> ได้จากสไลเดอร์ด้านล่าง และกดหยุดเพื่อดูค่าในขณะหนึ่ง</div>
+  </div>
+<script>
+(() => {
+  const cv = document.getElementById('cv');
+  const ctx = cv.getContext('2d');
+  const stage = cv.parentElement;
+  const stats = document.getElementById('stats');
+  const AInp = document.getElementById('A');
+  const mInp = document.getElementById('m');
+  const kInp = document.getElementById('k');
+  const AVal = document.getElementById('AVal');
+  const mVal = document.getElementById('mVal');
+  const kVal = document.getElementById('kVal');
+  const toggleRun = document.getElementById('toggleRun');
+  const toggleLabels = document.getElementById('toggleLabels');
+  const toggleLabelsText = document.getElementById('toggleLabelsText');
+
+  let running = true;
+  let time = 0;
+  let last = performance.now();
+  let smoothV = 0, smoothA = 0, smoothF = 0, smoothX = 0;
+  let dirV = 1, dirA = 1, dirF = 1, dirX = 1;
+
+  function resize(){
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    const rect = stage.getBoundingClientRect();
+    cv.width = Math.round(rect.width * dpr);
+    cv.height = Math.round(rect.height * dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  toggleRun.addEventListener('click', () => {
+    running = !running;
+    toggleRun.textContent = running ? '⏸ หยุด' : '▶️ เล่น';
+  });
+  let showStats = true;
+  toggleLabels.addEventListener('click', () => {
+    showStats = !showStats;
+    stats.style.display = showStats ? 'block' : 'none';
+    toggleLabelsText.textContent = showStats ? 'ซ่อนป้าย' : 'แสดงป้าย';
+  });
+
+  function drawArrow(x1,y1,x2,y2,color,{lineWidth=4,head=12}={}){
+    const dx = x2-x1, dy = y2-y1;
+    const ang = Math.atan2(dy,dx);
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = lineWidth;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(x1,y1);
+    ctx.lineTo(x2,y2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x2,y2);
+    ctx.lineTo(x2 - head*Math.cos(ang - Math.PI/7), y2 - head*Math.sin(ang - Math.PI/7));
+    ctx.lineTo(x2 - head*Math.cos(ang + Math.PI/7), y2 - head*Math.sin(ang + Math.PI/7));
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  function springPath(x0,y0,x1,turns,amp){
+    const len = x1 - x0;
+    const lead = Math.max(18, len*0.05);
+    ctx.beginPath();
+    ctx.moveTo(x0,y0);
+    ctx.lineTo(x0+lead,y0);
+    const inner0 = x0+lead;
+    const innerLen = Math.max(20, len - lead - 16);
+    for(let i=0;i<=turns;i++){
+      const px = inner0 + innerLen * i / turns;
+      const py = y0 + (i===0||i===turns?0:(i%2?amp:-amp));
+      ctx.lineTo(px,py);
+    }
+    ctx.lineTo(x1,y0);
+  }
+
+  function fmt(n,d=2){ return Number(n).toFixed(d); }
+
+  function frame(now){
+    const dt = Math.min(0.03, (now-last)/1000);
+    last = now;
+    if(running) time += dt;
+
+    const w = cv.clientWidth, h = cv.clientHeight;
+    ctx.clearRect(0,0,w,h);
+
+    const m = parseFloat(mInp.value);
+    const k = parseFloat(kInp.value);
+    const A = parseFloat(AInp.value);
+    AVal.textContent = `${fmt(A,2)} m`;
+    mVal.textContent = `${fmt(m,1)} kg`;
+    kVal.textContent = `${fmt(k,0)} N/m`;
+
+    const omega = Math.sqrt(k/m);
+    const T = 2*Math.PI/omega;
+    const f = 1/T;
+    const vmax = omega*A;
+    const amax = omega*omega*A;
+    const E = 0.5*k*A*A;
+
+    const leftPad = Math.max(68, w*0.08);
+    const eqX = Math.min(w*0.63, w-150);
+    const pxPerM = Math.min(420, w*1.9);
+    const yMid = h*0.53;
+    const wallW = Math.max(34, w*0.032);
+    const blockW = Math.min(110, w*0.12);
+    const blockH = Math.min(74, h*0.19);
+
+    const x = A * Math.cos(omega*time);
+    const v = -omega*A*Math.sin(omega*time);
+    const a = -omega*omega*x;
+    const F = -k*x;
+
+    const smoothFactor = 0.14;
+    smoothX += (x - smoothX) * smoothFactor;
+    smoothV += (Math.abs(v) - smoothV) * smoothFactor;
+    smoothA += (Math.abs(a) - smoothA) * smoothFactor;
+    smoothF += (Math.abs(F) - smoothF) * smoothFactor;
+    if(Math.abs(v) > 0.02) dirV = Math.sign(v) || dirV;
+    if(Math.abs(a) > 0.03) dirA = Math.sign(a) || dirA;
+    if(Math.abs(F) > 0.05) dirF = Math.sign(F) || dirF;
+    if(Math.abs(x) > 0.002) dirX = Math.sign(x) || dirX;
+
+    const blockCX = eqX + x*pxPerM;
+    const blockX = blockCX - blockW/2;
+    const blockY = yMid - blockH/2;
+
+    ctx.fillStyle = '#cbd5e1';
+    ctx.fillRect(leftPad-wallW*0.75, yMid-h*0.34, wallW, h*0.68);
+    ctx.strokeStyle = '#a7b5c8';
+    ctx.lineWidth = 2;
+    for(let yy=yMid-h*0.33; yy<yMid+h*0.34; yy+=18){
+      ctx.beginPath();
+      ctx.moveTo(leftPad-wallW*0.75, yy);
+      ctx.lineTo(leftPad-wallW*0.75+wallW, yy+14);
+      ctx.stroke();
+    }
+
+    ctx.save();
+    ctx.setLineDash([7,7]);
+    ctx.strokeStyle = '#cbd5e1';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(eqX, 20);
+    ctx.lineTo(eqX, h-20);
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.fillStyle = '#475569';
+    ctx.font = `700 ${Math.max(16, w*0.018)}px system-ui`;
+    ctx.textAlign = 'center';
+    ctx.fillText('ตำแหน่งสมดุล', eqX, 24);
+    ctx.textAlign = 'left';
+
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 5;
+    springPath(leftPad, yMid, blockX, 8, Math.min(20,h*0.055));
+    ctx.stroke();
+
+    const radius = Math.min(18, blockW*0.18);
+    ctx.fillStyle = '#60a5fa';
+    ctx.strokeStyle = '#2563eb';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(blockX+radius, blockY);
+    ctx.lineTo(blockX+blockW-radius, blockY);
+    ctx.quadraticCurveTo(blockX+blockW, blockY, blockX+blockW, blockY+radius);
+    ctx.lineTo(blockX+blockW, blockY+blockH-radius);
+    ctx.quadraticCurveTo(blockX+blockW, blockY+blockH, blockX+blockW-radius, blockY+blockH);
+    ctx.lineTo(blockX+radius, blockY+blockH);
+    ctx.quadraticCurveTo(blockX, blockY+blockH, blockX, blockY+blockH-radius);
+    ctx.lineTo(blockX, blockY+radius);
+    ctx.quadraticCurveTo(blockX, blockY, blockX+radius, blockY);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = 'rgba(255,255,255,.18)';
+    ctx.beginPath();
+    ctx.roundRect(blockX+8, blockY+8, blockW-16, Math.max(16, blockH*0.26), 12);
+    ctx.fill();
+    ctx.fillStyle = '#1e3a8a';
+    ctx.font = `500 ${Math.max(18, blockW*0.22)}px system-ui`;
+    ctx.textAlign = 'center';
+    ctx.fillText('m', blockCX, blockY + blockH*0.60);
+    ctx.textAlign = 'left';
+
+    const labelFont = `700 ${Math.max(17, w*0.024)}px system-ui`;
+    const numFont = `700 ${Math.max(9, w*0.014)}px system-ui`;
+
+    // x
+    const xY = Math.min(h-44, yMid + blockH*1.85);
+    const xLen = Math.max(18, Math.min(82, Math.abs(smoothX)*pxPerM*0.42));
+    drawArrow(eqX, xY, eqX + dirX * xLen, xY, '#38bdf8', {lineWidth:4, head:12});
+    ctx.fillStyle = '#0284c7';
+    ctx.font = labelFont;
+    const xTextX = Math.min(w-145, eqX + xLen + 10);
+    ctx.fillText('x', xTextX, xY-10);
+    ctx.font = numFont;
+    ctx.fillText(`= ${fmt(x,2)} m`, xTextX + 14, xY-10);
+
+    // v : value travels together with the v arrow
+    const vY = blockY - Math.max(18, blockH*0.22);
+    const vAnchor = blockCX;
+    const vLen = Math.max(12, Math.min(42, 8 + smoothV*24));
+    const vEndX = vAnchor + dirV * vLen;
+    drawArrow(vAnchor, vY, vEndX, vY, '#22c55e', {lineWidth:4, head:12});
+    ctx.fillStyle = '#22c55e';
+    ctx.font = labelFont;
+    const vGroupX = dirV >= 0 ? Math.min(w-140, vEndX + 8) : Math.max(14, vEndX - 120);
+    ctx.fillText('v', vGroupX, vY-12);
+    ctx.font = numFont;
+    ctx.fillText(`= ${fmt(v,2)} m/s`, vGroupX + 14, vY-12);
+
+    // a
+    const aY = yMid + blockH*0.78;
+    const aLen = Math.max(12, Math.min(42, 8 + smoothA*10));
+    drawArrow(eqX, aY, eqX + dirA * aLen, aY, '#ef4444', {lineWidth:4, head:12});
+    ctx.fillStyle = '#ef4444';
+    ctx.font = labelFont;
+    ctx.fillText('a', eqX+6, aY-12);
+    ctx.font = numFont;
+    ctx.fillText(`= ${fmt(a,2)} m/s²`, eqX+20, aY-12);
+
+    // F
+    const FY = yMid + blockH*1.32;
+    const FLen = Math.max(12, Math.min(54, 8 + smoothF*6));
+    drawArrow(eqX, FY, eqX + dirF * FLen, FY, '#8b5cf6', {lineWidth:4, head:12});
+    ctx.fillStyle = '#8b5cf6';
+    ctx.font = labelFont;
+    ctx.fillText('F', eqX+6, FY-12);
+    ctx.font = numFont;
+    ctx.fillText(`= ${fmt(F,2)} N`, eqX+20, FY-12);
+
+    stats.innerHTML = `
+      <div class="row"><span class="k">f</span><span class="v">${fmt(f,2)} Hz</span></div>
+      <div class="row"><span class="k">T</span><span class="v">${fmt(T,2)} s</span></div>
+      <div class="row"><span class="k">A</span><span class="v">${fmt(A,2)} m</span></div>
+      <div class="row"><span class="k">E</span><span class="v">${fmt(E,2)} J</span></div>
+      <div class="row"><span class="k">v<sub>max</sub></span><span class="v">${fmt(vmax,2)} m/s</span></div>
+      <div class="row"><span class="k">a<sub>max</sub></span><span class="v">${fmt(amax,2)} m/s²</span></div>`;
+
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

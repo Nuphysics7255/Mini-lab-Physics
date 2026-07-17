@@ -1,0 +1,1210 @@
+<!DOCTYPE html> 
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>สปริงแนวดิ่ง — SHM + กราฟ F–x + แบบฝึกหัด (ไฟล์พร้อมใช้)</title>
+<style>
+:root{
+  --ink:#0f172a; --muted:#64748b; --line:#e5e7eb; --accent:#2563eb;
+  --ceiling:#0b0f1a; --spring:#111827; --bob:#b45309; --zero:#16a34a;
+  --panel:#f8fafc; --overlay:#0b1220cc;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#fff;color:var(--ink);font-family:system-ui,-apple-system,"Noto Sans Thai",sans-serif}
+main{max-width:1100px;margin:auto;padding:12px}
+h2{margin:6px 0 2px}
+.hint{font-size:12px;color:var(--muted);margin:0 0 10px}
+
+.layout{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(360px,430px);gap:12px;align-items:start}
+@media(max-width:900px){ .layout{grid-template-columns:1fr} }
+
+#sim{
+  display:block;width:100%;max-width:960px;aspect-ratio:960/560;height:auto;
+  border:1px solid var(--line);border-radius:14px;background:#fff;
+  touch-action:none;user-select:none;cursor:grab
+}
+@media(max-width:900px){ #sim{max-height:80vh;} }
+
+.controls{
+  display:grid;grid-template-columns:120px minmax(0,1fr) 110px;gap:10px;margin-top:12px;
+  background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px
+}
+.controls input[type=number], .controls input[type=range], .controls select{
+  width:100%;padding:6px;border:1px solid var(--line);border-radius:10px
+}
+.row{display:contents}
+.small{font-size:12px;color:var(--muted);margin:0}
+.modeHint{font-size:12px;color:var(--muted);margin:0}
+@media(max-width:900px){ .modeHint{display:none;} }
+
+.stepper{display:flex;align-items:center;gap:4px}
+.stepper input[type=number]{flex:1}
+.stepBtn{padding:4px 8px;border-radius:999px;border:1px solid var(--line);background:#fff;cursor:pointer}
+.stepBtn:active{transform:scale(0.96)}
+@media(min-width:901px){ .stepper .stepBtn{display:none;} }
+@media(max-width:900px){ .controls{grid-template-columns:1fr} .sliderInput{display:none;} }
+
+button{
+  padding:8px 12px;border:1px solid var(--line);border-radius:12px;background:#fff;
+  cursor:pointer;font-size:14px;transition:.15s;display:inline-flex;align-items:center;gap:8px
+}
+button:hover{transform:translateY(-1px)}
+button:active{transform:translateY(0) scale(.99)}
+button .ico{font-size:16px;line-height:1}
+
+/* สีปุ่ม */
+#toggleBtn{
+  background:#2563eb;border-color:#2563eb;color:#fff;
+  box-shadow:0 8px 18px rgba(37,99,235,.18);
+}
+#resetBtn{background:#f1f5f9;border-color:#e2e8f0;color:#0f172a}
+
+/* ✅ ปรับให้สีอ่อนลงตามสั่ง */
+#formulaBtn{background:#ede9fe;border-color:#c4b5fd;color:#5b21b6}
+#exerciseBtn{background:#ffedd5;border-color:#fdba74;color:#9a3412}
+#graphBtn{background:#d1fae5;border-color:#6ee7b7;color:#065f46}
+
+#resetBtn{padding:6px 10px;font-size:12px}
+
+/* ✅ จอคอม: จัดแถวบนให้ "เล่น" + "รีเซ็ต" อยู่บรรทัดเดียวกันเสมอ */
+.buttonsRow{margin-top:4px}
+.playRow{display:flex;align-items:center;gap:8px;width:100%}
+.playRow #resetBtn{margin-left:auto;}
+
+@media(min-width:901px){
+  .buttonsRow{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .buttonsRow button{flex:0 0 auto;white-space:nowrap}
+  .playRow{order:0}
+  #formulaBtn{order:1}
+  #exerciseBtn{order:2}
+  #graphBtn{order:3}
+}
+@media(max-width:900px){
+  .buttonsRow{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  #toggleBtn{grid-column:1;grid-row:1;}
+  #resetBtn{grid-column:2;grid-row:1;}
+  #formulaBtn{grid-column:1;grid-row:2;}
+  #exerciseBtn{grid-column:2;grid-row:2;}
+  #graphBtn{grid-column:1 / span 2;grid-row:3;}
+  .playRow{display:contents}
+}
+
+/* HUD */
+.hud{
+  position:absolute;right:6px;bottom:6px;z-index:3;
+  background:rgba(255,255,255,0.88);backdrop-filter:blur(10px);
+  border:1px solid rgba(148,163,184,0.9);border-radius:14px;
+  padding:10px 12px;min-width:243px;
+  cursor:move;
+  box-shadow:0 10px 24px rgba(15,23,42,0.22)
+}
+.hud .kv{display:grid;grid-template-columns:110px 1fr;gap:6px;font-size:13px}
+.hud .green{color:#16a34a;font-weight:700}
+.hud .red{color:#ef4444;font-weight:700}
+@media(min-width:901px){ .hud{transform:scale(0.65);transform-origin:bottom right;} }
+@media(max-width:900px){ .hud{transform:scale(0.5);transform-origin:bottom right;} }
+
+/* Modals */
+.modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:var(--overlay);z-index:50}
+.modal.active{display:flex}
+.card{background:white;border-radius:16px;max-width:980px;width:94%;padding:20px;border:2px solid var(--accent);box-shadow:0 10px 25px #0003;position:relative}
+.card header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.card h3{margin:0;color:#2563eb}
+.card .content{
+  max-height:72vh;overflow-y:auto;line-height:1.85;font-size:16px;
+}
+.close{background:#111827;color:white;border:0;border-radius:10px;padding:6px 10px}
+
+/* Graph */
+.graphWrap{display:grid;grid-template-columns:1fr;gap:8px}
+.graphCanvas{width:100%;height:360px;border:1px solid var(--line);border-radius:12px}
+.legend{font-size:13px;color:#334155}
+
+/* Exercise */
+.quizWrap{display:grid;gap:14px}
+.qCard{border:1px solid var(--line);border-radius:12px;padding:12px}
+.qTitle{font-weight:600;margin:0 0 8px}
+.choice{display:flex;gap:8px;align-items:flex-start;margin:6px 0}
+.choice input{margin-top:4px}
+.exFooter{display:flex;gap:10px;justify-content:space-between;align-items:center;margin-top:10px}
+.badgeScore{display:inline-block;padding:4px 10px;border-radius:999px;background:#ecfeff;border:1px solid #a5f3fc;color:#155e75}
+
+/* ✅ A/B/C/D หลังวงกลมตัวเลือก */
+.optLetter{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:22px;
+  font-weight:800;
+  color:#0f172a;
+  margin-top:1px;
+}
+
+/* ✅ เฉลย: บอกข้อที่ถูก + คำอธิบายเป็นสีแดง */
+.solCorrect{font-weight:800;color:#0f172a;margin-top:8px}
+.solExplain{color:#ef4444;font-weight:700;margin-top:4px}
+
+/* ✅ มือถือ: โจทย์/ตัวเลือก/สมการ ต้องตัดบรรทัดพอดีจอ ไม่เลื่อนซ้ายขวา */
+#exerciseModal .card .content{overflow-x:hidden;}
+#exerciseModal .qCard{overflow-x:hidden;}
+#exerciseModal .qTitle,
+#exerciseModal .choice,
+#exerciseModal .choice span{
+  overflow-wrap:anywhere;
+  word-break:break-word;
+}
+#exerciseModal mjx-container{max-width:100% !important;}
+#exerciseModal mjx-container svg{max-width:100% !important;height:auto !important;}
+
+.vecRow{display:flex;align-items:center;gap:10px}
+.vecRow input{transform:scale(1.1)}
+@media(max-width:900px){ .vecLabel{display:none;} }
+
+/* ✅ (ตามสั่ง) มือถือ: ช่องติ๊กผลลัพธ์ + เวกเตอร์ อยู่แถวเดียวกัน และเวกเตอร์อยู่ขวา */
+.checksLine{
+  display:flex;
+  align-items:center;
+  gap:18px;
+  justify-content:space-between;
+  flex-wrap:nowrap;
+}
+.checkItem{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  white-space:nowrap;
+}
+@media(max-width:900px){
+  .checksLine{width:100%}
+  .checkItem .small{font-size:13px}
+}
+
+/* Floating timer */
+.timerDock{
+  position:absolute;
+  top:14px;
+  right:86px;
+  z-index:10;
+  display:flex;
+  gap:10px;
+  align-items:center;
+  pointer-events:auto;
+}
+.timerBadge{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 12px;
+  border-radius:999px;
+  border:1px solid #fdba74;
+  background:#fff7ed;
+  color:#9a3412;
+  font-weight:700;
+  box-shadow:0 6px 16px rgba(15,23,42,.12);
+  white-space:nowrap;
+  font-variant-numeric:tabular-nums;
+}
+.timerBtn{
+  width:44px;height:44px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:999px;
+  border:1px solid var(--line);
+  background:#fff;
+  cursor:pointer;
+  font-weight:800;
+  font-size:18px;
+  line-height:1;
+  padding:0;
+}
+.timerBtn:active{transform:scale(.97)}
+@media(max-width:600px){
+  .timerDock{
+    top:10px;
+    right:30px;
+    transform: translateY(55px) scale(0.62);
+    transform-origin:top right;
+  }
+}
+</style>
+
+<script>
+  window.MathJax = { tex:{inlineMath:[["$","$"],["\\(","\\)"]]}, svg:{fontCache:'global'} };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+</head>
+
+<body>
+<main>
+  <!-- ✅ หัวข้อสีน้ำเงินตามสั่ง -->
+  <h2 style="color:#2563eb">มวลติดสปริงในแนวดิ่ง</h2>
+  <p class="hint">
+    ลากมวลด้วยเมาส์หรือปลายนิ้วแล้วปล่อย → เคลื่อนที่แบบ SHM (ไร้แดมป์).
+    • ศึกษาเพิ่มเติมที่
+    <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">เพจคลายปมฟิสิกส์</a>
+  </p>
+
+  <div class="layout">
+    <div class="stage" style="position:relative">
+      <canvas id="sim" width="960" height="560"></canvas>
+
+      <div class="hud" id="hud" style="display:none">
+        <div class="kv">
+          <div>k</div><div><span id="hudK">—</span> N/m</div>
+          <div>m</div><div><span id="hudM">—</span> kg</div>
+          <div>W</div><div><span id="hudW">—</span> N</div>
+          <div>Δy</div><div><span id="hudDy">—</span> m</div>
+          <div>ตำแหน่ง (y)</div><div><span id="hudY">—</span> m</div>
+          <div>Fสปริง</div><div><span id="hudFs">—</span> N</div>
+          <div>Fลัพธ์</div><div><span id="hudFnet">—</span> N</div>
+          <div>\(\omega_0\)</div><div><span id="hudW0">—</span> rad/s</div>
+          <div>T</div><div><span id="hudT">—</span> s</div>
+          <div>f</div><div><span id="hudF">—</span> Hz</div>
+          <div>v<sub>max</sub></div><div><span id="hudVmax">—</span> m/s</div>
+          <div>a<sub>max</sub></div><div><span id="hudAmax">—</span> m/s²</div>
+          <div><span class="green">v ขณะนั้น</span></div>
+          <div><span id="hudVnow" class="green">—</span> <span class="green">m/s</span></div>
+          <div><span class="red">a ขณะนั้น</span></div>
+          <div><span id="hudAnow" class="red">—</span> <span class="red">m/s²</span></div>
+        </div>
+      </div>
+    </div>
+
+    <section class="controls">
+      <div class="row">
+        <label>โหมดการปรับ</label>
+        <select id="modeSel">
+          <option value="mass">มวล (kg)</option>
+          <option value="weight">น้ำหนัก (N)</option>
+        </select>
+        <div class="modeHint">กรอกเป็นมวล (kg) หรือน้ำหนัก (N)</div>
+      </div>
+
+      <div class="row" id="massRow">
+        <label>มวล m (kg)</label>
+        <input class="sliderInput" type="range" id="mRange" min="0" max="20" step="0.1" value="1.0">
+        <div class="stepper" data-target="mRange">
+          <button type="button" class="stepBtn" data-delta="-1">−</button>
+          <input type="number" id="mNum" min="0" max="20" step="0.1" value="1.0">
+          <button type="button" class="stepBtn" data-delta="1">+</button>
+        </div>
+      </div>
+
+      <div class="row" id="weightRow" style="display:none">
+        <label>น้ำหนัก W (N)</label>
+        <input class="sliderInput" type="range" id="wRange" min="0" max="200" step="1" value="10">
+        <div class="stepper" data-target="wRange">
+          <button type="button" class="stepBtn" data-delta="-1">−</button>
+          <input type="number" id="wNum" min="0" max="200" step="1" value="10">
+          <button type="button" class="stepBtn" data-delta="1">+</button>
+        </div>
+      </div>
+
+      <div class="row">
+        <label>k (N/m)</label>
+        <input class="sliderInput" type="range" id="kRange" min="10" max="1000" step="10" value="150">
+        <div class="stepper" data-target="kRange">
+          <button type="button" class="stepBtn" data-delta="-1">−</button>
+          <input type="number" id="kNum" min="10" max="1000" step="10" value="150">
+          <button type="button" class="stepBtn" data-delta="1">+</button>
+        </div>
+      </div>
+
+      <div class="row">
+        <label>ตัวเลือก</label>
+        <div class="checksLine">
+          <label class="checkItem">
+            <input type="checkbox" id="resultChk">
+            <span class="small">แสดงค่าผลลัพธ์</span>
+          </label>
+
+          <label class="checkItem">
+            <input type="checkbox" id="vecChk">
+            <span class="small">แสดงเวกเตอร์ y v a</span>
+          </label>
+        </div>
+        <div></div>
+      </div>
+
+      <div class="row buttonsRow">
+        <div class="playRow">
+          <button id="toggleBtn"><span class="ico" id="toggleIco">⏸</span><span id="toggleTxt">หยุด</span></button>
+          <button id="resetBtn"><span class="ico">🔄</span>รีเซต</button>
+        </div>
+
+        <button id="formulaBtn"><span class="ico">📘</span>สูตรสำคัญ</button>
+        <button id="exerciseBtn"><span class="ico">📝</span>แบบฝึกหัด</button>
+        <button id="graphBtn"><span class="ico">📈</span>กราฟ F–x</button>
+      </div>
+    </section>
+  </div>
+</main>
+
+<!-- สูตรสำคัญ -->
+<div class="modal" id="formulaModal">
+  <div class="card">
+    <header><h3>สูตรสำคัญ — สมดุล & SHM (ไร้แดมป์)</h3><button id="closeFormula" class="close">ปิด</button></header>
+    <div class="content">
+
+      <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:16px;padding:12px 14px;margin-bottom:12px">
+        <h4 style="margin:0 0 6px;color:#1d4ed8">สมดุล</h4>
+        <div style="font-size:13px">
+          <p style="margin:0">$$k\,\Delta y = mg \quad(\text{หรือ } k\,\Delta y=W)$$</p>
+          <p style="margin:0">$$\Rightarrow \Delta y = \frac{mg}{k} = \frac{W}{k}$$</p>
+        </div>
+        <p style="margin:8px 0 0;color:#334155;font-size:15px">
+          <b>ความหมายของ \(\Delta y\)</b> : ระยะที่มวลอยู่ต่ำกว่า “ตำแหน่ง 0 (ไม่มีมวล)” เมื่อระบบอยู่ที่ <b>ตำแหน่งสมดุล</b>
+        </p>
+      </div>
+
+      <div style="background:#ecfdf5;border:2px solid #34d399;border-radius:18px;padding:14px 14px">
+        <h4 style="margin:0 0 8px;color:#059669">การสั่นแบบ SHM (ให้ \(y\) วัดจากตำแหน่งสมดุล)</h4>
+
+        <div style="background:#fff7ed;border:2px solid #fb923c;border-radius:18px;padding:12px 12px;margin:10px 0">
+          <div style="font-weight:800;color:#c2410c;margin-bottom:6px">อัตราเร็วเชิงมุม • คาบ • ความถี่</div>
+          <div style="font-size:13px">
+            <p style="margin:0">$$\omega_0=\sqrt{\frac{k}{m}}$$</p>
+            <p style="margin:0">$$T=\frac{2\pi}{\omega_0}=2\pi\sqrt{\frac{m}{k}}$$</p>
+            <p style="margin:0">$$f=\frac{1}{T}=\frac{\omega_0}{2\pi}$$</p>
+          </div>
+        </div>
+
+        <div style="background:#eef2ff;border:2px solid #6366f1;border-radius:18px;padding:12px 12px;margin:10px 0">
+          <div style="font-weight:800;color:#3730a3;margin-bottom:6px">สมการการกระจัด • ความเร็ว • ความเร่ง</div>
+          <div style="font-size:13px">
+            <p style="margin:0">$$y(t)=A\sin(\omega_0 t+\phi)$$</p>
+            <p style="margin:0">$$v(t)=\dot y=\omega_0 A\cos(\omega_0 t+\phi)$$</p>
+            <p style="margin:0">$$a(t)=\ddot y=-\omega_0^2 A\sin(\omega_0 t+\phi)=-\omega_0^2 y$$</p>
+          </div>
+        </div>
+
+        <div style="background:#f1f5f9;border:1px solid #cbd5e1;border-radius:14px;padding:10px 12px;margin-top:10px">
+          <div style="font-size:13px">
+            <p style="margin:0">$$a_{\max}=\omega_0^2A$$</p>
+            <p style="margin:0">$$v_{\max}=\omega_0A$$</p>
+            <p style="margin:0">$$v(y)=\pm \omega_0\sqrt{A^2-y^2}$$</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- กราฟ F–x -->
+<div class="modal" id="graphModal">
+  <div class="card">
+    <header>
+      <h3>กราฟแรง–การยืด (F–x) — x เป็น cm, y เป็น N</h3>
+      <button id="closeGraph" class="close">ปิด</button>
+    </header>
+    <div class="content">
+      <div class="graphWrap">
+        <canvas id="fxCanvas" class="graphCanvas" width="900" height="360"></canvas>
+        <div class="legend">
+          เส้น Hooke: <b>F = k x</b> • Slope = <b id="slopeK">k</b> N/m • จุดแดงแสดงค่าปัจจุบัน
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- แบบฝึกหัด -->
+<div class="modal" id="exerciseModal">
+  <div class="card">
+    <div class="timerDock" aria-label="stopwatch">
+      <div class="timerBadge">⏱️ <span id="quizTimerText">00:00.0</span></div>
+      <button type="button" id="quizTimerBtn" class="timerBtn" aria-label="เริ่ม/หยุดเวลา">▶</button>
+    </div>
+
+    <header>
+      <h3>แบบฝึกหัด : มวลติดปลายสปริง (10 ข้อ)</h3>
+      <button id="closeExercise" class="close">ปิด</button>
+    </header>
+
+    <div class="content">
+      <div class="quizWrap" id="quizWrap"></div>
+      <div class="exFooter">
+        <div>
+          <button id="regenQuiz">สุ่มชุดใหม่</button>
+          <button id="checkQuiz" style="background:#2563eb;border-color:#2563eb;color:#fff">ตรวจคำตอบ</button>
+        </div>
+        <div id="scoreBadge" class="badgeScore" style="display:none">คะแนน: 0/0</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* ===== Canvas & DOM ===== */
+const canvas = document.getElementById("sim");
+const ctx = canvas.getContext("2d");
+const W = canvas.width, H = canvas.height;
+
+const modeSel = document.getElementById("modeSel");
+const kRange = document.getElementById("kRange"), kNum = document.getElementById("kNum");
+const mRange = document.getElementById("mRange"), mNum = document.getElementById("mNum");
+const wRange = document.getElementById("wRange"), wNum = document.getElementById("wNum");
+const vecChk = document.getElementById("vecChk");
+const resultChk = document.getElementById("resultChk");
+
+const resetBtn = document.getElementById("resetBtn");
+const formulaBtn = document.getElementById("formulaBtn");
+const formulaModal = document.getElementById("formulaModal");
+const closeFormula = document.getElementById("closeFormula");
+const graphBtn = document.getElementById("graphBtn");
+const graphModal = document.getElementById("graphModal");
+const closeGraph = document.getElementById("closeGraph");
+const toggleBtn = document.getElementById("toggleBtn");
+const toggleIco = document.getElementById("toggleIco");
+const toggleTxt = document.getElementById("toggleTxt");
+
+const hud = document.getElementById("hud");
+const hudK = document.getElementById("hudK");
+const hudM = document.getElementById("hudM");
+const hudW = document.getElementById("hudW");
+const hudDy = document.getElementById("hudDy");
+const hudY = document.getElementById("hudY");
+const hudFs = document.getElementById("hudFs");
+const hudFnet = document.getElementById("hudFnet");
+const hudW0 = document.getElementById("hudW0");
+const hudVmax = document.getElementById("hudVmax");
+const hudAmax = document.getElementById("hudAmax");
+const hudVnow = document.getElementById("hudVnow");
+const hudAnow = document.getElementById("hudAnow");
+const hudT = document.getElementById("hudT");
+const hudF = document.getElementById("hudF");
+
+const fxCanvas = document.getElementById("fxCanvas");
+const fctx = fxCanvas.getContext("2d");
+const slopeKEl = document.getElementById("slopeK");
+
+/* ===== Physics constants ===== */
+const g = 9.81;
+const m2px = 320;
+const ceilingY = 70;
+const anchorX = W/2;
+const L0 = 0.35;
+const yZero = ceilingY + L0*m2px;
+const minTipGapPx = 30;
+
+/* scale + shift */
+const drawScale = 1.495;
+const expShiftX = -150;
+const scaleShiftY = 52;
+
+/* ===== State ===== */
+let params = { mode:'mass', k:150, m:1.0, W:9.81 };
+let drag = { active:false, dy:0 };
+let u = 0, vel = 0;
+let lastT = 0, paused = false;
+
+/* ===== Helpers ===== */
+function massFromControls(){ return (params.mode==='mass') ? params.m : params.W/g; }
+function weightFromControls(){ return (params.mode==='mass') ? params.m*g : params.W; }
+function Dy(){
+  const m = massFromControls();
+  return (m>0 && params.k>0)? (m*g)/params.k : 0;
+}
+function omega0(){ const m = massFromControls(); return (m>0)? Math.sqrt(params.k/m) : 0; }
+function period(){ const w0 = omega0(); return (w0>0)? 2*Math.PI/w0 : Infinity; }
+function springLineWidth(k){ const t = Math.max(0, Math.min(1, (k-10)/(1000-10))); return 1.5 + t*(8.0-1.5); }
+function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
+
+function screenToWorld(px,py){
+  let x=px, y=py;
+  x -= (W/2 + expShiftX);
+  y -= (H/2 + scaleShiftY);
+  x /= drawScale;
+  y /= drawScale;
+  x += W/2;
+  y += H/2;
+  return {x,y};
+}
+
+function drawArrow(x1,y1,x2,y2,color,label,fontSize=15){
+  const head = 10;
+  const dx=x2-x1, dy=y2-y1;
+  const ang=Math.atan2(dy,dx);
+  ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x2,y2);
+  ctx.lineTo(x2 - head*Math.cos(ang - Math.PI/7), y2 - head*Math.sin(ang - Math.PI/7));
+  ctx.lineTo(x2 - head*Math.cos(ang + Math.PI/7), y2 - head*Math.sin(ang + Math.PI/7));
+  ctx.closePath(); ctx.fill();
+  if(label){
+    ctx.font=`700 ${fontSize}px system-ui`;
+    ctx.textBaseline="middle";
+    ctx.fillText(label, x2+8, y2);
+  }
+}
+
+function drawDeltaYBracket(x, yTop, yBot, text){
+  const cap = 10;
+  ctx.strokeStyle = '#0f172a';
+  ctx.fillStyle = '#0f172a';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(x, yTop); ctx.lineTo(x, yBot); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x-cap, yTop); ctx.lineTo(x+cap, yTop); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x-cap, yBot); ctx.lineTo(x+cap, yBot); ctx.stroke();
+  const mid = (yTop+yBot)/2;
+  ctx.font = '12px system-ui';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, x+14, mid);
+}
+
+/* ===== Draw ===== */
+function draw(){
+  ctx.clearRect(0,0,W,H);
+
+  ctx.save();
+  ctx.translate(W/2 + expShiftX, H/2 + scaleShiftY);
+  ctx.scale(drawScale, drawScale);
+  ctx.translate(-W/2, -H/2);
+
+  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--ceiling').trim()||'#111827';
+  ctx.fillRect(0, ceilingY-14, W, 14);
+
+  const rulerX = anchorX - 130;
+  ctx.strokeStyle='#e5e7eb'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(rulerX, ceilingY-14); ctx.lineTo(rulerX, H-40); ctx.stroke();
+
+  const tickStart = ceilingY-14, tickEnd = H-40;
+  const cmPx = 0.01*m2px;
+  for(let y=tickStart; y<=tickEnd; y+=cmPx){
+    ctx.strokeStyle='#cbd5e1';
+    ctx.beginPath(); ctx.moveTo(rulerX, y); ctx.lineTo(rulerX+6, y); ctx.stroke();
+  }
+
+  const topCM = Math.round(((tickStart - yZero)/m2px)*100);
+  const botCM = Math.round(((tickEnd   - yZero)/m2px)*100);
+  const startLabel = Math.floor(Math.min(topCM, botCM)/10)*10 - 40;
+  const endLabel   = Math.ceil(Math.max(topCM, botCM)/10)*10 + 40;
+
+  ctx.fillStyle='#334155';
+  ctx.font='12px system-ui';
+  ctx.strokeStyle='#64748b';
+
+  for(let cm=startLabel; cm<=endLabel; cm+=10){
+    const y = yZero + (cm/100)*m2px;
+    if(y < tickStart-2 || y > tickEnd+2) continue;
+    ctx.beginPath(); ctx.moveTo(rulerX, y); ctx.lineTo(rulerX+14, y); ctx.stroke();
+    const show = -cm;
+    const txt = (show>=0?'+':'') + String(show).replace('+0','0').replace('-0','0');
+    ctx.fillText(txt.replace('+-','-') + ' cm', rulerX+18, y+4);
+  }
+
+  const m = massFromControls();
+  const dy = Dy();
+  const yEqTip = ceilingY + (L0 + dy)*m2px;
+
+  let L = L0 + (m>0 ? (dy + u) : 0);
+  let tipY = ceilingY + L*m2px;
+  if(tipY < ceilingY + minTipGapPx) tipY = ceilingY + minTipGapPx;
+
+  const showResult = !!(resultChk && resultChk.checked);
+
+  if(showResult){
+    const lineL = rulerX + 14;
+    const lineR = anchorX + 50;
+
+    ctx.strokeStyle='#ef4444'; ctx.setLineDash([6,6]);
+    ctx.beginPath(); ctx.moveTo(lineL, yEqTip); ctx.lineTo(lineR, yEqTip); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='#b91c1c';
+    ctx.fillText('ตำแหน่งสมดุล', anchorX+96, yEqTip+4);
+
+    ctx.strokeStyle='#16a34a'; ctx.setLineDash([6,6]);
+    ctx.beginPath(); ctx.moveTo(lineL, yZero); ctx.lineTo(lineR, yZero); ctx.stroke();
+    ctx.setLineDash([]);
+
+    const yTop = Math.min(yZero, yEqTip);
+    const yBot = Math.max(yZero, yEqTip);
+    drawDeltaYBracket(lineR + 24, yTop, yBot, `Δy = ${dy.toFixed(4)} m`);
+  }
+
+  const turns=10, amp=14;
+  ctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue('--spring').trim()||'#111827';
+  ctx.lineWidth=springLineWidth(params.k);
+  ctx.beginPath(); ctx.moveTo(anchorX, ceilingY);
+  for(let i=1;i<=turns;i++){
+    const t=i/turns;
+    const yy=ceilingY+t*(L*m2px);
+    const xx=anchorX+(i%2?amp:-amp);
+    ctx.lineTo(xx,yy);
+  }
+  ctx.lineTo(anchorX, tipY);
+  ctx.stroke();
+
+  let bobSize=0;
+  if(m>0){
+    bobSize = 28 + Math.min(32, m*1.2);
+    ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--bob').trim()||'#b45309';
+    ctx.fillRect(anchorX-bobSize/2, tipY, bobSize, bobSize);
+  }
+
+  if(vecChk && vecChk.checked && m>0 && params.k>0){
+    const w0 = Math.sqrt(params.k/m);
+    const a = -(w0*w0)*u;
+
+    const curTipY = tipY;
+    const eqTipY  = yEqTip;
+    const curCY = tipY + bobSize/2;
+
+    const vxBase = anchorX + bobSize/2 + 26;
+    const eps=1;
+
+    const yPix = clamp((curTipY - eqTipY), -160, 160);
+    const vPix = clamp(vel*m2px*0.0625, -140, 140);
+    const aPix = clamp(a*m2px*0.0125, -140, 140);
+
+    const vX = anchorX;
+    const aX = (vxBase+52) - 20;
+
+    if(Math.abs(yPix)>eps) drawArrow(vxBase, eqTipY, vxBase, eqTipY + yPix, "#111827", "y", 15);
+    if(Math.abs(vPix)>eps) drawArrow(vX, curCY, vX, curCY + vPix, "#16a34a", "v", 17);
+    if(Math.abs(aPix)>eps) drawArrow(aX, curCY, aX, curCY + aPix, "#ef4444", "a", 17);
+  }
+
+  ctx.restore();
+
+  hud.style.display = (resultChk && resultChk.checked) ? '' : 'none';
+
+  const w0 = omega0();
+
+  hudK.textContent = params.k.toFixed(0);
+  hudM.textContent = massFromControls().toFixed(3);
+  hudW.textContent = weightFromControls().toFixed(2);
+  hudDy.textContent = dy.toFixed(4);
+
+  const yRelM = (tipY - yZero)/m2px;
+  hudY.textContent = (yRelM>=0?'+':'') + yRelM.toFixed(4);
+
+  const x = (dy + u);
+  const Fs_y = -params.k * x;
+  const Wt = weightFromControls();
+  const Fnet_y = Wt + Fs_y;
+
+  hudFs.textContent = Fs_y.toFixed(2);
+  hudFnet.textContent = Fnet_y.toFixed(2);
+
+  hudW0.textContent = (w0>0)? w0.toFixed(3) : '—';
+
+  let A = 0;
+  if(w0>0){ A = Math.sqrt(u*u + (vel/w0)*(vel/w0)); }
+  const vMax = (w0>0)? (w0*A) : 0;
+  const aMax = (w0>0)? (w0*w0*A) : 0;
+  const aNow = (w0>0)? (-(w0*w0)*u) : 0;
+
+  hudVmax.textContent = (w0>0)? vMax.toFixed(3) : '—';
+  hudAmax.textContent = (w0>0)? aMax.toFixed(3) : '—';
+  hudVnow.textContent = vel.toFixed(3);
+  hudAnow.textContent = aNow.toFixed(3);
+
+  const T = period();
+  hudT.textContent = isFinite(T)?T.toFixed(3):'—';
+  const f = (isFinite(T)&&T>0)?(1/T):NaN;
+  hudF.textContent = isFinite(f)?f.toFixed(3):'—';
+
+  if(graphModal.classList.contains('active')) drawFXGraph();
+}
+
+/* ===== Step ===== */
+function step(ts){
+  if(!lastT) lastT = ts;
+  const dt = Math.min(0.033, (ts-lastT)/1000);
+  lastT = ts;
+
+  if(!paused && !drag.active){
+    const m = massFromControls();
+    if(m>0 && params.k>0){
+      const w0 = Math.sqrt(params.k/m);
+      const a = -(w0*w0)*u;
+      vel += a*dt;
+      u += vel*dt;
+
+      const minU = (minTipGapPx/m2px) - (L0 + Dy());
+      if(u < minU){ u = minU; if(vel<0) vel = 0; }
+    }else{
+      vel=0; u=0;
+    }
+  }
+  draw();
+  requestAnimationFrame(step);
+}
+requestAnimationFrame(step);
+
+/* ===== Dragging ===== */
+function hitBob(mx,my){
+  const m = massFromControls();
+  if(m<=0) return false;
+  const L = L0 + Dy() + u;
+  const tipY = ceilingY + L*m2px;
+  const size = 28 + Math.min(32, m*1.2);
+  const pad = 6;
+  return (mx >= anchorX - size/2 - pad &&
+          mx <= anchorX + size/2 + pad &&
+          my >= tipY - pad &&
+          my <= tipY + size + pad);
+}
+function getXY(e){
+  const r = canvas.getBoundingClientRect();
+  const sx = canvas.width/r.width, sy = canvas.height/r.height;
+  const px = (e.clientX-r.left)*sx;
+  const py = (e.clientY-r.top)*sy;
+  return screenToWorld(px,py);
+}
+canvas.addEventListener('pointerdown', (e)=>{
+  const {x:mx,y:my}=getXY(e);
+  if(hitBob(mx,my)){
+    drag.active=true;
+    canvas.setPointerCapture(e.pointerId);
+    canvas.style.cursor='grabbing';
+    const L=L0+Dy()+u;
+    const tipY=ceilingY+L*m2px;
+    drag.dy = my - tipY;
+    vel=0;
+  }
+});
+canvas.addEventListener('pointermove', (e)=>{
+  if(!drag.active) return;
+  const {y:my}=getXY(e);
+  let desiredTipY = my - drag.dy;
+  if(desiredTipY < ceilingY + minTipGapPx) desiredTipY = ceilingY + minTipGapPx;
+  const desiredL = Math.max(0.05, (desiredTipY - ceilingY)/m2px);
+  const eq = L0 + Dy();
+  u = desiredL - eq;
+  draw();
+});
+canvas.addEventListener('pointerup', (e)=>{
+  if(drag.active){
+    drag.active=false;
+    try{canvas.releasePointerCapture(e.pointerId);}catch(_){}
+    canvas.style.cursor='grab';
+  }
+});
+canvas.addEventListener('pointercancel', ()=>{
+  drag.active=false; canvas.style.cursor='grab';
+});
+
+/* ===== Control bindings ===== */
+function bindPair(rangeEl, numEl, onChange){
+  const apply=(val)=>{ const f=parseFloat(val); if(!isNaN(f)) onChange(f); };
+  rangeEl.addEventListener('input', e=>apply(e.target.value));
+  numEl.addEventListener('change', e=>apply(e.target.value));
+}
+bindPair(kRange, kNum, (v)=>{ v=Math.max(10,Math.min(1000,v)); params.k=v; kRange.value=kNum.value=v; draw(); });
+bindPair(mRange, mNum, (v)=>{ v=Math.max(0,Math.min(20,v)); params.m=v; mRange.value=mNum.value=v; vel=0; draw(); });
+bindPair(wRange, wNum, (v)=>{ v=Math.max(0,Math.min(200,v)); params.W=v; wRange.value=wNum.value=v; vel=0; draw(); });
+
+modeSel.addEventListener('change', ()=>{
+  params.mode = modeSel.value;
+  document.getElementById('massRow').style.display = (params.mode==='mass')?'contents':'none';
+  document.getElementById('weightRow').style.display = (params.mode==='weight')?'contents':'none';
+  u=0; vel=0; draw();
+});
+
+resetBtn.addEventListener('click', ()=>{
+  params={mode:'mass',k:150,m:1.0,W:9.81};
+  modeSel.value='mass';
+  kRange.value=kNum.value=150;
+  mRange.value=mNum.value=1.0;
+  wRange.value=wNum.value=10;
+  u=0; vel=0; paused=false;
+  toggleIco.textContent='⏸'; toggleTxt.textContent='หยุด';
+  vecChk.checked=false;
+  resultChk.checked=false;
+  draw();
+});
+
+toggleBtn.addEventListener('click', ()=>{
+  paused=!paused;
+  if(paused){
+    toggleIco.textContent='▶';
+    toggleTxt.textContent='เล่นต่อ';
+  }else{
+    toggleIco.textContent='⏸';
+    toggleTxt.textContent='หยุด';
+  }
+});
+vecChk.addEventListener('change', draw);
+resultChk.addEventListener('change', draw);
+
+/* stepper (+ -) */
+document.querySelectorAll('.stepper').forEach(stepper=>{
+  const targetId = stepper.dataset.target;
+  const rangeEl = document.getElementById(targetId);
+  const numEl = stepper.querySelector('input[type="number"]');
+  stepper.querySelectorAll('.stepBtn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const deltaSign = parseFloat(btn.dataset.delta || '1');
+      const step = parseFloat(rangeEl.step || numEl.step || 1);
+      let v = parseFloat(rangeEl.value || numEl.value || 0);
+      v += deltaSign * step;
+      const min = parseFloat(rangeEl.min ?? numEl.min ?? '-1e9');
+      const max = parseFloat(rangeEl.max ?? '1e9');
+      v = Math.max(min, Math.min(max, v));
+      rangeEl.value = v;
+      numEl.value = v;
+      rangeEl.dispatchEvent(new Event('input',{bubbles:true}));
+    });
+  });
+});
+
+/* ===== Graph (F–x) ===== */
+function drawFXGraph(){
+  const w=fxCanvas.width, h=fxCanvas.height;
+  fctx.clearRect(0,0,w,h);
+  const Lm=60, Rm=20, Tm=24, Bm=44;
+  const plotW=w-Lm-Rm, plotH=h-Tm-Bm;
+  const k=params.k;
+
+  const x_cur_m = (Dy() + u);
+  const F_cur = k * x_cur_m;
+
+  const xMax_m = Math.max(0.25, Math.abs(x_cur_m) + 0.05);
+  const FmaxRounded = Math.max(10, Math.ceil(Math.abs(k*xMax_m)/10)*10);
+
+  fctx.strokeStyle='#94a3b8'; fctx.lineWidth=1;
+  fctx.beginPath(); fctx.moveTo(Lm, h-Bm); fctx.lineTo(w-Rm, h-Bm); fctx.stroke();
+  fctx.beginPath(); fctx.moveTo(Lm, h-Bm); fctx.lineTo(Lm, Tm); fctx.stroke();
+
+  fctx.strokeStyle='#e5e7eb'; fctx.fillStyle='#334155'; fctx.font='12px system-ui';
+  for(let F=0; F<=FmaxRounded+1e-9; F+=10){
+    const Y=h-Bm - (F/FmaxRounded)*plotH;
+    fctx.beginPath(); fctx.moveTo(Lm, Y); fctx.lineTo(w-Rm, Y); fctx.stroke();
+    fctx.fillText(F.toFixed(0), 8, Y+4);
+  }
+  fctx.textAlign='left'; fctx.textBaseline='bottom';
+  fctx.fillText('F (N)', Lm+4, Tm-6);
+
+  const xMax_cm = xMax_m*100;
+  const xStep = niceStep(xMax_cm/6);
+  const shown = new Set();
+  fctx.textAlign='center'; fctx.textBaseline='alphabetic';
+  for(let xcm=0; xcm<=xMax_cm+1e-9; xcm+=xStep){
+    const label = Math.round(xcm);
+    if(shown.has(label)) continue;
+    shown.add(label);
+    const xm = label/100;
+    const X = Lm + (xm/xMax_m)*plotW;
+    fctx.strokeStyle='#e5e7eb';
+    fctx.beginPath(); fctx.moveTo(X, Tm); fctx.lineTo(X, h-Bm); fctx.stroke();
+    fctx.fillStyle='#334155';
+    fctx.fillText(label.toString(), X, h-Bm+16);
+  }
+  fctx.textAlign='left'; fctx.textBaseline='alphabetic';
+  fctx.fillText('x (cm)', Lm+plotW/2-20, h-10);
+
+  const X0 = Lm, Y0 = h - Bm;
+  const X1 = Lm + plotW;
+  const Y1 = h - Bm - ((k * xMax_m) / FmaxRounded) * plotH;
+  fctx.lineWidth = 2;
+  fctx.strokeStyle = '#2563eb';
+  fctx.beginPath(); fctx.moveTo(X0, Y0); fctx.lineTo(X1, Y1); fctx.stroke();
+
+  const Xc = Lm + (Math.abs(x_cur_m)/xMax_m)*plotW;
+  const Yc = h-Bm - (Math.abs(F_cur)/FmaxRounded)*plotH;
+  fctx.fillStyle='#dc2626';
+  fctx.beginPath(); fctx.arc(Xc, Yc, 5, 0, Math.PI*2); fctx.fill();
+
+  slopeKEl.textContent = params.k.toFixed(0);
+}
+function niceStep(maxVal){
+  if(maxVal<=0) return 1;
+  const pow = Math.pow(10, Math.floor(Math.log10(maxVal)));
+  const frac = maxVal / pow;
+  let step = pow;
+  if(frac < 2) step = 0.2*pow;
+  else if(frac < 5) step = 0.5*pow;
+  else step = 1*pow;
+  return step;
+}
+
+/* modal helpers */
+function openModal(m){ m.classList.add('active'); }
+function closeModal(m){ m.classList.remove('active'); }
+
+formulaBtn.addEventListener('click', ()=>{
+  openModal(formulaModal);
+  if(window.MathJax && MathJax.typesetPromise){ MathJax.typesetPromise([formulaModal]); }
+});
+closeFormula.addEventListener('click', ()=> closeModal(formulaModal));
+formulaModal.addEventListener('click', (e)=>{ if(e.target===formulaModal) closeModal(formulaModal); });
+
+graphBtn.addEventListener('click', ()=>{ openModal(graphModal); drawFXGraph(); });
+closeGraph.addEventListener('click', ()=> closeModal(graphModal));
+graphModal.addEventListener('click', (e)=>{ if(e.target===graphModal) closeModal(graphModal); });
+
+/* ===== Exercise modal (timer) ===== */
+(function(){
+  const exerciseBtn   = document.getElementById('exerciseBtn');
+  const exerciseModal = document.getElementById('exerciseModal');
+  const closeExercise = document.getElementById('closeExercise');
+  const quizWrap      = document.getElementById('quizWrap');
+  const regenBtn      = document.getElementById('regenQuiz');
+  const checkBtn      = document.getElementById('checkQuiz');
+  const scoreBadge    = document.getElementById('scoreBadge');
+  if(!exerciseBtn) return;
+
+  const timerText = document.getElementById('quizTimerText');
+  const timerBtn  = document.getElementById('quizTimerBtn');
+  let tRunning=false, tStart=0, tAcc=0, tRaf=0;
+
+  function fmt(ms){
+    const s = ms/1000;
+    const mm = Math.floor(s/60);
+    const ss = Math.floor(s%60);
+    const d  = Math.floor((s - Math.floor(s))*10);
+    return `${String(mm).padStart(2,'0')}:${String(ss).padStart(2,'0')}.${d}`;
+  }
+  function renderTimer(){
+    const now = performance.now();
+    const cur = tAcc + (tRunning ? (now - tStart) : 0);
+    timerText.textContent = fmt(cur);
+    if(tRunning) tRaf = requestAnimationFrame(renderTimer);
+  }
+  function resetTimer(){
+    tRunning=false; tAcc=0;
+    timerText.textContent='00:00.0';
+    timerBtn.textContent='▶';
+    timerBtn.setAttribute('aria-label','เริ่มเวลา');
+    if(tRaf) cancelAnimationFrame(tRaf);
+    tRaf=0;
+  }
+
+  timerBtn.addEventListener('click', ()=>{
+    if(!tRunning){
+      tRunning=true;
+      tStart=performance.now();
+      timerBtn.textContent='⏸';
+      timerBtn.setAttribute('aria-label','หยุดเวลา');
+      renderTimer();
+    }else{
+      tRunning=false;
+      tAcc += performance.now() - tStart;
+      timerBtn.textContent='▶';
+      timerBtn.setAttribute('aria-label','เริ่มเวลา');
+      if(tRaf) cancelAnimationFrame(tRaf);
+      tRaf=0;
+    }
+  });
+
+  function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } }
+  const fmtN=(x,d=2)=>Number(x.toFixed(d)).toString();
+  function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+  function buildEasySet(){
+    const gq = 10;
+    const mList = [0.5,1,2,4,5];
+    const kList = [40,50,80,100,200,250,400];
+    const m = pick(mList);
+    const k = pick(kList);
+    const A = pick([0.05,0.10,0.15]);
+    const y = pick([0, A/2, (Math.sqrt(3)/2)*A]);
+    return {gq,m,k,A,y};
+  }
+
+  function buildQuestions(){
+    const qs=[];
+    const {gq,m,k,A,y} = buildEasySet();
+    const w0 = Math.sqrt(k/m);
+
+    (function(){
+      const dy = (m*gq)/k;
+      const cm = dy*100;
+      const ans = fmtN(cm,1);
+      const text =`แขวนมวล m ติดกับสปริงในแนวดิ่ง กำหนด \\(g=10\\,\\text{m/s}^2\\), \\(k=${k}\\,\\text{N/m}\\), \\(m=${m}\\,\\text{kg}\\). เมื่อวัตถุอยู่ในสภาวะสมดุลจงหาระยะยืดของสปริง \\(\\Delta y\\) (ตอบเป็น cm)`;
+      const opts=[ans, fmtN(cm+5,1), fmtN(cm-5,1), fmtN(cm*2,1)];
+      shuffle(opts);
+      const sol = `คำเฉลย: $$\\Delta y=\\frac{mg}{k}=\\frac{${m}\\times 10}{${k}}=${fmtN(dy,3)}\\,\\text{m}=${ans}\\,\\text{cm}$$`;
+      qs.push({text, choices: opts.map(v=>`\\(${v}\\,\\text{cm}\\)`), correct: opts.indexOf(ans), solution: sol});
+    })();
+
+    (function(){
+      const ans = fmtN(w0,2);
+      const text = `มวลติดปลายสปริงกำลังสั่นแบบ SHM ในแนวดิ่ง กำหนด \\(k=${k}\\,\\text{N/m}\\), \\(m=${m}\\,\\text{kg}\\). จงหา \\(\\omega_0\\)`;
+      const opts=[ans, fmtN(w0*2,2), fmtN(w0/2,2), fmtN(Math.sqrt(m/k),2)];
+      shuffle(opts);
+      const sol = `คำเฉลย: $$\\omega_0=\\sqrt{\\frac{k}{m}}=\\sqrt{\\frac{${k}}{${m}}}=${ans}\\,\\text{rad/s}$$`;
+      qs.push({text, choices: opts.map(v=>`\\(${v}\\,\\text{rad/s}\\)`), correct: opts.indexOf(ans), solution: sol});
+    })();
+
+    (function(){
+      const correct = `\\(T=2\\pi\\sqrt{\\tfrac{m}{k}},\\ f=\\tfrac{1}{T}\\)`;
+      const text = `มวลติดปลายสปริงกำลังสั่นแบบ SHM ในแนวดิ่ง กำหนด \\(k=${k}\\,\\text{N/m}\\), \\(m=${m}\\,\\text{kg}\\). สูตรที่ถูกต้องของ \\(T\\) และ \\(f\\) คือข้อใด`;
+      const opts=[
+        correct,
+        `\\(T=2\\pi\\sqrt{\\tfrac{k}{m}},\\ f=\\tfrac{1}{T}\\)`,
+        `\\(T=\\tfrac{2\\pi}{\\sqrt{km}},\\ f=\\tfrac{1}{T}\\)`,
+        `\\(T=\\pi\\sqrt{\\tfrac{m}{k}},\\ f=\\tfrac{1}{T}\\)`
+      ];
+      shuffle(opts);
+      const sol = `คำเฉลย: $$T=2\\pi\\sqrt{\\frac{m}{k}},\\quad f=\\frac{1}{T}$$`;
+      qs.push({text, choices: opts, correct: opts.indexOf(correct), solution: sol});
+    })();
+
+    (function(){
+      const vmax = w0*A;
+      const ans = fmtN(vmax,2);
+      const text = `มวลติดปลายสปริงกำลังสั่นแบบ SHM ในแนวดิ่ง ให้ \\(A=${fmtN(A*100,0)}\\,\\text{cm}\\), \\(\\omega_0=${fmtN(w0,2)}\\,\\text{rad/s}\\). จงหา \\(v_{\\max}\\)`;
+      const opts=[ans, fmtN(vmax/2,2), fmtN(vmax*2,2), fmtN(A/w0,2)];
+      shuffle(opts);
+      const sol = `คำเฉลย: $$v_{\\max}=\\omega_0A=(${fmtN(w0,2)})(${fmtN(A,2)})=${ans}\\,\\text{m/s}$$`;
+      qs.push({text, choices: opts.map(v=>`\\(${v}\\,\\text{m/s}\\)`), correct: opts.indexOf(ans), solution: sol});
+    })();
+
+    (function(){
+      const amax = w0*w0*A;
+      const ans = fmtN(amax,2);
+      const text = `มวลติดปลายสปริงกำลังสั่นแบบ SHM ในแนวดิ่ง ให้ \\(A=${fmtN(A*100,0)}\\,\\text{cm}\\), \\(\\omega_0=${fmtN(w0,2)}\\,\\text{rad/s}\\). จงหา \\(a_{\\max}\\)`;
+      const opts=[ans, fmtN(amax/2,2), fmtN(amax*2,2), fmtN(w0*A,2)];
+      shuffle(opts);
+      const sol = `คำเฉลย: $$a_{\\max}=\\omega_0^2A=(${fmtN(w0,2)}^2)(${fmtN(A,2)})=${ans}\\,\\text{m/s}^2$$`;
+      qs.push({text, choices: opts.map(v=>`\\(${v}\\,\\text{m/s}^2\\)`), correct: opts.indexOf(ans), solution: sol});
+    })();
+
+    (function(){
+      const v = w0*Math.sqrt(Math.max(0, A*A - y*y));
+      const ans = fmtN(v,2);
+      const text = `มวลติดปลายสปริงกำลังสั่นแบบ SHM ในแนวดิ่ง ให้ \\(A=${fmtN(A*100,0)}\\,\\text{cm}\\), \\(|y|=${fmtN(Math.abs(y)*100,0)}\\,\\text{cm}\\), \\(\\omega_0=${fmtN(w0,2)}\\). จงหา \\(|v|\\)`;
+      const opts=[ans, fmtN(v/2,2), fmtN(v*2,2), fmtN(w0*A,2)];
+      shuffle(opts);
+      const sol = `คำเฉลย: $$|v|=\\omega_0\\sqrt{A^2-y^2}=${fmtN(w0,2)}\\sqrt{${fmtN(A,2)}^2-${fmtN(Math.abs(y),2)}^2}=${ans}\\,\\text{m/s}$$`;
+      qs.push({text, choices: opts.map(v=>`\\(${v}\\,\\text{m/s}\\)`), correct: opts.indexOf(ans), solution: sol});
+    })();
+
+    (function(){
+      const a = w0*w0*Math.abs(y);
+      const ans = fmtN(a,2);
+      const text = `มวลติดปลายสปริงกำลังสั่นแบบ SHM ในแนวดิ่ง ที่ตำแหน่ง \\(|y|=${fmtN(Math.abs(y)*100,0)}\\,\\text{cm}\\) ให้ \\(\\omega_0=${fmtN(w0,2)}\\). จงหา \\(|a|\\)`;
+      const opts=[ans, fmtN(a/2,2), fmtN(a*2,2), fmtN(w0*Math.abs(y),2)];
+      shuffle(opts);
+      const sol = `คำเฉลย: $$|a|=\\omega_0^2|y|=(${fmtN(w0,2)}^2)(${fmtN(Math.abs(y),2)})=${ans}\\,\\text{m/s}^2$$`;
+      qs.push({text, choices: opts.map(v=>`\\(${v}\\,\\text{m/s}^2\\)`), correct: opts.indexOf(ans), solution: sol});
+    })();
+
+    (function(){
+      const text = `ในการสั่นแบบ SHM จุดใดมีความเร็วมากที่สุด?`;
+      const opts = [
+        `ที่ตำแหน่งสมดุล \\((y=0)\\)`,
+        `ที่ตำแหน่งปลายสุด \\((y=\\pm A)\\)`,
+        `ทุกตำแหน่งมีความเร็วเท่ากัน`,
+        `ที่ตำแหน่งที่ความเร่งมากที่สุด`
+      ];
+      const correct = 0;
+      const sol = `คำเฉลย: ที่สมดุล \\((y=0)\\) เพราะ $$|v|=\\omega_0\\sqrt{A^2-y^2}$$ มากสุดเมื่อ \\(y=0\\)`;
+      qs.push({text, choices: opts, correct, solution: sol});
+    })();
+
+    (function(){
+      const text = `ในการสั่นแบบ SHM จุดใดมีขนาดความเร่งมากที่สุด?`;
+      const opts = [
+        `ที่ตำแหน่งปลายสุด \\((y=\\pm A)\\)`,
+        `ที่ตำแหน่งสมดุล \\((y=0)\\)`,
+        `ทุกตำแหน่งมีความเร่งเท่ากัน`,
+        `ที่ตำแหน่งที่ความเร็วมากที่สุด`
+      ];
+      const correct = 0;
+      const sol = `คำเฉลย: ที่ปลายสุด \\((y=\\pm A)\\) เพราะ $$|a|=\\omega_0^2|y|$$ มากสุดเมื่อ \\(|y|=A\\)`;
+      qs.push({text, choices: opts, correct, solution: sol});
+    })();
+
+    (function(){
+      const text = `สปริงแนวดิ่งที่สั่นแบบ SHM จุดใดแรงลัพธ์เท่ากับ 0?`;
+      const opts = [
+        `ที่ตำแหน่งสมดุล \\((y=0)\\)`,
+        `ที่ตำแหน่งปลายสุด \\((y=\\pm A)\\)`,
+        `ทุกตำแหน่ง`,
+        `ไม่มีตำแหน่งใดเลย`
+      ];
+      const correct = 0;
+      const sol = `คำเฉลย: ที่สมดุล \\((y=0)\\) เพราะ $$F_{net}=-ky \\Rightarrow F_{net}=0 \\text{ เมื่อ } y=0$$`;
+      qs.push({text, choices: opts, correct, solution: sol});
+    })();
+
+    return qs;
+  }
+
+  function renderQuiz(){
+    const qs = buildQuestions();
+    quizWrap.innerHTML=''; scoreBadge.style.display='none';
+
+    qs.forEach((q,i)=>{
+      const card=document.createElement('div'); card.className='qCard';
+
+      const t=document.createElement('div');
+      t.className='qTitle';
+      t.innerHTML=`ข้อ ${i+1}. ${q.text}`;
+      card.appendChild(t);
+
+      q.choices.forEach((c,j)=>{
+        const row=document.createElement('label'); row.className='choice';
+        const inp=document.createElement('input'); inp.type='radio'; inp.name='q'+i; inp.value=j;
+
+        const opt=document.createElement('span'); opt.className='optLetter';
+        opt.textContent = String.fromCharCode(65+j);
+
+        const span=document.createElement('span'); span.innerHTML=c;
+
+        row.appendChild(inp);
+        row.appendChild(opt);
+        row.appendChild(span);
+        card.appendChild(row);
+      });
+
+      const sol=document.createElement('div');
+      sol.id='sol'+i;
+      sol.style.display='none';
+      sol.style.marginTop='8px';
+      const correctLetter = String.fromCharCode(65 + q.correct);
+      sol.innerHTML =
+        `<div class="solCorrect">คำตอบที่ถูก: ข้อ ${correctLetter}</div>`+
+        `<div class="solExplain">${q.solution}</div>`;
+      card.appendChild(sol);
+
+      quizWrap.appendChild(card);
+    });
+
+    quizWrap.__qs=qs;
+    if(window.MathJax && MathJax.typesetPromise){ MathJax.typesetPromise([quizWrap]); }
+  }
+
+  function checkQuiz(){
+    const qs=quizWrap.__qs||[]; let score=0;
+    qs.forEach((q,i)=>{
+      const sel=quizWrap.querySelector(`input[name="q${i}"]:checked`);
+      const sol=document.getElementById('sol'+i);
+      if(sel && Number(sel.value)===q.correct) score++;
+      sol.style.display='block';
+    });
+    scoreBadge.textContent=`คะแนน: ${score}/${qs.length}`;
+    scoreBadge.style.display='inline-block';
+    if(window.MathJax && MathJax.typesetPromise){ MathJax.typesetPromise([quizWrap]); }
+  }
+
+  exerciseBtn.addEventListener('click', ()=>{
+    exerciseModal.classList.add('active');
+    resetTimer();
+    renderQuiz();
+  });
+  closeExercise.addEventListener('click', ()=>{
+    exerciseModal.classList.remove('active');
+    resetTimer();
+  });
+  exerciseModal.addEventListener('click', (e)=>{
+    if(e.target===exerciseModal){
+      exerciseModal.classList.remove('active');
+      resetTimer();
+    }
+  });
+
+  regenBtn.addEventListener('click', renderQuiz);
+  checkBtn.addEventListener('click', checkQuiz);
+})();
+</script>
+</body>
+</html>
