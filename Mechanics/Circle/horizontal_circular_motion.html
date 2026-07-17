@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>CircularMotionLab — การเคลื่อนที่แบบวงกลม (มองจากด้านบน)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- MathJax -->
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['\\(','\\)'], ['$', '$']] },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+
+  <style>
+    canvas { background:#ffffff; }
+
+    /* ให้ v = 2.0 m/s แบบบรรทัดเดียว */
+    .result-row{
+      display:flex;
+      align-items:baseline;
+      gap:4px;
+      white-space:nowrap;
+    }
+
+    /* บรรทัดโจทย์ที่ไม่อยากให้ตัดบรรทัด */
+    .nowrap{
+      white-space:nowrap;
+    }
+
+    /* สไตล์วงกลมตัวเลือก: เส้นทึบสีเทาเข้ม */
+    input[type="radio"]{
+      appearance:none;
+      width:18px;
+      height:18px;
+      border:2px solid #64748b; /* เทาเข้ม ทึบ */
+      border-radius:50%;
+      position:relative;
+      flex-shrink:0;
+      margin-top:2px;
+    }
+    input[type="radio"]:checked{
+      border:2px solid #0ea5e9;
+    }
+    input[type="radio"]:checked::after{
+      content:"";
+      width:10px;
+      height:10px;
+      background:#0ea5e9;
+      border-radius:50%;
+      position:absolute;
+      top:3px;
+      left:3px;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-100 text-slate-900">
+
+  <!-- layout: จอทดลองซ้าย, แผงตั้งค่าขวา (เฉพาะ lg) -->
+  <div class="max-w-6xl mx-auto p-4 grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-4">
+
+    <!-- แผงตั้งค่า + ผลลัพธ์ (ขวาในคอม) -->
+    <section class="bg-white rounded-2xl shadow p-4 space-y-4 lg:order-2">
+      <h1 class="text-xl font-semibold">CircularMotionLab — วงกลมบนโต๊ะ (Top View)</h1>
+
+      <!-- แผงตั้งค่า -->
+      <div class="grid grid-cols-2 gap-3">
+        <label class="text-sm">มวล m (kg)
+          <input id="mInput" type="number" step="0.1" min="0.1" value="1.0"
+                 class="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1">
+        </label>
+        <label class="text-sm">รัศมี r (m)
+          <input id="rInput" type="number" step="0.05" min="0.1" value="1.0"
+                 class="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1">
+        </label>
+        <label class="text-sm">อัตราเร็ว v (m/s)
+          <input id="vInput" type="number" step="0.1" min="0" value="2.0"
+                 class="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1">
+        </label>
+        <label class="text-sm">มุมเริ่มต้น θ₀ (deg)
+          <input id="thetaInput" type="range" min="0" max="360" value="0"
+                 class="mt-2 w-full">
+        </label>
+        <label class="text-sm col-span-2">ทิศการเคลื่อนที่
+          <select id="dirSelect" class="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1">
+            <option value="ccw">ทวนเข็มนาฬิกา (CCW)</option>
+            <option value="cw">ตามเข็มนาฬิกา (CW)</option>
+          </select>
+        </label>
+      </div>
+
+      <!-- ปุ่มเล่น / เชือกขาด / รีเซ็ต / เวกเตอร์ / (สรุปสูตร+แบบฝึกหัด อยู่ด้านล่างต่อจากแสดงเวกเตอร์) -->
+      <div id="vecContainer" class="flex flex-wrap items-center gap-2 pt-2">
+        <button id="playBtn"  class="px-3 py-1.5 rounded-xl bg-sky-600 text-white shadow">▶️ เล่น</button>
+        <button id="cutBtn"   class="px-3 py-1.5 rounded-xl bg-amber-500 text-white shadow">✂️ เชือกขาด</button>
+        <button id="resetBtn" class="px-3 py-1.5 rounded-xl bg-slate-200 text-slate-900 shadow">รีเซ็ต</button>
+        <button id="vecBtn"   class="px-3 py-1.5 rounded-xl bg-emerald-600 text-white shadow">📐 แสดงเวกเตอร์</button>
+
+        <!-- ปุ่มสรุปสูตร + แบบฝึกหัด (ย้ายมาไว้ด้านล่างต่อจากปุ่มแสดงเวกเตอร์) -->
+        <div class="w-full flex flex-wrap items-center gap-2 mt-2">
+          <button id="formulaBtn" class="px-4 py-2 rounded-full bg-indigo-600 text-white shadow flex items-center gap-2">
+            📘 <span>สรุปสูตร</span>
+          </button>
+          <button id="quizBtn" class="px-4 py-2 rounded-full bg-pink-600 text-white shadow flex items-center gap-2">
+            📝 <span>แบบฝึกหัด</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- บล็อกผลลัพธ์ -->
+      <div id="resultBlock" class="mt-3 space-y-2">
+        <div class="p-3 rounded-xl border border-slate-200 bg-slate-50">
+          <div class="font-semibold mb-2">ผลลัพธ์ (อัปเดตตามค่าปัจจุบัน)</div>
+
+          <!-- grid 2 คอลัมน์: v / f ; a_c / ω ; F_c / T -->
+          <div class="grid grid-cols-2 gap-y-1 text-sm">
+            <!-- แถวบน: v (ซ้าย) -->
+            <div class="result-row">
+              <span class="italic">v</span>
+              <span>=</span>
+              <span id="outV" class="font-mono"></span>
+              <span>m/s</span>
+            </div>
+            <!-- แถวบน: f (ขวา) -->
+            <div class="result-row">
+              <span class="italic">f</span>
+              <span>=</span>
+              <span id="outFreq" class="font-mono"></span>
+              <span>Hz</span>
+            </div>
+
+            <!-- แถวกลาง: a_c (ซ้าย) -->
+            <div class="result-row">
+              <span class="italic">a<sub>c</sub></span>
+              <span>=</span>
+              <span id="outA" class="font-mono"></span>
+              <span>m/s²</span>
+            </div>
+            <!-- แถวกลาง: ω (ขวา) -->
+            <div class="result-row">
+              <span class="italic">ω</span>
+              <span>=</span>
+              <span id="outW" class="font-mono"></span>
+              <span>rad/s</span>
+            </div>
+
+            <!-- แถวล่าง: F_c (ซ้าย) -->
+            <div class="result-row">
+              <span class="italic">F<sub>c</sub></span>
+              <span>=</span>
+              <span id="outF" class="font-mono"></span>
+              <span>N</span>
+            </div>
+            <!-- แถวล่าง: T (ขวา) -->
+            <div class="result-row">
+              <span class="italic">T</span>
+              <span>=</span>
+              <span id="outT" class="font-mono"></span>
+              <span>s</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="text-xs text-slate-500">
+          Tip: กด "เชือกขาด" Fc = 0 ⇒ v เคลื่อนที่เส้นตรงไม่เปลี่ยนทิศ
+        </div>
+
+        <div class="text-sm">
+          <a class="text-blue-600 underline" href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">
+            ศึกษาเพิ่มเติมที่เพจคลายปมฟิสิกส์
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- จอทดลอง (ซ้ายในคอม) -->
+    <section class="relative bg-white rounded-2xl shadow p-2 lg:order-1">
+      <div class="relative mx-auto" style="width:100%; max-width:100%;">
+        <div class="relative" style="aspect-ratio:1/1;">
+          <canvas id="cv" class="w-full h-full"></canvas>
+        </div>
+      </div>
+
+      <!-- anchor สำหรับมือถือ: ปุ่ม + ผลลัพธ์ใต้จอ -->
+      <div id="mobileControlsAnchor" class="mt-3 flex flex-col gap-2"></div>
+    </section>
+  </div>
+
+  <!-- MODAL: สรุปสูตร -->
+  <div id="formulaModal" class="fixed inset-0 hidden items-center justify-center bg-black/40 p-4">
+    <div class="max-w-2xl w-full bg-white rounded-2xl shadow-xl p-5 max-h-[85vh] overflow-auto">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-lg font-semibold">สรุปสูตร — การเคลื่อนที่แบบวงกลม</h2>
+        <button id="formulaClose" class="px-3 py-1 rounded-lg bg-slate-200 hover:bg-slate-300">ปิด</button>
+      </div>
+      <div class="space-y-3 text-sm">
+        <div class="p-3 rounded-xl bg-indigo-50 border border-indigo-200">
+          <p class="mb-1">
+            ต้องมี <span class="font-semibold">แรงเข้าสู่ศูนย์กลาง</span> ทำหน้าที่
+            <span class="font-semibold">เปลี่ยนทิศทางของความเร็ว</span> แรงนี้ตั้งฉากกับ \(\vec v\)เสมอ
+            ดังนั้น <span class="font-semibold">งานของแรงเข้าสู่ศูนย์กลาง</span> มีค่าเป็นศูนย์
+          </p>
+          <p class="font-mono">\( W_{c} = \vec F_{c} \cdot \vec s = F_{c}s\cos 90^\circ = 0 \)</p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div class="p-3 rounded-xl border">
+            <div class="font-semibold mb-1">ความสัมพันธ์เชิงมุม/เชิงเส้น</div>
+            <ul class="list-disc pl-5 space-y-1">
+              <li>\( \omega = \dfrac{v}{r} \)</li>
+              <li>\( f = \dfrac{\omega}{2\pi} \)</li>
+              <li>\( T = \dfrac{1}{f} = \dfrac{2\pi}{\omega} = \dfrac{2\pi r}{v} \)</li>
+              <li>\( a_{c} = \dfrac{v^{2}}{r} = \omega^{2} r \)</li>
+            </ul>
+          </div>
+          <div class="p-3 rounded-xl border">
+            <div class="font-semibold mb-1">แรงเข้าสู่ศูนย์กลาง</div>
+            <p>\( \sum F_{c} = m a_{c} = m\dfrac{v^{2}}{r} = m\omega^{2} r \)</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: แบบฝึกหัด -->
+  <div id="quizModal" class="fixed inset-0 hidden items-center justify-center bg-black/40 p-4">
+    <div class="max-w-3xl w-full bg-white rounded-2xl shadow-xl p-5">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-lg font-semibold whitespace-nowrap">แบบฝึกหัด — วงกลม</h2>
+        <button id="quizClose" class="px-3 py-1 rounded-lg bg-slate-200 hover:bg-slate-300">ปิด</button>
+      </div>
+
+      <div id="quizWrap" class="space-y-4 text-sm max-h-[70vh] overflow-auto pr-2">
+        <div class="p-3 rounded-xl border">
+          <div class="font-semibold">1) ข้อใดถูกต้องเกี่ยวกับแรงเข้าสู่ศูนย์กลาง</div>
+          <div class="mt-2 space-y-1">
+            <label class="flex gap-2 items-start"><input type="radio" name="q1" value="A">A. ทำงานเป็นบวกเสมอ</label>
+            <label class="flex gap-2 items-start"><input type="radio" name="q1" value="B">B. ขนานกับความเร็วเสมอ</label>
+            <label class="flex gap-2 items-start"><input type="radio" name="q1" value="C">C. ตั้งฉากกับความเร็วเสมอ และงานเป็นศูนย์</label>
+            <label class="flex gap-2 items-start"><input type="radio" name="q1" value="D">D. มีทิศออกจากศูนย์กลาง</label>
+          </div>
+          <div class="mt-2 text-xs text-slate-500 explain hidden">เฉลย: C — เพราะแรงสู่ศูนย์กลางตั้งฉากกับ \(\vec v\) จึงทำงานเป็นศูนย์</div>
+        </div>
+
+        <div class="p-3 rounded-xl border">
+          <!-- แก้ให้เป็นบรรทัดเดียว ใช้ HTML + sub -->
+          <div class="font-semibold nowrap">
+            2) มวล 2 kg เคลื่อนที่รัศมี 0.5 m ด้วย<br> v = 3 m/s จงหา a<sub>c</sub> และ F<sub>c</sub>
+          </div>
+          <div class="mt-2 space-y-1">
+            <label class="flex gap-2 items-start">
+              <input type="radio" name="q2" value="A">
+              <span>A. \( a_{c}=6\,\text{m/s}^2,\ F_{c}=10\,\text{N} \)</span>
+            </label>
+            <label class="flex gap-2 items-start">
+              <input type="radio" name="q2" value="B">
+              <span>B. \( a_{c}=9\,\text{m/s}^2,\ F_{c}=18\,\text{N} \)</span>
+            </label>
+            <label class="flex gap-2 items-start">
+              <input type="radio" name="q2" value="C">
+              <span>C. \( a_{c}=18\,\text{m/s}^2,\ F_{c}=36\,\text{N} \)</span>
+            </label>
+            <label class="flex gap-2 items-start">
+              <input type="radio" name="q2" value="D">
+              <span>D. \( a_{c}=12\,\text{m/s}^2,\ F_{c}=24\,\text{N} \)</span>
+            </label>
+          </div>
+          <div class="mt-2 text-xs text-slate-500 explain hidden">
+            เฉลยละเอียด: \(a_{c} = \dfrac{v^{2}}{r} = \dfrac{9}{0.5} = 18\,\text{m/s}^2\);
+            \(F_{c} = m a_{c} = 2\times18 = 36\,\text{N}\) ⇒ C
+          </div>
+        </div>
+
+        <div class="p-3 rounded-xl border">
+          <!-- แก้ให้บรรทัดเดียว ใช้ HTML + sub -->
+          <div class="font-semibold nowrap">
+            3) ถ้าเพิ่มความเร็วเป็น 2 เท่าแล้วรัศมีเท่าเดิม<br> a<sub>c</sub> เปลี่ยนอย่างไร
+          </div>
+          <div class="mt-2 space-y-1">
+            <label class="flex gap-2 items-start"><input type="radio" name="q3" value="A">A. คงเดิม</label>
+            <label class="flex gap-2 items-start"><input type="radio" name="q3" value="B">B. เพิ่มเป็น 2 เท่า</label>
+            <label class="flex gap-2 items-start"><input type="radio" name="q3" value="C">C. เพิ่มเป็น 3 เท่า</label>
+            <label class="flex gap-2 items-start"><input type="radio" name="q3" value="D">D. เพิ่มเป็น 4 เท่า</label>
+          </div>
+          <div class="mt-2 text-xs text-slate-500 explain hidden">
+            เฉลยละเอียด: \(a_{c} \propto v^{2}\) ⇒ v เพิ่ม 2 เท่าทำให้ \(a_{c}\) เป็น 4 เท่า ⇒ D
+          </div>
+        </div>
+      </div>
+
+      <div class="flex gap-2 mt-3">
+        <button id="gradeBtn" class="px-3 py-1.5 rounded-xl bg-emerald-600 text-white">ตรวจคะแนน</button>
+        <div id="gradeOut" class="text-sm font-semibold"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ===== Canvas & refs =====
+    const cv = document.getElementById('cv');
+    const ctx = cv.getContext('2d');
+    const $ = id => document.getElementById(id);
+
+    const mInput=$('mInput'), rInput=$('rInput'), vInput=$('vInput'),
+          thetaInput=$('thetaInput'), dirSelect=$('dirSelect');
+    const playBtn=$('playBtn'),  cutBtn=$('cutBtn'),
+          resetBtn=$('resetBtn'), vecBtn=$('vecBtn');
+
+    const formulaBtn=$('formulaBtn'), formulaModal=$('formulaModal'), formulaClose=$('formulaClose');
+    const quizBtn=$('quizBtn'), quizModal=$('quizModal'), quizClose=$('quizClose');
+    const gradeBtn=$('gradeBtn');
+
+    const outV=$('outV'), outA=$('outA'), outF=$('outF'),
+          outW=$('outW'), outFreq=$('outFreq'), outT=$('outT');
+
+    const resultBlock = $('resultBlock');
+    const vecContainer = $('vecContainer');
+    const mobileAnchor = $('mobileControlsAnchor');
+
+    const resultOriginalParent = resultBlock.parentElement;
+    const vecOriginalParent = vecContainer.parentElement;
+    let movedUnderCanvas = false;
+
+    function resizeCanvas(){
+      const box = cv.parentElement.getBoundingClientRect();
+      const size = Math.min(box.width, box.height);
+      cv.width = size; cv.height = size;
+    }
+
+    // ย้ายปุ่ม + แผงผลลัพธ์ ไปใต้ canvas เฉพาะในมือถือ
+    function handleLayout(){
+      const isMobile = window.innerWidth < 768;
+      if(isMobile && !movedUnderCanvas){
+        mobileAnchor.appendChild(vecContainer);
+        mobileAnchor.appendChild(resultBlock);
+        movedUnderCanvas = true;
+      } else if(!isMobile && movedUnderCanvas){
+        vecOriginalParent.appendChild(vecContainer);
+        resultOriginalParent.appendChild(resultBlock);
+        movedUnderCanvas = false;
+      }
+    }
+
+    resizeCanvas();
+    handleLayout();
+    window.addEventListener('resize', ()=>{
+      resizeCanvas(); draw(); updateReadouts(); handleLayout();
+    });
+
+    // ===== Simulation state =====
+    let running=false, ropeCut=false, tPrev=0, showVectors=false;
+    let trace=[];
+    let m=parseFloat(mInput.value), r=parseFloat(rInput.value), v=parseFloat(vInput.value);
+    let theta0=parseFloat(thetaInput.value)*Math.PI/180, dir=+1;
+    let theta=theta0;
+    let pos={x:0,y:0}, vel={x:0,y:0};
+
+    function center(){ return {x:cv.width/2, y:cv.height/2}; }
+    function ppm(){ return (Math.min(cv.width,cv.height)-80)/(2*r+0.5); }
+
+    function resetState(){
+      m=parseFloat(mInput.value);
+      r=Math.max(0.1, parseFloat(rInput.value));
+      v=Math.max(0, parseFloat(vInput.value));
+      theta0=parseFloat(thetaInput.value)*Math.PI/180;
+      dir=(dirSelect.value==='ccw')?+1:-1;
+      theta=theta0; ropeCut=false; trace=[];
+      const C=center();
+      pos.x=C.x + Math.cos(theta)*r*ppm();
+      pos.y=C.y - Math.sin(theta)*r*ppm();
+      const tan={x:-Math.sin(theta)*dir, y:Math.cos(theta)*dir};
+      vel.x=tan.x*v*ppm();
+      vel.y=-tan.y*v*ppm();
+      updateReadouts();
+    }
+    resetState();
+
+    // ===== UI handlers =====
+    playBtn.onclick=()=>{
+      running=!running;
+      playBtn.textContent = running ? '⏸️ หยุด':'▶️ เล่น';
+      if(running){ tPrev=performance.now(); requestAnimationFrame(frame); }
+    };
+    cutBtn.onclick=()=>{ ropeCut=true; trace=[{x:pos.x,y:pos.y}]; updateReadouts(); };
+    resetBtn.onclick=()=>{ running=false; playBtn.textContent='▶️ เล่น'; resetState(); draw(); };
+    vecBtn.onclick=()=>{ showVectors=!showVectors; vecBtn.textContent = showVectors?'👁️ ซ่อนเวกเตอร์':'📐 แสดงเวกเตอร์'; draw(); };
+
+    [mInput,rInput,vInput,thetaInput,dirSelect].forEach(el=>{
+      el.oninput=()=>{ if(!running){ resetState(); draw(); } }
+    });
+
+    formulaBtn.onclick=()=>{
+      formulaModal.classList.remove('hidden'); formulaModal.classList.add('flex');
+      if(window.MathJax) MathJax.typesetPromise([formulaModal]);
+    };
+    formulaClose.onclick=()=>{
+      formulaModal.classList.add('hidden'); formulaModal.classList.remove('flex');
+    };
+
+    quizBtn.onclick=()=>{ quizModal.classList.remove('hidden'); quizModal.classList.add('flex'); };
+    quizClose.onclick=()=>{ quizModal.classList.add('hidden'); quizModal.classList.remove('flex'); $('gradeOut').textContent=''; };
+
+    gradeBtn.onclick=()=>{
+      const ans={q1:'C',q2:'C',q3:'D'}; let score=0,total=3;
+      Object.keys(ans).forEach(q=>{
+        const v=[...document.getElementsByName(q)].find(x=>x.checked)?.value;
+        if(v===ans[q]) score++;
+      });
+      $('gradeOut').textContent=`คะแนน ${score}/${total}`;
+      document.querySelectorAll('#quizWrap .explain').forEach(el=>el.classList.remove('hidden'));
+      if(window.MathJax) MathJax.typesetPromise([quizModal]);
+    };
+
+    // ===== Physics & drawing =====
+    function update(dt){
+      const C=center();
+      if(!ropeCut){
+        const omega=(r>0)?(v/r):0;
+        theta+=dir*omega*dt;
+        pos.x=C.x + Math.cos(theta)*r*ppm();
+        pos.y=C.y - Math.sin(theta)*r*ppm();
+        const tan={x:-Math.sin(theta)*dir, y:Math.cos(theta)*dir};
+        vel.x=tan.x*v*ppm();
+        vel.y=-tan.y*v*ppm();
+      } else {
+        pos.x+=vel.x*dt; pos.y+=vel.y*dt;
+        if(trace.length===0 || Math.hypot(pos.x-trace[trace.length-1].x,pos.y-trace[trace.length-1].y)>1){
+          trace.push({x:pos.x,y:pos.y}); if(trace.length>1500) trace.shift();
+        }
+      }
+    }
+
+    function drawArrow(x1,y1,x2,y2,color){
+      ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+      const ang=Math.atan2(y2-y1,x2-x1); const ah=8;
+      ctx.beginPath();
+      ctx.moveTo(x2,y2);
+      ctx.lineTo(x2-ah*Math.cos(ang-Math.PI/6), y2-ah*Math.sin(ang-Math.PI/6));
+      ctx.lineTo(x2-ah*Math.cos(ang+Math.PI/6), y2-ah*Math.sin(ang+Math.PI/6));
+      ctx.closePath(); ctx.fill();
+    }
+
+    function labelAt(text,x,y,color){
+      ctx.save();
+      ctx.font='12px system-ui, -apple-system, "Noto Sans Thai", sans-serif';
+      ctx.fillStyle=color;
+      ctx.strokeStyle='white';
+      ctx.lineWidth=3;
+      ctx.strokeText(text,x,y);
+      ctx.fillText(text,x,y);
+      ctx.restore();
+    }
+
+    function draw(){
+      const C=center();
+      ctx.clearRect(0,0,cv.width,cv.height);
+
+      // วงกลมวิถี – สีจาง + เส้นปะ
+      ctx.strokeStyle='#cbd5e1';
+      ctx.lineWidth=1.5;
+      ctx.setLineDash([6,4]);
+      ctx.beginPath();
+      ctx.arc(C.x,C.y,r*ppm(),0,2*Math.PI);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.fillStyle='#0f172a';
+      ctx.beginPath(); ctx.arc(C.x,C.y,4,0,2*Math.PI); ctx.fill();
+
+      if(!ropeCut){
+        ctx.strokeStyle='#111827'; ctx.lineWidth=2;
+        ctx.beginPath(); ctx.moveTo(C.x,C.y); ctx.lineTo(pos.x,pos.y); ctx.stroke();
+      }
+
+      if(ropeCut && trace.length>1){
+        ctx.strokeStyle='#10b981'; ctx.lineWidth=1.5; ctx.setLineDash([6,6]);
+        ctx.beginPath(); ctx.moveTo(trace[0].x,trace[0].y);
+        for(let i=1;i<trace.length;i++){ ctx.lineTo(trace[i].x,trace[i].y); }
+        ctx.stroke(); ctx.setLineDash([]);
+      }
+
+      ctx.fillStyle='#1d4ed8';
+      ctx.beginPath(); ctx.arc(pos.x,pos.y,10,0,2*Math.PI); ctx.fill();
+
+      if(showVectors){
+        // v
+        const vdir=Math.atan2(vel.y,vel.x);
+        const vx=Math.cos(vdir)*48, vy=Math.sin(vdir)*48;
+        const vEndX = pos.x+vx, vEndY = pos.y+vy;
+        drawArrow(pos.x,pos.y,vEndX,vEndY,'#059669');
+        labelAt('v', vEndX+4, vEndY-4, '#059669');
+
+        if(!ropeCut){
+          const toC=Math.atan2(C.y-pos.y,C.x-pos.x);
+
+          // a_c
+          const ax=Math.cos(toC)*36, ay=Math.sin(toC)*36;
+          const aEndX = pos.x+ax, aEndY = pos.y+ay;
+          drawArrow(pos.x,pos.y,aEndX,aEndY,'#e11d48');
+          labelAt('a_c', aEndX+4, aEndY-4, '#e11d48');
+
+          // F_c
+          const fx=Math.cos(toC)*58, fy=Math.sin(toC)*58;
+          const fEndX = pos.x+fx, fEndY = pos.y+fy;
+          drawArrow(pos.x,pos.y,fEndX,fEndY,'#4338ca');
+          labelAt('F_c', fEndX+4, fEndY-4, '#4338ca');
+        }
+      }
+    }
+
+    function updateReadouts(){
+      const omega=(!ropeCut && r>0)?(v/r):0;
+      const ac=(!ropeCut && r>0)?(v*v/r):0;
+      const Fc=(!ropeCut)?m*ac:0;
+      const f =(!ropeCut && omega>0)?(omega/(2*Math.PI)):0;
+      const T =(!ropeCut && omega>0)?(2*Math.PI/omega):0;
+      outV.textContent=v.toFixed(1);
+      outA.textContent=!ropeCut?ac.toFixed(1):'—';
+      outF.textContent=!ropeCut?Fc.toFixed(1):'—';
+      outW.textContent=!ropeCut?omega.toFixed(1):'—';
+      outFreq.textContent=!ropeCut?f.toFixed(1):'—';
+      outT.textContent=!ropeCut?T.toFixed(1):'—';
+    }
+
+    function frame(now){
+      if(!running) return;
+      const dt=Math.min(0.05,(now-tPrev)/1000); tPrev=now;
+      update(dt); draw(); updateReadouts();
+      requestAnimationFrame(frame);
+    }
+
+    draw(); updateReadouts();
+    if(window.MathJax) MathJax.typesetPromise();
+  </script>
+</body>
+</html>

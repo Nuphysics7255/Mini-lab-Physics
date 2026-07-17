@@ -1,0 +1,657 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>วงโคจรดาวเทียม — Three.js + ฟิสิกส์ (milestone_vBest+exercises)</title>
+  <style>
+    :root{ --bg:#020617; --ink:#e2e8f0; --muted:#94a3b8 }
+    body{margin:0;overflow:hidden;background:var(--bg);font-family:Inter,system-ui,sans-serif}
+    #stage{position:fixed;inset:0}
+
+    .ui{position:fixed;left:12px;top:12px;z-index:20;display:flex;flex-direction:column;gap:8px;max-width:300px;pointer-events:auto}
+    .bar{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+    .card{backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);background:rgba(11,18,32,.35);color:var(--ink);border:1px solid rgba(23,32,54,.4);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.25);padding:10px}
+    .pill{background:rgba(15,23,42,.35);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid rgba(31,42,68,.5);color:#e2e8f0;border-radius:999px;padding:6px 10px;font-size:12px;cursor:pointer}
+    .pill.danger{background:rgba(248,113,113,.2);border-color:rgba(248,113,113,.8);color:#fee2e2}
+    .row{display:grid;grid-template-columns:1fr;gap:6px;margin:6px 0}
+    .row label{font-size:12px;color:var(--muted)}
+    .row input{appearance:none;width:100%;max-width:260px;background:rgba(15,23,42,.4);border:1px solid rgba(31,42,68,.5);border-radius:10px;padding:8px 10px;color:var(--ink)}
+    .stats{display:grid;grid-template-columns:repeat(2,auto);gap:6px;font-family:ui-monospace, Menlo, monospace;font-size:12px}
+    .stat{background:rgba(15,23,42,.35);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid rgba(31,42,68,.5);border-radius:10px;padding:4px 8px;white-space:nowrap}
+
+    .legend{position:fixed;right:12px;top:12px;z-index:10;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+    .legend .pill span{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:middle}
+
+    /* overlays */
+    .overlay{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;background:rgba(2,6,23,.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+    .sheet{max-width:920px;width:min(94vw,920px);max-height:min(86vh,900px);overflow:auto;border-radius:16px;border:1px solid rgba(31,42,68,.45);box-shadow:0 24px 60px rgba(0,0,0,.45);background:linear-gradient(180deg, rgba(219,234,254,.95), rgba(254,249,195,.95));color:#0f172a;padding:18px 20px 16px 20px}
+    .sheet h2{margin:6px 0 10px 0;font-size:18px}
+    .sheet .close{color:#0f172a;border-color:rgba(0,0,0,.15);background:rgba(255,255,255,.6)}
+
+    /* exercises */
+    .mcq{background:rgba(255,255,255,.6);border:1px solid rgba(0,0,0,.08);border-radius:12px;padding:12px;margin:10px 0}
+    .mcq h3{margin:0 0 8px 0;font-size:15px}
+    .choices{display:grid;gap:6px;margin:6px 0}
+    .result{margin-top:10px;font-weight:600}
+    .ex-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+    .pill.alt{background:rgba(255,255,255,.6);color:#0f172a;border-color:rgba(0,0,0,.15)}
+
+    /* ย้าย legend มุมซ้ายล่างเฉพาะโทรศัพท์ */
+    @media (max-width: 640px){
+      .legend{
+        right:auto;
+        top:auto;
+        left:12px;
+        bottom:70px;   /* เหลือที่ให้ปุ่มแสดงแผงด้านล่าง */
+        transform:scale(0.9);
+      }
+    }
+  </style>
+
+  <!-- MathJax for equations -->
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['$','$'], ['\\(','\\)']], displayMath: [['$$','$$'], ['\\[','\\]']] },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+  <!-- three.js import map -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="stage"></div>
+
+  <div class="ui">
+    <div class="card">
+      <div class="bar">
+        <button id="btnFormulas" class="pill" title="สูตรสำคัญ">สูตรสำคัญ</button>
+        <button id="btnExercises" class="pill" title="แบบฝึกหัด">แบบฝึกหัด</button>
+        <button id="btnPlay" class="pill">เล่น/หยุด</button>
+        <button id="toggleVec" class="pill">เวกเตอร์</button>
+        <button id="btnMin" class="pill danger">ซ่อน</button>
+      </div>
+      <div id="panelBody">
+        <div class="row">
+          <label>ระยะจากผิวโลก (m)</label>
+          <input id="altitude" type="number" step="1000" value="4.00e5">
+        </div>
+        <div class="row">
+          <label>มวลดาวเทียม (kg)</label>
+          <input id="massSat" type="number" step="10" value="1000">
+        </div>
+        <div class="stats">
+          <div class="stat" id="lblR">r=— m</div>
+          <div class="stat" id="lblV">v=— m/s</div>
+          <div class="stat" id="lblG">g=— m/s²</div>
+          <div class="stat" id="lblF">F=— N</div>
+          <div class="stat" id="lblT">T=— s</div>
+          <div class="stat">Mₑ=5.972e24 kg</div>
+          <div class="stat">Rₑ=6.371e6 m</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <div class="pill">
+      <span style="background:#22c55e"></span>V &nbsp;
+      <span style="background:#ef4444"></span>F
+    </div>
+  </div>
+
+  <!-- overlay: สูตรสำคัญ -->
+  <div id="formulaOverlay" class="overlay">
+    <div class="sheet">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;position:sticky;top:0;background:transparent;">
+        <h2>📘 สูตรสำคัญสำหรับวงโคจรดาวเทียม</h2>
+        <button id="btnCloseFormula" class="pill close">ปิด</button>
+      </div>
+      <div id="formulaContent" style="font-size:14px;line-height:1.55">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+          <div class="mcq">
+            <b>สนามโน้มถ่วง</b>
+            <div>$$ g(r) = \frac{GM}{r^2} $$</div>
+          </div>
+          <div class="mcq">
+            <b>แรงโน้มถ่วง</b>
+            <div>$$ F = \frac{GMm}{r^2} = mg $$</div>
+          </div>
+          <div class="mcq">
+            <b>อัตราเร็วเชิงวงโคจร (วงกลม)</b>
+            <div>$$ v = \sqrt{\tfrac{GM}{r}} $$</div>
+          </div>
+          <div class="mcq">
+            <b>คาบการโคจร</b>
+            <div>$$ T = 2\pi \sqrt{\tfrac{r^3}{GM}} $$</div>
+            <small>$$T^2 \propto r^3$$</small>
+          </div>
+          <div class="mcq">
+            <b>พลังงานวงโคจร (รวม)</b>
+            <div>$$ E = -\frac{GMm}{2r} $$</div>
+            <small>$K=\tfrac{1}{2}mv^2=\tfrac{GMm}{2r}$, $U=-\tfrac{GMm}{r}$</small>
+          </div>
+          <div class="mcq">
+            <b>ความเร็วหลุดพ้น</b>
+            <div>$$ v_{esc} = \sqrt{\tfrac{2GM}{r}} $$</div>
+          </div>
+        </div>
+        <div class="mcq" style="margin-top:12px">
+          <b>รัศมีวงโคจร</b>
+          <div>$$ r = R_{\text{โลก}} + h $$</div>
+          <small>$R_{\text{โลก}}=6.371\times10^6\,\text{m}$, $h$ คือระยะจากผิวโลก</small>
+        </div>
+        <div style="margin-top:12px;background:rgba(219,234,254,.85);border:1px solid rgba(0,0,0,.08);border-radius:12px;padding:10px 12px">
+          <b>ค่าคงที่ที่ใช้ (สากล)</b>:
+          $G=6.67430\times10^{-11}\,\text{m}^3\,\text{kg}^{-1}\,\text{s}^{-2}$,
+          $M_{\text{โลก}}=5.972\times10^{24}\,\text{kg}$,
+          $R_{\text{โลก}}=6.371\times10^{6}\,\text{m}$
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- overlay: แบบฝึกหัด -->
+  <div id="exerciseOverlay" class="overlay">
+    <div class="sheet">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;position:sticky;top:0;background:transparent;">
+        <h2>📝 แบบฝึกหัด — วงโคจรดาวเทียม</h2>
+        <button id="btnCloseExercises" class="pill close">ปิด</button>
+      </div>
+      <div id="exerciseContent" style="font-size:14px;line-height:1.6">
+
+        <div class="mcq" data-qid="q1">
+          <h3>ข้อ 1: นิยามรัศมีวงโคจร $r$ ที่ถูกต้องคือข้อใด?</h3>
+          <div class="choices">
+            <label><input type="radio" name="q1" value="A"> $r=h$</label>
+            <label><input type="radio" name="q1" value="B"> $r=R_{\text{โลก}}-h$</label>
+            <label><input type="radio" name="q1" value="C"> $r=R_{\text{โลก}}+h$</label>
+            <label><input type="radio" name="q1" value="D"> $r=\sqrt{R_{\text{โลก}}^2+h^2}$</label>
+          </div>
+          <div class="ex-actions">
+            <button class="pill alt" data-check>ตรวจคำตอบ</button>
+            <span class="result"></span>
+          </div>
+          <div class="solution" style="display:none;margin-top:8px">
+            เฉลย: ใช้คำจำกัดความ $$r=R_{\text{โลก}}+h$$
+            เพราะ $r$ วัดจาก <i>ศูนย์กลางโลก</i> ไม่ใช่จากผิวโลก
+          </div>
+        </div>
+
+        <div class="mcq" data-qid="q2">
+          <h3>ข้อ 2: สำหรับวงโคจร <u>กลม</u> ความสัมพันธ์ความเร็วเชิงวงโคจรคือข้อใด?</h3>
+          <div class="choices">
+            <label><input type="radio" name="q2" value="A"> $v=\sqrt{\tfrac{GM}{r}}$</label>
+            <label><input type="radio" name="q2" value="B"> $v=\sqrt{\tfrac{2GM}{r}}$</label>
+            <label><input type="radio" name="q2" value="C"> $v=\sqrt{\tfrac{GM}{r^2}}$</label>
+            <label><input type="radio" name="q2" value="D"> $v=\tfrac{GM}{r}$</label>
+          </div>
+          <div class="ex-actions">
+            <button class="pill alt" data-check>ตรวจคำตอบ</button>
+            <span class="result"></span>
+          </div>
+          <div class="solution" style="display:none;margin-top:8px">
+            เฉลย: สมดุลแรงศูนย์กลางกับแรงโน้มถ่วง:
+            $$\frac{mv^2}{r}=\frac{GMm}{r^2}\;\Rightarrow\; v=\sqrt{\frac{GM}{r}}$$
+          </div>
+        </div>
+
+        <div class="mcq" data-qid="q3">
+          <h3>ข้อ 3: ถ้าเพิ่ม $r$ เป็น $2r$ คาบ $T$ จะเปลี่ยนอย่างไร?</h3>
+          <div class="choices">
+            <label><input type="radio" name="q3" value="A"> เพิ่มเป็น $2T$</label>
+            <label><input type="radio" name="q3" value="B"> เพิ่มเป็น $\sqrt{2}\,T$</label>
+            <label><input type="radio" name="q3" value="C"> เพิ่มเป็น $2\sqrt{2}\,T$</label>
+            <label><input type="radio" name="q3" value="D"> เพิ่มเป็น $2^{3/2}T$</label>
+          </div>
+          <div class="ex-actions">
+            <button class="pill alt" data-check>ตรวจคำตอบ</button>
+            <span class="result"></span>
+          </div>
+          <div class="solution" style="display:none;margin-top:8px">
+            เฉลย:
+            $$T\propto r^{3/2} \Rightarrow \dfrac{T'}{T}
+            = \left(\dfrac{2r}{r}\right)^{3/2}
+            = 2^{3/2} \Rightarrow T' = 2^{3/2}T$$
+          </div>
+        </div>
+
+        <div class="mcq" data-qid="q4">
+          <h3>ข้อ 4: ที่รัศมีเดียวกัน ความสัมพันธ์ระหว่าง $v_{esc}$ กับ $v$ (วงกลม) คือข้อใด?</h3>
+          <div class="choices">
+            <label><input type="radio" name="q4" value="A"> $v_{esc}=v$</label>
+            <label><input type="radio" name="q4" value="B"> $v_{esc}=\sqrt{2}\,v$</label>
+            <label><input type="radio" name="q4" value="C"> $v_{esc}=2v$</label>
+            <label><input type="radio" name="q4" value="D"> $v_{esc}=\tfrac{v}{\sqrt{2}}$</label>
+          </div>
+          <div class="ex-actions">
+            <button class="pill alt" data-check>ตรวจคำตอบ</button>
+            <span class="result"></span>
+          </div>
+          <div class="solution" style="display:none;margin-top:8px">
+            เฉลย:
+            $$v_{esc}=\sqrt{\tfrac{2GM}{r}}
+            =\sqrt{2}\,\sqrt{\tfrac{GM}{r}}
+            =\sqrt{2}\,v$$
+          </div>
+        </div>
+
+        <div class="ex-actions">
+          <button id="btnCheckAll" class="pill">ตรวจทั้งหมด</button>
+          <button id="btnResetAll" class="pill alt">เริ่มใหม่</button>
+          <span id="totalScore" class="result"></span>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- three.js app -->
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    const renderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
+    renderer.setSize(innerWidth, innerHeight);
+    document.getElementById('stage').appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 2000);
+    camera.position.set(8,5,12);
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+
+    scene.add(new THREE.AmbientLight(0xffffff,0.25));
+    const sun = new THREE.DirectionalLight(0xffffff,1.5);
+    sun.position.set(20,10,10);
+    scene.add(sun);
+
+    const starGeo = new THREE.BufferGeometry();
+    const starCount = 1500;
+    const starPos = new Float32Array(starCount*3);
+    for(let i=0;i<starCount;i++){
+      const r = 220 + Math.random()*380;
+      const th = Math.acos(2*Math.random()-1);
+      const ph = Math.random()*Math.PI*2;
+      starPos[i*3]   = r*Math.sin(th)*Math.cos(ph);
+      starPos[i*3+1] = r*Math.cos(th);
+      starPos[i*3+2] = r*Math.sin(th)*Math.sin(ph);
+    }
+    starGeo.setAttribute('position',new THREE.BufferAttribute(starPos,3));
+    scene.add(new THREE.Points(starGeo,new THREE.PointsMaterial({size:1,color:0xffffff})));
+
+    const earthTex = new THREE.TextureLoader().load('https://threejs.org/examples/textures/land_ocean_ice_cloud_2048.jpg');
+    const Rscene = 2;
+    const earth = new THREE.Mesh(
+      new THREE.SphereGeometry(Rscene,64,32),
+      new THREE.MeshPhongMaterial({map:earthTex})
+    );
+    scene.add(earth);
+
+    const sat = new THREE.Group();
+    sat.scale.set(0.5,0.5,0.5);
+    const body = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.4,0.4,1.2,32),
+      new THREE.MeshStandardMaterial({color:0xaaaaaa,metalness:0.8,roughness:0.3})
+    );
+    const head = new THREE.Mesh(
+      new THREE.ConeGeometry(0.4,0.6,32),
+      new THREE.MeshStandardMaterial({color:0xdddddd,metalness:0.9,roughness:0.2})
+    );
+    head.position.y = 0.9;
+    const gridTex = new THREE.TextureLoader().load('https://threejs.org/examples/textures/checker.png');
+    gridTex.wrapS = gridTex.wrapT = THREE.RepeatWrapping;
+    gridTex.repeat.set(6,2);
+    const panelMat = new THREE.MeshStandardMaterial({
+      map:gridTex,color:0x224466,metalness:1,roughness:0.2,
+      emissive:0x112244,emissiveIntensity:0.35
+    });
+    const panelL = new THREE.Mesh(new THREE.BoxGeometry(2,0.05,0.6), panelMat.clone());
+    panelL.position.set(-1.2,0,0);
+    const panelR = new THREE.Mesh(new THREE.BoxGeometry(2,0.05,0.6), panelMat.clone());
+    panelR.position.set(1.2,0,0);
+    sat.add(body,head,panelL,panelR);
+    scene.add(sat);
+
+    const satLight = new THREE.PointLight(0x00ffff, 1, 5);
+    satLight.position.set(0,1,0);
+    sat.add(satLight);
+
+    const satLightOrange = new THREE.PointLight(0xff8800, 1, 5);
+    satLightOrange.position.set(0,-1,0);
+    sat.add(satLightOrange);
+
+    const bulb = new THREE.Mesh(
+      new THREE.SphereGeometry(0.1,16,16),
+      new THREE.MeshBasicMaterial({color:0xff8800})
+    );
+    bulb.position.copy(satLightOrange.position);
+    sat.add(bulb);
+
+    const G  = 6.67430e-11;
+    const M  = 5.972e24;
+    const Re = 6.371e6;
+
+    const elH  = document.getElementById('altitude');
+    const elm  = document.getElementById('massSat');
+    const lblR = document.getElementById('lblR');
+    const lblG = document.getElementById('lblG');
+    const lblF = document.getElementById('lblF');
+    const lblV = document.getElementById('lblV');
+    const lblT = document.getElementById('lblT');
+
+    const btnPlay = document.getElementById('btnPlay');
+    const btnVec  = document.getElementById('toggleVec');
+    const btnMin  = document.getElementById('btnMin');
+    const panelBody = document.getElementById('panelBody');
+
+    function fmt(x,u){
+      if(!isFinite(x)) return '—';
+      const a = Math.abs(x);
+      const s = (a>=1e9||a<1e-3)
+        ? x.toExponential(3)
+        : x.toLocaleString(undefined,{maximumFractionDigits:3});
+      return u ? `${s} ${u}` : s;
+    }
+
+    let omega = 0;
+    let orbitRadiusScene = 6;
+
+    function recalc(){
+      const h = parseFloat(elH.value)||0;
+      const m = parseFloat(elm.value)||0;
+      const r_m = Re + h;
+      const mu = G*M;
+      const g = mu/(r_m*r_m);
+      const F = g*m;
+      const v = Math.sqrt(mu/r_m);
+      const T = 2*Math.PI*Math.sqrt((r_m**3)/mu);
+      omega = Math.sqrt(mu/(r_m**3));
+
+      lblR.textContent = `r=${fmt(r_m,'m')}`;
+      lblG.textContent = `g=${fmt(g,'m/s²')}`;
+      lblF.textContent = `F=${fmt(F,'N')}`;
+      lblV.textContent = `v=${fmt(v,'m/s')}`;
+      lblT.textContent = `T=${fmt(T,'s')}`;
+
+      orbitRadiusScene = 4 + h/2e5;
+      updateOrbit3D();
+    }
+
+    ['change','input'].forEach(ev=>{
+      [elH,elm].forEach(el=>el.addEventListener(ev,recalc));
+    });
+
+    let orbitLine;
+    function updateOrbit3D(){
+      if(orbitLine) scene.remove(orbitLine);
+      const pts=[];
+      const N=128;
+      for(let i=0;i<=N;i++){
+        const a=i/N*Math.PI*2;
+        pts.push(new THREE.Vector3(
+          orbitRadiusScene*Math.cos(a),
+          0,
+          orbitRadiusScene*Math.sin(a)
+        ));
+      }
+      const geo=new THREE.BufferGeometry().setFromPoints(pts);
+      const mat=new THREE.LineDashedMaterial({
+        color:0x93c5fd,transparent:true,opacity:0.25,
+        dashSize:0.2,gapSize:0.1
+      });
+      orbitLine=new THREE.LineLoop(geo,mat);
+      orbitLine.computeLineDistances();
+      scene.add(orbitLine);
+    }
+
+    const clock=new THREE.Clock();
+    let theta=0;
+    let running=true;
+    const timeScale=1200*0.7;
+
+    btnPlay.addEventListener('click',()=>{ running=!running; });
+
+    let panelHidden=false;
+    btnMin.addEventListener('click',()=>{
+      panelHidden = !panelHidden;
+      panelBody.style.display = panelHidden ? 'none' : 'block';
+      btnMin.textContent = panelHidden ? 'แสดง' : 'ซ่อน';
+    });
+
+    let showVec=false;
+    let arrowV=null, arrowF=null;
+    let labelV=null, labelF=null;
+
+    btnVec.addEventListener('click',()=>{
+      showVec = !showVec;
+      if(!showVec){
+        if(arrowV){ scene.remove(arrowV); arrowV=null; }
+        if(arrowF){ scene.remove(arrowF); arrowF=null; }
+        if(labelV){ scene.remove(labelV); labelV=null; }
+        if(labelF){ scene.remove(labelF); labelF=null; }
+      }else{
+        updateVectors();
+      }
+    });
+
+    function makeLabelSprite(text,color){
+      const cvs=document.createElement('canvas');
+      const s=128;
+      cvs.width=cvs.height=s;
+      const ctx=cvs.getContext('2d');
+      ctx.font='bold 96px Inter,system-ui,sans-serif';
+      ctx.textAlign='center';
+      ctx.textBaseline='middle';
+      ctx.strokeStyle='rgba(0,0,0,.6)';
+      ctx.lineWidth=10;
+      ctx.strokeText(text,s/2,s/2+6);
+      ctx.fillStyle=color;
+      ctx.fillText(text,s/2,s/2+6);
+      const tex=new THREE.CanvasTexture(cvs);
+      const mat=new THREE.SpriteMaterial({map:tex,transparent:true});
+      const spr=new THREE.Sprite(mat);
+      spr.scale.set(0.7,0.7,0.7);
+      return spr;
+    }
+
+    function updateVectors(){
+      if(!showVec) return;
+      const pos = sat.position.clone();
+      const vDir = new THREE.Vector3(-Math.sin(theta), 0, Math.cos(theta)).normalize();
+      const fDir = pos.clone().multiplyScalar(-1).normalize();
+      const vLen = Math.min(orbitRadiusScene*0.5, 2.0);
+      const fLen = Math.min(orbitRadiusScene*0.5, 2.0);
+
+      if(!arrowV){
+        arrowV=new THREE.ArrowHelper(vDir, pos, vLen, 0x22c55e, 0.35, 0.2);
+        scene.add(arrowV);
+      }else{
+        arrowV.setDirection(vDir);
+        arrowV.setLength(vLen,0.35,0.2);
+        arrowV.position.copy(pos);
+      }
+
+      if(!arrowF){
+        arrowF=new THREE.ArrowHelper(fDir, pos, fLen, 0xef4444, 0.35, 0.2);
+        scene.add(arrowF);
+      }else{
+        arrowF.setDirection(fDir);
+        arrowF.setLength(fLen,0.35,0.2);
+        arrowF.position.copy(pos);
+      }
+
+      const vHead = pos.clone().add(vDir.clone().multiplyScalar(vLen));
+      const fHead = pos.clone().add(fDir.clone().multiplyScalar(fLen));
+
+      if(!labelV){
+        labelV = makeLabelSprite('V','#86efac');
+        scene.add(labelV);
+      }
+      if(!labelF){
+        labelF = makeLabelSprite('F','#fca5a5');
+        scene.add(labelF);
+      }
+      labelV.position.copy(vHead);
+      labelF.position.copy(fHead);
+    }
+
+    function updatePanelGlints(){
+      const sdir = sun.position.clone().normalize();
+      const nL = new THREE.Vector3(-1,0,0).applyQuaternion(sat.quaternion);
+      const nR = new THREE.Vector3( 1,0,0).applyQuaternion(sat.quaternion);
+      const glL = Math.max(0, nL.dot(sdir));
+      const glR = Math.max(0, nR.dot(sdir));
+      panelL.material.emissiveIntensity = 0.25 + glL*0.9;
+      panelR.material.emissiveIntensity = 0.25 + glR*0.9;
+      const sparkle = 0.1*Math.max(glL,glR)*Math.abs(Math.sin(clock.elapsedTime*6.0));
+      panelL.material.roughness = 0.2 - sparkle*0.15;
+      panelR.material.roughness = 0.2 - sparkle*0.15;
+    }
+
+    function animate(){
+      requestAnimationFrame(animate);
+      const dt=clock.getDelta();
+      if(running){ theta+=omega*timeScale*dt; }
+      sat.position.set(
+        orbitRadiusScene*Math.cos(theta),
+        0,
+        orbitRadiusScene*Math.sin(theta)
+      );
+      sat.lookAt(0,0,0);
+      earth.rotation.y+=0.002;
+
+      const blinkSpeed=2.0;
+      const blink=Math.sin(clock.elapsedTime*Math.PI*blinkSpeed);
+      satLightOrange.intensity = blink>0 ? 1.2 : 0.05;
+      bulb.material.color.set(blink>0 ? 0xffaa33 : 0x552200);
+
+      updatePanelGlints();
+      updateVectors();
+      controls.update();
+      renderer.render(scene,camera);
+    }
+
+    recalc();
+    animate();
+
+    addEventListener('resize',()=>{
+      camera.aspect=innerWidth/innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth,innerHeight);
+    });
+  </script>
+
+  <!-- overlay toggles & exercises logic -->
+  <script>
+    const btnFormulas=document.getElementById('btnFormulas');
+    const formulaOv=document.getElementById('formulaOverlay');
+    const btnCloseFormula=document.getElementById('btnCloseFormula');
+
+    btnFormulas.addEventListener('click',()=>{
+      formulaOv.style.display='flex';
+      if(window.MathJax?.typesetPromise){
+        MathJax.typesetPromise([document.getElementById('formulaContent')]);
+      }
+    });
+    btnCloseFormula.addEventListener('click',()=> formulaOv.style.display='none');
+    formulaOv.addEventListener('click',e=>{
+      if(e.target===formulaOv) formulaOv.style.display='none';
+    });
+
+    const btnExercises=document.getElementById('btnExercises');
+    const exOv=document.getElementById('exerciseOverlay');
+    const btnCloseExercises=document.getElementById('btnCloseExercises');
+
+    btnExercises.addEventListener('click',()=>{
+      exOv.style.display='flex';
+      if(window.MathJax?.typesetPromise){
+        MathJax.typesetPromise([document.getElementById('exerciseContent')]);
+      }
+    });
+    btnCloseExercises.addEventListener('click',()=> exOv.style.display='none');
+    exOv.addEventListener('click',e=>{
+      if(e.target===exOv) exOv.style.display='none';
+    });
+
+    const answers={ q1:'C', q2:'A', q3:'D', q4:'B' };
+
+    function checkOne(box){
+      const qid=box.getAttribute('data-qid');
+      const picked = (box.querySelector('input[type=radio]:checked')||{}).value;
+      const correct = answers[qid];
+      const result = box.querySelector('.result');
+      const sol = box.querySelector('.solution');
+      if(!picked){
+        result.textContent='เลือกคำตอบก่อนนะ';
+        result.style.color='#b91c1c';
+        return 0;
+      }
+      const ok = picked===correct;
+      result.textContent = ok ? 'ถูกต้อง ✅' : `ไม่ถูก ❌ (เฉลย: ${correct})`;
+      result.style.color = ok? '#14532d' : '#7f1d1d';
+      sol.style.display='block';
+      return ok?1:0;
+    }
+
+    document.querySelectorAll('.mcq [data-check]').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        const box = btn.closest('.mcq');
+        checkOne(box);
+        if(window.MathJax?.typesetPromise){
+          MathJax.typesetPromise([box]);
+        }
+      });
+    });
+
+    document.getElementById('btnCheckAll').addEventListener('click',()=>{
+      let score=0, total=0;
+      document.querySelectorAll('#exerciseContent .mcq').forEach(box=>{
+        score+=checkOne(box);
+        total++;
+      });
+      const out=document.getElementById('totalScore');
+      out.textContent=`คะแนนรวม: ${score}/${total}`;
+      out.style.color = score===total? '#14532d' : '#1f2937';
+      if(window.MathJax?.typesetPromise){
+        MathJax.typesetPromise([document.getElementById('exerciseContent')]);
+      }
+    });
+
+    document.getElementById('btnResetAll').addEventListener('click',()=>{
+      document.querySelectorAll('#exerciseContent input[type=radio]').forEach(i=>i.checked=false);
+      document.querySelectorAll('#exerciseContent .result').forEach(r=>{
+        r.textContent='';
+        r.removeAttribute('style');
+      });
+      document.querySelectorAll('#exerciseContent .solution').forEach(s=> s.style.display='none');
+      document.getElementById('totalScore').textContent='';
+    });
+  </script>
+
+  <button
+    id="btnShowPanel"
+    class="pill"
+    style="position:fixed;left:12px;bottom:12px;z-index:22;display:none"
+    onclick="document.querySelector('.ui').style.display='flex'; this.style.display='none'">
+    แสดงแผง
+  </button>
+
+  <a
+    class="pill"
+    style="position:fixed;right:12px;bottom:12px;z-index:10;text-decoration:none"
+    href="https://www.facebook.com/resolvephysics"
+    target="_blank">
+    ศึกษาเพิ่มเติมที่เพจคลายปมฟิสิกส์
+  </a>
+</body>
+</html>

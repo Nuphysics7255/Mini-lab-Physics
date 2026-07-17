@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>VerticalCircularMotionLab — วงกลมแนวดิ่ง → โพรเจกไทล์</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- MathJax v3 -->
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['\\(','\\)'], ['$', '$']],
+        displayMath: [['\\[','\\]']],
+        processEscapes: true
+      },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+
+  <style>
+    html,body{height:100%}
+    canvas{background:#fff; touch-action:none}
+    .modal{display:none}
+    .modal.show{display:flex}
+    .glass{backdrop-filter: blur(6px)}
+    .eq{margin:.25rem 0 .75rem 0}
+    .chip{display:inline-flex;align-items:center;gap:.4rem;padding:.2rem .55rem;border-radius:999px;
+          font-size:.75rem;background:#fff;border:1px solid #e2e8f0}
+  </style>
+</head>
+<body class="min-h-screen bg-slate-100 text-slate-900">
+  <!-- ✅ จอใหญ่: แผงควบคุมไปอยู่ขวาของจอทดลอง -->
+  <div class="max-w-6xl mx-auto p-3 md:p-4 grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-3 md:gap-4">
+    <!-- ✅ Control Panel – TOP (หัวข้อ + อินพุต + Freeze) -->
+    <!-- มือถือ: อยู่บนสุด / จอใหญ่: อยู่คอลัมน์ขวา -->
+    <section class="order-1 lg:order-2 bg-white rounded-2xl shadow p-3 md:p-4 space-y-3">
+      <!-- หัวข้อ (ย้ายปุ่ม 3 อันออกไปไว้ด้านล่างแล้ว) -->
+      <div class="flex items-center justify-between gap-2">
+        <h1 class="text-base md:text-lg font-semibold">วงกลมแนวดิ่ง</h1>
+      </div>
+
+      <div id="warnBox" class="hidden rounded-lg border border-amber-300 bg-amber-50 text-amber-900 px-3 py-2 text-xs md:text-sm">
+        ⚠️ <b>อาจหย่อนที่ยอดวง</b> — ต้อง \(v_0^2 \ge 5gr\)
+      </div>
+
+      <div class="grid grid-cols-2 gap-2 text-sm">
+        <label class="flex flex-col gap-1">m (kg)
+          <input id="mInput" type="number" step="0.1" min="0.1" value="1.0" class="rounded-md border border-slate-300 px-2 py-1">
+        </label>
+        <label class="flex flex-col gap-1">r (m)
+          <input id="rInput" type="number" step="0.05" min="0.1" value="1.0" class="rounded-md border border-slate-300 px-2 py-1">
+        </label>
+        <label class="flex flex-col gap-1">v₀ (m/s)
+          <input id="v0Input" type="number" step="0.1" min="0" value="8.0" class="rounded-md border border-slate-300 px-2 py-1">
+        </label>
+        <label class="flex flex-col gap-1">g (m/s²)
+          <input id="gInput" type="number" step="0.01" min="0" value="9.8" class="rounded-md border border-slate-300 px-2 py-1">
+        </label>
+      </div>
+
+      <!-- Freeze-at-angle -->
+      <div class="grid grid-cols-[1fr_auto] items-center gap-2 text-sm">
+        <label class="flex items-center gap-2">
+          <span>หยุดที่ θ (°)</span>
+          <input id="thetaInput" type="number" step="1" min="0" max="360" value="0"
+                 class="w-24 rounded-md border border-slate-300 px-2 py-1">
+        </label>
+        <button id="freezeBtn" class="px-2.5 py-1 rounded-lg bg-amber-600 text-white">หยุดภาพ</button>
+      </div>
+    </section>
+
+    <!-- ✅ Canvas -->
+    <!-- มือถือ: อยู่กลาง / จอใหญ่: อยู่ซ้าย และกิน 2 แถว -->
+    <section class="order-2 lg:order-1 relative bg-white rounded-2xl shadow p-2 lg:row-span-2">
+      <div class="relative mx-auto w-full" style="max-width:900px;">
+        <div class="relative" style="aspect-ratio:1/1;">
+          <canvas id="cv" class="w-full h-full"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- ✅ Control Panel – BOTTOM (ปุ่มเล่น + แสดงผล + (ย้าย) ปุ่มสูตร/วิธี/แบบฝึกหัด) -->
+    <!-- มือถือ: อยู่ล่าง / จอใหญ่: อยู่คอลัมน์ขวา -->
+    <section class="order-3 lg:order-3 bg-white rounded-2xl shadow p-3 md:p-4 space-y-3">
+      <div class="flex flex-wrap items-center gap-2">
+        <button id="playBtn" class="px-3 py-1.5 rounded-xl bg-sky-600 text-white text-sm shadow">▶️ เล่น (CCW)</button>
+        <button id="resetBtn" class="px-3 py-1.5 rounded-xl bg-slate-200 text-slate-900 text-sm shadow">รีเซ็ต</button>
+<label class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-800 text-sm shadow-sm">
+  <span>สโลโมชัน</span>
+  <input id="slowInput" type="range" min="0.25" max="1" step="0.05" value="1" class="w-24">
+</label>
+
+        <label class="ml-1 inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-800 text-sm shadow-sm select-none">
+          <input id="vecChk" type="checkbox" class="accent-rose-600">
+          <span>แสดงเวกเตอร์</span>
+        </label>
+
+        <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-800 text-sm shadow-sm select-none">
+          <input id="resChk" type="checkbox" class="accent-blue-600">
+          <span>แสดงแรงลัพธ์</span>
+        </label>
+      </div>
+<!-- ✅ ย้ายปุ่ม สูตรสำคัญ / วิธีคำนวณ / แบบฝึกหัด มาไว้ “ด้านล่าง” ปุ่ม เล่น/รีเซ็ต/แสดงเวกเตอร์ -->
+      <div class="grid grid-cols-3 gap-2 w-full">
+        <button id="howBtn"
+                class="px-2.5 py-1 rounded-lg bg-indigo-600 text-white text-sm shadow w-full text-center">
+          วิธีคำนวณ
+        </button>
+        <button id="keyBtn"
+                class="px-2.5 py-1 rounded-lg bg-amber-600 text-white text-sm shadow w-full text-center">
+          สูตรสำคัญ
+        </button>
+        <button id="quizBtn"
+                class="px-2.5 py-1 rounded-lg bg-emerald-200 text-emerald-900 text-sm shadow w-full text-center">
+          แบบฝึกหัด
+        </button>
+      </div>
+
+      <!-- Readouts -->
+      <div id="readout" class="text-xs md:text-sm grid grid-cols-2 gap-x-4 gap-y-1"></div>
+
+      <div class="mt-1 border border-slate-200 rounded-xl p-3 text-xs md:text-sm">
+        <div class="font-medium mb-1">ค่าที่มุมจาก “หยุดภาพ”</div>
+        <div id="atAngle" class="grid grid-cols-2 gap-x-4 gap-y-1"></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- วิธีคำนวณ Modal -->
+  <div id="howModal" class="modal fixed inset-0 items-stretch justify-center bg-black/40 glass z-30">
+    <div class="bg-white w-full max-w-5xl md:rounded-2xl shadow-xl flex flex-col">
+      <div class="sticky top-0 z-10 px-4 md:px-6 py-3 border-b border-slate-200 flex items-center justify-between bg-white/90 backdrop-blur">
+        <div class="flex items-center gap-2">
+          <span class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-indigo-600 text-white text-sm">i</span>
+          <h2 class="text-base md:text-lg font-semibold">วิธีคำนวณ (Step-by-step)</h2>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="howFullBtn" class="px-3 py-1 rounded-lg bg-slate-800 text-white text-sm">เต็มหน้า</button>
+          <button class="px-3 py-1 rounded-lg bg-slate-200 text-sm" data-close-how>ปิด</button>
+        </div>
+      </div>
+      <div id="howBody" class="p-4 md:p-6 overflow-y-auto grow">
+        <div class="grid md:grid-cols-2 gap-4">
+          <div class="rounded-2xl border border-slate-200 p-4 bg-indigo-50/50">
+            <div class="text-indigo-700 font-semibold mb-2">1) นิยามมุม & ระบบแกน</div>
+            <p class="text-sm text-slate-700">
+              \(\theta=0^\circ\) ที่ต่ำสุด (แนวดิ่งลง), เพิ่มทวนเข็ม → \(90^\circ\) ขวา, \(180^\circ\) บน.
+              แกนจอ: ขวา = \(+x\), ลง = \(+y\).
+            </p>
+          </div>
+          <div class="rounded-2xl border border-slate-200 p-4 bg-emerald-50/50">
+            <div class="text-emerald-700 font-semibold mb-2">2) พลังงานกล → \(v(\theta)\)</div>
+            <p class="text-sm text-slate-700">
+              \[\tfrac12 m v^2(\theta) + mg\,r(1-\cos\theta) = \tfrac12 m v_0^2 \Rightarrow
+              v^2(\theta)=v_0^2-2gr(1-\cos\theta)\]
+            </p>
+          </div>
+          <div class="rounded-2xl border border-slate-200 p-4 bg-violet-50/50">
+            <div class="text-violet-700 font-semibold mb-2">3) แนวรัศมี → \(T(\theta)\)</div>
+            <p class="text-sm text-slate-700">
+              \[T - mg\cos\theta = m\frac{v^2(\theta)}{r}\Rightarrow
+              T(\theta)=m\frac{v^2(\theta)}{r}+mg\cos\theta\]
+              ไม่หย่อนที่ยอดวง: \(v_0^2\ge 5gr\).
+            </p>
+          </div>
+          <div class="rounded-2xl border border-slate-200 p-4 bg-amber-50/50">
+            <div class="text-amber-700 font-semibold mb-2">4) มุมเริ่มหย่อน & โพรเจกไทล์</div>
+            <p class="text-sm text-slate-700">
+              หา \(\theta_s\) จาก \(T(\theta_s)=0\). ถ้าพบ ⇒ เปลี่ยนเป็นโพรเจกไทล์ โดยใช้ความเร็วสัมผัส ณ จุดนั้น.
+            </p>
+          </div>
+          <div class="rounded-2xl border border-slate-200 p-4 bg-teal-50/50 md:col-span-2">
+            <div class="text-teal-700 font-semibold mb-2">5) โพรเจกไทล์ (แกนจอ \(y\) ลง)</div>
+            <p class="text-sm text-slate-700">
+              \[
+               \begin{aligned}
+                 &x(t)=x_s+v_{x,s}t,\quad y(t)=y_s+v_{y,s}t+\tfrac12 g t^2\\
+                 &v_{x,s}=v(\theta_s)\cos\theta_s,\; v_{y,s}=-v(\theta_s)\sin\theta_s
+               \end{aligned}
+              \]
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="px-4 md:px-6 py-3 border-t border-slate-200 flex items-center justify-end bg-white/90">
+        <button class="px-3 py-1 rounded-lg bg-slate-200 text-sm" data-close-how>กลับสู่หน้าแรก</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- สูตรสำคัญ Modal -->
+  <div id="keyModal" class="modal fixed inset-0 items-stretch justify-center bg-black/40 glass z-30">
+    <div class="bg-white w-full max-w-4xl md:rounded-2xl shadow-xl flex flex-col">
+      <div class="sticky top-0 z-10 px-4 md:px-6 py-3 border-b border-slate-200 flex items-center justify-between bg-white/90 backdrop-blur">
+        <div class="flex items-center gap-2">
+          <span class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-amber-600 text-white text-sm">Σ</span>
+          <h2 class="text-base md:text-lg font-semibold">สูตรสำคัญ (Quick Reference)</h2>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="keyFullBtn" class="px-3 py-1 rounded-lg bg-slate-800 text-white text-sm">เต็มหน้า</button>
+          <button class="px-3 py-1 rounded-lg bg-slate-200 text-sm" data-close-key>ปิด</button>
+        </div>
+      </div>
+
+      <div id="keyBody" class="p-4 md:p-6 overflow-y-auto grow">
+        <div class="grid md:grid-cols-2 gap-4">
+          <div class="rounded-2xl border border-slate-200 p-4 bg-emerald-50/80">
+            <div class="flex items-center justify-between mb-1">
+              <div class="text-emerald-700 font-semibold">ความเร็วที่มุม \( \theta \)</div>
+              <span class="chip">พลังงานกลคงตัว</span>
+            </div>
+            <div class="eq">\[
+              v^2(\theta)=v_0^2-2gr\,(1-\cos\theta)
+            \]</div>
+            <ul class="list-disc pl-5 text-sm text-slate-700 space-y-1">
+              <li>\(\theta=0^\circ\): \(v=v_0\)</li>
+              <li>\(\theta=90^\circ\): \(v=\sqrt{v_0^2-2gr}\)</li>
+              <li>\(\theta=180^\circ\): \(v=\sqrt{v_0^2-4gr}\)</li>
+            </ul>
+          </div>
+
+          <div class="rounded-2xl border border-slate-200 p-4 bg-violet-50/80">
+            <div class="flex items-center justify-between mb-1">
+              <div class="text-violet-700 font-semibold">แรงตึงเชือก \( T(\theta) \)</div>
+              <span class="chip">แรงสู่ศูนย์กลาง</span>
+            </div>
+            <div class="eq">\[
+              T(\theta)=m\,\frac{v^2(\theta)}{r}+m g\cos\theta
+            \]</div>
+            <p class="text-sm text-slate-700">ถ้าได้ \(T<0\) ⇒ เชือก <b>หย่อน</b> (ถือ \(T=0\)).</p>
+          </div>
+
+          <div class="rounded-2xl border border-slate-200 p-4 bg-amber-50/80">
+            <div class="flex items-center justify-between mb-1">
+              <div class="text-amber-700 font-semibold">เงื่อนไข “ครบวง”</div>
+              <span class="chip">ยอดวงไม่หย่อน</span>
+            </div>
+            <div class="eq">\[
+              v_{\text{top}}^2 \ge gr
+              \quad\Rightarrow\quad
+              v_0^2 \ge 5gr
+            \]</div>
+            <p class="text-sm text-slate-700">ถ้า \(v_0^2<5gr\) มีโอกาสหย่อนก่อนถึงยอดวง</p>
+          </div>
+
+          <div class="rounded-2xl border border-slate-200 p-4 bg-rose-50/80">
+            <div class="flex items-center justify-between mb-1">
+              <div class="text-rose-700 font-semibold">มุมที่หลุด \( \theta_s \)</div>
+              <span class="chip">ตั้ง \(T(\theta_s)=0\)</span>
+            </div>
+            <div class="eq">\[
+              \cos\theta_s = 2 - \frac{v_0^2}{gr}
+            \]</div>
+            <ul class="list-disc pl-5 text-sm text-slate-700 space-y-1">
+              <li>มีคำตอบจริงเมื่อ \(|\cos\theta_s|\le 1\)</li>
+              <li>เลือก \(\theta_s \in [0^\circ, 180^\circ]\)</li>
+            </ul>
+          </div>
+
+          <div class="rounded-2xl border border-slate-200 p-4 bg-sky-50/80 md:col-span-2">
+            <div class="flex items-center justify-between mb-1">
+              <div class="text-sky-700 font-semibold">หลังหลุด: โพรเจกไทล์ (แกนจอ \(+x\) ขวา, \(+y\) ลง)</div>
+              <span class="chip">เริ่มที่ \(\theta_s\)</span>
+            </div>
+            <div class="eq">\[
+              \begin{aligned}
+                v_{x,s}&=v(\theta_s)\cos\theta_s, &
+                v_{y,s}&=-\,v(\theta_s)\sin\theta_s \\
+                x(t)&=x_s+v_{x,s}t, &
+                y(t)&=y_s+v_{y,s}t+\tfrac12 g t^2
+              \end{aligned}
+            \]</div>
+            <p class="text-sm text-slate-700">แอปจะแสดงวิถีด้วย <b>เส้นปะสีเขียว</b>.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="px-4 md:px-6 py-3 border-t border-slate-200 flex items-center justify-end bg-white/90">
+        <button class="px-3 py-1 rounded-lg bg-slate-200 text-sm" data-close-key>กลับสู่หน้าแรก</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- แบบฝึกหัด Modal -->
+  <div id="quizModal" class="modal fixed inset-0 items-center justify-center bg-black/40 z-30">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden">
+      <div class="px-5 py-3 border-b border-slate-200 flex items-center justify-between">
+        <h2 class="text-lg font-semibold">แบบฝึกหัด — วงกลมแนวดิ่ง</h2>
+        <button class="px-3 py-1 rounded-lg bg-slate-200" data-close-quiz>ปิด</button>
+      </div>
+      <div id="quizBody" class="max-h-[60vh] overflow-y-auto p-5 space-y-4 text-sm"></div>
+      <div class="p-5 border-t border-slate-200 flex items-center gap-2">
+        <button id="checkBtn" class="px-3 py-1.5 rounded-xl bg-emerald-600 text-white">ตรวจคำตอบ</button>
+        <button class="px-3 py-1.5 rounded-xl bg-slate-200" data-close-quiz>กลับหน้าแรก</button>
+        <div id="scoreBox" class="ml-auto text-sm font-medium"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* =============== Simulation =============== */
+    const cv = document.getElementById('cv'); const ctx = cv.getContext('2d');
+    // ===== Draggable vector labels (mg, T, Fnet) =====
+    // stored in canvas pixel coordinates (same as drawing coordinates)
+    const labelOffset = {
+      mg:{dx:NaN,dy:NaN},
+      T:{dx:NaN,dy:NaN},
+      Fnet:{dx:NaN,dy:NaN}
+    };
+    const labelOffsetDefault = {
+      mg:{dx:NaN,dy:NaN},
+      T:{dx:NaN,dy:NaN},
+      Fnet:{dx:NaN,dy:NaN}
+    };
+    const labelBBox = { mg:{x:0,y:0,w:0,h:0}, T:{x:0,y:0,w:0,h:0}, Fnet:{x:0,y:0,w:0,h:0} };
+    const arrowTipCache = { mg:{x:0,y:0}, T:{x:0,y:0}, Fnet:{x:0,y:0} };
+
+    let draggingKey = null;
+    let dragOffset = {x:0,y:0};
+    let lastPointerId = null;
+
+    function canvasPointFromEvent(e){
+      const rect = cv.getBoundingClientRect();
+      const x = (e.clientX - rect.left) * (cv.width / rect.width);
+      const y = (e.clientY - rect.top)  * (cv.height / rect.height);
+      return {x,y};
+    }
+    function hitLabel(pt, key){
+      const b = labelBBox[key];
+      return pt.x >= b.x && pt.x <= (b.x + b.w) && pt.y >= b.y && pt.y <= (b.y + b.h);
+    }
+
+    cv.addEventListener('pointerdown', (e)=>{
+      if(!showVectors) return;
+      const pt = canvasPointFromEvent(e);
+
+      const keys = (showResultant) ? ['Fnet','T','mg'] : ['T','mg'];
+      for(const k of keys){
+        if(hitLabel(pt, k)){
+          draggingKey = k;
+          lastPointerId = e.pointerId;
+          // store offset relative to text baseline (fillText uses baseline at y)
+          dragOffset.x = pt.x - labelBBox[k].x;
+          dragOffset.y = pt.y - labelBBox[k].y; // b.y is top; keep consistent below
+          try { cv.setPointerCapture(e.pointerId); } catch(_){}
+          e.preventDefault();
+          return;
+        }
+      }
+    });
+
+    cv.addEventListener('pointermove', (e)=>{
+      if(!draggingKey) return;
+      if(lastPointerId !== null && e.pointerId !== lastPointerId) return;
+      const pt = canvasPointFromEvent(e);
+
+      // labelBBox stores top-left; convert to baseline y
+      const b = labelBBox[draggingKey];
+      const baselineY = (pt.y - dragOffset.y) + b.h; // move so that bbox top stays aligned; baseline = top + h
+      // store offset relative to arrow tip so it follows the arrow
+      labelOffset[draggingKey].dx = pt.x - arrowTipCache[draggingKey].x;
+      labelOffset[draggingKey].dy = pt.y - arrowTipCache[draggingKey].y;
+      draw();
+      e.preventDefault();
+    });
+
+    function endDrag(){
+      draggingKey = null;
+      lastPointerId = null;
+    }
+    cv.addEventListener('pointerup', endDrag);
+    cv.addEventListener('pointercancel', endDrag);
+
+    function resizeCanvas(){ const box=cv.parentElement.getBoundingClientRect(); const size=Math.max(240,Math.floor(box.width)); cv.width=size; cv.height=size; draw(); }
+    window.addEventListener('load', ()=>{
+      resizeCanvas();
+      // ย้ำค่าเริ่มต้นหลังจัดขนาดแคนวาส
+      setTimeout(()=>{ resizeCanvas(); resetState(); },0);
+    });
+    window.addEventListener('resize', resizeCanvas);
+
+    const $ = id=>document.getElementById(id);
+    const mInput=$('mInput'), rInput=$('rInput'), v0Input=$('v0Input'), gInput=$('gInput');
+    const thetaInput=$('thetaInput');
+    const playBtn=$('playBtn'), resetBtn=$('resetBtn');
+    const slowInput=$('slowInput');
+    const vecChk=$('vecChk'), resChk=$('resChk');
+    const readout=$('readout'), atAngle=$('atAngle'), warnBox=$('warnBox');
+    const howBtn=$('howBtn'), keyBtn=$('keyBtn'), quizBtn=$('quizBtn');
+    const howModal=$('howModal'), keyModal=$('keyModal'), quizModal=$('quizModal');
+    const howBody=$('howBody'), keyBody=$('keyBody'), quizBody=$('quizBody');
+
+    // เริ่มต้น "ซ่อนเวกเตอร์" / "ซ่อนแรงลัพธ์"
+    let showVectors = false;
+    let showResultant = false;
+
+    // state
+    let mode='rope', running=false, tPrev=0;
+    let hasStarted = false;
+    let timeScale = 1.0; // slow motion factor // show dashed reference line only after motion starts
+    let m=1, r=1, v0=8, g=9.81, theta=0; // v0 เริ่มต้น 8
+    let pos={x:0,y:0}, vel_pix={x:0,y:0};
+    let proj={active:false,x:0,y:0,vx:0,vy:0,trace:[]};
+
+      // reset draggable label positions
+      ['mg','T','Fnet'].forEach(k=>{ labelOffset[k].dx=NaN; labelOffset[k].dy=NaN; labelOffsetDefault[k].dx=NaN; labelOffsetDefault[k].dy=NaN; });
+
+    const center=()=>({x:cv.width/2,y:cv.height/2});
+    const ppm=()=> (Math.min(cv.width,cv.height)-80)/(2*r+0.5);
+
+    // ฟังก์ชันบังคับมุม (deg) และอัปเดตตำแหน่งทันที
+    function setAngleDeg(deg){
+      theta = (deg*Math.PI)/180;
+      thetaInput.value = String(Math.round(deg));
+      updateKinematics(0);
+    }
+
+    function updateWarning(){
+      if (v0*v0 < 5*g*r) warnBox.classList.remove('hidden'); else warnBox.classList.add('hidden');
+      MathJax.typesetPromise([warnBox]);
+    }
+
+    function resetState(){
+      m=Math.max(0.1,+mInput.value||1);
+      r=Math.max(0.1,+rInput.value||1);
+      v0=Math.max(0,+v0Input.value||0);
+      g=Math.max(0,+gInput.value||0);
+      mode='rope'; running=false; hasStarted=false; playBtn.textContent='▶️ เล่น (CCW)';
+      proj={active:false,x:0,y:0,vx:0,vy:0,trace:[]};
+
+      // reset draggable label positions
+      ['mg','T','Fnet'].forEach(k=>{ labelOffset[k].dx=NaN; labelOffset[k].dy=NaN; labelOffsetDefault[k].dx=NaN; labelOffsetDefault[k].dy=NaN; });
+
+      // ★ เริ่มต้นที่ "ต่ำสุด" เสมอ (θ=0°)
+      setAngleDeg(0);
+      updateWarning(); updateReadouts(true); draw();
+    }
+
+    // physics
+    const v2_at=th=> v0*v0 - 2*g*r*(1-Math.cos(th));
+    const T_at=th=> { const v2=Math.max(0,v2_at(th)); const v=Math.sqrt(v2); return m*(v*v/r)+m*g*Math.cos(th); };
+
+    function updateKinematics(dt){
+      const C=center(), R=r*ppm()*0.84;
+      if(mode==='rope' || mode==='freeze'){
+        pos.x=C.x+R*Math.sin(theta); pos.y=C.y+R*Math.cos(theta);
+        const vmag=Math.sqrt(Math.max(0,v2_at(theta)));
+        vel_pix.x=vmag*Math.cos(theta)*ppm(); vel_pix.y=-vmag*Math.sin(theta)*ppm();
+        if(mode==='rope'){
+          const omega=(r>0)? vmag/r:0; theta=(theta+omega*dt)%(2*Math.PI);
+          if(T_at(theta)<=0){ mode='projectile'; proj={active:true,x:pos.x,y:pos.y,vx:vel_pix.x,vy:vel_pix.y,trace:[]}; }
+        }
+      } else {
+        const gpx=g*ppm();
+        proj.x+=proj.vx*dt; proj.y+=proj.vy*dt+0.5*gpx*dt*dt; proj.vy+=gpx*dt;
+        pos.x=proj.x; pos.y=proj.y; vel_pix.x=proj.vx; vel_pix.y=proj.vy;
+        proj.trace.push({x:pos.x,y:pos.y}); if(proj.trace.length>1500) proj.trace.shift();
+      }
+    }
+
+    function drawArrow(x1,y1,x2,y2,color,label,key){
+      ctx.save(); ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=1.6;
+      ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+      const ang=Math.atan2(y2-y1,x2-x1), ah=7;
+      ctx.beginPath(); ctx.moveTo(x2,y2);
+      ctx.lineTo(x2-ah*Math.cos(ang-Math.PI/6),y2-ah*Math.sin(ang-Math.PI/6));
+      ctx.lineTo(x2-ah*Math.cos(ang+Math.PI/6),y2-ah*Math.sin(ang+Math.PI/6));
+      ctx.closePath(); ctx.fill();
+
+      if(label){
+        ctx.font="15px ui-sans-serif, system-ui";
+
+        // default offset from arrow tip
+        const defDX = 8*Math.cos(ang);
+        const defDY = 8*Math.sin(ang);
+
+        let dx = defDX, dy = defDY;
+        if(key){
+          if(!Number.isFinite(labelOffsetDefault[key].dx)){
+            labelOffsetDefault[key].dx = defDX;
+            labelOffsetDefault[key].dy = defDY;
+          }
+          if(Number.isFinite(labelOffset[key].dx)){
+            dx = labelOffset[key].dx;
+            dy = labelOffset[key].dy;
+          } else {
+            dx = labelOffsetDefault[key].dx;
+            dy = labelOffsetDefault[key].dy;
+          }
+        }
+
+        const lx = x2 + dx;
+        const ly = y2 + dy;
+        ctx.fillText(label, lx, ly);
+
+        if(key){
+          const w = ctx.measureText(label).width;
+          const h = 20;
+          labelBBox[key] = { x: lx, y: ly - h, w, h };
+        }
+      }
+      ctx.restore();
+    }
+
+    function draw(){
+      const C=center(), R=r*ppm()*0.84; ctx.clearRect(0,0,cv.width,cv.height);
+      if(mode!=='projectile'){ ctx.save(); ctx.setLineDash([10,10]); ctx.strokeStyle='#cbd5e1'; ctx.lineWidth=1.2; ctx.beginPath(); ctx.arc(C.x,C.y,R,0,2*Math.PI); ctx.stroke(); ctx.restore(); }
+      ctx.fillStyle='#0f172a'; ctx.beginPath(); ctx.arc(C.x,C.y,4,0,2*Math.PI); ctx.fill();
+      if(mode!=='projectile'){ ctx.strokeStyle='#111827'; ctx.lineWidth=1.2; ctx.beginPath(); ctx.moveTo(C.x,C.y); ctx.lineTo(pos.x,pos.y); ctx.stroke(); }
+
+      if(mode==='projectile' && proj.trace.length>1){
+        ctx.save(); ctx.setLineDash([6,6]); ctx.strokeStyle='#10b981'; ctx.lineWidth=1.5;
+        ctx.beginPath(); ctx.moveTo(proj.trace[0].x,proj.trace[0].y);
+        for(let i=1;i<proj.trace.length;i++) ctx.lineTo(proj.trace[i].x,proj.trace[i].y);
+        ctx.stroke(); ctx.restore();
+      }
+
+      // ลูกบอลเล็กลงอีกนิด
+      ctx.fillStyle='#1d4ed8'; ctx.beginPath(); ctx.arc(pos.x,pos.y,8,0,2*Math.PI); ctx.fill();
+
+      if(showVectors){
+        // === Scale-consistent force vectors ===
+        // Use Newton values then convert to pixels so that T, mg, and Fnet are proportional.
+        const mgN = m * g;
+        const Tn  = (mode==='projectile') ? 0 : Math.max(0, T_at(theta));
+        const toC = Math.atan2(C.y - pos.y, C.x - pos.x);
+
+        // Visual scale: make |mg| ≈ 63 px (same as the old mg length)
+        const mgL = 25;   // 🔒 Lock |mg| = 25 px as reference
+        const pxPerN = (mgN > 1e-9) ? (mgL / mgN) : 0;
+
+        // Vector components in pixels
+        const Tvec = { x: Tn * Math.cos(toC) * pxPerN, y: Tn * Math.sin(toC) * pxPerN };
+        const mgDisplayFactor = 1.5;
+        const mgVec = { x: 0, y: mgN * pxPerN * mgDisplayFactor };
+
+        // Draw mg & T with consistent scaling
+        arrowTipCache.mg = {x: pos.x + mgVec.x, y: pos.y + mgVec.y};
+        drawArrow(pos.x, pos.y, pos.x + mgVec.x, pos.y + mgVec.y, '#e11d48', 'mg', 'mg');
+
+        if(mode==='projectile'){
+          drawArrow(pos.x, pos.y, pos.x + Tvec.x, pos.y + Tvec.y, '#a78bfa88', 'T=0', 'T');
+        } else {
+          const colT = (Tn<=0) ? '#a78bfa88' : '#7c3aed';
+          arrowTipCache.T = {x: pos.x + Tvec.x, y: pos.y + Tvec.y};
+          drawArrow(pos.x, pos.y, pos.x + Tvec.x, pos.y + Tvec.y, colT, 'T', 'T');
+        }
+
+        if(showResultant){
+          // === Parallelogram (dashed) for T + mg ===
+          const tipT  = { x: pos.x + Tvec.x,  y: pos.y + Tvec.y };
+          const tipMg = { x: pos.x + mgVec.x, y: pos.y + mgVec.y };
+          const tipSumFromT  = { x: tipT.x  + mgVec.x, y: tipT.y  + mgVec.y };
+          const tipSumFromMg = { x: tipMg.x + Tvec.x,  y: tipMg.y + Tvec.y };
+
+          // dashed helper lines
+          ctx.save();
+          ctx.setLineDash([4,4]);
+          ctx.strokeStyle = 'rgba(100,116,139,0.65)'; // slate-ish
+          ctx.lineWidth = 1.2;
+
+          // from tip of T, draw mg
+          ctx.beginPath();
+          ctx.moveTo(tipT.x, tipT.y);
+          ctx.lineTo(tipSumFromT.x, tipSumFromT.y);
+          ctx.stroke();
+
+          // from tip of mg, draw T
+          ctx.beginPath();
+          ctx.moveTo(tipMg.x, tipMg.y);
+          ctx.lineTo(tipSumFromMg.x, tipSumFromMg.y);
+          ctx.stroke();
+
+          ctx.restore();
+
+          // Resultant (diagonal) in BLUE
+          const Fnetx = Tvec.x + mgVec.x;
+          const Fnety = Tvec.y + mgVec.y;
+          arrowTipCache.Fnet = {x: pos.x + Fnetx, y: pos.y + Fnety};
+          drawArrow(pos.x, pos.y, pos.x + Fnetx, pos.y + Fnety, '#2563eb', 'Fₙₑₜ', 'Fnet');
+        }
+      }
+
+      if(hasStarted){
+      ctx.save();
+            ctx.setLineDash([10,10]);
+            ctx.strokeStyle='#e2e8f0';
+            ctx.lineWidth=1;
+            ctx.beginPath();
+            // reference dashed vertical line: ONLY lower half (angle measured from downward vertical)
+            ctx.moveTo(C.x, C.y);
+            ctx.lineTo(C.x, C.y + R + 16);
+            ctx.stroke();
+            ctx.restore();
+      }
+
+// ===== Angle arc + label (ใต้จุดหมุน) =====
+const degNow = (theta*180/Math.PI);
+const rArc = 28;
+// vertical-down direction in canvas is +90deg (pi/2). Rope direction is (pi/2 - theta).
+const startA = Math.PI/2;
+const endA   = Math.PI/2 - theta;
+ctx.save();
+ctx.setLineDash([4,4]);
+ctx.strokeStyle = '#94a3b8';
+ctx.lineWidth = 1.4;
+ctx.beginPath();
+ctx.arc(C.x, C.y, rArc, startA, endA, true); // anticlockwise sweep
+ctx.stroke();
+ctx.restore();
+
+// label: right of the grey vertical line, 20px below pivot
+ctx.save();
+ctx.font = "12px ui-sans-serif, system-ui";
+ctx.fillStyle = 'rgba(100,116,139,0.95)'; // slate-500-ish, translucent
+ctx.fillText(`θ = ${degNow.toFixed(1)}°`, C.x + 10, C.y + 20);
+ctx.restore();
+
+          }
+
+    const fmt=x=>Number.isFinite(x)?x.toFixed(1):'—';
+    function updateReadouts(typeset=false){
+      const v=Math.sqrt(Math.max(0,v2_at(theta))); const T=(mode==='projectile')?0:T_at(theta);
+      const mg = m*g;
+      // Net force from displayed forces (T toward center + mg downward)
+      const Tn = (mode==='projectile') ? 0 : Math.max(0, T);
+      const Fx = Tn * (-Math.sin(theta));
+      const Fy = Tn * (-Math.cos(theta)) + mg;
+      const Fnet = Math.sqrt(Fx*Fx + Fy*Fy);
+      const status=(mode==='projectile')?'เชือกหย่อน → โพรเจกไทล์':(T<=0?'เชือกหย่อน (T=0)':'ตึง');
+
+      // v ต่ำสุด vs v ครบรอบ (สีแดง/เขียว)
+      const vBottom = Math.sqrt(Math.max(0, v2_at(0)));   // จุดต่ำสุด θ = 0°
+      const vCrit   = Math.sqrt(5 * g * r);               // v เกณฑ์ครบวง
+      const vClass  = (vBottom < vCrit) ? 'text-red-600' : 'text-emerald-600';
+
+      readout.innerHTML=`
+        <div>โหมด: <b>${mode}</b></div>
+        <div>θ (deg): <b>${(theta*180/Math.PI).toFixed(2)}</b></div>
+        <div>v (m/s): <b>${fmt(v)}</b></div>
+        <div>T (N): <b class="text-violet-600">${fmt(Math.max(0,T))}</b> <span class="text-violet-600">N</span></div>
+        <div>mg (N): <b class="text-rose-600">${fmt(mg)}</b> <span class="text-rose-600">N</span></div>
+        <div>Fₙₑₜ (N): <b class="text-blue-600">${fmt(Fnet)}</b> <span class="text-blue-600">N</span></div>
+        <div class="col-span-2">สถานะเชือก: <b>${status}</b></div>
+        <div class="col-span-2">
+          v ต่ำสุด:
+          <b class="${vClass}">${fmt(vBottom)}</b> m/s
+          &nbsp;|&nbsp; v ครบรอบ ≈ <b>${fmt(vCrit)}</b> m/s
+        </div>`;
+
+      if(mode==='freeze'){
+        atAngle.innerHTML=`
+          <div>θ หยุดภาพ (deg): <b>${(+thetaInput.value).toFixed(1)}</b></div>
+          <div>v(θ) (m/s): <b>${fmt(v)}</b></div>
+          <div>T(θ) (N): <b class="text-violet-600">${fmt(Math.max(0,T))}</b> <span class="text-violet-600">N</span></div>
+          <div>mg (N): <b class="text-rose-600">${fmt(mg)}</b> <span class="text-rose-600">N</span></div>
+          <div>Fₙₑₜ (N): <b class="text-blue-600">${fmt(Fnet)}</b> <span class="text-blue-600">N</span></div>
+          <div>เชือก: <b>${(T<=0)?'หย่อน (T=0)':'ตึง'}</b></div>`;
+      } else {
+        atAngle.innerHTML=`<div class="col-span-2 text-slate-500">กด “หยุดภาพ” ใส่มุม แล้วคำนวณ</div>`;
+      }
+      if(typeset) MathJax.typesetPromise([readout, atAngle]);
+    }
+
+    function frame(now){ if(!running) return; const dt=Math.min(0.05,(now-tPrev)/1000) * timeScale; tPrev=now; updateKinematics(dt); draw(); requestAnimationFrame(frame); updateReadouts(); }
+
+    // Controls
+    playBtn.onclick=()=>{
+      // ถ้าอยู่โหมด freeze ให้ "เล่นต่อ"
+      if(mode === 'freeze' && !running){
+        mode = 'rope';
+        running = true;
+        hasStarted = true;
+        playBtn.textContent = '⏸️ หยุด';
+        tPrev = performance.now();
+        requestAnimationFrame(frame);
+        return;
+      }
+      // toggle ปกติ
+      running = !running;
+      playBtn.textContent = running ? '⏸️ หยุด' : '▶️ เล่น (CCW)';
+      if(running){ hasStarted = true; tPrev=performance.now(); requestAnimationFrame(frame); }
+    };
+
+    resetBtn.onclick=()=> resetState();
+    slowInput.oninput=()=>{ timeScale = parseFloat(slowInput.value)||1; };
+
+    vecChk.onchange=()=>{ showVectors = vecChk.checked; draw(); };
+    resChk.onchange=()=>{ showResultant = resChk.checked; draw(); };
+
+    [mInput,rInput,v0Input,gInput].forEach(el=>el.oninput=()=>{
+      const was=running; resetState();
+      running = was && mode!=='freeze';
+      if(running){ hasStarted = true; tPrev=performance.now(); requestAnimationFrame(frame); }
+    });
+
+    // Freeze-at-angle
+    freezeBtn.onclick=()=>{
+      let deg=(+thetaInput.value)||0; deg=((deg%360)+360)%360; thetaInput.value=deg.toFixed(0);
+      theta=deg*Math.PI/180; mode='freeze'; running=false; playBtn.textContent='▶️ เล่น (CCW)';
+      proj.active=false; proj.trace.length=0; updateKinematics(0); draw(); updateReadouts(true);
+    };
+
+    /* ===== Modals + MathJax typeset ===== */
+    function openHow(){ howModal.classList.add('show'); MathJax.typesetPromise([howBody]); }
+    function closeHow(){ howModal.classList.remove('show'); }
+    document.getElementById('howFullBtn').onclick=()=>{ const box=howModal.querySelector('.md\\:rounded-2xl'); box?.classList.toggle('md:rounded-2xl'); };
+    howBtn.onclick=openHow; document.querySelectorAll('[data-close-how]').forEach(b=>b.onclick=closeHow);
+
+    function openKey(){ keyModal.classList.add('show'); MathJax.typesetPromise([keyBody]); }
+    function closeKey(){ keyModal.classList.remove('show'); }
+    document.getElementById('keyFullBtn').onclick=()=>{ const box=keyModal.querySelector('.md\\:rounded-2xl'); box?.classList.toggle('md:rounded-2xl'); };
+    keyBtn.onclick=openKey; document.querySelectorAll('[data-close-key]').forEach(b=>b.onclick=closeKey);
+
+    // Quiz
+    const questions=[
+      { q:"นิยามมุมของแอปนี้คืออะไร?",
+        choices:["วัดจากแกน x ทางขวา หมุนตามเข็ม","วัดจากแนวดิ่งลงที่ตำแหน่งต่ำสุด หมุนทวนเข็ม","วัดจากแนวราบซ้าย หมุนทวนเข็ม","วัดจากแนวดิ่งขึ้นที่ยอดวง หมุนตามเข็ม"],
+        ans:1, exp:"กำหนด \\(\\theta=0^\\circ\\) ที่ต่ำสุด (แนวดิ่งลง) และเพิ่มทวนเข็ม: 90° ขวา, 180° บน" },
+      { q:"ให้ \\(m=1\\,\\mathrm{kg},\\ r=0.8\\,\\mathrm{m},\\ g=9.8\\,\\mathrm{m/s^2},\\ v_0=5.0\\,\\mathrm{m/s}\\). จงหา \\(v(90^\\circ)\\).",
+        choices:["\\(\\sqrt{v_0^2-2gr(1-\\cos 90^\\circ)}\\)","\\(\\sqrt{25-15.68}\\approx 3.05\\,\\mathrm{m/s}\\)","\\(\\sqrt{25-0}\\approx 5.0\\,\\mathrm{m/s}\\)","ทั้ง (ก) และ (ข) ถูก"],
+        ans:3, exp:"สูตร \\(v^2=v_0^2-2gr(1-\\cos\\theta)\\). ที่ \\(90^\\circ\\): \\(\\cos\\theta=0\\) ⇒ \\(v=\\sqrt{25-15.68}\\approx 3.05\\,\\mathrm{m/s}\\)" },
+      { q:"เงื่อนไขอย่างน้อยให้เคลื่อนที่ครบวงคือ?",
+        choices:["\\(v_0^2\\ge gr\\)","\\(v_0^2\\ge 3gr\\)","\\(v_0^2\\ge 4gr\\)","\\(v_0^2\\ge 5gr\\)"],
+        ans:3, exp:"ที่ยอดวงต้อง \\(T\\ge 0\\Rightarrow v_{\\text{top}}^2\\ge gr\\). จากพลังงานได้ \\(v_0^2\\ge 5gr\\)." },
+      { q:"ถ้าเชือกหย่อนที่ \\(\\theta_s\\) วัตถุจะ…",
+        choices:["หยุดนิ่งทันที","วิ่งวงกลมต่อไป","วิ่งเส้นตรงแนวดิ่งขึ้น","กลายเป็นโพรเจกไทล์ด้วยความเร็วสัมผัส ณ จุดนั้น"],
+        ans:3, exp:"เมื่อ \\(T=0\\) ไม่มีแรงตามรัศมี เหลือเพียง \\(mg\\) ⇒ โพรเจกไทล์ โดยใช้ความเร็วสัมผัสที่ \\(\\theta_s\\)" }
+    ];
+
+    function renderQuiz(){
+      const quizBody = document.getElementById('quizBody');
+      quizBody.innerHTML='';
+      questions.forEach((item,idx)=>{
+        const name='q'+idx;
+        const block=document.createElement('div');
+        block.className="border border-slate-200 rounded-xl p-3";
+        block.innerHTML=`
+          <div class="font-medium mb-2">ข้อ ${idx+1}. ${item.q}</div>
+          <div class="space-y-2">
+            ${item.choices.map((c,i)=>`
+              <label class="flex items-center gap-2">
+                <input type="radio" name="${name}" value="${i}" class="accent-fuchsia-600">
+                <span>${c}</span>
+              </label>`).join('')}
+          </div>
+          <div class="mt-2 text-sm hidden" id="exp-${idx}"></div>`;
+        quizBody.appendChild(block);
+      });
+      MathJax.typesetPromise([quizBody]);
+    }
+    function openQuiz(){ renderQuiz(); document.getElementById('scoreBox').textContent=''; quizModal.classList.add('show'); }
+    function closeQuiz(){ quizModal.classList.remove('show'); }
+    document.querySelectorAll('[data-close-quiz]').forEach(b=>b.onclick=closeQuiz);
+    document.getElementById('quizBtn').onclick=openQuiz;
+    document.getElementById('checkBtn').onclick=()=>{
+      let correct=0;
+      questions.forEach((item,idx)=>{
+        const chosen=document.querySelector(`input[name="q${idx}"]:checked`);
+        const exp=document.getElementById(`exp-${idx}`);
+        if(chosen && +chosen.value===item.ans){ correct++; exp.className="mt-2 text-sm text-emerald-700"; exp.textContent="ถูกต้อง! "; }
+        else { exp.className="mt-2 text-sm text-rose-700"; exp.textContent="ยังไม่ถูก "; }
+        exp.innerHTML += ` — เฉลย: ${item.exp}`;
+        exp.classList.remove('hidden');
+      });
+      document.getElementById('scoreBox').textContent=`คะแนน: ${correct} / ${questions.length}`;
+      MathJax.typesetPromise([document.getElementById('quizBody')]);
+    };
+  </script>
+</body>
+</html>
