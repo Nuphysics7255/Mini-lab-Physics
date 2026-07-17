@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Mini Lab คนเดินบนเรือ — จุดศูนย์กลางมวล v4</title>
+<script>
+window.MathJax = { tex: { inlineMath: [['\\(','\\)'], ['$', '$']], displayMath: [['\\[','\\]']] }, svg: { fontCache: 'global' } };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<style>
+:root{
+  --blue:#2f6fd6; --blue2:#204d7c; --sky:#eaf4ff; --soft-blue:#edf3fb;
+  --green:#eaf8e6; --green-border:#9dcc92; --orange:#fff3df; --orange-border:#e6b46e;
+  --gray:#eef2f7; --text:#14324a; --red:#d93025;
+  --safe-top: env(safe-area-inset-top); --safe-bottom: env(safe-area-inset-bottom);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:#f5f8fc;color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Tahoma,sans-serif;overflow-x:hidden}
+body{min-height:100vh;padding:calc(10px + var(--safe-top)) 12px calc(132px + var(--safe-bottom))}
+.app{max-width:1180px;margin:0 auto}
+.header{text-align:center;margin:4px 0 10px}
+.title1{font-weight:900;color:var(--blue);font-size:clamp(24px,3.6vw,42px);line-height:1.1}
+.title2{font-weight:900;color:var(--blue2);font-size:clamp(20px,2.8vw,32px);line-height:1.15;margin-top:3px}
+.layout{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(280px,.75fr);gap:14px;align-items:start}
+.stage-card,.panel,.readout-card{background:#fff;border:1px solid #dbe6f2;border-radius:24px;box-shadow:0 8px 24px rgba(32,77,124,.08)}
+.stage-card{padding:12px;position:relative;overflow:hidden}
+#labCanvas{width:100%;height:clamp(390px,56vh,610px);display:block;border-radius:18px;background:linear-gradient(#dff2ff 0 52%,#e5f7ff 52% 100%);border:1px solid #c9ddee}
+.hint-bar{margin-top:9px;background:#edf3fb;border:1px solid #d6e4f3;border-radius:18px;padding:9px 12px;font-weight:800;color:#2e5f93;font-size:15px;line-height:1.45}
+.panel{padding:14px;display:flex;flex-direction:column;gap:12px;max-height:calc(100vh - 92px);overflow:auto}
+.section-title{font-weight:900;color:#2e5f93;font-size:18px;margin:0 0 5px;display:flex;align-items:center;gap:7px}
+.control-box{background:#f8fbff;border:1px solid #dce9f6;border-radius:20px;padding:11px}
+.row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;margin:8px 0}
+label{font-weight:800;color:#284a68;font-size:14px;line-height:1.25}
+.num-wrap{display:flex;align-items:center;gap:5px;justify-content:flex-end}
+input[type="number"]{width:82px;border:1px solid #c9d9ea;border-radius:12px;padding:8px 7px;font-size:15px;font-weight:800;color:#173954;background:#fff;text-align:center}
+.small-btn{width:32px;height:32px;border-radius:11px;border:1px solid #b9cce0;background:#fff;font-size:20px;font-weight:900;color:#315f8d;cursor:pointer;line-height:1}
+.range-line{display:flex;align-items:center;gap:8px;margin-top:9px}
+input[type="range"]{width:100%;accent-color:#2f6fd6}
+.readouts{display:grid;grid-template-columns:1fr;gap:8px}
+.readout-card{padding:10px 11px;border-radius:18px;box-shadow:none}
+.readout-title{font-weight:900;color:#315f8d;font-size:14px;margin-bottom:3px}
+.readout-value{font-weight:900;font-size:18px;color:#102f4a}
+.readout-note{font-size:12.5px;color:#5d7184;line-height:1.35;margin-top:2px}
+.cm{color:#9a6500}.person{color:#d93025}.boat{color:#1769aa}
+.footer-link{text-align:center;margin:14px 0 0;font-size:15px;font-weight:800}.footer-link a{color:#1f66d1;text-decoration:underline}
+.bottom-controls{position:fixed;left:50%;bottom:calc(12px + var(--safe-bottom));transform:translateX(-50%);z-index:20;width:min(760px,calc(100vw - 18px));background:rgba(235,241,247,.72);backdrop-filter:blur(9px);border:1px solid #d8e3ef;border-radius:24px;padding:8px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;box-shadow:0 10px 30px rgba(20,50,74,.15)}
+.main-btn{min-height:52px;border-radius:18px;border:1.5px solid transparent;font-size:16px;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;color:#173954;box-shadow:inset 0 1px 0 rgba(255,255,255,.6)}
+.play{background:#59a9e9;color:white;border-color:#3992d4}.reset{background:#e9edf2;color:#5a6773;border-color:#d0d8e0}.formula{background:#ffe6bd;color:#8b4d00;border-color:#efc58f}.exercise{background:#dff2da;color:#1f6f35;border-color:#9dcc92}
+.modal{position:fixed;inset:0;z-index:50;display:none;background:rgba(15,32,48,.45);padding:calc(16px + var(--safe-top)) 14px calc(132px + var(--safe-bottom));overflow:auto}.modal.show{display:block}.modal-card{max-width:880px;margin:0 auto;border-radius:24px;padding:22px;position:relative;box-shadow:0 20px 60px rgba(0,0,0,.22)}
+.close-btn{position:fixed;right:calc(14px + env(safe-area-inset-right));top:calc(14px + var(--safe-top));z-index:70;width:52px;height:52px;border-radius:18px;border:0;background:#e7eef6;color:#45688f;font-size:25px;font-weight:900;cursor:pointer}.formula-card{background:#fff3df;border:2px solid #e6b46e}.exercise-card{background:#f4fff1;border:2px solid #9dcc92}.modal h2{margin:0 0 12px;color:#123d70;font-size:26px}.box{background:#fff;border:1px solid #e3d2b7;border-radius:18px;padding:13px;margin:10px 0;line-height:1.65;font-size:16px}.exercise-card .box{border-color:#cfe7c8}.red{color:var(--red);font-weight:900}.blue{color:#1f66d1;font-weight:900}.green{color:#16743a;font-weight:900}
+.quiz-choice{display:block;width:100%;text-align:left;background:#fff;border:1.5px solid #d4e4d1;border-radius:16px;padding:11px 13px;margin:7px 0;font-size:16px;font-weight:800;cursor:pointer}.quiz-choice.correct{background:#eaf8e6;border-color:#74b86c}.quiz-choice.wrong{background:#f0f0f0;border-color:#ccc;color:#777}.solution{display:none;margin-top:10px;background:#fff;border-left:5px solid #d93025;border-radius:14px;padding:12px;line-height:1.6}.solution.show{display:block}
+@media (max-width:820px){body{padding-left:8px;padding-right:8px}.layout{grid-template-columns:1fr}.panel{max-height:none;overflow:visible}.bottom-controls{grid-template-columns:repeat(4,1fr);gap:6px;border-radius:18px;padding:6px}.main-btn{min-height:46px;border-radius:15px;font-size:13px;gap:4px;flex-direction:column}#labCanvas{height:min(58vh,470px)}.title1{font-size:clamp(20px,6vw,30px)}.title2{font-size:clamp(18px,5.4vw,26px)}input[type="number"]{width:74px}.modal-card{padding:18px 14px}.modal h2{font-size:22px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="header">
+    <div class="title1">Mini Lab</div>
+    <div class="title2">คนเดินบนเรือกับจุดศูนย์กลางมวล</div>
+  </header>
+  <main class="layout">
+    <section class="stage-card">
+      <canvas id="labCanvas" aria-label="ภาพทดลองคนเดินบนเรือ"></canvas>
+      <div class="hint-bar">หลักสำคัญ: ถ้าไม่มีแรงภายนอกในแนวนอน จุดศูนย์กลางมวลของระบบคน+เรือจะอยู่นิ่ง แม้คนเดินและเรือเลื่อนไปคนละทิศ</div>
+    </section>
+    <aside class="panel">
+      <div class="control-box">
+        <p class="section-title">⚙️ ตั้งค่า</p>
+        <div class="row"><label>มวลคน \(m_\text{คน}\)</label><div class="num-wrap"><button class="small-btn" data-step="-5" data-target="personMass">−</button><input id="personMass" type="number" value="60" min="30" max="120" step="5"><button class="small-btn" data-step="5" data-target="personMass">+</button></div></div>
+        <div class="row"><label>มวลเรือ \(m_\text{เรือ}\)</label><div class="num-wrap"><button class="small-btn" data-step="-10" data-target="boatMass">−</button><input id="boatMass" type="number" value="180" min="40" max="500" step="10"><button class="small-btn" data-step="10" data-target="boatMass">+</button></div></div>
+        <div class="row"><label>ความยาวเรือ \(L\)</label><div class="num-wrap"><button class="small-btn" data-step="-0.5" data-target="boatLength">−</button><input id="boatLength" type="number" value="6" min="3" max="10" step="0.5"><button class="small-btn" data-step="0.5" data-target="boatLength">+</button></div></div>
+        <div class="range-line"><label style="min-width:98px">ตำแหน่งคนบนเรือ</label><input id="walk" type="range" min="0" max="100" value="0"></div>
+      </div>
+      <div class="readouts">
+        <div class="readout-card"><div class="readout-title person">● จุดศูนย์กลางมวลของคน</div><div id="personX" class="readout-value">—</div><div class="readout-note">ตำแหน่งจริงของคนเทียบกับสเกลบนพื้น</div></div>
+        <div class="readout-card"><div class="readout-title boat">● จุดศูนย์กลางมวลของเรือ</div><div id="boatX" class="readout-value">—</div><div class="readout-note">เรือเลื่อนสวนทางกับการเดินของคน</div></div>
+        <div class="readout-card"><div class="readout-title cm">◆ จุดศูนย์กลางมวลของระบบ</div><div id="systemX" class="readout-value">—</div><div class="readout-note">ค่านี้ควรคงที่ เมื่อไม่มีแรงภายนอกแนวนอน</div></div>
+      </div>
+      <div class="control-box">
+        <p class="section-title">🎯 ภารกิจ</p>
+        <div style="font-size:14.5px;line-height:1.55;font-weight:700;color:#405f78">ลองเพิ่มมวลเรือให้มากขึ้น แล้วสังเกตว่าเรือถอยกลับน้อยลงหรือไม่ จากนั้นลดมวลเรือให้เบาลงแล้วเปรียบเทียบอีกครั้ง</div>
+      </div>
+    </aside>
+  </main>
+  <div class="footer-link"><a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">ศึกษาเพิ่มเติมที่เพจคลายปมฟิสิกส์</a></div>
+</div>
+<nav class="bottom-controls">
+  <button id="resetBtn" class="main-btn reset">🔄<span>รีเซ็ต</span></button>
+  <button id="formulaBtn" class="main-btn formula">Σ<span>สูตรสำคัญ</span></button>
+  <button id="exerciseBtn" class="main-btn exercise">📝<span>แบบฝึกหัด</span></button>
+</nav>
+<div id="formulaModal" class="modal" role="dialog" aria-modal="true">
+  <button class="close-btn" data-close="formulaModal">❌</button>
+  <div class="modal-card formula-card">
+    <h2>Σ สูตรสำคัญ</h2>
+    <div class="box"><b class="blue">แนวคิดหลัก</b><br>ถ้าระบบคน+เรือไม่มีแรงภายนอกในแนวนอน โมเมนตัมรวมในแนวนอนคงที่ และถ้าเริ่มจากอยู่นิ่ง จุดศูนย์กลางมวลของระบบจะอยู่นิ่ง</div>
+    <div class="box">ตำแหน่งจุดศูนย์กลางมวลของระบบคือ
+      \[
+      x_{CM}=\frac{m_\text{คน}x_\text{คน}+m_\text{เรือ}x_\text{เรือ}}{m_\text{คน}+m_\text{เรือ}}
+      \]
+    </div>
+    <div class="box">เมื่อคนเดินบนเรือไปทางขวา เรือจะเลื่อนไปทางซ้ายเพื่อรักษา \(x_{CM}\) ให้คงที่ ดังนั้นไม่ได้แปลว่าเรือนิ่ง แต่ <b class="red">ระบบทั้งระบบรักษาจุดศูนย์กลางมวลเดิม</b></div>
+    <div class="box">ถ้าเรือมีมวลมากกว่าเดิมมาก เรือจะขยับน้อยลง เพราะมวลมากต้องเคลื่อนที่น้อยกว่าเพื่อชดเชยการเคลื่อนที่ของคน</div>
+  </div>
+</div>
+<div id="exerciseModal" class="modal" role="dialog" aria-modal="true">
+  <button class="close-btn" data-close="exerciseModal">❌</button>
+  <div class="modal-card exercise-card">
+    <h2>📝 แบบฝึกหัด</h2>
+    <div class="box"><b>หัวข้อแบบฝึกหัด</b><br>เลือกคำตอบ A–E แล้วกดดูเฉลยในแต่ละข้อ เพื่อทบทวนแนวคิดจุดศูนย์กลางมวลของระบบ</div>
+    <div class="box quiz" data-answer="B">
+      <b>ข้อ 1</b> คนเดินไปทางขวาบนเรือที่ลอยนิ่งบนผิวน้ำ โดยละเลยแรงต้านน้ำ เรือจะเคลื่อนที่อย่างไร?<br>
+      <button class="quiz-choice">A. เรือเคลื่อนที่ไปทางขวาตามคน</button>
+      <button class="quiz-choice">B. เรือเคลื่อนที่ไปทางซ้าย</button>
+      <button class="quiz-choice">C. เรือไม่เคลื่อนที่เลย</button>
+      <button class="quiz-choice">D. เรือจมลง</button>
+      <button class="quiz-choice">E. สรุปไม่ได้ เพราะไม่มีแรงเสียดทาน</button>
+      <div class="solution"><span class="red">เฉลย: B</span><br>คนออกแรงดันเรือไปทางซ้าย และเรือดันคนไปทางขวา แรงคู่นี้เป็นแรงภายในระบบ จึงทำให้คนและเรือเคลื่อนที่สวนกัน แต่จุดศูนย์กลางมวลของระบบยังคงที่</div>
+    </div>
+    <div class="box quiz" data-answer="D">
+      <b>ข้อ 2</b> ถ้าเพิ่มมวลเรือให้มากขึ้น โดยให้คนเดินระยะเท่าเดิม เรือจะถอยกลับอย่างไร?<br>
+      <button class="quiz-choice">A. ถอยมากขึ้น</button>
+      <button class="quiz-choice">B. ถอยเท่าเดิมเสมอ</button>
+      <button class="quiz-choice">C. ไม่เกี่ยวกับมวลเรือ</button>
+      <button class="quiz-choice">D. ถอยน้อยลง</button>
+      <button class="quiz-choice">E. ถอยไปทางเดียวกับคน</button>
+      <div class="solution"><span class="red">เฉลย: D</span><br>มวลเรือมากขึ้นทำให้เรือต้องเลื่อนน้อยลง เพื่อให้ค่า \(x_{CM}\) ของระบบยังคงเดิม</div>
+    </div>
+  </div>
+</div>
+<script>
+const canvas = document.getElementById('labCanvas');
+const ctx = canvas.getContext('2d');
+const inputs = {
+  personMass: document.getElementById('personMass'),
+  boatMass: document.getElementById('boatMass'),
+  boatLength: document.getElementById('boatLength'),
+  walk: document.getElementById('walk')
+};
+const labels = { personX:document.getElementById('personX'), boatX:document.getElementById('boatX'), systemX:document.getElementById('systemX') };
+let playing=false, dir=1, raf=null;
+let walkDirection=1;
+let lastWalkValue=parseFloat(document.getElementById('walk').value)||0;
+let draggingPerson=false;
+let lastDragTime=0;
+let lastDragWalk=lastWalkValue;
+let armPhase=0;
+let walkSpeedVisual=0;
+function clamp(v,min,max){return Math.max(min,Math.min(max,v));}
+function val(id){return parseFloat(inputs[id].value)||0;}
+function resize(){const dpr=window.devicePixelRatio||1; const rect=canvas.getBoundingClientRect(); canvas.width=Math.round(rect.width*dpr); canvas.height=Math.round(rect.height*dpr); ctx.setTransform(dpr,0,0,dpr,0,0); draw();}
+function state(){
+  const mp=val('personMass'), mb=val('boatMass'), L=val('boatLength');
+  const margin=0.75; const rMin=-L/2+margin, rMax=L/2-margin;
+  const t=parseFloat(inputs.walk.value)/100;
+  const r=rMin+(rMax-rMin)*t;
+  const r0=rMin; const xCM0=mp*r0/(mp+mb);
+  const xBoat=xCM0-mp*r/(mp+mb);
+  const xPerson=xBoat+r;
+  const xCM=(mp*xPerson+mb*xBoat)/(mp+mb);
+  return {mp,mb,L,r,rMin,rMax,xBoat,xPerson,xCM,xCM0};
+}
+function meterToPx(x,w,scaleMin,scaleMax){return (x-scaleMin)/(scaleMax-scaleMin)*w;}
+function currentScale(rectW){
+  const s=state();
+  const maxAbs=Math.max(5, Math.abs(s.xBoat)+s.L/2+1, Math.abs(s.xPerson)+1, Math.abs(s.xCM)+1);
+  const scaleMin=-Math.ceil(maxAbs), scaleMax=Math.ceil(maxAbs);
+  return {s,scaleMin,scaleMax,sx:x=>meterToPx(x,rectW-70,scaleMin,scaleMax)+35, pxToMeter:px=>scaleMin+(px-35)/(rectW-70)*(scaleMax-scaleMin)};
+}
+function drawArrow(x1,y1,x2,y2,color,label){
+  ctx.save();ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+  const ang=Math.atan2(y2-y1,x2-x1);ctx.beginPath();ctx.moveTo(x2,y2);ctx.lineTo(x2-11*Math.cos(ang-.45),y2-11*Math.sin(ang-.45));ctx.lineTo(x2-11*Math.cos(ang+.45),y2-11*Math.sin(ang+.45));ctx.closePath();ctx.fill();
+  if(label){ctx.font='800 14px system-ui';ctx.fillText(label,(x1+x2)/2-12,y1-8)}ctx.restore();
+}
+function draw(){
+  const rect=canvas.getBoundingClientRect(), w=rect.width, h=rect.height; ctx.clearRect(0,0,w,h);
+  const s=state();
+  const sc=currentScale(w);
+  const scaleMin=sc.scaleMin, scaleMax=sc.scaleMax, sx=sc.sx;
+  // background
+  const waterY=h*0.58; ctx.fillStyle='#dff2ff'; ctx.fillRect(0,0,w,waterY); ctx.fillStyle='#bfeaff'; ctx.fillRect(0,waterY,w,h-waterY);
+  ctx.strokeStyle='rgba(58,139,190,.35)'; ctx.lineWidth=2; for(let i=0;i<8;i++){ctx.beginPath();let y=waterY+18+i*24; for(let x=0;x<w;x+=28){ctx.lineTo(x,y+Math.sin((x+i*17)/38)*3)}ctx.stroke();}
+  // scale
+  const scaleY=h-54; ctx.strokeStyle='#58738c'; ctx.lineWidth=2; ctx.beginPath();ctx.moveTo(35,scaleY);ctx.lineTo(w-35,scaleY);ctx.stroke();
+  ctx.fillStyle='#405f78'; ctx.font='700 12px system-ui'; ctx.textAlign='center';
+  for(let m=scaleMin;m<=scaleMax;m++){const x=sx(m); ctx.beginPath();ctx.moveTo(x,scaleY-8);ctx.lineTo(x,scaleY+8);ctx.stroke(); if(m%1===0) ctx.fillText(m+' m',x,scaleY+25);}
+  // positions
+  const boatC=sx(s.xBoat), boatW=Math.min(w*.76, Math.max(220, s.L/(scaleMax-scaleMin)*(w-70))), boatH=70, boatY=waterY-52;
+  const boatLeft=boatC-boatW/2, boatRight=boatC+boatW/2;
+  // boat hull
+  ctx.fillStyle='#8cc7ef'; ctx.strokeStyle='#1769aa'; ctx.lineWidth=3; ctx.beginPath();ctx.moveTo(boatLeft+20,boatY);ctx.lineTo(boatRight-20,boatY);ctx.quadraticCurveTo(boatRight,boatY+5,boatRight-35,boatY+boatH);ctx.lineTo(boatLeft+35,boatY+boatH);ctx.quadraticCurveTo(boatLeft,boatY+5,boatLeft+20,boatY);ctx.closePath();ctx.fill();ctx.stroke();
+  ctx.fillStyle='#1769aa';ctx.font='900 15px system-ui';ctx.textAlign='center';ctx.fillText('เรือ',boatC,boatY+45);
+  // person: draggable body + arm/leg swing follows drag speed and direction
+  const pX=sx(s.xPerson), pBase=boatY-2;
+  const face=walkDirection>=0?1:-1;
+  const swingAmp=clamp(walkSpeedVisual/18,0,1);
+  const swing=Math.sin(armPhase)*swingAmp;
+  const shoulderY=pBase-48, hipY=pBase-31;
+  const armLen=28, legLen=31;
+  const armA1=Math.PI/2 + face*(0.95 + swing*0.85);
+  const armA2=Math.PI/2 - face*(0.95 + swing*0.85);
+  // When dragging stops, swingAmp becomes 0, so both legs hang down to pBase.
+  // This keeps the feet touching the boat floor instead of floating above it.
+  const legSwing = swing*0.82;
+  const legA1=Math.PI/2 - face*legSwing;
+  const legA2=Math.PI/2 + face*legSwing;
+  ctx.strokeStyle='#d93025'; ctx.fillStyle='#d93025'; ctx.lineWidth=5; ctx.lineCap='round'; ctx.lineJoin='round';
+  ctx.beginPath();ctx.arc(pX,pBase-76,14,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#ffffff';ctx.beginPath();ctx.arc(pX+face*5,pBase-80,2.1,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#d93025';
+  ctx.beginPath();
+  ctx.moveTo(pX,pBase-61);ctx.lineTo(pX,hipY);
+  ctx.moveTo(pX,shoulderY);ctx.lineTo(pX+Math.cos(armA1)*armLen,shoulderY+Math.sin(armA1)*armLen);
+  ctx.moveTo(pX,shoulderY);ctx.lineTo(pX+Math.cos(armA2)*armLen,shoulderY+Math.sin(armA2)*armLen);
+  ctx.moveTo(pX,hipY);ctx.lineTo(pX+Math.cos(legA1)*legLen,hipY+Math.sin(legA1)*legLen);
+  ctx.moveTo(pX,hipY);ctx.lineTo(pX+Math.cos(legA2)*legLen,hipY+Math.sin(legA2)*legLen);
+  ctx.stroke();
+  ctx.font='900 14px system-ui';ctx.textAlign='center';ctx.fillText('คน',pX,pBase-98);
+  // CM markers
+  function marker(x,color,text,yOffset,shape){const px=sx(x); ctx.save(); ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=3; ctx.beginPath();ctx.moveTo(px,scaleY-18);ctx.lineTo(px,waterY+95+yOffset);ctx.setLineDash([5,5]);ctx.stroke();ctx.setLineDash([]); if(shape==='diamond'){ctx.beginPath();ctx.moveTo(px,waterY+75+yOffset);ctx.lineTo(px+9,waterY+84+yOffset);ctx.lineTo(px,waterY+93+yOffset);ctx.lineTo(px-9,waterY+84+yOffset);ctx.closePath();ctx.fill();}else{ctx.beginPath();ctx.arc(px,waterY+84+yOffset,7,0,Math.PI*2);ctx.fill();} ctx.font='900 13px system-ui';ctx.textAlign='center';ctx.fillText(text,px,waterY+66+yOffset);ctx.restore();}
+  marker(s.xPerson,'#d93025','CM คน',-18,'circle'); marker(s.xBoat,'#1769aa','CM เรือ',10,'circle'); marker(s.xCM,'#9a6500','CM ระบบ',38,'diamond');
+  // velocity arrows follow the latest walking direction
+  const pArrowStart=pX-walkDirection*46, pArrowEnd=pX+walkDirection*46;
+  drawArrow(pArrowStart,pBase-116,pArrowEnd,pBase-116,'#d93025','v คน');
+  const boatDir=-walkDirection;
+  drawArrow(boatC-boatDir*52,boatY+boatH+24,boatC+boatDir*52,boatY+boatH+24,'#1769aa','v เรือ');
+  labels.personX.textContent=s.xPerson.toFixed(2)+' m'; labels.boatX.textContent=s.xBoat.toFixed(2)+' m'; labels.systemX.textContent=s.xCM.toFixed(2)+' m';
+}
+function roundRect(ctx,x,y,w,h,r,fill,stroke){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();if(fill)ctx.fill();if(stroke)ctx.stroke();}
+function animate(){ if(!playing)return; let v=parseFloat(inputs.walk.value); v += dir*0.42; if(v>=100){v=100;dir=-1;} if(v<=0){v=0;dir=1;} walkDirection=dir>=0?1:-1; inputs.walk.value=v; lastWalkValue=v; draw(); raf=requestAnimationFrame(animate); }
+document.getElementById('resetBtn').addEventListener('click',()=>{playing=false; inputs.walk.value=0; dir=1; walkDirection=1; lastWalkValue=0; lastDragWalk=0; armPhase=0; walkSpeedVisual=0; draw();});
+document.querySelectorAll('.small-btn').forEach(btn=>btn.addEventListener('click',()=>{const id=btn.dataset.target; const el=inputs[id]; const step=parseFloat(btn.dataset.step); const min=parseFloat(el.min), max=parseFloat(el.max); el.value=clamp((parseFloat(el.value)||0)+step,min,max); draw(); if(window.MathJax) MathJax.typesetPromise();}));
+Object.values(inputs).forEach(el=>el.addEventListener('input',()=>{
+  if(el===inputs.walk){
+    const now=parseFloat(inputs.walk.value)||0;
+    const delta=now-lastWalkValue;
+    if(delta>0) walkDirection=1;
+    else if(delta<0) walkDirection=-1;
+    walkSpeedVisual=Math.abs(delta)*9;
+    armPhase += Math.abs(delta)*0.18;
+    lastWalkValue=now; lastDragWalk=now;
+  }
+  draw();
+}));
+
+function pointerPos(evt){
+  const rect=canvas.getBoundingClientRect();
+  const e=evt.touches?evt.touches[0]:evt;
+  return {x:e.clientX-rect.left,y:e.clientY-rect.top,w:rect.width,h:rect.height};
+}
+function isOnPerson(pt){
+  const sc=currentScale(pt.w); const lab=state();
+  const waterY=pt.h*0.58;
+  const maxAbs=Math.max(5, Math.abs(lab.xBoat)+lab.L/2+1, Math.abs(lab.xPerson)+1, Math.abs(lab.xCM)+1);
+  const boatY=waterY-52;
+  const pX=sc.sx(lab.xPerson), pBase=boatY-2;
+  return Math.abs(pt.x-pX)<42 && pt.y>pBase-112 && pt.y<pBase+12;
+}
+function dragToWalk(pt){
+  const sc=currentScale(pt.w); const lab=state();
+  const xPersonTarget=sc.pxToMeter(pt.x);
+  let r=(xPersonTarget-lab.xCM0)*(lab.mp+lab.mb)/lab.mb;
+  r=clamp(r,lab.rMin,lab.rMax);
+  const t=(r-lab.rMin)/(lab.rMax-lab.rMin);
+  const newWalk=clamp(t*100,0,100);
+  const now=performance.now();
+  const dt=Math.max(16, now-lastDragTime);
+  const delta=newWalk-lastDragWalk;
+  if(Math.abs(delta)>0.02){
+    walkDirection=delta>0?1:-1;
+    walkSpeedVisual=Math.abs(delta)/dt*1000;
+    armPhase += Math.abs(delta)*0.22 + walkSpeedVisual*0.006;
+  }else{
+    walkSpeedVisual*=0.85;
+  }
+  inputs.walk.value=newWalk;
+  lastWalkValue=newWalk; lastDragWalk=newWalk; lastDragTime=now;
+  draw();
+}
+canvas.addEventListener('pointerdown',evt=>{
+  const pt=pointerPos(evt);
+  if(isOnPerson(pt)){
+    draggingPerson=true;
+    canvas.setPointerCapture(evt.pointerId);
+    lastDragTime=performance.now();
+    lastDragWalk=parseFloat(inputs.walk.value)||0;
+    evt.preventDefault();
+  }
+});
+canvas.addEventListener('pointermove',evt=>{ if(draggingPerson){dragToWalk(pointerPos(evt)); evt.preventDefault();} });
+canvas.addEventListener('pointerup',evt=>{draggingPerson=false; walkSpeedVisual=0; try{canvas.releasePointerCapture(evt.pointerId)}catch(e){} draw();});
+canvas.addEventListener('pointercancel',()=>{draggingPerson=false; walkSpeedVisual=0; draw();});
+
+window.addEventListener('resize',resize); resize();
+document.getElementById('formulaBtn').onclick=()=>{document.getElementById('formulaModal').classList.add('show'); if(window.MathJax) MathJax.typesetPromise();};
+document.getElementById('exerciseBtn').onclick=()=>{document.getElementById('exerciseModal').classList.add('show'); if(window.MathJax) MathJax.typesetPromise();};
+document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>document.getElementById(b.dataset.close).classList.remove('show'));
+document.querySelectorAll('.quiz').forEach(q=>{const buttons=[...q.querySelectorAll('.quiz-choice')]; buttons.forEach((b,i)=>b.onclick=()=>{const ans=q.dataset.answer.charCodeAt(0)-65; buttons.forEach((x,j)=>{x.disabled=true; if(j===ans)x.classList.add('correct');}); if(i!==ans)b.classList.add('wrong'); q.querySelector('.solution').classList.add('show'); if(window.MathJax) MathJax.typesetPromise();});});
+</script>
+</body>
+</html>

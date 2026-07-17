@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+
+<html lang="th">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>การชนลูกบอล–กำแพง (อุดมคติ)</title>
+<style>
+  :root{
+    --blue:#2563eb;
+    --ink:#0f172a;
+    --muted:#64748b;
+    --panel:#ffffff;
+    --card:#ffffff;
+    --bg:#f5f6f8;
+    --wall:#6b7280;
+    --ground:#9ca3af;
+    --red:#dc2626;
+  }
+  body{
+    margin:0;
+    font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans Thai",sans-serif;
+    background:var(--bg);
+    color:var(--ink);
+    min-height:100vh;
+    overflow-x:hidden;
+  }
+  .container{max-width:920px;margin:0 auto;padding:12px;}
+  h2{margin:0 0 6px 0;text-align:center}
+  @media(min-width:900px){
+    h2{
+font-size:30px;}
+  }
+
+  .card{
+    background:var(--card);
+    border-radius:22px;
+    padding:10px;
+    box-shadow:0 10px 30px rgba(15,23,42,.06);
+  }
+
+  canvas{display:block;width:100%;height:280px;border-radius:18px; background:transparent;}
+  #scene{height:280px;}
+  #graph{height:280px;}
+  @media(min-width:900px){
+    #scene{height:340px;}
+    #graph{height:340px;}
+  }
+
+  .controls{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    align-items:center;
+    justify-content:center;
+    margin:10px 0 6px;
+  }
+  .row{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    justify-content:center;
+    align-items:center;
+  }
+  .pill{
+    border:1px solid rgba(15,23,42,.18);
+    background:#eef2f7;
+    color:#111827;
+    padding:10px 14px;
+    border-radius:999px;
+    font-weight:700;
+    cursor:pointer;
+    user-select:none;
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    min-width:110px;
+    justify-content:center;
+  }
+  .pill:active{transform:translateY(1px);}
+  .pill.active{
+    background:var(--blue);
+    color:white;
+    border-color:rgba(37,99,235,.65);
+    box-shadow:0 8px 18px rgba(37,99,235,.22);
+  }
+  .pill.play{
+    background:#fde68a;
+    border-color:rgba(245,158,11,.55);
+    min-width:120px;
+  }
+  .pill.play.active{
+    background:#f59e0b;
+    border-color:rgba(245,158,11,.8);
+    color:#111827;
+  }
+  .pill.reset{
+    background:#e5e7eb;
+    border-color:rgba(107,114,128,.45);
+  }
+  .pill.formula{
+    background:#fdebd2;
+    border-color:rgba(249,115,22,.35);
+    min-width:140px;
+  }
+
+  .checkwrap{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    justify-content:center;
+    margin:8px 0 10px;
+  }
+  .check{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:10px 14px;
+    border-radius:999px;
+    background:#eef2f7;
+    border:1px solid rgba(15,23,42,.18);
+    font-weight:800;
+  }
+  .check input{width:22px;height:22px;}
+
+  .note{
+    margin-top:10px;
+    background:#e0f2fe;
+    border:1px solid rgba(2,132,199,.25);
+    padding:12px 14px;
+    border-radius:16px;
+    color:#0f172a;
+    line-height:1.45;
+    font-weight:500;
+  }
+  .footer{
+    text-align:center;
+    margin:12px 0 6px;
+    font-weight:700;
+  }
+  .footer a{color:var(--blue); text-decoration:none;}
+  .footer a:hover{text-decoration:underline;}
+
+  /* modal */
+  .modalBackdrop{
+    position:fixed; inset:0;
+    background:rgba(15,23,42,.40);
+    display:none;
+    align-items:stretch;
+    justify-content:stretch;
+    padding:0;
+    z-index:50;
+    overflow:auto;
+  }
+  .modal{
+width:100%;
+    height:100%;
+    max-height:100vh;
+    background:white;
+    border-radius:0;
+    box-shadow:0 18px 60px rgba(0,0,0,.25);
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+  }
+  .modalTop{
+    position:sticky; top:0;
+    background:white;
+    padding:10px 12px;
+    border-bottom:1px solid rgba(15,23,42,.10);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+  }
+  .modalTop .title{
+    font-weight:900;
+    color:var(--blue);
+  }
+  .closeBtn{
+    border:none;
+    background:#fff;
+    width:42px;height:42px;
+    border-radius:12px;
+    cursor:pointer;
+    box-shadow:0 4px 12px rgba(15,23,42,.12);
+    font-size:18px;
+  }
+  .modalBody{
+    padding:14px 16px 18px;
+    overflow:auto;
+    flex:1;
+    height:calc(100vh - 56px);
+    line-height:1.55;
+  }
+  .badge{
+    display:inline-block;
+    padding:4px 10px;
+    border-radius:999px;
+    background:#e2e8f0;
+    font-weight:800;
+    margin-right:6px;
+  }
+  .warnTitle{color:#dc2626;}
+  .warn{
+    background:#fff7ed;
+    border:1px solid rgba(249,115,22,.25);
+    padding:10px 12px;
+    border-radius:14px;
+  }
+  .eq{
+    font-family:ui-serif, "Times New Roman", serif;
+    font-size:18px;
+    font-weight:700;
+    display:inline-block;
+    margin:6px 0 6px 14px; /* shift right a bit */
+    padding:8px 12px;
+    background:#eef2ff;
+    border:1px solid #c7d2fe;
+    border-radius:12px;
+  }
+
+/* === v37 tweaks === */
+.subtitle { font-size: 0.6em; } /* smaller than main title */
+@media (max-width: 768px){
+  .slow-motion-label{ font-size: calc(var(--slow-font,16px) + 7px); }
+}
+
+
+/* === v39 title hierarchy fix === */
+.title-main{ margin:0 0 6px 0; text-align:center; color:#1d4ed8; font-weight:700; font-size:32px; line-height:1.15; }
+.title-sub{ display:inline-block; margin-left:6px; font-weight:500; color:rgba(29,78,216,.85); font-size:20px; } /* ~12px smaller than main */
+@media (max-width: 560px){
+  .title-main{ font-size:26px; }
+  .title-sub{ font-size:14px; } /* keep clearly smaller on mobile too */
+}
+
+  /* Force Thai font inside MathJax text to prevent spaced glyphs */
+  .mjx-mtext, mjx-mtext { font-family: "Noto Sans Thai", system-ui, sans-serif !important; }
+
+
+  /* === mini-lab compact experiment area === */
+  .lab-card{
+    width:50%;
+    margin-left:auto;
+    margin-right:auto;
+    padding:8px;
+  }
+
+  #scene{height:140px;}
+  #graph{height:140px;}
+
+  @media(min-width:900px){
+    #scene{height:170px;}
+    #graph{height:170px;}
+  }
+
+  @media(max-width:560px){
+    .lab-card{
+      width:50%;
+      min-width:0;
+    }
+    #scene{height:120px;}
+    #graph{height:120px;}
+  }
+</style>
+</head>
+<body>
+<div class="container">
+<h2 class="title-main">การชนลูกบอล–กำแพง <span class="title-sub">(กรณีอุดมคติ: ไม่สูญเสียพลังงาน)</span></h2>
+<div class="card lab-card">
+<canvas aria-label="scene" id="scene"></canvas>
+</div>
+<div style="height:10px"></div>
+<div class="card lab-card">
+<canvas aria-label="graph" id="graph"></canvas>
+</div>
+<div class="controls">
+<div class="row">
+<button class="pill active" id="btnHard">บอลแข็ง</button>
+<button class="pill" id="btnSoft">บอลอ่อน</button>
+</div>
+<div class="row">
+<button class="pill play" id="btnPlay">▶️ เล่น</button>
+<button class="pill reset" id="btnReset">🔄 รีเซ็ต</button>
+</div>
+<div class="row">
+<button class="pill formula" id="btnFormula">📘 สูตรสำคัญ</button>
+</div>
+</div>
+<div class="checkwrap">
+<label class="check">
+<input id="chkAvg" type="checkbox"/>
+        แสดงค่าแรงเฉลี่ย
+      </label>
+</div>
+<div class="note">
+<b>หมายเหตุ (ชีวิตจริง)</b><br/>
+      ในความเป็นจริงลูกบอลจะสูญเสียพลังงานบางส่วนเป็นความร้อน การเสียรูปภายใน เสียง และแรงเสียดทานภายในวัสดุ
+      ทำให้ลูกบอลอ่อนมักมีความเร็วสะท้อนกลับน้อยกว่าลูกบอลแข็ง (ค่าสัมประสิทธิ์การคืนรูปต่ำกว่า)
+    </div>
+<div class="footer">
+      ศึกษาเพิ่มเติมที่ <a href="https://www.facebook.com/resolvephysics" rel="noopener" target="_blank">เพจคลายปมฟิสิกส์</a>
+</div>
+</div>
+<!-- Modal -->
+<div aria-modal="true" class="modalBackdrop" id="backdrop" role="dialog">
+<div class="modal">
+<div class="modalTop">
+<div class="title">📘 สูตรสำคัญ: การดล (Impulse) และกราฟแรง–เวลา</div>
+<div style="display:flex;align-items:center;gap:10px;">
+<button class="closeBtn" id="btnClose" title="ปิด">❌</button>
+</div>
+</div>
+<div class="modalBody">
+<div>💡 <span class="badge">แนวคิด</span>ระหว่างการชน แรงที่กำแพงกระทำต่อลูกบอล <b>ไม่คงที่</b> แต่เปลี่ยนตามเวลา</div>
+<div style="height:10px"></div>
+<div>🟦 <span class="badge">การดล</span>นิยามการดล (ใช้ตัวแปร <b>I</b>) คือ</div>
+<div class="eq">\( I = \int_{t_i}^{t_f} F(t)\,dt \)</div>
+<div>และมีความสัมพันธ์กับการเปลี่ยนโมเมนตัม</div>
+<div class="eq">\( I = \Delta p = m\,\Delta v \)</div>
+<div style="height:10px"></div>
+<div>📈 <span class="badge">พื้นที่ใต้กราฟ</span>พื้นที่ใต้กราฟ \(F\text{–}t\) เท่ากับ <b>ขนาดการดล</b> \(I\)</div>
+<div style="height:10px"></div>
+<div>⚖️ <span class="badge">แรงเฉลี่ย</span>นิยามแรงเฉลี่ยคือ</div>
+<div class="eq">\( F_{\text{avg}} = \dfrac{I}{\Delta t} \)</div>
+<div style="height:10px"></div>
+<div><span class="badge">แรงสูงสุด</span>แรงสูงสุด \(F_{\text{max}}\) คือค่ามากที่สุดของแรงในช่วงชน</div>
+<div style="height:12px"></div>
+<div class="warn">
+<b class="warnTitle">ข้อควรระวัง!</b> หลายคนเข้าใจผิดคิดว่า \(F_{\text{avg}} = F_{\text{max}}/2\)<br/>
+          ซึ่งจะเป็นจริงก็ต่อเมื่อ <b>กราฟในโจทย์เป็นรูปสามเหลี่ยม</b> เท่านั้น<br/>
+          หลักที่ถูกคือ \(F_{\text{avg}} = I/\Delta t\) (พื้นที่ใต้กราฟหารด้วยเวลา)
+        </div>
+<div style="height:12px"></div>
+<div><span class="badge">แตกหัก/เสียหายเกิดจากอะไร?</span></div>
+<div>
+          การแตกหัก/เสียหายมักเกี่ยวข้องกับ <b>แรงสูงสุด</b> (หรือความเค้นสูงสุด) ที่เกินค่าทนทานของวัสดุ
+          ขณะที่แรงเฉลี่ยใช้บอก “ผลรวม” ในเชิงโมเมนตัม/การดล
+        </div>
+<div style="height:10px"></div>
+<div><span class="badge">ตัวอย่างชีวิตประจำวัน</span></div>
+<ul>
+<li>หมอน/แผ่นรองกันกระแทก: ทำให้ \(\Delta t\) นานขึ้น → \(F_{\text{avg}}\) ลดลง</li>
+<li>ถุงลมนิรภัย: ยืดเวลาหยุดของร่างกาย → ลดแรงกระแทกเฉลี่ย</li>
+<li>ค้อนกับตะปู: เวลาสัมผัสสั้นมาก → \(F_{\text{max}}\) สูง</li>
+</ul>
+</div>
+</div>
+</div>
+<script>
+(() => {
+  const scene = document.getElementById('scene');
+  const graph = document.getElementById('graph');
+  const ctx = scene.getContext('2d');
+  const gtx = graph.getContext('2d');
+
+  const btnHard = document.getElementById('btnHard');
+  const btnSoft = document.getElementById('btnSoft');
+  const btnPlay = document.getElementById('btnPlay');
+  const btnReset = document.getElementById('btnReset');
+  const chkAvg = document.getElementById('chkAvg');
+  const btnFormula = document.getElementById('btnFormula');
+  const backdrop = document.getElementById('backdrop');
+  const btnClose = document.getElementById('btnClose');
+
+
+  // State
+  let mode = 'hard'; // default hard
+  let running = false;
+  let slowLabel = false; // show slow motion label only during collision
+  let slowPhase = 0; // for glow/pulse effect
+  let rafId = null;
+  let lastTs = null;
+
+  // Physics / params (ideal)
+  const ball = { r: 46, x: 0, y: 0, v: -220 }; // v<0 moving left
+  const wall = { x: 0, w: 18 };
+  const ground = { y: 0 };
+
+  // Collision pulse model
+  const params = {
+    hard: { Dt: 0.85, Fmax: 1.0, cFrac: 0.25 }, // shorter, higher
+    soft: { Dt: 1.70, Fmax: 0.5, cFrac: 0.45 }  // longer, lower, more compression
+  };
+
+  let coll = { active:false, tau:0, Dt:params.hard.Dt, Fmax:params.hard.Fmax, cmax:0, v0:0 };
+  let graphPts = []; // {tau, F}
+  let doneCollision = false;
+  let avgForce = null;
+
+  function dpr(){ return Math.max(1, window.devicePixelRatio || 1); }
+  function isMobileUI(){ return window.matchMedia && window.matchMedia('(max-width: 560px)').matches; }
+
+  function resize(){
+    const r = dpr();
+    [scene, graph].forEach(cv=>{
+      const rect = cv.getBoundingClientRect();
+      cv.width  = Math.max(1, Math.round(rect.width  * r));
+      cv.height = Math.max(1, Math.round(rect.height * r));
+    });
+    layout();
+    drawAll();
+  }
+
+  function layout(){
+    const sW = scene.width, sH = scene.height;
+
+    ground.y = Math.round(sH * 0.72);
+    wall.x = Math.round(sW * 0.12);
+    wall.w = Math.max(16, Math.round(sW * 0.024));
+
+    // ball size relative
+    const baseR = Math.max(28, Math.round(Math.min(sW, sH) * 0.095));
+    ball.r = Math.round(baseR * 1.20); // +20%
+    ball.y = ground.y - ball.r;
+
+    // start 30px away from wall face (CSS px)
+    const dist = Math.round(30 * dpr());
+    const wallFace = wall.x + Math.round(wall.w/2);
+    ball.x = wallFace + ball.r + dist;
+  }
+
+  function setMode(m){
+    mode = m;
+    btnHard.classList.toggle('active', mode==='hard');
+    btnSoft.classList.toggle('active', mode==='soft');
+
+    // arrow color depends on mode; handled in draw()
+    // reset to show differences clearly
+    resetAll();
+  }
+
+  function setPlayLabel(){
+    if(running){
+      btnPlay.classList.add('active');
+      btnPlay.textContent = '⏸ หยุด';
+    }else{
+      btnPlay.classList.remove('active');
+      btnPlay.textContent = '▶️ เล่น';
+    }
+  }
+
+  function togglePlay(){
+    running = !running;
+    setPlayLabel();
+    if(running && !rafId){
+      lastTs = null;
+      rafId = requestAnimationFrame(loop);
+    }
+  }
+
+  function resetAll(){
+    slowLabel = false;
+    slowPhase = 0;
+    running = false;
+    setPlayLabel();
+    lastTs = null;
+    if(rafId){ cancelAnimationFrame(rafId); rafId=null; }
+
+    // reset motion
+    const p = params[mode];
+    coll = { active:false, tau:0, Dt:p.Dt, Fmax:p.Fmax, cmax:Math.round(ball.r*p.cFrac), v0:0 };
+    ball.v = -900;
+    // place ball 30px from wall
+    const dist = Math.round(30 * dpr());
+    const wallFace = wall.x + Math.round(wall.w/2);
+    ball.x = wallFace + ball.r + dist;
+    ball.y = ground.y - ball.r;
+
+    graphPts = [];
+    doneCollision = false;
+    avgForce = null;
+    drawAll();
+  }
+
+  function startCollision(){
+    const p = params[mode];
+    slowLabel = true;
+    slowPhase = 0;
+    coll.active = true;
+    coll.tau = 0;
+    coll.Dt = p.Dt;
+    coll.Fmax = p.Fmax;
+    coll.cmax = Math.round(ball.r * p.cFrac);
+    coll.v0 = ball.v;
+    graphPts = [];
+    doneCollision = false;
+    avgForce = null;
+  }
+
+  function F_of_tau(tau, Dt, Fmax){
+    // F = Fmax sin^2(pi * tau / Dt), 0..Dt
+    const x = Math.PI * (tau / Dt);
+    const s = Math.sin(x);
+    return Fmax * s * s;
+  }
+
+  function comp_of_tau(tau, Dt, cmax){
+    // compression envelope ~ sin(pi * tau / Dt) (0..cmax..0)
+    const x = Math.PI * (tau / Dt);
+    return cmax * Math.sin(x);
+  }
+
+  function tick(dt){
+    if(!running) return;
+
+    const wallFace = wall.x + Math.round(wall.w/2);
+
+    if(!coll.active){
+      // free rolling toward wall
+      ball.x += ball.v * dt;
+
+      const touchX = wallFace + ball.r;
+      if(ball.x <= touchX){
+        // begin collision while keeping contact
+        ball.x = touchX;
+        startCollision();
+      }
+    }else{
+      coll.tau += dt;
+      if(coll.tau > coll.Dt) coll.tau = coll.Dt;
+
+      const c = comp_of_tau(coll.tau, coll.Dt, coll.cmax);
+      // keep surface touching wall: x = wallFace + (r - c)
+      ball.x = wallFace + (ball.r - c);
+
+      const F = F_of_tau(coll.tau, coll.Dt, coll.Fmax);
+      graphPts.push({tau: coll.tau, F});
+
+      if(coll.tau >= coll.Dt){
+        // end collision: restore shape, reverse velocity (ideal)
+        coll.active = false;
+        doneCollision = true;
+        slowLabel = false;
+        ball.x = wallFace + ball.r + 0.5; // tiny separation so the ball cleanly leaves the wall
+        ball.v = Math.abs(coll.v0) * 0.4; // rebound at 40% speed (60% slower) for a softer release
+
+        // compute avg force
+        // area approx by trapezoid on stored points
+        let area = 0;
+        for(let i=1;i<graphPts.length;i++){
+          const a = graphPts[i-1], b = graphPts[i];
+          area += 0.5*(a.F + b.F)*(b.tau - a.tau);
+        }
+        avgForce = area / coll.Dt;
+      }
+    }
+  }
+
+  function drawScene(){
+    const W = scene.width, H = scene.height;
+    ctx.clearRect(0,0,W,H);
+
+    // subtle background
+    ctx.fillStyle = "rgba(2,6,23,0.02)";
+    ctx.fillRect(0,0,W,H);
+
+    // wall
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--wall').trim() || "#6b7280";
+    const wallLeft = wall.x - Math.round(wall.w/2);
+    const wallTop = Math.round(H*0.18);
+    // wall ends exactly at the ground
+    const wallH = Math.max(6, ground.y - wallTop);
+    ctx.fillRect(wallLeft, wallTop, wall.w, wallH);
+
+    // ground (start from the left edge of the wall; do not extend further left)
+// ground
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--ground').trim() || "#9ca3af";
+    ctx.fillRect(wallLeft, ground.y, (W - wallLeft), Math.max(12, Math.round(H*0.06)));
+
+    // slow motion label (appears only during real collision)
+    if(slowLabel){
+      const mobileBoost = isMobileUI() ? 7 : 0; // requested: mobile bigger +7px
+      const baseSize = Math.max(16, Math.round(W*0.022)) + mobileBoost;
+      const pulse = 10 + 6*Math.sin(slowPhase*9); // glow pulse
+      ctx.save();
+      ctx.fillStyle = "#dc2626";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.font = `600 ${baseSize}px system-ui, "Noto Sans Thai", sans-serif`;
+      // glow effect (special mode)
+      ctx.shadowColor = "rgba(220,38,38,0.9)";
+      ctx.shadowBlur = pulse * (window.devicePixelRatio || 1);
+      // tiny "pop" effect at start
+      const pop = 1 + 0.03*Math.sin(slowPhase*12);
+      ctx.translate(Math.round(W*0.58), Math.round(H*0.35));
+      ctx.scale(pop, pop);
+      ctx.fillText("ภาพ slow motion", 0, 0);
+      ctx.restore();
+    }
+
+    // ball deformation (ellipse)
+    const wallFace = wall.x + Math.round(wall.w/2);
+    let squash = 0;
+    if(coll.active){
+      const c = comp_of_tau(coll.tau, coll.Dt, coll.cmax);
+      squash = c / ball.r; // 0..cFrac..0
+    }
+    const rx = ball.r * (1.0 - 0.55*squash); // compress in x
+    const ry = ball.r * (1.0 + 0.35*squash); // expand in y
+
+    // ball outline
+    ctx.save();
+    ctx.translate(ball.x, ball.y);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI*2);
+    ctx.lineWidth = Math.max(2, Math.round(W*0.0025));
+    ctx.strokeStyle = "#111827";
+    ctx.stroke();
+    ctx.restore();
+
+    // force arrow when colliding (points right)
+    if(coll.active){
+      const F = F_of_tau(coll.tau, coll.Dt, coll.Fmax);
+      const aColor = (mode==="hard") ? "#dc2626" : "#2563eb";
+      const base = Math.round(Math.min(W,H) * 0.08);
+      const len = base + Math.round(base * 1.25 * F); // scale with F
+      const x0 = wallFace + 6;
+      const y0 = ball.y;
+      drawArrow(x0, y0, x0 + len, y0, aColor, "F");
+    }
+  }
+
+  function drawArrow(x1,y1,x2,y2,color,label){
+    ctx.save();
+    ctx.strokeStyle=color;
+    ctx.fillStyle=color;
+    ctx.lineWidth = Math.max(3, Math.round(scene.width*0.003));
+    ctx.lineCap="round";
+    ctx.beginPath();
+    ctx.moveTo(x1,y1); ctx.lineTo(x2,y2);
+    ctx.stroke();
+
+    const ang = Math.atan2(y2-y1, x2-x1);
+    const head = Math.max(10, Math.round(scene.width*0.015));
+    ctx.beginPath();
+    ctx.moveTo(x2,y2);
+    ctx.lineTo(x2 - head*Math.cos(ang) + head*0.55*Math.sin(ang),
+               y2 - head*Math.sin(ang) - head*0.55*Math.cos(ang));
+    ctx.lineTo(x2 - head*Math.cos(ang) - head*0.55*Math.sin(ang),
+               y2 - head*Math.sin(ang) + head*0.55*Math.cos(ang));
+    ctx.closePath();
+    ctx.fill();
+
+    // label
+    ctx.font = `800 ${Math.max(16, Math.round(scene.width*0.03))}px system-ui, "Noto Sans Thai", sans-serif`;
+    ctx.textBaseline="bottom";
+    ctx.textAlign="left";
+    ctx.fillText(label, x2 + 10, y2 - 6);
+    ctx.restore();
+  }
+
+  function drawGraph(){
+    const W = graph.width, H = graph.height;
+    gtx.clearRect(0,0,W,H);
+
+    // plot box margins
+    const padL = Math.round(W*0.10);
+    const padB = Math.round(H*0.14);
+    const padT = Math.round(H*0.08);
+    const padR = Math.round(W*0.06);
+
+    const xA = padL;
+    const xB = W - padR;
+    const yA = H - padB;
+    const yB = padT;
+
+    // axes
+    gtx.strokeStyle = "rgba(15,23,42,0.55)";
+    gtx.lineWidth = Math.max(2, Math.round(W*0.002));
+    gtx.beginPath();
+    gtx.moveTo(xA, yA); gtx.lineTo(xA, yB);
+    gtx.moveTo(xA, yA); gtx.lineTo(xB, yA);
+    gtx.stroke();
+
+    // axis labels (smaller & thinner)
+    gtx.fillStyle = "#111";
+    gtx.font = `600 ${Math.max(16, Math.round(W*0.040))}px system-ui, "Noto Sans Thai", sans-serif`;
+    gtx.textAlign="center";
+    gtx.textBaseline="middle";
+    gtx.fillText("F", Math.round(xA*0.45), Math.round((yA+yB)/2));
+    gtx.font = `600 ${Math.max(14, Math.round(W*0.034))}px system-ui, "Noto Sans Thai", sans-serif`;
+    gtx.fillText("t", xB + Math.round(W*0.03), yA + Math.round(H*0.05));
+
+    // if no data yet, just axes
+    if(graphPts.length < 2){
+      return;
+    }
+
+    const p = params[mode];
+    const DtMax = 2.0; // for scaling time axis
+    const FmaxMax = 1.0; // normalized
+    const w = xB - xA;
+    const h = yA - yB;
+
+    // curve style by mode
+    const color = (mode==="hard") ? "#dc2626" : "#2563eb";
+
+    // build curve path for the *actual* duration
+    const xEnd = xA + (p.Dt/DtMax)*w;
+
+    gtx.save();
+    gtx.lineWidth = Math.max(3, Math.round(W*0.004));
+    gtx.strokeStyle = color;
+    gtx.lineJoin="round";
+    gtx.lineCap="round";
+    gtx.beginPath();
+    for(let i=0;i<graphPts.length;i++){
+      const pt = graphPts[i];
+      const x = xA + (pt.tau/DtMax)*w;
+      const y = yA - (pt.F/FmaxMax)*h;
+      if(i===0) gtx.moveTo(x,y);
+      else gtx.lineTo(x,y);
+    }
+    gtx.stroke();
+
+    // fill under the curve (during drawing) only when NOT showing average-force flattening
+    if(!chkAvg.checked){
+      gtx.save();
+      gtx.globalCompositeOperation = "source-over";
+      gtx.fillStyle = (mode==="hard") ? "rgba(220,38,38,0.14)" : "rgba(37,99,235,0.14)";
+      gtx.beginPath();
+      for(let i=0;i<graphPts.length;i++){
+        const pt = graphPts[i];
+        const x = xA + (pt.tau/DtMax)*w;
+        const y = yA - (pt.F/FmaxMax)*h;
+        if(i===0) gtx.moveTo(x,y);
+        else gtx.lineTo(x,y);
+      }
+      // close to baseline
+      const last = graphPts[graphPts.length-1];
+      const xLast = xA + (last.tau/DtMax)*w;
+      gtx.lineTo(xLast, yA);
+      gtx.lineTo(xA, yA);
+      gtx.closePath();
+      gtx.fill();
+      gtx.restore();
+    }
+
+
+    gtx.restore();
+
+    // Fmax label (show only after the collision finishes; smaller & thinner for readability)
+    if(doneCollision){
+      let peak = graphPts[0];
+      for(const q of graphPts){ if(q.F > peak.F) peak = q; }
+      const xPeak = xA + (peak.tau/DtMax)*w;
+      const yPeak = yA - (peak.F/FmaxMax)*h;
+
+      gtx.fillStyle = "#111";
+      gtx.textAlign="left";
+      gtx.textBaseline="bottom";
+
+      const bump = isMobileUI()?8:0;
+      const Fsize = Math.max(12, Math.round(W*0.030) - 10 + bump);
+      const subSize = Math.max(9, Math.round(W*0.020) - 10 + bump);
+      gtx.font = `700 ${Fsize}px system-ui, "Noto Sans Thai", sans-serif`;
+      gtx.fillText("F", xPeak + 6, yPeak - 3);
+      gtx.font = `600 ${subSize}px system-ui, "Noto Sans Thai", sans-serif`;
+      gtx.fillText("max", xPeak + 6 + Math.round(Fsize*0.65), yPeak + 1);
+    }
+
+    // Avg line & rectangle (only after collision done)
+    if(doneCollision && chkAvg.checked && avgForce != null){
+      const yAvg = yA - (avgForce/FmaxMax)*h;
+
+      // rectangle fill under avg (ends at xEnd)
+      gtx.fillStyle = (mode==="hard") ? "rgba(220,38,38,0.18)" : "rgba(37,99,235,0.18)";
+      gtx.fillRect(xA, yAvg, (xEnd - xA), (yA - yAvg));
+
+      // dashed line
+      gtx.save();
+      gtx.setLineDash([10,8]);
+      gtx.strokeStyle = "rgba(15,23,42,0.85)";
+      gtx.lineWidth = Math.max(2, Math.round(W*0.002));
+      gtx.beginPath();
+      gtx.moveTo(xA, yAvg);
+      gtx.lineTo(xEnd, yAvg);
+      gtx.stroke();
+      gtx.restore();
+
+      // Favg label
+      gtx.fillStyle = "#111";
+      gtx.textAlign="left";
+      gtx.textBaseline="bottom";
+      gtx.font = `700 ${Math.max(11, Math.round(W*0.028) - 10 + (isMobileUI()?8:0))}px system-ui, "Noto Sans Thai", sans-serif`;
+      const xLab = xA + Math.round((xEnd - xA)*0.62) - Math.round(10*dpr());
+      gtx.fillText("F", xLab, yAvg - 9);
+      gtx.font = `600 ${Math.max(9, Math.round(W*0.020) - 10 + (isMobileUI()?8:0))}px system-ui, "Noto Sans Thai", sans-serif`;
+      gtx.fillText("avg", xLab + 14, yAvg - 3);
+    }
+  }
+
+  function drawAll(){
+    drawScene();
+    drawGraph();
+  }
+
+  function loop(ts){
+    if(!running){
+      rafId = null;
+      return;
+    }
+    if(lastTs == null) lastTs = ts;
+    let dt = (ts - lastTs)/1000;
+    lastTs = ts;
+
+    // slow motion factor
+    dt = Math.min(0.05, dt) * 0.35;
+
+    slowPhase += dt;
+
+    tick(dt);
+    drawAll();
+    rafId = requestAnimationFrame(loop);
+  }
+
+  // Modal (deterministic links)
+  function closeAllModals(){
+    backdrop.style.display = 'none';
+    document.body.style.overflow='';
+  }
+  function openFormulaModal(){
+    closeAllModals();
+    backdrop.style.display = 'flex';
+    document.body.style.overflow='hidden';
+    if(window.MathJax && MathJax.typeset) MathJax.typeset();
+  }
+// UI events
+  btnHard.addEventListener('click', ()=>setMode('hard'));
+  btnSoft.addEventListener('click', ()=>setMode('soft'));
+  btnPlay.addEventListener('click', togglePlay);
+  btnReset.addEventListener('click', resetAll);
+  chkAvg.addEventListener('change', ()=>drawGraph());
+  btnFormula.addEventListener('click', openFormulaModal);
+  btnClose.addEventListener('click', closeAllModals);
+  backdrop.addEventListener('click', (e)=>{ if(e.target===backdrop) closeAllModals(); });
+  window.addEventListener('resize', resize);
+
+  // Boot
+  resize();
+  setMode('hard'); // ensures active button
+  resetAll();
+})();
+</script>
+<!-- MathJax -->
+<script>
+window.MathJax = { tex: { inlineMath: [['\\(','\\)']] }, svg: { fontCache: 'global' } };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</body>
+</html>

@@ -1,0 +1,599 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ปืนใหญ่ — โมเมนตัม & เสียดทาน (mobile layout)</title>
+
+<style>
+  :root{
+    --bg:#ffffff; --panel:#f8fafc; --ink:#0f172a; --muted:#475569;
+    --accent:#0ea5e9; --good:#16a34a; --danger:#ef4444; --warn:#f59e0b;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font:14px/1.6 Inter,system-ui,Arial,sans-serif;
+  }
+
+  .wrap{
+    max-width:1100px;
+    margin:0 auto;
+    padding:14px;
+    display:grid;
+    grid-template-columns:340px 1fr;
+    gap:14px;
+    grid-template-areas:
+      "controls canvas"
+      "bottom   canvas";
+  }
+  .card{
+    background:var(--panel);
+    border-radius:14px;
+    box-shadow:0 6px 18px rgba(2,6,23,.06);
+    padding:14px;
+  }
+  .controls-card{grid-area:controls;}
+  .canvas-card{grid-area:canvas;}
+  .bottom-card{grid-area:bottom;}
+
+  h1{font-size:22px;margin:0 0 8px}
+  label{display:block;font-size:12px;color:var(--muted);margin:8px 0 4px}
+  input[type=number]{
+    width:100%;padding:10px 12px;
+    border:1px solid #e5e7eb;border-radius:10px;background:#fff;
+  }
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  button{
+    appearance:none;border:0;background:var(--accent);color:#fff;
+    padding:10px 14px;border-radius:12px;cursor:pointer;font-weight:700;
+  }
+  button.secondary{background:#64748b}
+  button.success{background:var(--good)}
+  button.warn{background:var(--warn)}
+  .muted{color:var(--muted)}
+  .small{font-size:12px}
+  .out{
+    font-family:ui-monospace,Menlo,Consolas,monospace;
+    background:#fff;padding:10px 12px;
+    border-radius:10px;border:1px solid #e5e7eb;
+  }
+  .link{color:#0ea5e9;text-decoration:none}
+  .legend{font-size:12px;color:var(--muted);margin-top:6px}
+  canvas{
+    width:100%;height:auto;
+    border:1px solid #e5e7eb;border-radius:12px;background:#fff;
+  }
+
+  .modal{
+    position:fixed;inset:0;background:rgba(0,0,0,.55);
+    display:none;align-items:center;justify-content:center;
+    padding:14px;z-index:50;
+  }
+  .modal-content{
+    background:#fff;padding:22px;max-width:860px;width:100%;
+    border-radius:16px;box-shadow:0 10px 24px rgba(2,6,23,.25);
+    max-height:90vh;overflow-y:auto;
+  }
+  .modal h2{margin:0 0 12px}
+  .modal .grid{display:grid;grid-template-columns:1fr;gap:10px}
+  .close{
+    float:right;background:#ef4444;color:#fff;border:0;
+    border-radius:8px;padding:6px 10px;cursor:pointer;
+  }
+  .note{
+    background:#f1f5f9;border:1px solid #e2e8f0;
+    border-radius:10px;padding:10px 12px;color:#0f172a;
+  }
+  .hr{height:1px;background:#e5e7eb;margin:10px 0}
+  .footer-actions{
+    display:flex;gap:8px;flex-wrap:wrap;
+    position:sticky;bottom:0;background:#fff;padding-top:10px;
+  }
+
+  @media(max-width:980px){
+    .wrap{
+      grid-template-columns:1fr;
+      grid-template-areas:
+        "controls"
+        "canvas"
+        "bottom";
+    }
+  }
+
+  @media(max-width:600px){
+    body{font-size:15px;}
+    h1{font-size:20px;}
+    .canvas-card{overflow-x:hidden;}
+    #cv{
+      transform:scale(1.2);
+      transform-origin:top center;
+    }
+    .note{font-size:15px;}
+    .modal-content{padding:18px;}
+  }
+</style>
+
+<!-- MathJax -->
+<script>
+  window.MathJax = {
+    tex:{inlineMath:[['\\(','\\)']], displayMath:[['\\[','\\]']]},
+    svg:{fontCache:'global'}
+  };
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+</head>
+<body>
+  <div class="wrap">
+    <!-- การ์ด 1: แผงตั้งค่า -->
+    <div class="card controls-card">
+      <h1>ปืนใหญ่บนพื้น (พื้นมีความฝืด)</h1>
+      <div class="row">
+        <div>
+          <label>มวลปืนใหญ่ \(m_c\) (kg)</label>
+          <input id="mCannon" type="number" step="0.1" value="120.000" min="1">
+        </div>
+        <div>
+          <label>มวลลูกปืน \(m_b\) (kg)</label>
+          <input id="mBall" type="number" step="0.001" value="5.000" min="0.001">
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label>ความเร็วกระสุน \(u\) (m/s)</label>
+          <input id="uBullet" type="number" step="1" value="90" min="1">
+        </div>
+        <div>
+          <label>สัมประสิทธิ์เสียดทานจลน์ \(\mu_k\)</label>
+          <input id="mu" type="number" step="0.01" value="0.250" min="0.01" max="5">
+        </div>
+      </div>
+    </div>
+
+    <!-- การ์ด 2: จอการทดลอง -->
+    <div class="card canvas-card">
+      <canvas id="cv" width="900" height="360"></canvas>
+    </div>
+
+    <!-- การ์ด 3: ปุ่ม + legend (ไม่มีป้ายผลลัพธ์แล้ว) -->
+    <div class="card bottom-card">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button id="fireBtn">🔴 ยิง!</button>
+        <button id="resetBtn" class="secondary">รีเซ็ต</button>
+        <button id="formulaBtn" class="success">📘 สูตรสำคัญ</button>
+        <button id="detailBtn">🧮 วิธีการคำนวณแบบละเอียด</button>
+        <button id="quizBtn" class="warn">📝 แบบฝึกหัด</button>
+      </div>
+
+      <div style="margin-top:12px;display:grid;gap:8px">
+        <div class="out" id="results" style="display:none"></div>
+        <div class="legend">
+          เส้นปะสีเทา = ตำแหน่งเริ่มต้นของปืน • ลูกศรแดง \(s\) จะแสดงเมื่อปืนหยุด
+        </div>
+      </div>
+
+      <p class="small muted" style="margin-top:12px">
+        ศึกษาเพิ่มเติมได้ที่เพจ
+        <a class="link" target="_blank" href="https://www.facebook.com/resolvephysics">คลายปมฟิสิกส์</a>
+      </p>
+    </div>
+  </div>
+
+  <!-- สูตรสำคัญ -->
+  <div class="modal" id="formulaModal" aria-hidden="true">
+    <div class="modal-content">
+      <button class="close" id="closeModal1">✖</button>
+      <h2>📘 สูตรสำคัญ</h2>
+      <div class="grid">
+        <div class="note">
+           p_รวมก่อนยิง =p_รวมหลังยิง <br/>\(0=m_b u + m_c v_c \) <br/>
+          \[
+            \boxed{v_c = -\frac{m_b}{m_c}\,u}
+          \]
+        </div>
+        <div class="note">
+          แรงเสียดทานจลน์ \(f_k = \mu_k m_c g\) ทำงานหยุดปืน: <br/>
+          \[
+            f_k s = \frac{1}{2} m_c v_c^2 \;\Rightarrow\;
+            \boxed{s = \frac{v_c^2}{2 \mu_k g}}
+          \]
+          <br/>
+          <b>หมายเหตุ:</b><br/>
+          • ตอนช่วงการยิงสั้น ๆ การดลจากแรง \(f\) น้อยมาก ใช้ <b>กฎอนุรักษ์โมเมนตัม</b> ได้<br/>
+          • หลังจากนั้น (ช่วงปืนถอยหลังจนหยุด) ต้องใช้ <b>สมการงาน–พลังงานและแรงเสียดทาน</b><br/>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- วิธีคำนวณแบบละเอียด -->
+  <div class="modal" id="detailModal" aria-hidden="true">
+    <div class="modal-content">
+      <button class="close" id="closeModal2">✖</button>
+      <h2>🧮 วิธีการคำนวณแบบละเอียด (แทนค่าจริงจากอินพุต)</h2>
+      <div id="detailBody" class="grid"></div>
+    </div>
+  </div>
+
+  <!-- แบบฝึกหัด -->
+  <div class="modal" id="quizModal" aria-hidden="true">
+    <div class="modal-content">
+      <button class="close" id="closeQuizTop">✖</button>
+      <h2>📝 แบบฝึกหัด</h2>
+      <div id="quizBody"></div>
+      <div class="hr"></div>
+      <div class="footer-actions">
+        <button id="submitQuiz" class="success">ตรวจคำตอบ</button>
+        <button id="closeQuizBottom" class="secondary">ปิด</button>
+      </div>
+      <div id="quizResult" style="margin-top:12px"></div>
+    </div>
+  </div>
+
+<script>
+const isMobile = window.matchMedia("(max-width: 600px)").matches;
+
+/* ค่าคงที่ & State */
+const g = 9.81;
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+const state = {
+  scale: isMobile ? 60 : 50,
+  groundY: 310,
+  cannon:{x0:460,x:460,y:210,w:260,h:36,baseW:160,baseH:58,recoilV:0,stopped:true},
+  bullet:{r:9,x:0,y:0,vx:0,visible:true,fired:false},
+  particles:[], sAccum:0, sTheory:0, playing:false, showArrow:false, finalX:0
+};
+
+/* วาดพื้น */
+function drawGround(){
+  ctx.fillStyle='#c2b280';
+  ctx.fillRect(0,state.groundY,cv.width,cv.height-state.groundY);
+  ctx.strokeStyle='#8b7355'; ctx.lineWidth=1;
+  for(let i=0;i<cv.width;i+=16){
+    ctx.beginPath();
+    ctx.moveTo(i,state.groundY);
+    ctx.lineTo(i+6,state.groundY+48);
+    ctx.stroke();
+  }
+}
+
+/* วาดปืนใหญ่ */
+function drawCannon(x,y){
+  ctx.fillStyle='#111827';
+  const bw=state.cannon.baseW, bh=state.cannon.baseH;
+  ctx.fillRect(x-bw/2, state.groundY-bh, bw, bh);
+
+  ctx.beginPath(); ctx.moveTo(x-54,state.groundY-bh); ctx.lineTo(x-34,y); ctx.lineTo(x-14,state.groundY-bh); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.MoveTo;
+  ctx.beginPath(); ctx.moveTo(x+8,state.groundY-bh); ctx.lineTo(x+22,y+28); ctx.lineTo(x+36,state.groundY-bh); ctx.closePath(); ctx.fill();
+
+  ctx.fillStyle='#b0b0b0';
+  const top=y, bottom=y+state.cannon.h;
+  ctx.beginPath(); ctx.moveTo(x-120,top); ctx.lineTo(x+140,top); ctx.lineTo(x+140,bottom); ctx.lineTo(x-120,bottom); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.arc(x-120,(top+bottom)/2,state.cannon.h/2,Math.PI/2,Math.PI*1.5,true); ctx.fill();
+
+  return {mx:x+140,my:(top+bottom)/2, baseRight:x+bw/2};
+}
+
+/* เส้นปะตำแหน่งเริ่มต้นฐานปืน */
+function drawStartLine(){
+  const baseRight=state.cannon.x0+state.cannon.baseW/2;
+  ctx.setLineDash([6,6]); ctx.strokeStyle='#9ca3af'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(baseRight, state.groundY-state.cannon.baseH-22);
+  ctx.lineTo(baseRight, state.groundY); ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+/* ลูกศร s (ใช้ค่าทฤษฎี sTheory) */
+function drawArrowS(){
+  if(!state.showArrow) return;
+
+  const startEdge = state.cannon.x0 + state.cannon.baseW/2;
+  const finalCenter = state.finalX;
+  const finalEdge = finalCenter + state.cannon.baseW/2;
+  if (finalEdge >= startEdge) return;
+
+  const y = state.groundY - state.cannon.baseH + 25;
+  ctx.strokeStyle = '#ef4444'; ctx.fillStyle = '#ef4444'; ctx.lineWidth = 3;
+
+  ctx.beginPath(); ctx.moveTo(startEdge, y); ctx.lineTo(finalEdge, y); ctx.stroke();
+
+  const tipX  = finalEdge;
+  const baseX = finalEdge + 12;
+  ctx.beginPath();
+  ctx.moveTo(tipX, y);
+  ctx.lineTo(baseX, y - 7);
+  ctx.lineTo(baseX, y + 7);
+  ctx.closePath();
+  ctx.fill();
+
+  const sFontSize = isMobile ? 26 : 22;
+  ctx.font = 'bold ' + sFontSize + 'px ui-monospace,Menlo,monospace';
+  ctx.fillText('s = ' + state.sTheory.toFixed(3) + ' m', (startEdge + finalEdge)/2 - 70, y - 14);
+}
+
+/* กระสุน */
+function drawBullet(){
+  if(!state.bullet.visible) return;
+  ctx.fillStyle='#111827';
+  ctx.beginPath();
+  ctx.arc(state.bullet.x,state.bullet.y,state.bullet.r,0,Math.PI*2);
+  ctx.fill();
+}
+
+/* เอฟเฟกต์ปากกระบอก */
+function spawnMuzzleFlash(x,y){
+  for (let i=0;i<24;i++){
+    state.particles.push({x,y,vx:3+Math.random()*5,vy:(Math.random()-0.5)*2,life:160+Math.random()*140,type:'flame',r:4+Math.random()*10});
+  }
+  for (let i=0;i<18;i++){
+    state.particles.push({x,y,vx:1+Math.random()*2,vy:-0.5-Math.random()*0.6,life:600+Math.random()*500,type:'smoke',r:6+Math.random()*10});
+  }
+}
+function drawParticles(dt){
+  for(let i=state.particles.length-1;i>=0;i--){
+    const p=state.particles[i];
+    p.x+=p.vx; p.y+=p.vy; p.life-=dt;
+    if(p.type==='flame'){
+      const a=Math.max(0,p.life/200);
+      ctx.fillStyle='rgba(255,120,0,'+a+')';
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r*Math.max(0.2,a),0,Math.PI*2); ctx.fill();
+    } else {
+      const a=Math.max(0,p.life/700);
+      ctx.fillStyle='rgba(120,120,120,'+a+')';
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill();
+    }
+    if(p.life<=0) state.particles.splice(i,1);
+  }
+}
+
+/* เสียงระเบิด */
+let audioCtx=null;
+function bang(){
+  try{
+    if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+    const dur=0.18, sr=audioCtx.sampleRate;
+    const buf=audioCtx.createBuffer(1, sr*dur, sr), data=buf.getChannelData(0);
+    for(let i=0;i<data.length;i++){
+      data[i]=(Math.random()*2-1)*(1-i/data.length);
+    }
+    const src=audioCtx.createBufferSource(); src.buffer=buf;
+    const gain=audioCtx.createGain(); gain.gain.setValueAtTime(0.8,audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+dur);
+    src.connect(gain).connect(audioCtx.destination); src.start();
+  }catch(e){}
+}
+
+/* ลูปเวลา */
+let lastTs = 0;
+function step(ts){
+  if(!state.playing){ lastTs=ts; render(); return; }
+  const dt=Math.min(32, ts-lastTs); lastTs=ts;
+
+  if(state.bullet.fired){
+    state.bullet.x += state.bullet.vx*(dt/1000)*state.scale;
+    if(state.bullet.x - state.bullet.r > cv.width) state.bullet.visible=false;
+  }
+
+  if(!state.cannon.stopped){
+    const muVal= +document.getElementById('mu').value;
+    const sign=Math.sign(state.cannon.recoilV);
+    const a = -muVal*g*sign;
+    const vPrev=state.cannon.recoilV;
+    state.cannon.recoilV += a*(dt/1000);
+    const vAvg=0.5*(vPrev+state.cannon.recoilV);
+    const dx_m=vAvg*(dt/1000);
+    state.sAccum += Math.abs(dx_m);
+    state.cannon.x += dx_m*state.scale;
+
+    if(sign!==Math.sign(state.cannon.recoilV) || Math.abs(state.cannon.recoilV)<1e-3){
+      state.cannon.recoilV=0; state.cannon.stopped=true; state.playing=false;
+      state.finalX=state.cannon.x; state.showArrow=true; updateResults(true);
+    }
+  }
+
+  render(); requestAnimationFrame(step);
+}
+
+/* วาดทั้งหมด */
+function render(){
+  ctx.clearRect(0,0,cv.width,cv.height);
+  drawGround(); drawStartLine();
+  const muzzle=drawCannon(state.cannon.x,state.cannon.y);
+  drawBullet(); drawParticles(16);
+
+  ctx.fillStyle='#0f172a';
+  const velFontSize = isMobile ? 24 : 20;
+  ctx.font = velFontSize + 'px ui-monospace,Menlo,monospace';
+  if(state.bullet.fired){
+    const u = +document.getElementById('uBullet').value;
+    ctx.fillText('v_b = +' + u.toFixed(3) + ' m/s', state.bullet.x+12, state.bullet.y-12);
+  }
+  if(!state.cannon.stopped){
+    ctx.fillText('v_c = ' + state.cannon.recoilV.toFixed(3) + ' m/s', state.cannon.x-100, state.cannon.y-18);
+  }
+
+  drawArrowS();
+
+  if(!state.bullet.fired){
+    state.bullet.x=muzzle.mx-70; state.bullet.y=muzzle.my;
+  }
+}
+
+/* อัปเดตผลลัพธ์ (ใช้เก็บ sTheory อย่างเดียว) */
+function updateResults(final=false){
+  const mC=+document.getElementById('mCannon').value;
+  const mB=+document.getElementById('mBall').value;
+  const u =+document.getElementById('uBullet').value;
+  const muVal=+document.getElementById('mu').value;
+
+  const vC0=-(mB/mC)*u;
+  const sStop= (vC0*vC0)/(2*muVal*g);
+  state.sTheory = sStop;
+
+  document.getElementById('results').textContent='';
+}
+
+/* รีเซ็ตทั้งหมด */
+function resetAll(){
+  state.cannon.x=state.cannon.x0; state.cannon.recoilV=0; state.cannon.stopped=true;
+  state.sAccum=0; state.sTheory=0;
+  state.bullet.fired=false; state.bullet.visible=true;
+  state.particles.length=0; state.playing=false; state.showArrow=false; state.finalX=0;
+  document.getElementById('results').textContent='';
+  render();
+}
+
+/* ปุ่มยิง / รีเซ็ต */
+document.getElementById('fireBtn').addEventListener('click', ()=>{
+  if(state.playing) return;
+  const mC=+document.getElementById('mCannon').value;
+  const mB=+document.getElementById('mBall').value;
+  const u =+document.getElementById('uBullet').value;
+  const muVal=+document.getElementById('mu').value;
+  if(mC<=0||mB<=0||u<=0||muVal<=0){
+    alert('กรุณาใส่ค่ามากกว่า 0 ทุกช่อง'); return;
+  }
+
+  const vC0=-(mB/mC)*u;
+  state.cannon.recoilV=vC0; state.cannon.stopped=false;
+  state.bullet.vx=u; state.bullet.fired=true; state.bullet.visible=true;
+
+  spawnMuzzleFlash(state.cannon.x+140, state.cannon.y+state.cannon.h/2); bang();
+  state.playing=true; state.showArrow=false; updateResults(false);
+  requestAnimationFrame((t)=>{ lastTs=t; step(t); });
+});
+document.getElementById('resetBtn').addEventListener('click', resetAll);
+
+/* โมดัล สูตรสำคัญ */
+const modal1=document.getElementById('formulaModal');
+document.getElementById('formulaBtn').addEventListener('click', ()=>{
+  modal1.style.display='flex'; MathJax.typesetPromise?.();
+});
+document.getElementById('closeModal1').addEventListener('click', ()=> modal1.style.display='none');
+
+/* โมดัล รายละเอียด (แทนค่าจริง) — แก้สมการตรงนี้ */
+const modal2=document.getElementById('detailModal'), body2=document.getElementById('detailBody');
+document.getElementById('detailBtn').addEventListener('click', ()=>{
+  const mC=+document.getElementById('mCannon').value;
+  const mB=+document.getElementById('mBall').value;
+  const u =+document.getElementById('uBullet').value;
+  const muVal=+document.getElementById('mu').value;
+  const vC0=-(mB/mC)*u;
+  const fk = muVal*mC*g;
+  const s  = (vC0*vC0)/(2*muVal*g);
+  body2.innerHTML = `
+    <div class="note">
+      <b>ขั้นที่ 1: โมเมนตัม</b><br/>
+      \\[
+        v_c = -\\frac{m_b}{m_c}u
+        = -\\frac{${mB.toFixed(3)}}{${mC.toFixed(3)}}\\,( ${u.toFixed(3)} )
+        = \\boxed{${vC0.toFixed(3)}\\,\\text{m/s}}
+      \\]
+    </div>
+    <div class="note">
+      <b>ขั้นที่ 2: งาน–พลังงาน</b><br/>
+      \\[
+        f_k = \\mu_k m_c g
+        = (${muVal.toFixed(3)}) (${mC.toFixed(3)}) (${g.toFixed(3)})
+        = ${fk.toFixed(3)}\\,\\text{N}
+      \\]
+      \\[
+        s = \\frac{v_c^2}{2\\mu_k g}
+        = \\frac{(${vC0.toFixed(3)})^2}{2 (${muVal.toFixed(3)}) (${g.toFixed(3)})}
+        = \\boxed{${s.toFixed(3)}\\,\\text{m}}
+      \\]
+    </div>`;
+  modal2.style.display='flex';
+  MathJax.typesetPromise?.();
+});
+document.getElementById('closeModal2').addEventListener('click', ()=> modal2.style.display='none');
+
+/* แบบฝึกหัด */
+const quizData = [
+  {
+    q: "1) ปืนใหญ่มีมวล 120 kg ยิงลูกปืน 5 kg ด้วยความเร็ว 90 m/s บนพื้นไม่มีแรงเสียดทาน ความเร็วถอยหลังของปืนเท่าไร?",
+    options: ["-3.75 m/s", "-2.50 m/s", "-5.00 m/s", "-4.25 m/s"],
+    correct: 0,
+    explain: `
+      ใช้กฎอนุรักษ์โมเมนตัม:
+      \\[ m_b u + m_c v_c = 0 \\]
+      ดังนั้น
+      \\[ v_c = -\\frac{m_b}{m_c}u = -\\frac{5}{120}(90) = -3.75 \\,\\text{m/s} \\]`
+  },
+  {
+    q: "2) ถ้า \\(\\mu_k=0.25\\) และ \\(g=9.81\\,\\text{m/s}^2\\) ระยะถอยหลังของปืนจากข้อ 1 เป็นเท่าไร?",
+    options: ["1.88 m", "2.87 m", "3.75 m", "2.29 m"],
+    correct: 1,
+    explain: `
+      \\[ s = \\frac{v_c^2}{2\\mu_k g} = \\frac{(3.75)^2}{2(0.25)(9.81)} = 2.87\\,\\text{m} \\]`
+  },
+  {
+    q: "3) ยิงกระสุนด้วยความเร็วเท่าเดิม แต่พื้นมีสัมประสิทธิ์เสียดทานจลน์เพิ่มเป็น 2 เท่าของเดิม จงหาอัตราส่วน \\(s_2/s_1\\)",
+    options: ["1", "2", "1/2", "1/4"],
+    correct: 2,
+    explain: `
+      จาก \\( s = \\dfrac{v_c^2}{2\\mu_k g} \\) และเมื่อความเร็วเดิม ⇒ \\(v_c\\) เดิม  
+      ดังนั้น \\( s \\propto \\tfrac{1}{\\mu_k} \\).  
+      ถ้าเพิ่ม \\(\\mu_k\\) เป็น 2 เท่า ⇒ \\( s_2 = \\dfrac{s_1}{2} \\Rightarrow \\boxed{\\tfrac{1}{2}} \\)
+    `
+  }
+];
+
+function renderQuiz(){
+  const body=document.getElementById("quizBody");
+  body.innerHTML="";
+  quizData.forEach((q,i)=>{
+    const div=document.createElement("div");
+    div.className="note";
+    div.innerHTML = `
+      <b>${q.q}</b><br/>
+      ${q.options.map((opt,j)=>
+        `<label style="display:block;margin-top:4px">
+           <input type="radio" name="q${i}" value="${j}"> ${opt}
+         </label>`).join("")}
+    `;
+    body.appendChild(div);
+  });
+  document.getElementById("quizResult").innerHTML="";
+}
+function closeQuiz(){ document.getElementById("quizModal").style.display="none"; }
+
+document.getElementById("submitQuiz").addEventListener("click",()=>{
+  let score=0, out="";
+  quizData.forEach((q,i)=>{
+    const sel=document.querySelector('input[name="q'+i+'"]:checked');
+    if(sel){
+      const ans=parseInt(sel.value);
+      if(ans===q.correct){ score++; out+=`<p>✔️ ข้อ ${i+1} ถูกต้อง</p>`; }
+      else {
+        out+=`<p>❌ ข้อ ${i+1} ผิด<br/>เฉลย: ${q.options[q.correct]}<br/>
+        วิธีคิด:<br/> ${q.explain}</p>`;
+      }
+    } else {
+      out+=`<p>⚠️ ข้อ ${i+1} ยังไม่ได้เลือก</p>`;
+    }
+  });
+  out+=`<div class="hr"></div><b>คะแนนรวม: ${score} / ${quizData.length}</b>`;
+  document.getElementById("quizResult").innerHTML=out;
+  MathJax.typesetPromise?.();
+});
+
+const quizModal=document.getElementById("quizModal");
+document.getElementById("quizBtn").addEventListener("click",()=>{
+  renderQuiz();
+  quizModal.style.display="flex";
+  MathJax.typesetPromise?.();
+});
+document.getElementById("closeQuizTop").addEventListener("click", closeQuiz);
+document.getElementById("closeQuizBottom").addEventListener("click", closeQuiz);
+
+/* เริ่มต้น */
+resetAll();
+render();
+</script>
+</body>
+</html>

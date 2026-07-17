@@ -1,0 +1,1847 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>กฎอนุรักษ์โมเมนตัม — รถชน 1 มิติ (พร้อม Vcm)</title>
+
+<!-- MathJax v3 -->
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath: [['\\(','\\)'], ['$', '$']],
+      displayMath: [['\\[','\\]'], ['$$','$$']]
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] }
+  };
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+
+<style>
+  :root{
+    --ink:#0f172a; --muted:#64748b; --accent:#2563eb; --line:#e5e7eb;
+    --red:#ef4444; --blue:#3b82f6; --orange:#f97316;
+    --panel:#ffffff; --bg:#ffffff;
+
+    --soft-gray:#f3f4f6;
+    --soft-sky:#e0f2fe;
+    --soft-violet:#ede9fe;
+    --soft-amber:#fef3c7;
+    --soft-rose:#ffe4e6;
+    --soft-green:#dcfce7;
+    --soft-teal:#ccfbf1;
+
+    --b-cyan:#67e8f9;
+    --b-pink:#f9a8d4;
+    --b-green:#86efac;
+    --b-orange:#fdba74;
+    --b-violet:#c4b5fd;
+
+    --clay:#9ca3af;
+
+    /* ✅ COM = เขียวอ่อน */
+    --com:#86efac;
+    --com-stroke:#22c55e;
+
+    --boardH: 420px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial,sans-serif
+  }
+
+  header{display:none}
+
+  .wrap{
+    display:grid;grid-template-columns:1fr;gap:12px;padding:12px;
+    max-width:1200px;margin:0 auto
+  }
+  @media(min-width:980px){ .wrap{grid-template-columns:2fr 1fr} }
+
+  /* ✅ Board: fixed desktop, mobile = half height */
+  .board{
+    position:relative;background:#fff;border:1px solid var(--line);border-radius:16px;
+    overflow:hidden;
+    height: var(--boardH);
+    min-height: var(--boardH);
+  }
+  canvas#scene{
+    display:block;
+    width:100%;
+    height:100%;
+  }
+  @media(max-width:768px){
+    .board{
+      height:calc(var(--boardH) * 0.5);
+      min-height:calc(var(--boardH) * 0.5);
+    }
+  }
+
+  .boardTitle{
+    position:absolute; left:50%; top:14px; transform:translateX(-50%);
+    z-index:10;
+    font-weight:900;
+    color:var(--accent);
+    background:rgba(255,255,255,.9);
+    border:1px solid var(--line);
+    border-radius:999px;
+    padding:6px 12px;
+    max-width:calc(100% - 24px);
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    pointer-events:none;
+    text-align:center;
+  }
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media(max-width:640px){ .row{grid-template-columns:1fr} }
+  .ctl{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
+
+  .tag{display:inline-block;font-size:12px;color:#fff;background:var(--muted);padding:2px 6px;border-radius:10px}
+  .tag.red{background:var(--red)} .tag.blue{background:var(--blue)}
+
+  .btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center}
+  button{
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:8px 10px;
+    cursor:pointer;
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    font-weight:650;
+    color:#0f172a;
+    background:#fff;
+  }
+  button.primary{background:var(--accent);color:#fff;border-color:transparent}
+  button.gray{background:var(--soft-gray)}
+  button.sky{background:var(--soft-sky)}
+  button.violet{background:var(--soft-violet)}
+  button.amber{background:var(--soft-amber)}
+  button.rose{background:var(--soft-rose)}
+  button.green{background:var(--soft-green)}
+  button.teal{background:var(--soft-teal)}
+  button:active{transform:translateY(1px)}
+
+  .readout{
+    font-size:14px;line-height:1.65;
+    border-top:1px dashed var(--line);
+    padding-top:10px;margin-top:10px;
+  }
+
+  .legend{display:flex;gap:14px;align-items:center;font-size:13px;color:#64748b}
+  .dot{width:10px;height:10px;border-radius:50%}
+  .dot.red{background:var(--red)} .dot.blue{background:var(--blue)}
+  .dot.com{background:var(--com)} /* ✅ จุดศูนย์กลางมวล */
+
+  .graphBox{display:none;margin-top:10px;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  #graph{width:100%;height:220px;display:block}
+
+  .footer{color:#64748b;font-size:13px;margin-top:8px}
+  .footer a{color:#2563eb;text-decoration:none}
+
+  .modal{position:fixed;inset:0;display:none}
+  .modal.show{display:block}
+  .modal .backdrop{position:absolute;inset:0;background:rgba(0,0,0,.35)}
+  .modal .card{
+    position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    width:min(980px, calc(100% - 24px));max-height:88vh;overflow:auto;
+    background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 30px rgba(0,0,0,.25)
+  }
+  .card-h{
+    display:flex;align-items:flex-start;justify-content:space-between;
+    border-bottom:1px solid var(--line);padding:10px 14px;
+    gap:12px;
+    position:sticky; top:0; background:#fff; z-index:5;
+  }
+  .card-title{font-weight:800}
+  .card-tools{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+  .card-close{border:none;background:transparent;cursor:pointer;font-size:18px;line-height:1}
+  .card-content{padding:12px 16px;font-size:14px;line-height:1.75}
+
+  .how-card{
+    background:linear-gradient(180deg,#ffffff, #f8fafc);
+    border:1px solid #e2e8f0;
+    border-radius:14px;
+    padding:12px 12px;
+    margin:10px 0;
+  }
+  .how-title{
+    font-weight:900;color:#0f172a;margin:10px 0 6px;
+    display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+  }
+  .how-title .pill{
+    font-size:12px;font-weight:900;
+    padding:2px 10px;border-radius:999px;
+    background:#ecfeff;border:1px solid var(--b-cyan);color:#0e7490;
+  }
+  .pill.violet{background:#f5f3ff;border-color:var(--b-violet);color:#5b21b6}
+  .pill.orange{background:#fff7ed;border-color:var(--b-orange);color:#9a3412}
+  .pill.green{background:#f0fdf4;border-color:var(--b-green);color:#14532d}
+  .pill.pink{background:#fdf2f8;border-color:var(--b-pink);color:#9d174d}
+
+  .eqbox{
+    background:#ecfeff;
+    border:1px solid var(--b-cyan);
+    border-radius:14px;
+    padding:10px 12px;
+    margin:8px 0;
+  }
+  .eqbox.alt{ background:#fdf2f8; border-color:var(--b-pink); }
+  .eqbox.k{ background:#f0fdf4; border-color:var(--b-green); }
+  .eqbox.cm{ background:#fff7ed; border-color:var(--b-orange); }
+  .eqbox.vio{ background:#f5f3ff; border-color:var(--b-violet); }
+  .muted{color:#64748b}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media(max-width:640px){ .grid2{grid-template-columns:1fr} }
+
+  .timerBox{
+    border:1px solid var(--line);
+    background:#fff;
+    border-radius:12px;
+    padding:6px 10px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    min-width:180px;
+  }
+  .timerTime{font-weight:900;font-variant-numeric:tabular-nums}
+  .timerBtn{
+    border:1px solid var(--line);
+    background:var(--soft-sky);
+    border-radius:10px;
+    padding:6px 10px;
+    cursor:pointer;
+    font-weight:800;
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+  }
+  .quiz-actions{
+    display:flex; gap:8px; flex-wrap:wrap;
+    margin:10px 0 6px;
+  }
+  .quiz-q{
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:12px;
+    margin:10px 0;
+    background:linear-gradient(180deg,#fff,#f8fafc);
+  }
+
+  .q-head{
+    display:flex;
+    justify-content:flex-start;
+    gap:10px;
+    align-items:flex-start;
+    margin-bottom:8px;
+    text-align:left;
+  }
+  .q-body{
+    flex:1;
+    min-width:0;
+    text-align:left;
+    direction:ltr;
+  }
+
+  .q-num{
+    font-weight:900;
+    background:#eef2ff;
+    border:1px solid #c7d2fe;
+    color:#3730a3;
+    padding:3px 10px;
+    border-radius:999px;
+    font-size:13px;
+    white-space:nowrap;
+    flex:0 0 auto;
+  }
+
+  .choices{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+  @media(max-width:640px){ .choices{grid-template-columns:1fr} }
+  .choice{
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:10px;
+    background:#fff;
+    display:flex;
+    gap:10px;
+    align-items:flex-start;
+    cursor:pointer;
+  }
+  .choice input{margin-top:3px}
+  .choice:hover{background:#f8fafc}
+  .resultLine{margin-top:10px;border-top:1px dashed var(--line);padding-top:10px}
+  .badge-ok{
+    display:inline-block;padding:2px 10px;border-radius:999px;
+    background:#dcfce7;border:1px solid #86efac;color:#14532d;
+    font-weight:900;font-size:12px;
+  }
+  .badge-no{
+    display:inline-block;padding:2px 10px;border-radius:999px;
+    background:#ffe4e6;border:1px solid #fecdd3;color:#7f1d1d;
+    font-weight:900;font-size:12px;
+  }
+  .answerPill{
+    display:inline-block;padding:2px 10px;border-radius:999px;
+    background:#fff7ed;border:1px solid #fdba74;color:#9a3412;
+    font-weight:900;font-size:12px;margin-left:8px;
+  }
+  .explain{
+    margin-top:8px;background:#fff7ed;border:1px solid #fdba74;
+    border-radius:12px;padding:10px;
+  }
+  .bullets{margin:6px 0 0 0;padding-left:18px}
+  .bullets li{margin:4px 0}
+
+  /* ✅ Controls row: ตัวแปร + ช่องปรับค่า อยู่แถวเดียว */
+  .varRow{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    margin-top:2px;
+  }
+  .varLabel{
+    font-weight:900;
+    white-space:nowrap;
+  }
+  .varLabel small{
+    font-weight:800;
+    color:var(--muted);
+  }
+
+  .numCtl{
+    display:grid;
+    grid-template-columns:38px 90px 38px;
+    gap:8px;
+    align-items:center;
+    margin:0;
+    flex:0 0 auto;
+  }
+  @media(max-width:420px){
+    .numCtl{ grid-template-columns:38px 76px 38px; }
+  }
+  .numCtl button{
+    padding:8px 0;
+    border-radius:10px;
+    background:#fff;
+    font-weight:900;
+    justify-content:center;
+  }
+  .numCtl input[type="number"]{
+    width:100%;
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:8px 10px;
+    font-weight:800;
+    outline:none;
+    text-align:center;
+  }
+  .numCtl input[type="number"]:focus{
+    border-color:#93c5fd;
+    box-shadow:0 0 0 3px rgba(147,197,253,.35);
+  }
+
+  /* ✅ Checkbox row (ผลลัพธ์) */
+  .checkRow{
+    display:flex; align-items:center; gap:8px;
+    margin-top:10px;
+    color:#0f172a;
+    font-weight:800;
+    user-select:none;
+  }
+  .checkRow input{ transform: translateY(1px); }
+</style>
+</head>
+
+<body>
+
+<div class="wrap">
+  <div class="board" id="board">
+    <div class="boardTitle">กฎอนุรักษ์โมเมนตัม : รถชนกัน(1 มิติ)</div>
+    <canvas id="scene" width="900" height="420" aria-label="พื้นที่ทดลอง"></canvas>
+  </div>
+
+  <div class="panel">
+    <div class="legend" style="margin-bottom:6px">
+      <span class="dot red"></span> รถคันที่ 1
+      <span class="dot blue"></span> รถคันที่ 2
+      <span class="dot com"></span> จุดศูนย์กลางมวล (สีเขียวอ่อน)
+    </div>
+
+    <div class="ctl">
+      <label><b>ชนแบบ</b></label>
+      <label><input type="radio" name="ctype" value="elastic" checked> ยืดหยุ่น</label>
+      <label><input type="radio" name="ctype" value="inelastic"> ไม่ยืดหยุ่นสมบูรณ์</label>
+    </div>
+
+    <div class="row">
+      <div class="ctl">
+        <span class="tag red">รถ 1 (แดง)</span>
+
+        <div class="varRow">
+          <div class="varLabel">m₁ <small>(kg)</small>: <span id="m1v">2.0</span></div>
+          <div class="numCtl">
+            <button id="m1Minus" aria-label="ลด m1">−</button>
+            <input id="m1" type="number" min="0.5" max="10" step="0.5" value="2">
+            <button id="m1Plus" aria-label="เพิ่ม m1">+</button>
+          </div>
+        </div>
+
+        <div class="varRow">
+          <div class="varLabel">u₁ <small>(m/s)</small>: <span id="u1v">+2.0</span></div>
+          <div class="numCtl">
+            <button id="u1Minus" aria-label="ลด u1">−</button>
+            <input id="u1" type="number" min="-10" max="10" step="0.5" value="2">
+            <button id="u1Plus" aria-label="เพิ่ม u1">+</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="ctl">
+        <span class="tag blue">รถ 2 (น้ำเงิน)</span>
+
+        <div class="varRow">
+          <div class="varLabel">m₂ <small>(kg)</small>: <span id="m2v">2.0</span></div>
+          <div class="numCtl">
+            <button id="m2Minus" aria-label="ลด m2">−</button>
+            <input id="m2" type="number" min="0.5" max="10" step="0.5" value="2">
+            <button id="m2Plus" aria-label="เพิ่ม m2">+</button>
+          </div>
+        </div>
+
+        <div class="varRow">
+          <div class="varLabel">u₂ <small>(m/s)</small>: <span id="u2v">-1.0</span></div>
+          <div class="numCtl">
+            <button id="u2Minus" aria-label="ลด u2">−</button>
+            <input id="u2" type="number" min="-10" max="10" step="0.5" value="-1">
+            <button id="u2Plus" aria-label="เพิ่ม u2">+</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="btns">
+      <button id="playPause" class="primary">▶️ เริ่ม</button>
+      <button id="reset" class="gray">🔄 รีเซ็ต</button>
+      <button id="toggleGraph" class="sky">📈 กราฟโมเมนตัม</button>
+
+      <button id="toggleVcm" class="violet">
+        <span class="dot com" aria-hidden="true"></span>
+        <span id="vcmBtnText">Vcm</span>
+      </button>
+
+      <button id="howBtn" class="amber">🧮 วิธีคำนวณ</button>
+      <button id="formulaBtn" class="rose">📚 สูตรสำคัญ</button>
+      <button id="quizBtn" class="teal">📝 แบบฝึกหัด</button>
+    </div>
+
+    <label class="checkRow" for="showReadout">
+      <input type="checkbox" id="showReadout">
+      แสดงผลลัพธ์
+    </label>
+
+    <div class="graphBox" id="graphBox">
+      <canvas id="graph" width="860" height="220" aria-label="กราฟโมเมนตัม"></canvas>
+      <div style="display:flex;gap:12px;align-items:center;justify-content:flex-end;padding:8px 10px;color:#64748b;font-size:12px">
+        <span class="dot red"></span> p₁(t) &nbsp; <span class="dot blue"></span> p₂(t)
+      </div>
+    </div>
+
+    <div class="readout" id="readout"></div>
+
+    <div class="footer">
+      ศึกษาเพิ่มเติมที่เพจ
+      <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">คลายปมฟิสิกส์</a>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: วิธีการคำนวณ -->
+<div id="howModal" class="modal" aria-hidden="true" role="dialog" aria-label="วิธีการคำนวณ">
+  <div class="backdrop" id="howBackdrop"></div>
+  <div class="card">
+    <div class="card-h">
+      <div class="card-title">วิธีการคำนวณ (ตามค่าที่ตั้งไว้)</div>
+      <div class="card-tools">
+        <button class="card-close" id="howClose" aria-label="ปิด">✕</button>
+      </div>
+    </div>
+    <div class="card-content" id="howContent"></div>
+  </div>
+</div>
+
+<!-- Modal: สูตรสำคัญ -->
+<div id="formulaModal" class="modal" aria-hidden="true" role="dialog" aria-label="สูตรสำคัญ">
+  <div class="backdrop" id="formulaBackdrop"></div>
+  <div class="card">
+    <div class="card-h">
+      <div>
+        <div class="card-title">สูตรสำคัญ & สรุปแนวคิด — โมเมนตัม/การชน/การดล</div>
+      </div>
+      <div class="card-tools">
+        <button class="card-close" id="formulaClose" aria-label="ปิด">✕</button>
+      </div>
+    </div>
+    <div class="card-content" id="formulaContent"></div>
+  </div>
+</div>
+
+<!-- Modal: แบบฝึกหัด -->
+<div id="quizModal" class="modal" aria-hidden="true" role="dialog" aria-label="แบบฝึกหัด">
+  <div class="backdrop" id="quizBackdrop"></div>
+  <div class="card">
+    <div class="card-h">
+      <div>
+        <div class="card-title">แบบฝึกหัด — โมเมนตัม & การชน (10 ข้อ)</div>
+</div>
+
+      <div class="card-tools">
+        <button class="card-close" id="quizClose" aria-label="ปิด">✕</button>
+
+        <div class="timerBox" aria-label="นาฬิกาจับเวลา">
+          <div style="display:flex;flex-direction:column;line-height:1.1">
+            <div class="muted" style="font-size:12px">⏱ เวลา</div>
+            <div class="timerTime" id="timerText">00:00</div>
+          </div>
+          <button class="timerBtn" id="timerBtn" title="เริ่ม/หยุด">
+            <span id="timerIcon">▶</span>
+            <span id="timerLabel">เริ่ม</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-content">
+      <div class="quiz-actions">
+        <button id="checkQuiz" class="green">✅ ตรวจคำตอบ</button>
+        <button id="resetQuiz" class="gray">🧼 ล้างคำตอบ</button>
+      </div>
+
+      <div id="quizScore" class="muted" style="margin:6px 0 10px"></div>
+      <div id="quizList"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  // ---------- Base simulation size (kept stable) ----------
+  const BASE_W = 900, BASE_H = 420;
+
+  // ✅ ขยาย “รูปการทดลอง” 40% โดยไม่เปลี่ยนขนาดจอ
+  const DRAW_SCALE = 1.4;
+
+  // ---------- Canvas (auto letterbox to avoid stretching) ----------
+  const cvs = document.getElementById('scene');
+  const ctx = cvs.getContext('2d');
+
+  function resizeCanvas(){
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    const rect = cvs.getBoundingClientRect();
+    const pw = Math.max(1, Math.floor(rect.width * dpr));
+    const ph = Math.max(1, Math.floor(rect.height * dpr));
+    if(cvs.width !== pw || cvs.height !== ph){
+      cvs.width = pw;
+      cvs.height = ph;
+    }
+  }
+
+  function withLetterboxDraw(drawFn){
+    // draw BASE_W x BASE_H into actual canvas size without distortion
+    const cw = cvs.width, ch = cvs.height;
+    const s = Math.min(cw/BASE_W, ch/BASE_H);
+    const ox = (cw - BASE_W*s)/2;
+    const oy = (ch - BASE_H*s)/2;
+
+    ctx.save();
+    ctx.setTransform(s,0,0,s,ox,oy);
+    drawFn();
+    ctx.restore();
+  }
+
+  // ---------- Graph ----------
+  const gcv = document.getElementById('graph');
+  const gtx = gcv.getContext('2d');
+
+  // ---------- Inputs ----------
+  const m1 = document.getElementById('m1'), m2 = document.getElementById('m2');
+  const u1 = document.getElementById('u1'), u2 = document.getElementById('u2');
+
+  const m1v = document.getElementById('m1v'), m2v = document.getElementById('m2v');
+  const u1v = document.getElementById('u1v'), u2v = document.getElementById('u2v');
+
+  const readout = document.getElementById('readout');
+  const showReadout = document.getElementById('showReadout');
+
+  const playBtn = document.getElementById('playPause');
+  const resetBtn = document.getElementById('reset');
+  const toggleGraphBtn = document.getElementById('toggleGraph');
+  const toggleVcmBtn = document.getElementById('toggleVcm');
+  const vcmBtnText = document.getElementById('vcmBtnText');
+  const graphBox = document.getElementById('graphBox');
+
+  const howBtn = document.getElementById('howBtn');
+  const howModal = document.getElementById('howModal');
+  const howContent = document.getElementById('howContent');
+  const howClose = document.getElementById('howClose');
+  const howBackdrop = document.getElementById('howBackdrop');
+
+  const formulaBtn = document.getElementById('formulaBtn');
+  const formulaModal = document.getElementById('formulaModal');
+  const formulaBackdrop = document.getElementById('formulaBackdrop');
+  const formulaClose = document.getElementById('formulaClose');
+  const formulaContent = document.getElementById('formulaContent');
+
+  const quizBtn = document.getElementById('quizBtn');
+  const quizModal = document.getElementById('quizModal');
+  const quizBackdrop = document.getElementById('quizBackdrop');
+  const quizClose = document.getElementById('quizClose');
+  const quizList = document.getElementById('quizList');
+  const quizScore = document.getElementById('quizScore');
+  const checkQuizBtn = document.getElementById('checkQuiz');
+  const resetQuizBtn = document.getElementById('resetQuiz');
+
+  const timerText = document.getElementById('timerText');
+  const timerBtn = document.getElementById('timerBtn');
+  const timerIcon = document.getElementById('timerIcon');
+  const timerLabel = document.getElementById('timerLabel');
+
+  // +/- buttons
+  const m1Minus = document.getElementById('m1Minus'), m1Plus = document.getElementById('m1Plus');
+  const m2Minus = document.getElementById('m2Minus'), m2Plus = document.getElementById('m2Plus');
+  const u1Minus = document.getElementById('u1Minus'), u1Plus = document.getElementById('u1Plus');
+  const u2Minus = document.getElementById('u2Minus'), u2Plus = document.getElementById('u2Plus');
+
+  // ---------- Timer ----------
+  let timerSec = 0;
+  let timerRunning = false;
+  let timerHandle = null;
+  function pad2(n){ return String(n).padStart(2,'0'); }
+  function renderTimer(){
+    const mm = Math.floor(timerSec/60);
+    const ss = timerSec%60;
+    timerText.textContent = `${pad2(mm)}:${pad2(ss)}`;
+  }
+  function startTimer(){
+    if(timerRunning) return;
+    timerRunning = true;
+    timerIcon.textContent = '⏸';
+    timerLabel.textContent = 'หยุด';
+    timerHandle = setInterval(()=>{ timerSec++; renderTimer(); },1000);
+  }
+  function stopTimer(){
+    timerRunning = false;
+    timerIcon.textContent = '▶';
+    timerLabel.textContent = 'เริ่ม';
+    if(timerHandle){ clearInterval(timerHandle); timerHandle=null; }
+  }
+  function resetTimer(){
+    stopTimer();
+    timerSec = 0;
+    renderTimer();
+  }
+  timerBtn.addEventListener('click', ()=>{ timerRunning ? stopTimer() : startTimer(); });
+
+  // ---------- State ----------
+  const groundY = BASE_H - 70;
+
+  const baseCarW = 90, baseCarH = 40;
+  const vxScale = 12;
+  const arrowScale = 8;
+  const maxSimT = 30;
+
+  const springAttachInset = 3;
+  const minCarGap = 20;
+  const clayMinTouch = 0;
+
+  let t = 0, running = false, started = false, collided = false, perfectlyInelastic = false;
+  let showVcm = false;
+
+  let s = {};
+  const trace = { t: [], p1: [], p2: [] };
+
+  const getCSS = (v)=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  const fmt1 = (x)=> (Math.abs(x)<1e-6 ? "0.0" : Number(x).toFixed(1));
+  const fmt2 = (x)=> (Math.abs(x)<1e-9 ? "0.00" : Number(x).toFixed(2));
+  const sign2 = (x)=> (x>=0?`+${fmt2(x)}`:fmt2(x));
+  function resetTrace(){ trace.t=[]; trace.p1=[]; trace.p2=[]; }
+
+  function clamp(x,a,b){ return Math.max(a, Math.min(b,x)); }
+
+  function carScale(m){
+    const sc = Math.sqrt(Math.max(0.1, m/2));
+    return clamp(sc, 0.75, 1.60);
+  }
+  function carDimsFor(m){
+    const sc = carScale(m);
+    return { w: baseCarW*sc, h: baseCarH*sc, sc };
+  }
+
+  function collisionType(){
+    return document.querySelector('input[name="ctype"]:checked').value === 'inelastic'
+      ? 'inelastic' : 'elastic';
+  }
+
+  function normalizeInput(el){
+    const min = Number(el.min ?? -Infinity);
+    const max = Number(el.max ?? Infinity);
+    const step = Number(el.step ?? 1);
+    let v = Number(el.value);
+    if(Number.isNaN(v)) v = 0;
+    v = clamp(v, min, max);
+    v = Math.round(v/step)*step;
+    el.value = String(v);
+    return v;
+  }
+
+  function refreshLabels(){
+    const _m1 = normalizeInput(m1);
+    const _m2 = normalizeInput(m2);
+    const _u1 = normalizeInput(u1);
+    const _u2 = normalizeInput(u2);
+
+    m1v.textContent = _m1.toFixed(1);
+    m2v.textContent = _m2.toFixed(1);
+    u1v.textContent = (_u1>=0?'+':'') + _u1.toFixed(1);
+    u2v.textContent = (_u2>=0?'+':'') + _u2.toFixed(1);
+  }
+  refreshLabels();
+
+  function stepValue(el, dir){
+    const step = Number(el.step || 1);
+    let v = Number(el.value || 0);
+    v = v + dir*step;
+    el.value = String(v);
+    normalizeInput(el);
+  }
+
+  m1Minus.addEventListener('click', ()=>{ stepValue(m1,-1); onInputsChanged(); });
+  m1Plus.addEventListener('click',  ()=>{ stepValue(m1,+1); onInputsChanged(); });
+  m2Minus.addEventListener('click', ()=>{ stepValue(m2,-1); onInputsChanged(); });
+  m2Plus.addEventListener('click',  ()=>{ stepValue(m2,+1); onInputsChanged(); });
+
+  u1Minus.addEventListener('click', ()=>{ stepValue(u1,-1); onInputsChanged(); });
+  u1Plus.addEventListener('click',  ()=>{ stepValue(u1,+1); onInputsChanged(); });
+  u2Minus.addEventListener('click', ()=>{ stepValue(u2,-1); onInputsChanged(); });
+  u2Plus.addEventListener('click',  ()=>{ stepValue(u2,+1); onInputsChanged(); });
+
+  function initSceneFromControls(){
+    const M1 = normalizeInput(m1);
+    const M2 = normalizeInput(m2);
+    const U1 = normalizeInput(u1);
+    const U2 = normalizeInput(u2);
+
+    const d1 = carDimsFor(M1);
+    const d2 = carDimsFor(M2);
+
+    const gap = 140;
+    const mid = BASE_W/2;
+
+    const x1c = mid - (d1.w + gap)/2;
+    const x2c = mid + (d2.w + gap)/2;
+
+    s = {
+      m1:M1, m2:M2,
+      v1:U1, v2:U2,            // internal velocities
+      w1:d1.w, h1:d1.h,
+      w2:d2.w, h2:d2.h,
+      x1: x1c - d1.w/2,
+      x2: x2c - d2.w/2,
+      y1: groundY - d1.h,
+      y2: groundY - d2.h,
+      v1_after:null, v2_after:null
+    };
+  }
+
+  function startSim(){
+    initSceneFromControls();
+    t = 0; collided = false;
+    perfectlyInelastic = (collisionType()==='inelastic');
+    started = true; running = true; resetTrace();
+    updateReadout();
+    playBtn.textContent = '⏸️ หยุด';
+    lastTS = performance.now(); raf();
+  }
+
+  function resetScene(){
+    initSceneFromControls();
+    started = false; running = false; collided = false; t = 0;
+    resetTrace();
+    playBtn.textContent = '▶️ เริ่ม';
+    updateReadout();
+    draw();
+  }
+
+  // ✅ เปลี่ยนตัวแปรพลังงานจลน์จาก K เป็น E_k (แสดงผล) และใช้ชื่อฟังก์ชัน Ek ในโค้ด
+  function Ek(m,v){ return 0.5*m*v*v; }
+
+  function computePost(u1,u2,m1,m2,ctype){
+    if(ctype==='inelastic'){
+      const v = (m1*u1 + m2*u2)/(m1+m2);
+      return { v1p:v, v2p:v };
+    }else{
+      return {
+        v1p: ((m1 - m2)/(m1+m2))*u1 + (2*m2/(m1+m2))*u2,
+        v2p: (2*m1/(m1+m2))*u1 + ((m2 - m1)/(m1+m2))*u2
+      };
+    }
+  }
+
+  function vcmNowFromState(){
+    return (s.m1*s.v1 + s.m2*s.v2)/(s.m1+s.m2);
+  }
+  function vcm0FromInputs(){
+    const M1=normalizeInput(m1), M2=normalizeInput(m2), U1=normalizeInput(u1), U2=normalizeInput(u2);
+    return (M1*U1 + M2*U2)/(M1+M2);
+  }
+  function xcm(){
+    const c1 = s.x1 + s.w1/2, c2 = s.x2 + s.w2/2;
+    return (s.m1*c1 + s.m2*c2)/(s.m1+s.m2);
+  }
+
+  function clayR(){ return {rx:12, ry:9}; }
+
+  function clayAttachX(){
+    return s.x1 + s.w1 - springAttachInset;
+  }
+
+  function checkInelasticContact(){
+    const {rx} = clayR();
+    const left = clayAttachX();
+    const rightMost = left + 2*rx;
+    return (s.x2 <= rightMost + clayMinTouch);
+  }
+
+  function doCollision(){
+    const m1=s.m1, m2=s.m2, u1=s.v1, u2=s.v2;
+    let v1p, v2p;
+
+    if(perfectlyInelastic){
+      const v = (m1*u1 + m2*u2)/(m1+m2);
+      v1p = v2p = v;
+
+      const {rx} = clayR();
+      const left = clayAttachX();
+      const rightMost = left + 2*rx;
+      s.x2 = rightMost;
+    }else{
+      v1p = ((m1 - m2)/(m1+m2))*u1 + (2*m2/(m1+m2))*u2;
+      v2p = (2*m1/(m1+m2))*u1 + ((m2 - m1)/(m1+m2))*u2;
+    }
+
+    s.v1 = v1p; s.v2 = v2p;
+    s.v1_after = v1p; s.v2_after = v2p;
+    collided = true;
+    updateReadout();
+  }
+
+  // ✅ Readout: ใช้ u สำหรับก่อนชน, ใช้ v สำหรับหลังชน (ไม่มี ' )
+  function updateReadout(){
+    // ซ่อนผลลัพธ์ถ้ายังไม่ติ๊ก
+    const shouldShow = !!showReadout.checked;
+    readout.style.display = shouldShow ? 'block' : 'none';
+    if(!shouldShow) return;
+
+    const U1 = normalizeInput(u1), U2 = normalizeInput(u2);
+    const M1 = normalizeInput(m1), M2 = normalizeInput(m2);
+    const ctype = collisionType();
+
+    const post = computePost(U1,U2,M1,M2,ctype);
+    const V1 = (s.v1_after==null ? post.v1p : s.v1_after);
+    const V2 = (s.v2_after==null ? post.v2p : s.v2_after);
+
+    const dp1 = M1*(V1-U1);
+    const dp2 = M2*(V2-U2);
+
+    const Ek1i = Ek(M1,U1), Ek2i = Ek(M2,U2);
+    const Ek1f = Ek(M1,V1), Ek2f = Ek(M2,V2);
+    const Ekb = Ek1i+Ek2i, Eka = Ek1f+Ek2f, dEk = Eka-Ekb;
+
+    const vcmLineVal = started ? vcmNowFromState() : vcm0FromInputs();
+
+    readout.innerHTML = `
+      <div style="font-weight:800;margin-bottom:6px">
+        ผลลัพธ์ (${ctype==='inelastic'?'ไม่ยืดหยุ่นสมบูรณ์':'ยืดหยุ่น'})
+      </div>
+
+      <div>\\[
+        v_1 = ${fmt1(V1)}\\,\\mathrm{m/s},\\quad
+        v_2 = ${fmt1(V2)}\\,\\mathrm{m/s}
+      \\]</div>
+
+      <div>\\[
+        \\Delta p_1 = ${fmt1(dp1)}\\,\\mathrm{kg\\,m/s},\\quad
+        \\Delta p_2 = ${fmt1(dp2)}\\,\\mathrm{kg\\,m/s}
+      \\]</div>
+
+      <div>\\[
+        E_{k,1\\,\\text{ก่อน}} = ${fmt1(Ek1i)}\\,\\mathrm{J}
+        \\rightarrow
+        E_{k,1\\,\\text{หลัง}} = ${fmt1(Ek1f)}\\,\\mathrm{J},
+        \\quad
+        \\Delta E_{k,1} = ${fmt1(Ek1f-Ek1i)}\\,\\mathrm{J}
+      \\]</div>
+
+      <div>\\[
+        E_{k,2\\,\\text{ก่อน}} = ${fmt1(Ek2i)}\\,\\mathrm{J}
+        \\rightarrow
+        E_{k,2\\,\\text{หลัง}} = ${fmt1(Ek2f)}\\,\\mathrm{J},
+        \\quad
+        \\Delta E_{k,2} = ${fmt1(Ek2f-Ek2i)}\\,\\mathrm{J}
+      \\]</div>
+
+      <div style="margin-top:4px;font-weight:800">\\[
+        E_{k,\\text{รวมก่อน}} = ${fmt1(Ekb)}\\,\\mathrm{J},\\quad
+        E_{k,\\text{รวมหลัง}} = ${fmt1(Eka)}\\,\\mathrm{J},\\quad
+        \\Delta E_{k,\\text{รวม}} = ${fmt1(dEk)}\\,\\mathrm{J}
+      \\]</div>
+
+      <div class="muted" style="margin-top:6px">\\[
+        v_{cm} = ${fmt1(vcmLineVal)}\\,\\mathrm{m/s}\\; (\\text{คงที่หากไม่มีแรงภายนอก})
+      \\]</div>
+    `;
+
+    if(window.MathJax?.typesetPromise){
+      MathJax.typesetPromise([readout]).catch(()=>{});
+    }
+  }
+
+  // ✅ วิธีคำนวณ: “สูตร” กับ “แทนค่า” แยกบรรทัด และบรรทัดแทนค่ามีตัวแปรซ้าย =
+  function buildHowHTML(){
+    const M1=normalizeInput(m1), M2=normalizeInput(m2), U1=normalizeInput(u1), U2=normalizeInput(u2);
+    const type = collisionType();
+    const post = computePost(U1,U2,M1,M2,type);
+    const V1=post.v1p, V2=post.v2p;
+
+    const dp1 = M1*(V1-U1);
+    const dp2 = M2*(V2-U2);
+
+    const Ek1i = Ek(M1,U1), Ek2i = Ek(M2,U2);
+    const Ek1f = Ek(M1,V1), Ek2f = Ek(M2,V2);
+    const Ekb = Ek1i+Ek2i, Eka = Ek1f+Ek2f, dEk = Eka-Ekb;
+
+    const Vcm0 = (M1*U1 + M2*U2)/(M1+M2);
+
+    const vcmBox = `
+      <div class="eqbox cm">
+        <div style="font-weight:900;margin-bottom:6px">ความเร็วของจุดศูนย์กลางมวล</div>
+        \\[
+          v_{cm} = \\frac{m_1u_1 + m_2u_2}{m_1+m_2}
+        \\]
+        \\[
+          v_{cm} =
+          \\frac{(${fmt2(M1)})(${sign2(U1)}) + (${fmt2(M2)})(${sign2(U2)})}{${fmt2(M1+M2)}}
+          = ${fmt2(Vcm0)}\\,\\mathrm{m/s}
+        \\]
+        <div class="muted">ถ้าไม่มีแรงภายนอกในแนวการเคลื่อนที่ \\(v_{cm}\\) จะคงที่</div>
+      </div>
+    `;
+
+    if(type==='inelastic'){
+      return `
+        <div class="how-card">
+          <div class="how-title"><span class="pill orange">ไม่ยืดหยุ่นสมบูรณ์</span> ติดกันหลังชน</div>
+
+          <div class="eqbox">
+            <div style="font-weight:900;margin-bottom:6px">ความเร็วร่วมหลังชน</div>
+            \\[
+              v = \\frac{m_1u_1 + m_2u_2}{m_1+m_2}
+            \\]
+            \\[
+              v = ${fmt2(V1)}\\,\\mathrm{m/s}
+            \\]
+            \\[
+              v_1 = v_2 = v
+            \\]
+          </div>
+
+          ${vcmBox}
+
+          <div class="grid2">
+            <div class="eqbox alt">
+              <div style="font-weight:900;margin-bottom:6px">\\(\\Delta p_1\\)</div>
+              \\[
+                \\Delta p_1 = m_1(v_1 - u_1)
+              \\]
+              \\[
+                \\Delta p_1 = ${fmt2(dp1)}\\;\\mathrm{kg\\,m/s}
+              \\]
+            </div>
+            <div class="eqbox alt">
+              <div style="font-weight:900;margin-bottom:6px">\\(\\Delta p_2\\)</div>
+              \\[
+                \\Delta p_2 = m_2(v_2 - u_2)
+              \\]
+              \\[
+                \\Delta p_2 = ${fmt2(dp2)}\\;\\mathrm{kg\\,m/s}
+              \\]
+            </div>
+          </div>
+
+          <div class="eqbox k">
+            <div style="font-weight:900;margin-bottom:6px">พลังงานจลน์รวม</div>
+            \\[
+              E_{k,\\text{รวมก่อน}} = E_{k,1} + E_{k,2}
+            \\]
+            \\[
+              E_{k,\\text{รวมก่อน}} = ${fmt2(Ekb)}\\,\\mathrm{J}
+            \\]
+            \\[
+              E_{k,\\text{รวมหลัง}} = ${fmt2(Eka)}\\,\\mathrm{J}
+            \\]
+            \\[
+              \\Delta E_{k,\\text{รวม}} = E_{k,\\text{รวมหลัง}} - E_{k,\\text{รวมก่อน}} = ${fmt2(dEk)}\\,\\mathrm{J}
+            \\]
+          </div>
+        </div>
+      `;
+    }
+
+    return `
+      <div class="how-card">
+        <div class="how-title"><span class="pill">ยืดหยุ่น</span> (Elastic)</div>
+
+        <div class="eqbox vio">
+          <div style="font-weight:900;margin-bottom:6px">สมการหลังชน (1 มิติ)</div>
+          \\[
+            v_1 = \\frac{m_1-m_2}{m_1+m_2}u_1 + \\frac{2m_2}{m_1+m_2}u_2
+          \\]
+          \\[
+            v_2 = \\frac{2m_1}{m_1+m_2}u_1 + \\frac{m_2-m_1}{m_1+m_2}u_2
+          \\]
+          \\[
+            v_1 = ${fmt2(V1)}\\,\\mathrm{m/s},\\quad v_2 = ${fmt2(V2)}\\,\\mathrm{m/s}
+          \\]
+        </div>
+
+        ${vcmBox}
+
+        <div class="grid2">
+          <div class="eqbox alt">
+            <div style="font-weight:900;margin-bottom:6px">\\(\\Delta p_1\\)</div>
+            \\[
+              \\Delta p_1 = m_1(v_1 - u_1)
+            \\]
+            \\[
+              \\Delta p_1 = ${fmt2(dp1)}\\;\\mathrm{kg\\,m/s}
+            \\]
+          </div>
+          <div class="eqbox alt">
+            <div style="font-weight:900;margin-bottom:6px">\\(\\Delta p_2\\)</div>
+            \\[
+              \\Delta p_2 = m_2(v_2 - u_2)
+            \\]
+            \\[
+              \\Delta p_2 = ${fmt2(dp2)}\\;\\mathrm{kg\\,m/s}
+            \\]
+          </div>
+        </div>
+
+        <div class="eqbox k">
+          <div style="font-weight:900;margin-bottom:6px">พลังงานจลน์รวม</div>
+          \\[
+            E_{k,\\text{รวมก่อน}} = ${fmt2(Ekb)}\\,\\mathrm{J},\\quad
+            E_{k,\\text{รวมหลัง}} = ${fmt2(Eka)}\\,\\mathrm{J}
+          \\]
+          \\[
+            \\Delta E_{k,\\text{รวม}} = ${fmt2(dEk)}\\,\\mathrm{J}
+          \\]
+        </div>
+      </div>
+    `;
+  }
+
+  // ✅ สูตรสำคัญ: ยึดโครงเดิม + “คำอธิบายครบ” + เปลี่ยน K -> E_k ตามที่ขอ
+  function buildFormulaHTML(){
+    return `
+      <div class="how-card">
+        <div class="how-title"><span class="pill violet">โมเมนตัม</span> นิยาม</div>
+        <div class="eqbox vio">
+          \\[
+            \\vec{p} = m\\vec{v}
+          \\]
+          <ul class="bullets">
+            <li>เป็นเวกเตอร์ ทิศเดียวกับ \\(\\vec{v}\\)</li>
+            <li>หน่วย \\(\\mathrm{kg\\,m/s}\\)</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="how-card">
+        <div class="how-title"><span class="pill">อนุรักษ์โมเมนตัม</span> ทิศทาง/เงื่อนไข</div>
+        <div class="eqbox cm">
+          <ul class="bullets">
+            <li>แรงที่รถกระทำต่อกันเป็นแรงภายใน (กิริยา–ปฏิกิริยา)</li>
+            <li>ถ้าไม่มีแรงภายนอกในแนวการเคลื่อนที่ ⇒ โมเมนตัมรวมคงที่</li>
+          </ul>
+        </div>
+        <div class="eqbox cm">
+          \\[
+            \\sum F_{ext}=0 \\Rightarrow p_{\\text{รวมก่อน}} = p_{\\text{รวมหลัง}}
+          \\]
+        </div>
+      </div>
+
+      <div class="how-card">
+        <div class="how-title"><span class="pill pink">แรงระหว่างชน</span> ขนาดแรง/การเปลี่ยนโมเมนตัม</div>
+        <div class="eqbox alt">
+          \\[
+            \\vec{F}_{1\\to2} = -\\vec{F}_{2\\to1}
+          \\]
+          \\[
+            \\Delta\\vec{p}_1 = -\\Delta\\vec{p}_2
+          \\]
+        </div>
+      </div>
+
+      <div class="how-card">
+        <div class="how-title"><span class="pill orange">การดล</span> (ใช้ตัวแปร \\(I\\))</div>
+        <div class="eqbox cm">
+          \\[
+            \\vec{I} = \\int \\vec{F}\\,dt
+            \\quad\\text{และ}\\quad
+            \\vec{I} = \\Delta\\vec{p}
+          \\]
+          <ul class="bullets">
+            <li>หน่วย \\(\\mathrm{N\\,s}\\) หรือ \\(\\mathrm{kg\\,m/s}\\)</li>
+            <li>มักใช้กับเหตุการณ์ช่วงสั้น เช่น ชน/กระแทก</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="how-card">
+        <div class="how-title"><span class="pill green">ศูนย์กลางมวล</span> ความเร็ว \\(v_{cm}\\)</div>
+        <div class="eqbox k">
+          \\[
+            v_{cm} = \\frac{m_1u_1+m_2u_2}{m_1+m_2}
+          \\]
+          <div class="muted">ถ้าไม่มีแรงภายนอกในแนวการเคลื่อนที่ \\(v_{cm}\\) จะคงที่</div>
+        </div>
+      </div>
+
+      <div class="how-card">
+        <div class="how-title"><span class="pill">ชนยืดหยุ่น</span> (Elastic)</div>
+        <div class="eqbox vio">
+          <div class="muted" style="margin-bottom:6px">อนุรักษ์ทั้งโมเมนตัมและพลังงานจลน์รวม</div>
+          \\[
+            p_{\\text{รวมก่อน}} = p_{\\text{รวมหลัง}},\\quad
+            E_{k,\\text{รวมก่อน}} = E_{k,\\text{รวมหลัง}}
+          \\]
+        </div>
+        <div class="eqbox">
+          \\[
+            v_1 = \\frac{m_1-m_2}{m_1+m_2}u_1 + \\frac{2m_2}{m_1+m_2}u_2
+          \\]
+          \\[
+            v_2 = \\frac{2m_1}{m_1+m_2}u_1 + \\frac{m_2-m_1}{m_1+m_2}u_2
+          \\]
+        </div>
+        <div class="eqbox cm">
+          <div class="muted">กรณี 1 มิติ และมวลเท่ากัน \\(m_1=m_2\\) : <b>จะเกิดการแลกเปลี่ยนความเร็วกัน</b></div>
+          \\[
+            v_1 = u_2,\\quad v_2 = u_1
+          \\]
+        </div>
+      </div>
+
+      <div class="how-card">
+        <div class="how-title"><span class="pill pink">ไม่ยืดหยุ่นสมบูรณ์</span> (Inelastic / Perfectly Inelastic)</div>
+        <div class="eqbox alt">
+          <div class="muted" style="margin-bottom:6px">โมเมนตัมรวมยังคงที่ แต่พลังงานจลน์รวมลดลง</div>
+          \\[
+            E_{k,\\text{รวมหลัง}} < E_{k,\\text{รวมก่อน}}
+          \\]
+        </div>
+        <div class="eqbox cm">
+          <div class="muted" style="margin-bottom:6px">ไม่ยืดหยุ่นสมบูรณ์: ชนแล้ว “ติดกัน”</div>
+          \\[
+            v = \\frac{m_1u_1+m_2u_2}{m_1+m_2}
+          \\]
+          \\[
+            v_1=v_2=v
+          \\]
+        </div>
+        <div class="eqbox k">
+          <div class="muted">ชีวิตประจำวันส่วนใหญ่มักเป็น “ไม่ยืดหยุ่น” (เสียพลังงานในรูปของความร้อน ,เสียง,การเปลี่ยนรูป )</div>
+        </div>
+      </div>
+    `;
+  }
+
+  // ---------- Quiz (คงเดิม) ----------
+  function shuffle(arr){
+    const a = arr.slice();
+    for(let i=a.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [a[i],a[j]]=[a[j],a[i]];
+    }
+    return a;
+  }
+  function makeOptions(correct, deltas){
+    const opts = [correct, ...deltas.map(d=>correct + d)];
+    const uniq = [];
+    for(const x of opts){
+      const v = Number(x.toFixed(2));
+      if(!uniq.some(u=>Math.abs(u-v)<1e-9)) uniq.push(v);
+    }
+    while(uniq.length<4){
+      const rnd = correct + (Math.random()*4-2);
+      const v = Number(rnd.toFixed(2));
+      if(!uniq.some(u=>Math.abs(u-v)<1e-9)) uniq.push(v);
+    }
+    return shuffle(uniq).slice(0,4);
+  }
+
+  function renderQuiz(){
+    const M1=normalizeInput(m1), M2=normalizeInput(m2), U1=normalizeInput(u1), U2=normalizeInput(u2);
+    const Vcm = (M1*U1 + M2*U2)/(M1+M2);
+
+    const postInel = computePost(U1,U2,M1,M2,'inelastic');
+    const vIn=postInel.v1p;
+
+    const vcmOpts = makeOptions(Vcm, [0.2, -0.2, 0.5]);
+    const vinOpts = makeOptions(vIn, [0.3, -0.3, 0.6]);
+
+    const q = [
+      {
+        stem: `ข้อใดถูกต้องเกี่ยวกับ “แรงที่กระทำต่อกันขณะชน” (ช่วงเวลาชนสั้น ๆ)?`,
+        choices: [
+          `แรงที่รถ 1 กระทำต่อรถ 2 มีขนาดมากกว่าแรงที่รถ 2 กระทำต่อรถ 1`,
+          `แรงที่รถ 2 กระทำต่อรถ 1 มีขนาดมากกว่าแรงที่รถ 1 กระทำต่อรถ 2`,
+          `แรงที่กระทำต่อกันมีขนาดเท่ากัน แต่ทิศตรงข้ามกัน`,
+          `แรงทั้งสองทิศเดียวกันเพราะชนกันแล้วติด`
+        ],
+        ans: 2,
+        explain: `
+          \\[
+            \\vec{F}_{1\\to2} = -\\vec{F}_{2\\to1}
+          \\]
+        `
+      },
+      {
+        stem: `ในการชนกันของรถ 2 คัน เมื่อไม่มีแรงภายนอกในแนวการเคลื่อนที่ ข้อใดถูกต้องเกี่ยวกับโมเมนตัมรวมของระบบ?`,
+        choices: [
+          `โมเมนตัมรวมเพิ่มขึ้นเสมอ`,
+          `โมเมนตัมรวมลดลงเสมอ`,
+          `โมเมนตัมรวมคงที่`,
+          `โมเมนตัมรวมเป็นศูนย์เสมอ`
+        ],
+        ans: 2,
+        explain: `
+          \\[
+            p_{\\text{รวมก่อน}} = p_{\\text{รวมหลัง}}
+          \\]
+        `
+      },
+      {
+        stem: `สำหรับค่าปัจจุบัน \\(m_1=${fmt2(M1)}\\,\\mathrm{kg},\\;u_1=${fmt2(U1)}\\,\\mathrm{m/s},\\;m_2=${fmt2(M2)}\\,\\mathrm{kg},\\;u_2=${fmt2(U2)}\\,\\mathrm{m/s}\\) จงหา \\(v_{cm}\\)`,
+        choices: vcmOpts.map(v=>`\\(v_{cm}=${v.toFixed(2)}\\,\\mathrm{m/s}\\)`),
+        ans: vcmOpts.findIndex(v=>Math.abs(v-Vcm)<1e-9),
+        explain: `
+          \\[
+            v_{cm}=\\frac{m_1u_1+m_2u_2}{m_1+m_2}
+            =${fmt2(Vcm)}\\,\\mathrm{m/s}
+          \\]
+        `
+      },
+      {
+        stem: `ชนไม่ยืดหยุ่นสมบูรณ์ (ติดกันหลังชน) สำหรับค่า \\(m_1=${fmt2(M1)}\\,\\mathrm{kg},\\;u_1=${fmt2(U1)}\\,\\mathrm{m/s},\\;m_2=${fmt2(M2)}\\,\\mathrm{kg},\\;u_2=${fmt2(U2)}\\,\\mathrm{m/s}\\) ความเร็วร่วมหลังชน \\(v\\) คือเท่าไร?`,
+        choices: vinOpts.map(v=>`\\(v=${v.toFixed(2)}\\,\\mathrm{m/s}\\)`),
+        ans: vinOpts.findIndex(v=>Math.abs(v-vIn)<1e-9),
+        explain: `
+          \\[
+            v = \\frac{m_1u_1+m_2u_2}{m_1+m_2}
+            = ${fmt2(vIn)}\\,\\mathrm{m/s}
+          \\]
+        `
+      },
+      {
+        stem: `ข้อใด “ถูกต้อง” เกี่ยวกับการเปลี่ยนโมเมนตัมของรถทั้งสองคันขณะชน?`,
+        choices: [
+          `\\(\\Delta p_1 = \\Delta p_2\\) (ขนาดและทิศเหมือนกัน)`,
+          `\\(\\Delta p_1 = -\\Delta p_2\\) (ขนาดเท่ากัน ทิศตรงข้าม)`,
+          `\\(\\Delta p_1\\) เป็นศูนย์เสมอ`,
+          `\\(\\Delta p_2\\) เป็นศูนย์เสมอ`
+        ],
+        ans: 1,
+        explain: `
+          \\[
+            \\Delta p_1 + \\Delta p_2 = 0
+            \\Rightarrow
+            \\Delta p_1 = -\\Delta p_2
+          \\]
+        `
+      },
+      {
+        stem: `ถ้าชนแบบ “ยืดหยุ่น” และไม่มีแรงภายนอกในแนวการเคลื่อนที่ ข้อใดถูกต้อง?`,
+        choices: [
+          `โมเมนตัมรวมคงที่ แต่พลังงานจลน์รวมเปลี่ยนได้`,
+          `พลังงานจลน์รวมคงที่ แต่โมเมนตัมรวมเปลี่ยนได้`,
+          `ทั้งโมเมนตัมรวมและพลังงานจลน์รวมคงที่`,
+          `ทั้งสองอย่างไม่คงที่`
+        ],
+        ans: 2,
+        explain: `
+          \\[
+            p_{\\text{รวม}}\\;\\text{คงที่},\\quad
+            E_{k,\\text{รวม}}\\;\\text{คงที่}
+          \\]
+        `
+      },
+      {
+        stem: `กรณีชนยืดหยุ่น “มวลเท่ากัน” \\(m_1=m_2\\) และชนกันในแนวเส้นตรง (1 มิติ) ข้อใดมักเกิดขึ้น?`,
+        choices: [
+          `ความเร็วหลังชนของทั้งสองคันเท่ากับศูนย์`,
+          `รถทั้งสองคันแลกความเร็วกัน (swap velocities)`,
+          `รถ 1 เด้งกลับเสมอ`,
+          `รถ 2 หยุดนิ่งเสมอ`
+        ],
+        ans: 1,
+        explain: `
+          \\[
+            v_1 = u_2,\\quad v_2 = u_1
+          \\]
+        `
+      },
+      {
+        stem: `ในการชนกันของรถ 2 คัน เมื่อไม่มีแรงภายนอกในแนวการเคลื่อนที่ ข้อใดถูกต้องเกี่ยวกับ \\(v_{cm}\\) ระหว่างการชน?`,
+        choices: [
+          `\\(v_{cm}\\) เปลี่ยนตลอดเพราะมีแรงชน`,
+          `\\(v_{cm}\\) คงที่แม้ชนกัน เพราะเป็นแรงภายใน`,
+          `\\(v_{cm}\\) เป็นศูนย์เสมอ`,
+          `\\(v_{cm}\\) เท่ากับความเร็วรถ 1 เสมอ`
+        ],
+        ans: 1,
+        explain: `
+          \\[
+            v_{cm}=\\frac{p_{\\text{รวม}}}{m_1+m_2}=\\text{คงที่}
+          \\]
+        `
+      },
+      {
+        stem: `ชนไม่ยืดหยุ่นสมบูรณ์ (ติดกันหลังชน) ขนาดพลังงานจลน์รวมของระบบ เป็นอย่างไร?`,
+        choices: [
+          `เพิ่มขึ้นเสมอ`,
+          `ลดลง (สูญเสียเป็นความร้อน/การเปลี่ยนรูป)`,
+          `คงที่เสมอ`,
+          `เป็นศูนย์เสมอ`
+        ],
+        ans: 1,
+        explain: `
+          \\[
+            E_{k,\\text{รวมหลัง}} < E_{k,\\text{รวมก่อน}}
+          \\]
+        `
+      },
+      {
+        stem: `ข้อใดเป็นนิยามที่ถูกต้องของการดล (Impulse) ที่กระทำต่อรถ 1?`,
+        choices: [
+          `\\(I_1 = m_1u_1\\)`,
+          `\\(I_1 = m_1v_1\\)`,
+          `\\(I_1 = \\Delta p_1 = m_1(v_1 - u_1)\\)`,
+          `\\(I_1 = \\Delta E_{k,1}\\)`
+        ],
+        ans: 2,
+        explain: `
+          \\[
+            I_1 = \\Delta p_1 = m_1(v_1 - u_1)
+          \\]
+        `
+      }
+    ];
+
+    quizList.innerHTML = q.map((qq, i)=>{
+      const name = `q${i}`;
+      const choicesHTML = qq.choices.map((c, idx)=>{
+        return `
+          <label class="choice">
+            <input type="radio" name="${name}" value="${idx}">
+            <div><b>${String.fromCharCode(65+idx)}.</b> <span>${c}</span></div>
+          </label>
+        `;
+      }).join('');
+
+      return `
+        <div class="quiz-q" data-qidx="${i}">
+          <div class="q-head">
+            <div class="q-num">ข้อ ${i+1}</div>
+            <div class="q-body">${qq.stem}</div>
+          </div>
+          <div class="choices">${choicesHTML}</div>
+          <div class="resultLine" id="res${i}"></div>
+        </div>
+      `;
+    }).join('');
+
+    window.__quizData = q;
+  }
+
+  function getSelected(i){
+    const el = document.querySelector(`input[name="q${i}"]:checked`);
+    return el ? Number(el.value) : null;
+  }
+
+  function checkQuiz(){
+    const q = window.__quizData || [];
+    let score = 0;
+
+    for(let i=0;i<q.length;i++){
+      const sel = getSelected(i);
+      const box = document.getElementById(`res${i}`);
+      const correctIdx = q[i].ans;
+      const correctLetter = String.fromCharCode(65 + correctIdx);
+
+      if(sel === null){
+        box.innerHTML = `<span class="badge-no">ยังไม่ได้ตอบ</span><span class="answerPill">เฉลย: ข้อ ${correctLetter}</span>`;
+        continue;
+      }
+
+      const ok = (sel === correctIdx);
+      if(ok) score++;
+
+      box.innerHTML = `
+        ${ok ? `<span class="badge-ok">ถูก ✓</span>` : `<span class="badge-no">ผิด ✕</span>`}
+        <span class="answerPill">เฉลย: ข้อ ${correctLetter}</span>
+        <div class="explain">
+          <div style="font-weight:900;margin-bottom:6px">เฉลยละเอียด</div>
+          ${q[i].explain}
+        </div>
+      `;
+    }
+
+    quizScore.innerHTML = `<b>คะแนน:</b> ${score} / ${q.length}`;
+    if(window.MathJax?.typesetPromise){
+      MathJax.typesetPromise([quizList, quizScore]).catch(()=>{});
+    }
+  }
+
+  function resetQuiz(){
+    const radios = quizList.querySelectorAll('input[type="radio"]');
+    radios.forEach(r=>r.checked=false);
+    for(let i=0;i<10;i++){
+      const box = document.getElementById(`res${i}`);
+      if(box) box.innerHTML = '';
+    }
+    quizScore.textContent = '';
+    resetTimer();
+  }
+
+  // ---------- Drawing (BASE coordinates) ----------
+  function drawSceneBase(){
+    ctx.clearRect(0,0,BASE_W,BASE_H);
+
+    // ✅ ขยายรูป 40% (คงจอเดิม) และจัดให้อยู่กลาง
+    ctx.save();
+    const tx = (BASE_W - BASE_W*DRAW_SCALE)/2;
+    const ty = (BASE_H - BASE_H*DRAW_SCALE)/2;
+    ctx.translate(tx, ty);
+    ctx.scale(DRAW_SCALE, DRAW_SCALE);
+
+    if(!started){
+      const M1 = normalizeInput(m1), M2 = normalizeInput(m2);
+      const d1 = carDimsFor(M1), d2 = carDimsFor(M2);
+      s.m1=M1; s.m2=M2;
+      s.w1=d1.w; s.h1=d1.h;
+      s.w2=d2.w; s.h2=d2.h;
+      s.y1=groundY - s.h1;
+      s.y2=groundY - s.h2;
+    }
+
+    drawCar(s.x1, s.y1, s.w1, s.h1, '#fff', getCSS('--red'), true, s.m1);
+    drawCar(s.x2, s.y2, s.w2, s.h2, '#fff', getCSS('--blue'), false, s.m2);
+
+    const ax = clayAttachX();
+    const yMid = s.y1 + s.h1/2;
+
+    if(collisionType()==='inelastic'){
+      const {rx} = clayR();
+      drawClay(ax + rx, s.y1 + s.h1 - 18);
+      drawClayLegend(); // ✅ มุมล่างซ้าย
+    }else{
+      const left = ax;
+      const rightFaceCar2 = s.x2;
+      const restLen = 30;
+      const minLen = 10;
+      const gap = rightFaceCar2 - left;
+      const len = Math.max(minLen, Math.min(restLen, gap - 5));
+      drawSpring(left, yMid, left + len);
+    }
+
+    drawVArrow(s.x1+s.w1/2, s.y1-10, s.v1, getCSS('--red'));
+    drawVArrow(s.x2+s.w2/2, s.y2-10, s.v2, getCSS('--blue'));
+
+    if(showVcm){
+      const xc = xcm();
+      const yc = Math.max(28, Math.min(s.y1,s.y2) - 28 + 60);
+      drawCOM(xc, yc);
+
+      // ✅ ลูกศร+ป้าย Vcm อยู่ใต้จุด (ห่างจุด 10px ตามที่ขอ)
+      // move Vcm arrow+label down by +10px (total +20px from COM point baseline)
+      drawVcmArrow(xc, yc + 20, vcmNowFromState(), getCSS('--com'));
+    }
+
+    ctx.restore();
+  }
+
+  function draw(){
+    resizeCanvas();
+    ctx.setTransform(1,0,0,1,0,0);
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+    withLetterboxDraw(drawSceneBase);
+  }
+
+  function drawCar(x,y,w,h,fill,strokeColor,isRed,mass){
+    ctx.save();
+    ctx.lineWidth = 2;
+    ctx.fillStyle = fill; ctx.strokeStyle = strokeColor;
+
+    ctx.beginPath();
+    if(ctx.roundRect){ ctx.roundRect(x,y,w,h,8); } else { ctx.rect(x,y,w,h); }
+    ctx.fill(); ctx.stroke();
+
+    ctx.fillStyle = strokeColor;
+    ctx.fillRect(x+4, y+4, w-8, Math.max(8, h*0.25));
+
+    const wheelR = Math.max(8, Math.min(12, h*0.28));
+    ctx.fillStyle = '#111';
+    ctx.beginPath(); ctx.arc(x+w*0.2, y+h, wheelR, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x+w*0.8, y+h, wheelR, 0, Math.PI*2); ctx.fill();
+
+    const sub = isRed ? '1' : '2';
+    const labelX = x + w*0.12;
+    const labelY = y + h*0.62;
+
+    ctx.fillStyle = strokeColor;
+    ctx.textBaseline = 'alphabetic';
+
+    ctx.font = `900 ${Math.max(14, h*0.38)}px system-ui`;
+    ctx.fillText('m', labelX, labelY);
+
+    const mWidth = ctx.measureText('m').width;
+    ctx.font = `900 ${Math.max(10, h*0.26)}px system-ui`;
+    ctx.fillText(sub, labelX + mWidth + 1, labelY + Math.max(3, h*0.10));
+
+    ctx.font = `800 ${Math.max(12, h*0.26)}px system-ui`;
+    const tail = ` = ${mass.toFixed(1)} kg`;
+    ctx.fillText(tail, labelX + mWidth + 10, labelY);
+
+    ctx.restore();
+  }
+
+  function drawSpring(x1,y,x2){
+    const len = Math.max(6, x2 - x1);
+    const turns = 6;
+    const amp = 5;
+
+    const squeeze = Math.max(0, 1 - (len/30));
+    const localTurns = turns + Math.round(squeeze*3);
+
+    ctx.save();
+    ctx.strokeStyle = '#6b7280';
+    ctx.lineWidth = 2;
+
+    ctx.beginPath();
+    ctx.moveTo(x1, y);
+    const step = len / localTurns;
+    for(let i=1;i<=localTurns;i++){
+      const xx = x1 + i*step;
+      const yy = y + (i%2 ? -amp : amp);
+      ctx.lineTo(xx, yy);
+    }
+    ctx.stroke();
+
+    ctx.strokeStyle = '#9ca3af';
+    ctx.beginPath();
+    ctx.moveTo(x1-2, y); ctx.lineTo(x1+6, y);
+    ctx.moveTo(x2-6, y); ctx.lineTo(x2+2, y);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  function drawClay(cx,cy){
+    const {rx, ry} = clayR();
+    ctx.save();
+    ctx.fillStyle = getCSS('--clay');
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawClayLegend(){
+    // ✅ มุมล่างซ้าย: ● สีเทา = ดินน้ำมัน
+    ctx.save();
+    const x = 18, y = BASE_H - 18;
+    ctx.fillStyle = getCSS('--clay');
+    ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI*2); ctx.fill();
+
+    ctx.fillStyle = '#334155';
+    ctx.font = '12px system-ui';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('= ดินน้ำมัน', x + 12, y);
+    ctx.restore();
+  }
+
+  function drawVArrow(cx, topY, v, color){
+    const len = Math.min(120, Math.abs(v)*arrowScale);
+    const dir = v>=0 ? 1 : -1;
+    const x1 = cx, y = topY;
+    const x2 = cx + dir*len;
+
+    ctx.save();
+    ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(x1,y); ctx.lineTo(x2,y); ctx.stroke();
+
+    const ah = 8;
+    ctx.beginPath();
+    ctx.moveTo(x2, y);
+    ctx.lineTo(x2 - dir*ah, y - ah);
+    ctx.lineTo(x2 - dir*ah, y + ah);
+    ctx.closePath(); ctx.fill();
+
+    // ✅ เพิ่มขนาดตัวอักษรป้ายความเร็ว
+    ctx.font = '900 14px system-ui';
+    ctx.textBaseline = 'bottom';
+    const mag = Math.abs(v);
+    const tx = x2 + (dir>0 ? 6 : -54);
+    const ty = y - 4;
+    ctx.fillText(`${mag.toFixed(1)} m/s`, tx, ty);
+
+    ctx.restore();
+  }
+
+  function drawCOM(x,y){
+    ctx.save();
+    ctx.shadowBlur = 16;
+    ctx.shadowColor = getCSS('--com');
+    ctx.fillStyle = getCSS('--com');
+    ctx.beginPath(); ctx.arc(x, y, 6.5, 0, Math.PI*2); ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = getCSS('--com-stroke');
+    ctx.beginPath(); ctx.arc(x, y, 9, 0, Math.PI*2); ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawVcmArrow(cx, y, v, color){
+    const len = Math.min(120, Math.abs(v)*arrowScale);
+    const dir = v>=0 ? 1 : -1;
+    const x1 = cx, x2 = cx + dir*len;
+
+    ctx.save();
+    ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(x1,y); ctx.lineTo(x2,y); ctx.stroke();
+
+    const ah = 8;
+    ctx.beginPath();
+    ctx.moveTo(x2, y);
+    ctx.lineTo(x2 - dir*ah, y - ah);
+    ctx.lineTo(x2 - dir*ah, y + ah);
+    ctx.closePath(); ctx.fill();
+
+    // ✅ ป้าย Vcm อยู่ใต้ลูกศร
+    ctx.font = '900 13px system-ui';
+    ctx.textBaseline = 'top';
+    const signed = (v>=0?'+':'') + v.toFixed(1);
+    const labelX = x1 + (dir>0 ? 6 : -88);
+    const labelY = y + 10;
+    ctx.fillText(`v_cm = ${signed} m/s`, labelX, labelY);
+
+    ctx.restore();
+  }
+
+  function drawGraph(){
+    const P = 10;
+    gtx.clearRect(0,0,gcv.width,gcv.height);
+    gtx.fillStyle='#fff'; gtx.fillRect(0,0,gcv.width,gcv.height);
+    const w = gcv.width - P*2, h = gcv.height - P*2;
+    gtx.strokeStyle='#e5e7eb'; gtx.lineWidth=1;
+    gtx.beginPath(); gtx.moveTo(P, P+h/2); gtx.lineTo(P+w, P+h/2); gtx.stroke();
+
+    if(trace.t.length<2) return;
+    const tmin = trace.t[0], tmax = trace.t[trace.t.length-1] || 1;
+    const pAll = trace.p1.concat(trace.p2);
+    const pmin = Math.min(...pAll), pmax = Math.max(...pAll);
+    const spanP = (pmax-pmin)||1;
+
+    const tx=(tt)=> P + ((tt - tmin)/(tmax - tmin))*w;
+    const py=(pp)=> P + h - ((pp - pmin)/spanP)*h;
+
+    gtx.strokeStyle='#f1f5f9';
+    gtx.beginPath();
+    for(let i=0;i<=5;i++){ const xx = P + i*w/5; gtx.moveTo(xx, P); gtx.lineTo(xx, P+h); }
+    gtx.stroke();
+
+    gtx.strokeStyle=getCSS('--red'); gtx.lineWidth=2;
+    gtx.beginPath(); gtx.moveTo(tx(trace.t[0]), py(trace.p1[0]));
+    for(let i=1;i<trace.t.length;i++) gtx.lineTo(tx(trace.t[i]), py(trace.p1[i]));
+    gtx.stroke();
+
+    gtx.strokeStyle=getCSS('--blue'); gtx.lineWidth=2;
+    gtx.beginPath(); gtx.moveTo(tx(trace.t[0]), py(trace.p2[0]));
+    for(let i=1;i<trace.t.length;i++) gtx.lineTo(tx(trace.t[i]), py(trace.p2[i]));
+    gtx.stroke();
+  }
+
+  // ---------- Loop ----------
+  let lastTS = 0;
+  function raf(){ if(!running) return; requestAnimationFrame(step); }
+  function step(ts){
+    const dt = Math.min(0.05, (ts - lastTS)/1000);
+    lastTS = ts; t += dt;
+
+    s.x1 += s.v1 * vxScale * dt;
+    s.x2 += s.v2 * vxScale * dt;
+
+    if(!collided){
+      if(collisionType()==='inelastic'){
+        if(checkInelasticContact()) doCollision();
+      }else{
+        const gap = s.x2 - (s.x1 + s.w1);
+        if(gap <= minCarGap){
+          s.x2 = s.x1 + s.w1 + minCarGap;
+          doCollision();
+        }
+      }
+    }else{
+      if(collisionType()==='inelastic'){
+        const {rx} = clayR();
+        const left = clayAttachX();
+        const rightMost = left + 2*rx;
+        s.x2 = rightMost;
+      }
+    }
+
+    if(trace.t.length===0 || t - trace.t[trace.t.length-1] > 0.03){
+      trace.t.push(t);
+      trace.p1.push(s.m1*s.v1);
+      trace.p2.push(s.m2*s.v2);
+      if(graphBox.style.display==='block') drawGraph();
+    }
+
+    draw();
+
+    const off1 = (s.x1+s.w1<0 || s.x1>BASE_W);
+    const off2 = (s.x2+s.w2<0 || s.x2>BASE_W);
+    if(t>maxSimT || (off1 && off2)){
+      running = false;
+      playBtn.textContent = '▶️ เล่นต่อ';
+    }
+    if(running) raf();
+  }
+
+  function playPause(){
+    if(!started) startSim();
+    else if(running){
+      running = false;
+      playBtn.textContent = '▶️ เล่นต่อ';
+    }else{
+      running = true;
+      playBtn.textContent = '⏸️ หยุด';
+      lastTS = performance.now(); raf();
+    }
+  }
+
+  function onInputsChanged(){
+    refreshLabels();
+    if(!started) initSceneFromControls();
+    updateReadout();
+    draw();
+  }
+
+  [m1,m2,u1,u2].forEach(el=>el.addEventListener('input', onInputsChanged));
+  [m1,m2,u1,u2].forEach(el=>el.addEventListener('change', onInputsChanged));
+
+  document.querySelectorAll('input[name="ctype"]').forEach(r=>{
+    r.addEventListener('change', ()=>{
+      perfectlyInelastic = (collisionType()==='inelastic');
+      if(!started) initSceneFromControls();
+      updateReadout(); draw();
+    });
+  });
+
+  toggleGraphBtn.addEventListener('click', ()=>{
+    graphBox.style.display = graphBox.style.display==='block' ? 'none' : 'block';
+    toggleGraphBtn.textContent = (graphBox.style.display==='block') ? '📉 ซ่อนกราฟ' : '📈 กราฟโมเมนตัม';
+    if(graphBox.style.display==='block') drawGraph();
+  });
+
+  toggleVcmBtn.addEventListener('click', ()=>{
+    showVcm = !showVcm;
+    vcmBtnText.textContent = showVcm ? 'ซ่อน Vcm' : 'Vcm';
+    toggleVcmBtn.classList.toggle('primary', showVcm);
+    draw();
+  });
+
+  playBtn.addEventListener('click', playPause);
+  resetBtn.addEventListener('click', resetScene);
+
+  howBtn.addEventListener('click', ()=>{
+    howContent.innerHTML = buildHowHTML();
+    howModal.classList.add('show');
+    if(window.MathJax?.typesetPromise){
+      MathJax.typesetPromise([howContent]).catch(()=>{});
+    }
+  });
+  function closeHow(){ howModal.classList.remove('show'); }
+  howClose.addEventListener('click', closeHow);
+  howBackdrop.addEventListener('click', closeHow);
+
+  formulaBtn.addEventListener('click', ()=>{
+    formulaContent.innerHTML = buildFormulaHTML();
+    formulaModal.classList.add('show');
+    if(window.MathJax?.typesetPromise){
+      MathJax.typesetPromise([formulaContent]).catch(()=>{});
+    }
+  });
+  function closeFormula(){ formulaModal.classList.remove('show'); }
+  formulaClose.addEventListener('click', closeFormula);
+  formulaBackdrop.addEventListener('click', closeFormula);
+
+  function openQuiz(){
+    quizModal.classList.add('show');
+    quizScore.textContent = '';
+    renderQuiz();
+    resetTimer();
+    setTimeout(()=>{ if(window.MathJax?.typesetPromise) MathJax.typesetPromise([quizList]).catch(()=>{}); }, 30);
+  }
+  function closeQuiz(){
+    quizModal.classList.remove('show');
+    stopTimer();
+  }
+  quizBtn.addEventListener('click', openQuiz);
+  quizBackdrop.addEventListener('click', closeQuiz);
+  quizClose.addEventListener('click', closeQuiz);
+
+  checkQuizBtn.addEventListener('click', checkQuiz);
+  resetQuizBtn.addEventListener('click', resetQuiz);
+
+  window.addEventListener('keydown', (e)=>{
+    if(e.key==='Escape'){ closeHow(); closeQuiz(); closeFormula(); }
+  });
+
+  // ✅ showReadout toggle
+  showReadout.addEventListener('change', ()=>{
+    updateReadout();
+  });
+
+  // ✅ first paint + keep correct aspect on resize
+  function boot(){
+    initSceneFromControls();
+    updateReadout(); // จะซ่อนอยู่จนกว่าติ๊ก
+    draw();
+  }
+  window.addEventListener('resize', ()=>{ draw(); });
+  window.addEventListener('orientationchange', ()=>{ setTimeout(draw, 100); });
+
+  boot();
+
+})();
+</script>
+</body>
+</html>

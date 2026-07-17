@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>การระเบิด 3 ส่วน — กฎอนุรักษ์โมเมนตัม (TH)</title>
+<style>
+  :root{
+    --ink:#0f172a; --muted:#64748b; --accent:#2563eb; --line:#e5e7eb; --bg:#ffffff; --dash:#94a3b8;
+    --red:#ef4444; --blue:#3b82f6; --teal:#14b8a6;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial,sans-serif}
+  header{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--line);padding:10px 14px;font-weight:700}
+
+  /* === Layout (desktop default) === */
+  .wrap{
+    display:grid;
+    gap:12px;
+    padding:12px;
+    max-width:1200px;
+    margin:0 auto;
+
+    grid-template-columns: 2fr 1fr;
+    grid-template-areas:
+      "board top"
+      "board bottom";
+    align-items:start;
+  }
+  .board{grid-area:board;position:relative;background:#fff;border:1px solid var(--line);border-radius:16px;min-height:420px;overflow:hidden}
+  canvas{display:block;width:100%;height:100%}
+
+  .panel{background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px;display:grid;gap:10px}
+  .panel.top{grid-area:top}
+  .panel.bottom{grid-area:bottom}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+  label{font-size:12px;color:var(--muted)}
+  input[type="number"]{width:100%}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  button{appearance:none;border:1px solid var(--line);background:#fff;border-radius:999px;padding:8px 12px;cursor:pointer}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .chip{font-size:12px;padding:4px 8px;border:1px solid var(--line);border-radius:999px}
+  .footer{font-size:13px;color:var(--muted);text-align:center}
+  .footer a{color:var(--accent);text-decoration:none}
+
+  /* === Mobile ONLY fixes (ตามที่ขอ) === */
+  @media (max-width: 979px){
+    /* 1) จัดเรียง: ช่องปรับ (บน) → จอทดลอง → ปุ่ม/ติ๊ก (ล่าง) */
+    .wrap{
+      grid-template-columns:1fr;
+      grid-template-areas:
+        "top"
+        "board"
+        "bottom";
+    }
+
+    /* 2) แก้จอทดลองยืดผิดปกติ: บังคับอัตราส่วน + จำกัดความสูง */
+    .board{
+      min-height:0;
+      height:auto;
+      aspect-ratio: 16 / 9;
+      max-height: 60vh;
+    }
+    canvas{
+      width:100%;
+      height:100%;
+    }
+  }
+</style>
+</head>
+<body>
+  <header>การระเบิด 3 ส่วน — กฎอนุรักษ์โมเมนตัม</header>
+
+  <div class="wrap">
+    <!-- TOP (inputs: มวล M + ความเร็ว V อยู่บนสำหรับมือถือ) -->
+    <div class="panel top">
+      <div class="grid3">
+        <div><label>M₀ (kg)</label><input type="number" id="M0" min="0.1" step="0.1" value="9"></div>
+        <div><label>m₁ (kg)</label><input type="number" id="m1" min="0.1" step="0.1" value="3"></div>
+        <div><label>m₂ (kg)</label><input type="number" id="m2" min="0.1" step="0.1" value="2"></div>
+      </div>
+      <div class="row"><span class="chip" id="m3Chip">m₃ = 4.00 kg</span><span id="massNote" style="font-size:12px;color:#64748b"></span></div>
+
+      <div class="grid2">
+        <div><label>|v₁| (m/s)</label><input type="number" id="v1" min="0" step="0.1" value="4"></div>
+        <div><label>θ₁ (°)</label><input type="number" id="a1" min="0" max="360" step="1" value="20"></div>
+      </div>
+      <div class="grid2">
+        <div><label>|v₂| (m/s)</label><input type="number" id="v2" min="0" step="0.1" value="3"></div>
+        <div><label>θ₂ (°)</label><input type="number" id="a2" min="0" max="360" step="1" value="140"></div>
+      </div>
+    </div>
+
+    <!-- BOARD (canvas) -->
+    <div class="board"><canvas id="cv" width="960" height="540"></canvas></div>
+
+    <!-- BOTTOM (buttons + checkboxes อยู่ล่างสำหรับมือถือ) -->
+    <div class="panel bottom">
+      <div class="row">
+        <button class="primary" id="explodeBtn">ระเบิด</button>
+        <button id="resetBtn">รีเซ็ต</button>
+        <label class="row" style="margin-left:auto"><input type="checkbox" id="showV" checked> เวกเตอร์ความเร็ว</label>
+      </div>
+      <div class="row">
+        <label class="row"><input type="checkbox" id="showTrail" checked> ร่องรอย (เส้นปะ)</label>
+        <label class="row"><input type="checkbox" id="showAngles" checked> มุมที่จุดระเบิด (θ₁, θ₂, θ₃)</label>
+        <label class="row"><input type="checkbox" id="showP" checked> สามเหลี่ยมโมเมนตัม (P1,P2,P3 & มุม)</label>
+      </div>
+      <div class="footer">ศึกษาเพิ่มเติมที่เพจ <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">คลายปมฟิสิกส์</a></div>
+    </div>
+  </div>
+
+<script>
+(()=>{
+
+// ===== Canvas & UI =====
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+const W=cv.width, H=cv.height, C={x:W/2,y:H/2};
+
+const M0El = document.getElementById('M0');
+const m1El = document.getElementById('m1');
+const m2El = document.getElementById('m2');
+const v1El = document.getElementById('v1');
+const a1El = document.getElementById('a1');
+const v2El = document.getElementById('v2');
+const a2El = document.getElementById('a2');
+const showVEl = document.getElementById('showV');
+const showTrailEl = document.getElementById('showTrail');
+const showAnglesEl = document.getElementById('showAngles');
+const showPEl = document.getElementById('showP');
+const explodeBtn = document.getElementById('explodeBtn');
+const resetBtn = document.getElementById('resetBtn');
+const m3Chip = document.getElementById('m3Chip');
+const massNote = document.getElementById('massNote');
+
+let state = 'idle'; // 'idle' | 'flying' | 'paused'
+
+// ===== Params =====
+const pxPer_ms = 18;
+const arrowScale = 40;
+const VCOL = ['#ef4444','#3b82f6','#14b8a6']; // V1 red, V2 blue, V3 teal
+
+// ===== WebAudio Boom =====
+let audioCtx=null;
+function playBoom(){
+  try{
+    if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+    const dur=0.9, sr=audioCtx.sampleRate, len=sr*dur;
+    const buf=audioCtx.createBuffer(1,len,sr), data=buf.getChannelData(0);
+    for(let i=0;i<len;i++){ data[i]=(Math.random()*2-1)*Math.exp(-3*i/len); } // noise with decay
+    const src=audioCtx.createBufferSource(); src.buffer=buf;
+    const lp=audioCtx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=2000;
+    const gain=audioCtx.createGain(); gain.gain.value=0.9; gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime+dur);
+    src.connect(lp); lp.connect(gain); gain.connect(audioCtx.destination); src.start();
+  }catch(e){}
+}
+
+// ===== Explosion FX (flame + smoke + flash) =====
+const flames=[], smokes=[];
+let flashT=0; // seconds remaining for flash
+function makeExplosionFX(){
+  const base=C;
+  for(let i=0;i<120;i++){
+    const ang=Math.random()*Math.PI*2, spd=150+Math.random()*380;
+    flames.push({x:base.x,y:base.y,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd,r:4+Math.random()*7,life:0,max:0.6+Math.random()*0.4});
+  }
+  for(let i=0;i<120;i++){
+    const dx=(Math.random()-0.5)*24, dy=(Math.random()-0.5)*24;
+    smokes.push({x:base.x+dx,y:base.y+dy,vx:(Math.random()-0.5)*25,vy:-(40+Math.random()*70),r:8+Math.random()*16,life:0,max:1.6+Math.random()*0.8});
+  }
+  flashT=0.35;
+}
+function updateParticles(dt){
+  for(let i=flames.length-1;i>=0;i--){
+    const p=flames[i]; p.life+=dt; if(p.life>p.max){ flames.splice(i,1); continue; }
+    p.x+=p.vx*dt; p.y+=p.vy*dt; p.r*=(1+1.1*dt);
+  }
+  for(let i=smokes.length-1;i>=0;i--){
+    const s=smokes[i]; s.life+=dt; if(s.life>s.max){ smokes.splice(i,1); continue; }
+    s.x+=s.vx*dt; s.y+=s.vy*dt; s.vx*=(1-0.5*dt); s.r*=(1+0.25*dt);
+  }
+  if(flashT>0) flashT=Math.max(0,flashT-dt);
+}
+function drawParticles(){
+  if(flashT>0){
+    const g=ctx.createRadialGradient(C.x,C.y,0,C.x,C.y,220);
+    const a=Math.min(1, flashT/0.35);
+    g.addColorStop(0,`rgba(255,220,160,${0.7*a})`);
+    g.addColorStop(1,'rgba(255,220,160,0)');
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  }
+  for(const p of flames){
+    const a=1-(p.life/p.max);
+    ctx.beginPath(); ctx.fillStyle=`rgba(255, ${120+Math.floor(120*Math.random())}, 0, ${Math.max(0,a)})`;
+    ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill();
+  }
+  for(const s of smokes){
+    const a=0.55*(1-s.life/s.max);
+    ctx.beginPath(); ctx.fillStyle=`rgba(110,110,110,${Math.max(0,a)})`;
+    ctx.arc(s.x,s.y,s.r,0,Math.PI*2); ctx.fill();
+  }
+}
+
+// ===== Helpers =====
+const deg2rad = d=>d*Math.PI/180, rad2deg = r=>r*180/Math.PI;
+
+function getInputs(){
+  const M0=+M0El.value, m1=+m1El.value, m2=+m2El.value, m3=+(M0-m1-m2).toFixed(6);
+  const v1=+v1El.value, a1=((+a1El.value%360)+360)%360;
+  const v2=+v2El.value, a2=((+a2El.value%360)+360)%360;
+  const v1x=v1*Math.cos(deg2rad(a1)), v1y=-v1*Math.sin(deg2rad(a1));
+  const v2x=v2*Math.cos(deg2rad(a2)), v2y=-v2*Math.sin(deg2rad(a2));
+  let v3x=0,v3y=0,v3=0,a3=0;
+  if(m3>0){
+    v3x=-(m1*v1x+m2*v2x)/m3; v3y=-(m1*v1y+m2*v2y)/m3;
+    v3=Math.hypot(v3x,v3y); a3=rad2deg(Math.atan2(-v3y, v3x)); if(a3<0)a3+=360;
+  }
+  return {M0,m1,m2,m3,v1,a1,v2,a2,v1x,v1y,v2x,v2y,v3x,v3y,v3,a3};
+}
+
+function updateMassChip(){
+  const {m3,m1,m2,M0}=getInputs();
+  m3Chip.textContent=`m₃ = ${m3.toFixed(2)} kg`;
+  massNote.textContent = (m1+m2>=M0) ? '❗ โปรดกำหนด m₁+m₂ < M₀' : '';
+}
+
+function drawArrow(x1,y1,x2,y2,color,w=3){
+  const ang=Math.atan2(y2-y1,x2-x1), head=12;
+  ctx.save(); ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=w;
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x2,y2);
+  ctx.lineTo(x2-head*Math.cos(ang-Math.PI/6), y2-head*Math.sin(ang-Math.PI/6));
+  ctx.lineTo(x2-head*Math.cos(ang+Math.PI/6), y2-head*Math.sin(ang+Math.PI/6));
+  ctx.closePath(); ctx.fill(); ctx.restore();
+}
+
+// ===== Fragments =====
+class Fragment{
+  constructor(id,mass,fill,stroke){
+    this.id=id; this.m=mass; this.fill=fill; this.stroke=stroke;
+    this.r=4.6*Math.max(6,6+Math.log2(Math.max(1,mass)));
+    this.pos={x:C.x,y:C.y}; this.vel={x:0,y:0}; this.trail=[];
+  }
+  setVelocity(vx,vy){ this.vel.x=vx; this.vel.y=vy; }
+  update(dt){
+    this.pos.x += this.vel.x*pxPer_ms*dt;
+    this.pos.y += this.vel.y*pxPer_ms*dt;
+    if(showTrailEl.checked){
+      this.trail.push({x:this.pos.x,y:this.pos.y});
+      if(this.trail.length>220) this.trail.shift();
+    }else this.trail.length=0;
+  }
+  draw(){
+    // trail (เส้นปะ)
+    if(showTrailEl.checked && this.trail.length>1){
+      ctx.save(); ctx.strokeStyle='var(--dash)'; ctx.setLineDash([4,7]);
+      ctx.beginPath(); ctx.moveTo(this.trail[0].x,this.trail[0].y);
+      for(let i=1;i<this.trail.length;i++) ctx.lineTo(this.trail[i].x,this.trail[i].y);
+      ctx.stroke(); ctx.restore();
+    }
+    // body
+    ctx.save();
+    ctx.beginPath(); ctx.fillStyle=this.fill; ctx.strokeStyle=this.stroke; ctx.lineWidth=5.5;
+    ctx.arc(this.pos.x,this.pos.y,this.r,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='#fff'; ctx.font='bold 14px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(String(this.id), this.pos.x, this.pos.y);
+    ctx.restore();
+    // velocity vector + label AT TIP with requested offsets
+    if(showVEl.checked){
+      const spd=Math.hypot(this.vel.x,this.vel.y);
+      const len=Math.max(18, spd*arrowScale);
+      const ang=Math.atan2(this.vel.y,this.vel.x);
+      const col=VCOL[this.id-1]||'#111';
+      const tipX=this.pos.x+Math.cos(ang)*len;
+      const tipY=this.pos.y+Math.sin(ang)*len;
+      drawArrow(this.pos.x, this.pos.y, tipX, tipY, col, 3.4);
+
+      // Offsets per spec:
+      let offX=0, offY=0;
+      if(this.id===1){ offY=-12; }
+      else if(this.id===2){ offY=-12; }
+      else if(this.id===3){ offY=+12; }
+
+      ctx.fillStyle=col; ctx.font='bold 13px system-ui'; ctx.textAlign='center';
+      ctx.fillText(`V${this.id}=${spd.toFixed(2)} m/s`, tipX+offX, tipY+offY);
+    }
+  }
+}
+
+let frags=[];
+
+function initFrags(){
+  const I=getInputs();
+  frags=[
+    new Fragment(1, I.m1, '#fecaca', '#b91c1c'),
+    new Fragment(2, I.m2, '#bfdbfe', '#1d4ed8'),
+    new Fragment(3, Math.max(0.0001,I.m3), '#ccfbf1', '#0f766e'),
+  ];
+  frags[0].setVelocity(I.v1x,I.v1y);
+  frags[1].setVelocity(I.v2x,I.v2y);
+  frags[2].setVelocity(I.v3x,I.v3y);
+  for(const f of frags){ f.pos={x:C.x,y:C.y}; f.trail.length=0; }
+}
+
+// ===== Center Angles (θ1,θ2,θ3) =====
+function drawAnglesAtCenter(){
+  if(!showAnglesEl.checked) return;
+  const I=getInputs(); if(I.m3<=0) return;
+  const radius=48;
+  function arcTo(vec,color,label,theta){
+    const a1=0; // +x
+    const a2=Math.atan2(vec.y,vec.x);
+    let d=a2-a1; while(d>Math.PI)d-=2*Math.PI; while(d<-Math.PI)d+=2*Math.PI;
+    const mid=a1+d/2; const ccw=d>0?false:true;
+    ctx.save(); ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.arc(C.x,C.y,radius,a1,a1+d,ccw); ctx.stroke();
+    ctx.font='bold 14px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(`${label}=${theta.toFixed(1)}°`, C.x+(radius+18)*Math.cos(mid), C.y+(radius+18)*Math.sin(mid));
+    drawArrow(C.x, C.y, C.x+vec.x*18, C.y+vec.y*18, color, 3);
+    ctx.restore();
+  }
+  arcTo({x:I.v1x,y:I.v1y}, VCOL[0], 'θ₁', I.a1);
+  arcTo({x:I.v2x,y:I.v2y}, VCOL[1], 'θ₂', I.a2);
+  arcTo({x:I.v3x,y:I.v3y}, VCOL[2], 'θ₃', I.a3);
+}
+
+// ===== Momentum triangle (head-to-tail with P labels & angles) =====
+function drawMomentumTriangle(){
+  if(!showPEl.checked) return;
+  const I=getInputs(); if(I.m3<=0) return;
+  const p1={x:I.m1*I.v1x, y:I.m1*I.v1y};
+  const p2={x:I.m2*I.v2x, y:I.m2*I.v2y};
+  const p3={x:I.m3*I.v3x, y:I.m3*I.v3y};
+  const maxP=Math.max(Math.hypot(p1.x,p1.y),Math.hypot(p2.x,p2.y),Math.hypot(p3.x,p3.y),1e-6);
+  const s=220/maxP;
+  const ox=80, oy=300;
+
+  const x0=ox, y0=oy;
+  const x1=x0+p1.x*s, y1=y0+p1.y*s;
+  const x2=x1+p2.x*s, y2=y1+p2.y*s;
+  const x3=x2+p3.x*s, y3=y2+p3.y*s; // close back to origin
+
+  // arrows
+  drawArrow(x0,y0,x1,y1,'#b91c1c',4.2); // red P1
+  drawArrow(x1,y1,x2,y2,'#1d4ed8',4.2); // blue P2
+  drawArrow(x2,y2,x3,y3,'#0f766e',4.2); // green P3
+
+ // === P labels at arrow tips with requested offsets ===
+  ctx.font='bold 16px system-ui';
+  ctx.fillStyle='#b91c1c'; ctx.fillText(`P1=${(Math.hypot(p1.x,p1.y)).toFixed(2)}`, x1 -10, y1 + 30);
+  ctx.fillStyle='#1d4ed8'; ctx.fillText(`P2=${(Math.hypot(p2.x,p2.y)).toFixed(2)}`, x2 + 40, y2 +10);
+  ctx.fillStyle='#0f766e'; ctx.fillText(`P3=${(Math.hypot(p3.x,p3.y)).toFixed(2)}`, x3 - 40, y3 -40);
+
+  // ----- angles -----
+  function angleBetween(u,v){
+    const du=Math.hypot(u.x,u.y), dv=Math.hypot(v.x,v.y);
+    if(du===0||dv===0) return 0;
+    let c=(u.x*v.x+u.y*v.y)/(du*dv);
+    c=Math.max(-1,Math.min(1,c));
+    return Math.acos(c);
+  }
+  function drawAngleArc(cx,cy,vA,vB,r,label){
+    const ang=angleBetween(vA,vB);
+    const a1=Math.atan2(vA.y,vA.x);
+    const cross=vA.x*vB.y - vA.y*vB.x;
+    const a2=a1 + (cross<0 ? -ang : ang);
+    ctx.save();
+    ctx.strokeStyle='#334155'; ctx.fillStyle='#334155'; ctx.lineWidth=2.4;
+    ctx.beginPath(); ctx.arc(cx,cy,r,a1,a2,(a2<a1)); ctx.stroke();
+    const mid=(a1+a2)/2;
+    ctx.font='bold 14px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(`${label}=${(ang*180/Math.PI).toFixed(1)}°`, cx+(r+16)*Math.cos(mid), cy+(r+16)*Math.sin(mid));
+    ctx.restore();
+  }
+
+  // α at O between (O→B) and (O→A)
+  const vR_O = {x:x1-x0, y:y1-y0};        // red from O
+  const vG_O = {x:x2-x0, y:y2-y0};        // -P3 anchored at O (O→B)
+  drawAngleArc(x0,y0,vG_O,vR_O,30,'α');
+
+  // β at A between A→O และ A→B
+  const vA1={x:x0-x1,y:y0-y1}, vA2={x:x2-x1,y:y2-y1};
+  drawAngleArc(x1,y1,vA1,vA2,30,'β');
+
+  // γ at B between B→A และ B→O
+  const vB1={x:x1-x2,y:y1-y2}, vB2={x:x0-x2,y:y0-y2};
+  drawAngleArc(x2,y2,vB1,vB2,30,'γ');
+}
+
+// ===== Idle object =====
+function drawIdle(){
+  const I=getInputs();
+  const r=Math.max(16, 14 + Math.log2(Math.max(1,I.M0))*10);
+  ctx.save(); ctx.fillStyle='#111'; ctx.beginPath(); ctx.arc(C.x,C.y,r,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#fff'; ctx.font='bold 14px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('วัตถุ (ระเบิด)', C.x, C.y); ctx.restore();
+}
+
+// ===== Loop =====
+let lastTS=null;
+function loop(ts){
+  if(lastTS===null) lastTS=ts;
+  const dt=Math.min(0.05,(ts-lastTS)/1000); lastTS=ts;
+  ctx.clearRect(0,0,W,H);
+
+  if(state==='idle'){
+    drawIdle();
+  }else if(state==='flying'){
+    updateParticles(dt);
+    drawParticles();
+    for(const f of frags){ f.update(dt); f.draw(); }
+  }else if(state==='paused'){
+    drawParticles();
+    for(const f of frags){ f.draw(); }
+  }
+
+  if(state!=='idle') drawAnglesAtCenter();
+  drawMomentumTriangle();
+
+  requestAnimationFrame(loop);
+}
+
+// ===== Events =====
+explodeBtn.addEventListener('click', ()=>{
+  if(state==='idle'){
+    initFrags(); makeExplosionFX(); playBoom();
+    state='flying'; explodeBtn.textContent='หยุด';
+  }else if(state==='flying'){
+    state='paused'; explodeBtn.textContent='เล่นต่อ';
+  }else{
+    state='flying'; explodeBtn.textContent='หยุด';
+  }
+});
+resetBtn.addEventListener('click', ()=>{
+  state='idle'; explodeBtn.textContent='ระเบิด';
+  frags.length=0; flames.length=0; smokes.length=0; flashT=0; lastTS=null;
+  ctx.clearRect(0,0,W,H);
+});
+
+['input','change'].forEach(ev=>{
+  [M0El,m1El,m2El,v1El,a1El,v2El,a2El,showVEl,showTrailEl,showAnglesEl,showPEl].forEach(el=>{
+    el.addEventListener(ev, ()=>{
+      updateMassChip();
+      if(state!=='idle') initFrags();
+    });
+  });
+});
+
+updateMassChip();
+requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,729 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>EnergyLab — Ballistic Pendulum (Ceiling, L=1m)</title>
+
+<!-- MathJax v3 (ใช้ใน Modal: สูตรสำคัญ/วิธีคำนวณ) -->
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath: [['\\(','\\)'], ['$', '$']],
+      displayMath: [['\\[','\\]'], ['$$','$$']]
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] }
+  };
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+<style>
+  :root{--bg:#ffffff;--panel:#f8fafc;--ink:#0f172a;--muted:#475569;--accent:#0ea5e9;--good:#16a34a;--danger:#ef4444}
+  body{font-family:Inter,system-ui,Arial,sans-serif;background:var(--bg);color:var(--ink);margin:0;padding:12px;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:360px 1fr;gap:12px}
+  @media(max-width:940px){ .wrap{grid-template-columns:1fr;padding:8px} }
+  .card{background:var(--panel);padding:14px;border-radius:10px;box-shadow:0 6px 18px rgba(2,6,23,0.06)}
+  h1{font-size:18px;margin:0 0 8px}
+  label{display:block;font-size:13px;color:var(--muted);margin-top:8px}
+  input[type=number], select{width:100%;padding:8px;border-radius:6px;border:1px solid #d1d5db;font-size:14px;box-sizing:border-box}
+  .controls{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+  button{padding:8px 12px;border-radius:8px;border:0;background:var(--accent);color:white;cursor:pointer}
+  button.secondary{background:#64748b}
+  button.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+  button.alt{background:#ffb020;color:#111}
+  canvas#sim{width:100%;height:auto;border-radius:6px;border:1px solid #e6edf3;display:block}
+  .results{margin-top:10px;font-size:14px}
+  .results .err{color:var(--danger);font-weight:700}
+  .small{font-size:13px;color:var(--muted)}
+  .note{margin-top:6px;font-size:12px;color:#334155;background:#f1f5f9;border:1px dashed #cbd5e1;padding:8px;border-radius:8px}
+
+  /* ✅ ป้ายทั้งหมด: ไม่มีเส้นขอบ */
+  .tag{
+    position:absolute;
+    font:13px/1.2 system-ui,Arial,sans-serif;
+    background:rgba(255,255,255,0.95);
+    border:0 !important;                /* สำคัญ: ไม่ให้มีเส้นขอบทุกป้าย */
+    outline:0 !important;
+    box-shadow:none !important;
+    border-radius:6px;
+    padding:4px 6px;
+    transform:translate(-50%,-50%);
+    pointer-events:none;
+    z-index:10
+  }
+  /* ✅ ป้ายโปร่งใสตามที่สั่ง */
+  .tag.transparent{
+    background:rgba(255,255,255,0);
+  }
+
+  #stage{position:relative}
+  .modal{position:fixed;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.45);display:none;align-items:center;justify-content:center;z-index:200;padding:12px;box-sizing:border-box}
+  .modal .card{width:940px;max-width:100%;max-height:90%;overflow:auto;padding:18px;border-radius:10px;box-sizing:border-box}
+  .modal .close{background:#ef4444;padding:6px 10px;border-radius:8px;color:white;border:0;cursor:pointer;float:right}
+  .formulas{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:900px){ .formulas{grid-template-columns:1fr} }
+  .formula-card{padding:12px;border-radius:10px;background:linear-gradient(180deg,#fffaf0,#fff3e0);border:1px solid #ffd6a5}
+  .formula-card.blue{background:linear-gradient(180deg,#f2feff,#e9fbff);border:1px solid #bfefff}
+  .formula-card h3{margin:0 0 6px;font-size:15px}
+  .formula-card p{margin:6px 0;font-size:14px;color:var(--muted)}
+  .formula{font-size:18px;line-height:1.4;margin-top:8px;font-weight:600}
+  .frac{display:inline-block;text-align:center;vertical-align:middle;margin:0 6px}
+  .frac .num{display:block;padding:0 6px;border-bottom:2px solid #111;font-size:0.95em}
+  .frac .den{display:block;padding:0 6px;font-size:0.95em}
+  .inline-math{font-family:Georgia,serif;background:transparent;padding:2px 4px;border-radius:4px}
+  .exercise-choices{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+  .choice{padding:8px;border-radius:8px;border:1px solid #e2e8f0;cursor:pointer;background:white}
+  .choice.selected{border-color:var(--accent);box-shadow:0 4px 12px rgba(14,165,233,0.12)}
+  .solution{background:#fff;border-left:4px solid var(--accent);padding:12px;border-radius:6px;margin-top:10px}
+  .score{font-weight:700;color:var(--good)}
+  .center{display:flex;justify-content:center;gap:8px;margin-top:12px}
+
+  /* ✅ จุดรองรับ “ปุ่ม+ผลลัพธ์” ใต้จอทดลองเฉพาะมือถือ */
+  #mobileBelowStage{display:none;margin-top:10px}
+  @media(max-width:940px){ #mobileBelowStage{display:block} }
+</style>
+</head>
+
+<body>
+<div class="wrap">
+  <div class="card" id="leftCard">
+    <h1>การทดลอง: ลูกตุ้มไม้ถูกยิงด้วยกระสุน </h1>
+
+    <div class="note">หมายเหตุ: ความยาวลูกตุ้ม <b>L = 1.00 m</b> (วัดจากจุดแขวนถึงจุดศูนย์กลางมวล)</div>
+    <div class="small">• ถ้าชนเพดานจะแสดง => <b>h = Error</b></div>
+
+    <label>มวลกระสุน <b>m</b> (กรัม)</label>
+    <input id="massBullet" type="number" min="0.1" step="0.1" value="9.0" />
+
+    <label>ความเร็วเริ่มต้นของกระสุน <b>u</b> (m/s)</label>
+    <input id="uInput" type="number" min="0" step="0.1" value="220" />
+
+    <label>มวลลูกตุ้มไม้ <b>M</b> (กิโลกรัม)</label>
+    <input id="massBob" type="number" min="0.1" step="0.1" value="1.50" />
+
+    <label>ชนแบบ</label>
+    <select id="modeSel">
+      <option value="embed" selected>ฝัง (inelastic)</option>
+      <option value="pass">ทะลุผ่าน</option>
+    </select>
+
+    <div id="exitBox" style="display:none">
+      <label>ความเร็วหลุดออกของกระสุน <b>v<sub>out</sub></b> (m/s) — ใช้เมื่อ "ทะลุผ่าน"</label>
+      <input id="voutInput" type="number" min="0" step="0.1" value="120" />
+    </div>
+
+    <!-- ✅ anchor ตำแหน่งเดิมบนจอใหญ่ -->
+    <div id="desktopAnchor"></div>
+
+    <!-- ✅ กล่องที่จะถูก “ย้าย” ลงไปใต้ canvas เฉพาะมือถือ -->
+    <div id="movePack">
+      <div class="controls">
+        <button id="toggleBtn">▶️ เล่น</button>
+        <button id="resetBtn" class="secondary">⏻ รีเซ็ต</button>
+        <button id="calcBtn" class="ghost">วิธีคำนวณแบบละเอียด</button>
+        <button id="formBtn" class="alt">สูตรสำคัญ</button>
+        <button id="quizBtn" class="ghost">แบบฝึกหัด</button>
+      </div>
+
+      <div class="results" id="results"></div>
+      <a class="inline-math" id="resolveLink" href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">ศึกษาเพิ่มเติมที่เพจคลายปมฟิสิกส์</a>
+    </div>
+  </div>
+
+  <div class="card" id="stage">
+    <canvas id="sim" aria-label="ballistic-pendulum simulation"></canvas>
+
+    <!-- ✅ ปุ่ม+ผลลัพธ์จะถูกย้ายมาวาง “ใต้ canvas” ตรงนี้บนมือถือ -->
+    <div id="mobileBelowStage"></div>
+
+    <div id="tagU" class="tag" style="display:none">u = – m/s</div>
+    <div id="tagH" class="tag transparent" style="display:none">h = – m</div>
+    <div id="tagTheta" class="tag transparent" style="display:none">θ = – °</div>
+    <div id="tagHit" class="tag" style="display:none;background:#fff3f3;color:#991b1b">ชนเพดาน</div>
+    <div id="tagStop" class="tag" style="display:none;background:#ecfeff;color:#075985">หยุดชั่วขณะ</div>
+  </div>
+</div>
+
+<!-- Modals -->
+<div id="calcModal" class="modal"><div class="card"><button class="close" id="closeCalc">ปิด</button><h2>วิธีคำนวณแบบละเอียด</h2><div id="calcContent"></div></div></div>
+<div id="formModal" class="modal"><div class="card"><button class="close" id="closeForm">ปิด</button><h2>สูตรสำคัญ</h2><div class="formulas" id="formulasContent">
+  <div class="formula-card"><h3>อนุรักษ์โมเมนตัม (ฝัง)</h3><p>เมื่อกระสุนฝังกับลูกตุ้ม</p><div class="formula"><span class="inline-math">m u = (m + M) V ⇒ V =</span><span class="frac"><span class="num">m</span><span class="den">m + M</span></span><span class="inline-math"> u</span></div></div>
+  <div class="formula-card blue"><h3>อนุรักษ์โมเมนตัม (ทะลุ)</h3><p>เมื่อกระสุนทะลุผ่านออกไป</p><div class="formula"><span class="inline-math">m u = m v<sub>out</sub> + M V ⇒ V =</span><span class="frac"><span class="num">m</span><span class="den">M</span></span><span class="inline-math"> (u − v<sub>out</sub>)</span></div></div>
+  <div class="formula-card"><h3>อนุรักษ์พลังงาน</h3><p>ความจลน์ของระบบเปลี่ยนเป็นพลังงานศักย์</p><div class="formula"><span class="inline-math">½ (m+M) V² = (m+M) g h ⇒ h =</span><span class="frac"><span class="num">V²</span><span class="den">2 g</span></span></div></div>
+  <div class="formula-card blue"><h3>มุมสูงสุด</h3><p>จากความสูงที่ได้</p><div class="formula">cos θ<sub>max</sub> = 1 − h/L ⇒ θ<sub>max</sub> = arccos(1 − h/L)</div></div>
+</div></div></div>
+
+<div id="quizModal" class="modal"><div class="card"><button class="close" id="closeQuiz">ปิด</button><h2>แบบฝึกหัด</h2><div id="quizArea"></div><div class="center"><button id="checkQuiz" class="accent">✅ ตรวจคำตอบ</button><button id="resetQuiz" class="secondary">รีเซ็ตคำตอบ</button></div><div id="quizResult"></div></div></div>
+
+<script>
+// Canvas setup
+const VW = 900, VH = 520;
+const canvas = document.getElementById('sim');
+const ctx = canvas.getContext('2d', { alpha: false });
+function resizeCanvas(){
+  const rect = canvas.parentElement.getBoundingClientRect();
+  const displayW = Math.max(320, rect.width - 0);
+  const displayH = Math.round(displayW * VH / VW);
+  const dpr = window.devicePixelRatio || 1;
+  canvas.style.width = displayW + 'px'; canvas.style.height = displayH + 'px';
+  canvas.width = Math.round(displayW * dpr); canvas.height = Math.round(displayH * dpr);
+  const sx = canvas.width / VW; const sy = canvas.height / VH;
+  ctx.setTransform(sx,0,0,sy,0,0);
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+/* ✅ ย้าย “ปุ่ม+ผลลัพธ์” ลงใต้ canvas เฉพาะมือถือ (คอมคงเดิม) */
+const movePack = document.getElementById('movePack');
+const desktopAnchor = document.getElementById('desktopAnchor');
+const mobileBelowStage = document.getElementById('mobileBelowStage');
+const leftCard = document.getElementById('leftCard');
+
+function isMobileView(){ return window.matchMedia('(max-width: 940px)').matches; }
+
+function applyMobileLayout(){
+  const isMobile = isMobileView();
+  if(isMobile){
+    if(movePack && mobileBelowStage && movePack.parentElement !== mobileBelowStage){
+      mobileBelowStage.appendChild(movePack);
+    }
+  } else {
+    if(movePack && desktopAnchor && movePack.parentElement !== leftCard){
+      desktopAnchor.insertAdjacentElement('afterend', movePack);
+    }
+  }
+}
+window.addEventListener('resize', applyMobileLayout);
+window.addEventListener('orientationchange', applyMobileLayout);
+applyMobileLayout();
+
+// Elements
+const massBullet = document.getElementById('massBullet');
+const uInput = document.getElementById('uInput');
+const massBob = document.getElementById('massBob');
+const modeSel = document.getElementById('modeSel');
+const exitBox = document.getElementById('exitBox');
+const voutInput = document.getElementById('voutInput');
+const toggleBtn = document.getElementById('toggleBtn');
+const resetBtn = document.getElementById('resetBtn');
+const calcBtn = document.getElementById('calcBtn');
+const formBtn = document.getElementById('formBtn');
+const quizBtn = document.getElementById('quizBtn');
+const resultsDiv = document.getElementById('results');
+const tagU = document.getElementById('tagU');
+const tagH = document.getElementById('tagH');
+const tagTheta = document.getElementById('tagTheta');
+const tagHit = document.getElementById('tagHit');
+const tagStop = document.getElementById('tagStop');
+const calcModal = document.getElementById('calcModal');
+const formModal = document.getElementById('formModal');
+const quizModal = document.getElementById('quizModal');
+const closeCalc = document.getElementById('closeCalc');
+const closeForm = document.getElementById('closeForm');
+const closeQuiz = document.getElementById('closeQuiz');
+const calcContent = document.getElementById('calcContent');
+const quizArea = document.getElementById('quizArea');
+const checkQuiz = document.getElementById('checkQuiz');
+const resetQuiz = document.getElementById('resetQuiz');
+const quizResult = document.getElementById('quizResult');
+
+// World & geometry
+const g = 9.81;
+const pxPerMeter = 300;
+const Lm_real = 1.00;
+const Lpx_set = Math.round(Lm_real * pxPerMeter);
+const pivotX = 420, pivotY = 180;
+const bobR = 25;
+const gunX = 40, SL = 160, SH = 20;
+const muzzleX = gunX + SL;
+const muzzleY = pivotY + Lpx_set;
+
+// State
+const State = {
+  phase:'idle', t:0,
+  bx: gunX + SL/2, prevBx: gunX + SL/2, by: muzzleY,
+  Lpx:Lpx_set, get Lm(){ return this.Lpx/pxPerMeter; },
+  theta:0, omega:0, thetaMax:0, v0:0, h:0,
+  embed:true, embeddedBullet:false,
+  flames:[], smokes:[],
+  passTrace:null, passBulletPark:null, showReference:false,
+  hError:false, hitShown:false, stopShown:false
+};
+
+// Helpers
+function mBullet_kg(){ return (parseFloat(massBullet.value)||9)/1000; }
+function u0(){ return parseFloat(uInput.value)||0; }
+function mBob_kg(){ return parseFloat(massBob.value)||1; }
+function vOut(){ return Math.max(0, parseFloat(voutInput.value)||0); }
+
+function placeTag(el, vx, vy, text){
+  el.style.display='block'; if(text!==undefined) el.textContent=text;
+  const rect = canvas.getBoundingClientRect();
+  const parentRect = canvas.parentElement.getBoundingClientRect();
+  const x = parentRect.left + (vx / VW) * rect.width;
+  const y = parentRect.top + (vy / VH) * rect.height;
+  el.style.left = (x - parentRect.left) + 'px';
+  el.style.top  = (y - parentRect.top) + 'px';
+}
+function hideTags(){ tagU.style.display = tagH.style.display = tagTheta.style.display = tagHit.style.display = tagStop.style.display = 'none'; }
+
+// Particles
+function spawnMuzzleFX(){
+  for(let i=0;i<12;i++) State.flames.push({x:muzzleX,y:muzzleY,vx:260+Math.random()*260,vy:(Math.random()-0.5)*120,life:0.12+Math.random()*0.12,age:0});
+  for(let i=0;i<20;i++) State.smokes.push({x:muzzleX+4,y:muzzleY,R:4+Math.random()*8,dR:10+Math.random()*30,vx:30+Math.random()*60,vy:-10-Math.random()*30,a:0.7,fade:0.25+Math.random()*0.4});
+}
+function updateParticles(dt){
+  State.flames.forEach(f=>{ f.age+=dt; f.x += f.vx*dt; f.y += f.vy*dt; });
+  State.flames = State.flames.filter(f=> f.age < f.life);
+  State.smokes.forEach(s=>{ s.x += s.vx*dt; s.y += s.vy*dt; s.R += s.dR*dt*0.4; s.a -= s.fade*dt; });
+  State.smokes = State.smokes.filter(s=> s.a>0);
+}
+
+// Geometry helpers
+function bobCenter(theta){ return { x: pivotX + State.Lpx * Math.sin(theta), y: pivotY + State.Lpx * Math.cos(theta) }; }
+function segCircleHit(x1,y1,x2,y2,cx,cy,r){
+  const dx=x2-x1, dy=y2-y1; const fx=x1-cx, fy=y1-cy;
+  const a=dx*dx+dy*dy; if(a===0) return false;
+  const b=2*(fx*dx+fy*dy); const c=fx*fx+fy*fy - r*r;
+  const disc=b*b-4*a*c; if(disc<0) return false;
+  const sd=Math.sqrt(disc); const t1=(-b-sd)/(2*a), t2=(-b+sd)/(2*a);
+  return (t1>=0 && t1<=1) || (t2>=0 && t2<=1);
+}
+
+// Impact & ceiling logic
+function computeImpact(){
+  const m = mBullet_kg(), M = mBob_kg(), u = u0();
+  let v0 = 0;
+  const c0 = bobCenter(0);
+  if(State.embed){
+    v0 = (m/(m+M))*u;
+    State.embeddedBullet = true; State.passTrace = null; State.passBulletPark = null;
+  } else {
+    const vout = Math.min(u, vOut());
+    v0 = (m/M) * Math.max(0, u - vout);
+    State.embeddedBullet = false;
+    const impactX = c0.x - (bobR + 6), impactY = c0.y;
+    const parkedX = Math.max(60, VW - 80 - 300);
+    State.passTrace = {x1: impactX, y1: impactY, x2: parkedX, y2: muzzleY};
+    State.passBulletPark = parkedX;
+  }
+  State.v0 = v0;
+
+  const hfree = (v0*v0)/(2*g);
+  State.hError = false;
+  const L = State.Lm;
+  const h_ceiling = Math.max(0, L - (bobR/pxPerMeter));
+  let thetaMaxCalc = Math.acos(Math.max(-1, Math.min(1, 1 - hfree/L)));
+
+  if(hfree >= h_ceiling - 1e-9){
+    State.hError = true;
+    State.h = NaN;
+    const cosAtHit = (bobR) / State.Lpx;
+    thetaMaxCalc = Math.acos(Math.max(-1, Math.min(1, cosAtHit)));
+  } else {
+    State.h = hfree;
+  }
+
+  State.thetaMax = thetaMaxCalc;
+  State.theta = 0;
+  State.omega = v0 / L;
+  State.showReference = true;
+  State.hitShown = false;
+  State.stopShown = false;
+}
+
+function playBangSafe(){
+  try{
+    const A=(window.AudioContext||window.webkitAudioContext)?new (window.AudioContext||window.webkitAudioContext)():null;
+    if(!A) return;
+    const len=0.06, rate=A.sampleRate;
+    const buffer=A.createBuffer(1, rate*len, rate);
+    const data=buffer.getChannelData(0);
+    for(let i=0;i<data.length;i++){ data[i]=(Math.random()*2-1)*Math.exp(-12*i/data.length); }
+    const src=A.createBufferSource(); src.buffer=buffer;
+    const gNode=A.createGain(); gNode.gain.value=0.9;
+    src.connect(gNode); gNode.connect(A.destination); src.start();
+  }catch(e){}
+}
+
+// Draw
+function drawGun(x,y){
+  ctx.fillStyle='#111'; ctx.fillRect(x,y,SL,SH);
+  const gripW=24, gripH=80, gripX=x, gripY=y+SH;
+  const auxX=gripX+gripW, auxY=y+SH, auxW=30, auxH=20;
+  ctx.fillStyle='#fff'; ctx.fillRect(auxX, auxY, auxW, auxH);
+  ctx.strokeStyle='#000'; ctx.lineWidth=2; ctx.strokeRect(auxX, auxY, auxW, auxH);
+  ctx.strokeStyle='#000'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(auxX+auxW/2, auxY); ctx.lineTo(auxX+auxW/2, auxY+10); ctx.stroke();
+  ctx.strokeStyle='#0f172a'; ctx.lineWidth=2; const tx=auxX+auxW/2, ty=auxY+2; ctx.beginPath(); ctx.moveTo(tx-5,ty); ctx.lineTo(tx+5,ty); ctx.stroke();
+  const gWood=ctx.createLinearGradient(gripX,gripY,gripX,gripY+gripH); gWood.addColorStop(0,'#deb887'); gWood.addColorStop(1,'#8b5a2b');
+  ctx.fillStyle=gWood; ctx.fillRect(gripX,gripY,gripW,gripH);
+  ctx.strokeStyle='#0f172a'; ctx.strokeRect(gripX,gripY,gripW,gripH);
+  ctx.fillStyle='#222'; ctx.beginPath(); ctx.arc(x+SL, y+SH/2, 2.5, 0, Math.PI*2); ctx.fill();
+}
+
+function drawScene(){
+  ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,VW,VH);
+
+  ctx.fillStyle='#0f172a'; ctx.fillRect(0, pivotY-6, VW, 12);
+  ctx.fillStyle='rgba(255,255,255,0.9)'; ctx.font='12px system-ui'; ctx.textAlign='left';
+  ctx.fillText('เพดาน', 10, pivotY-10);
+
+  ctx.fillStyle='#0f172a'; ctx.beginPath(); ctx.arc(pivotX, pivotY, 4, 0, Math.PI*2); ctx.fill();
+  drawGun(gunX, muzzleY-10);
+
+  const c = bobCenter(State.theta);
+
+  /* เส้นปะสีเทาแนวตั้ง: ร่องรอยเชือกแนวเดิม (แสดงเมื่อยิงแล้วและเบนจากแนวเดิม) */
+  if(State.showReference && Math.abs(State.theta) > 0.001){
+    ctx.save();
+    ctx.setLineDash([6,6]);
+    ctx.strokeStyle='rgba(100,116,139,0.55)';
+    ctx.lineWidth=2;
+    ctx.beginPath();
+    ctx.moveTo(pivotX, pivotY);
+    ctx.lineTo(pivotX, pivotY + State.Lpx);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // rope & bob (current)
+  ctx.strokeStyle='#111827'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(pivotX,pivotY); ctx.lineTo(c.x,c.y); ctx.stroke();
+
+  const grad = ctx.createRadialGradient(c.x-10,c.y-10,6,c.x,c.y,bobR);
+  grad.addColorStop(0,'#e0c9a6'); grad.addColorStop(1,'#8b5a2b');
+  ctx.fillStyle=grad; ctx.beginPath(); ctx.arc(c.x,c.y,bobR,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='rgba(0,0,0,0.18)'; ctx.stroke();
+
+  if(State.showReference){
+    ctx.save(); ctx.setLineDash([5,5]); ctx.strokeStyle='rgba(0,0,0,0.12)';
+    const b0 = bobCenter(0); ctx.beginPath(); ctx.arc(b0.x,b0.y,bobR,0,Math.PI*2); ctx.stroke(); ctx.restore();
+  }
+
+  if(State.embeddedBullet && State.phase!=='bullet'){ ctx.fillStyle='gray'; ctx.beginPath(); ctx.arc(c.x, c.y, 6, 0, Math.PI*2); ctx.fill(); }
+
+  if(!State.embeddedBullet && State.passTrace){
+    const p = State.passTrace; const ang = Math.atan2(p.y2 - p.y1, p.x2 - p.x1);
+    const hx = Math.cos(ang)*bobR, hy = Math.sin(ang)*bobR;
+    ctx.save(); ctx.strokeStyle='rgba(100,100,100,0.6)'; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.moveTo(c.x - hx, c.y - hy); ctx.lineTo(c.x + hx, c.y + hy); ctx.stroke(); ctx.restore();
+  }
+
+  if(State.phase==='bullet'){ ctx.fillStyle='gray'; ctx.beginPath(); ctx.arc(State.bx, State.by, 6, 0, Math.PI*2); ctx.fill(); }
+  else{
+    if(!State.embeddedBullet && !State.passBulletPark){
+      const barrelMidX = gunX + SL/2; ctx.fillStyle='gray'; ctx.beginPath(); ctx.arc(barrelMidX, muzzleY, 6, 0, Math.PI*2); ctx.fill();
+    }
+  }
+
+  if(State.passBulletPark !== null){
+    const parkedX = State.passBulletPark;
+    ctx.fillStyle='#000'; ctx.beginPath(); ctx.arc(parkedX, muzzleY, 6, 0, Math.PI*2); ctx.fill();
+    const vout = (parseFloat(voutInput.value)||0);
+    ctx.fillStyle='rgba(0,0,0,0.9)'; ctx.font='13px system-ui'; ctx.textAlign='left';
+    ctx.fillText(`v (bullet) = ${vout.toFixed(1)} m/s`, parkedX + 10, muzzleY + 4);
+    if(State.passTrace){
+      ctx.save(); ctx.setLineDash([6,6]); ctx.strokeStyle='rgba(0,0,0,0.12)'; ctx.lineWidth=2;
+      const p = State.passTrace;
+      const ang = Math.atan2(p.y2 - p.y1, p.x2 - p.x1);
+      const startX = p.x1 + Math.cos(ang)*6, startY = p.y1 + Math.sin(ang)*6;
+      ctx.beginPath(); ctx.moveTo(startX, startY); ctx.lineTo(parkedX, muzzleY); ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  State.flames.forEach(f=>{
+    const t = f.age / Math.max(0.0001, f.life);
+    const len = 12 + 36*(1-t); const w = 6*(1-t);
+    const x1=f.x, y1=f.y, x2=f.x+len, y2=f.y;
+    const gL=ctx.createLinearGradient(x1,y1,x2,y2);
+    gL.addColorStop(0,'rgba(255,220,140,0.95)'); gL.addColorStop(0.4,'rgba(255,140,30,0.9)'); gL.addColorStop(1,'rgba(255,80,0,0)');
+    ctx.fillStyle=gL; ctx.beginPath();
+    ctx.moveTo(x1,y1-w); ctx.lineTo(x2,y2-w*0.4); ctx.lineTo(x2,y2+w*0.4); ctx.lineTo(x1,y1+w);
+    ctx.closePath(); ctx.fill();
+  });
+  State.smokes.forEach(s=>{
+    ctx.save(); ctx.globalAlpha=Math.max(0,Math.min(1,s.a));
+    ctx.fillStyle='rgba(70,70,70,0.85)'; ctx.beginPath();
+    ctx.ellipse(s.x,s.y,s.R*1.2,s.R,0,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  });
+
+  const bottom = bobCenter(0);
+  if(State.showReference){
+    ctx.fillStyle='rgba(0,0,0,0.9)'; ctx.font='13px system-ui'; ctx.textAlign='center';
+    ctx.fillText(`V`, bottom.x + 60, bottom.y - 40);
+    ctx.fillText(`${State.v0?State.v0.toFixed(3):'—'} m/s`, bottom.x + 60, bottom.y - 24);
+  }
+
+  // ==========================
+  // tags
+  // ==========================
+
+  // ✅ u tag: ขยับไปทางขวา 20px
+  {
+    const dxU_VW = (20 / canvas.getBoundingClientRect().width) * VW;
+    placeTag(tagU, 120 + dxU_VW, muzzleY-40, `u = ${u0().toFixed(1)} m/s`);
+  }
+
+  // ✅ ตอนแรก "ไม่แสดง" h และ θ
+  // ✅ เมื่อ "หยุดชั่วขณะ" (stopShown) เท่านั้น จึงแสดง h และ θ
+  if(State.phase!=='bullet'){
+    if(State.stopShown){
+      const isMobile = isMobileView();
+      const cpt = bobCenter(State.theta);
+
+      // h tag: ตอนหยุด -> ขวา (20+50)px และลง 10px
+      const rightPx = 20 + 50;
+      const rightVW = (rightPx / canvas.getBoundingClientRect().width) * VW;
+      const yDownVH = (10 / canvas.getBoundingClientRect().height) * VH;
+      const xH = cpt.x + (bobR + rightVW);
+      const yH = cpt.y + yDownVH;
+
+      if(State.hError) placeTag(tagH, xH, yH, `h = Error`);
+      else placeTag(tagH, xH, yH, `h = ${State.h.toFixed(3)} m`);
+
+      // θ tag: ใต้คานสีดำ + มือถือขวา 20px + มือถือลงเพิ่มอีก 20px
+      const thetaRightPx = isMobile ? 20 : 0;
+      const thetaRightVW = (thetaRightPx / canvas.getBoundingClientRect().width) * VW;
+
+      const thetaDownPx = isMobile ? 20 : 0; // ✅ มือถือลงอีก 20px
+      const thetaDownVH = (thetaDownPx / canvas.getBoundingClientRect().height) * VH;
+
+      const deg = State.theta * 180 / Math.PI;
+      placeTag(tagTheta, (pivotX-40) + thetaRightVW, (pivotY + 48) + thetaDownVH, `θ = ${deg.toFixed(1)}°`);
+    } else {
+      tagH.style.display = 'none';
+      tagTheta.style.display = 'none';
+    }
+  } else {
+    tagH.style.display = 'none';
+    tagTheta.style.display = 'none';
+  }
+
+  if(State.hitShown){ placeTag(tagHit, pivotX + 80, pivotY - 16, 'ชนเพดาน'); }
+
+  // stop tag: (คงค่าเดิมที่แก้ก่อนหน้า)
+  if(State.stopShown){
+    const cpt2 = bobCenter(State.theta);
+    placeTag(tagStop, cpt2.x + 150, cpt2.y - 90, 'หยุดชั่วขณะ');
+  } else { tagStop.style.display='none'; }
+}
+
+// Physics
+function step(dt){
+  State.t += dt;
+  updateParticles(dt);
+
+  if(State.phase==='bullet'){
+    const x1 = State.prevBx, y1 = State.by;
+    const speedPx = u0()*pxPerMeter;
+    const x2 = State.bx + speedPx * dt, y2 = State.by;
+    const c0 = bobCenter(0);
+
+    if(segCircleHit(x1,y1,x2,y2,c0.x,c0.y,bobR+6)){
+      computeImpact();
+      State.phase = 'pendulum';
+      State.t = 0;
+      hideTags();
+      playBangSafe();
+      State.bx = c0.x - (bobR + 6);
+      State.prevBx = State.bx;
+    } else {
+      State.bx = x2;
+    }
+    State.prevBx = State.bx;
+    if(State.bx > VW + 50) { State.phase = 'idle'; }
+  }
+  else if(State.phase==='pendulum'){
+    const a = -(g/State.Lm) * Math.sin(State.theta);
+    State.omega += a * dt;
+    State.theta += State.omega * dt;
+
+    const cpt = bobCenter(State.theta);
+    if(cpt.y - bobR <= pivotY){
+      const cosAtHit = (bobR) / State.Lpx;
+      const thetaHit = Math.acos(Math.max(-1, Math.min(1, cosAtHit)));
+      State.theta = Math.sign(State.omega || 1) * thetaHit;
+      State.omega = 0;
+      State.hError = true;
+      State.hitShown = true;
+      State.phase = 'idle';
+      State.stopShown = true;
+    } else {
+      State.h = State.Lm * (1 - Math.cos(State.theta));
+      if(Math.abs(State.theta) >= (State.thetaMax - 0.003) && Math.sign(State.omega) === Math.sign(State.theta)){
+        State.omega = 0;
+        State.phase = 'idle';
+        State.stopShown = true;
+      }
+    }
+  }
+}
+
+// ผลลัพธ์: แสดงเป็น “ข้อความอ่านง่าย”
+function updateResults(){
+  const m = mBullet_kg(), M = mBob_kg(), u = u0();
+  const L = State.Lm;
+
+  const v0Txt = State.v0 ? State.v0.toFixed(3) : '—';
+  const thetaTxt = State.thetaMax ? (State.thetaMax*180/Math.PI).toFixed(2) : '—';
+  const hTxt = State.hError ? '<span class="err">Error</span>' : (State.h ? State.h.toFixed(3) : '—');
+
+  resultsDiv.innerHTML = `
+    <div>พารามิเตอร์: L = <b>${L.toFixed(2)} m</b>, m = <b>${(m*1000).toFixed(1)} g</b>, M = <b>${M.toFixed(2)} kg</b>, u = <b>${u.toFixed(1)} m/s</b></div>
+    <div style="margin-top:6px">หลังชน: v₀ = <b>${v0Txt} m/s</b> , θ_max = <b>${thetaTxt}°</b> , h = <b>${hTxt} ${State.hError ? '' : 'm'}</b></div>
+  `;
+}
+
+modeSel.addEventListener('change', ()=>{
+  const pass=(modeSel.value==='pass');
+  exitBox.style.display=pass?'block':'none';
+  State.embed=!pass;
+  if(pass){ State.embeddedBullet=false; }
+  updateResults();
+});
+
+[massBullet,uInput,massBob,voutInput].forEach(el=> el.addEventListener('input', ()=>{ updateResults(); }));
+
+toggleBtn.addEventListener('click', ()=>{
+  if(State.phase==='bullet' || State.phase==='pendulum'){
+    State.phase='idle';
+    toggleBtn.textContent='▶️ เล่น';
+  } else {
+    State.phase='bullet'; State.t=0;
+    State.bx = gunX + SL/2;
+    State.prevBx = State.bx - Math.max(1, (u0()*pxPerMeter)*0.016);
+    State.by = muzzleY;
+
+    State.embeddedBullet=false; State.passTrace=null; State.passBulletPark=null;
+    State.showReference=false; State.flames=[]; State.smokes=[];
+    State.hError=false; State.hitShown=false; State.stopShown=false; tagStop.style.display='none';
+
+    spawnMuzzleFX();
+    toggleBtn.textContent='⏸ หยุด';
+  }
+});
+
+resetBtn.addEventListener('click', ()=>{
+  State.phase='idle'; State.t=0;
+  State.theta=0; State.omega=0; State.v0=0; State.h=0; State.thetaMax=0;
+  State.embeddedBullet=false; State.flames=[]; State.smokes=[];
+  State.passTrace=null; State.passBulletPark=null;
+  State.showReference=false; State.hError=false; State.hitShown=false; State.stopShown=false;
+
+  hideTags();
+  updateResults();
+  drawScene();
+  toggleBtn.textContent='▶️ เล่น';
+});
+
+// Calculation modal
+function buildCalcContent(){
+  const m = mBullet_kg(); const M = mBob_kg(); const u = u0(); const L = State.Lm; const g0 = g;
+  let html = '';
+  if(modeSel.value === 'embed'){
+    const Vcalc = (m/(m+M))*u;
+    const hfree = (Vcalc*Vcalc)/(2*g0);
+    const h_ceiling = Math.max(0, L - (bobR/pxPerMeter));
+    const hdisp = (hfree>=h_ceiling) ? '<span class="err">Error (ชนเพดาน)</span>' : hfree.toFixed(6)+' m';
+    const theta = (hfree>=h_ceiling)? Math.acos(Math.max(-1, Math.min(1, (bobR)/State.Lpx ))) : Math.acos(Math.max(-1, Math.min(1,1 - hfree/L)));
+    html += `<div class="formula"><strong>อนุรักษ์โมเมนตัม (ฝัง)</strong><div style="margin-top:6px">m u = (m + M) V ⇒ V = <span class="frac"><span class="num">m</span><span class="den">m + M</span></span> u</div></div>`;
+    html += `<div style="margin-top:8px">แทนค่า: V = <b>${Vcalc.toFixed(6)}</b> m/s</div>`;
+    html += `<div style="margin-top:6px">h = V² / (2 g) = <b>${hdisp}</b></div>`;
+    html += `<div style="margin-top:6px">θ_max ≈ <b>${(theta*180/Math.PI).toFixed(2)}°</b> (จำกัดโดยเพดานถ้า h เป็น Error)</div>`;
+  } else {
+    const vout = Math.min(u, vOut()); const delta = Math.max(0, u - vout);
+    const Vcalc = (m/ M) * delta;
+    const hfree = (Vcalc*Vcalc)/(2*g0);
+    const h_ceiling = Math.max(0, L - (bobR/pxPerMeter));
+    const hdisp = (hfree>=h_ceiling) ? '<span class="err">Error (ชนเพดาน)</span>' : hfree.toFixed(6)+' m';
+    const theta = (hfree>=h_ceiling)? Math.acos(Math.max(-1, Math.min(1, (bobR)/State.Lpx ))) : Math.acos(Math.max(-1, Math.min(1,1 - hfree/L)));
+    html += `<div class="formula"><strong>อนุรักษ์โมเมนตัม (ทะลุ)</strong><div style="margin-top:6px">m u = m v_{out} + M V ⇒ V = <span class="frac"><span class="num">m</span><span class="den">M</span></span> (u − v_{out})</div></div>`;
+    html += `<div style="margin-top:8px">แทนค่า: V = <b>${Vcalc.toFixed(6)}</b> m/s</div>`;
+    html += `<div style="margin-top:6px">h = V² / (2 g) = <b>${hdisp}</b></div>`;
+    html += `<div style="margin-top:6px">θ_max ≈ <b>${(theta*180/Math.PI).toFixed(2)}°</b> (จำกัดโดยเพดานถ้า h เป็น Error)</div>`;
+  }
+  calcContent.innerHTML = html;
+
+  if(window.MathJax && MathJax.typesetPromise){
+    MathJax.typesetPromise([calcContent]).catch(()=>{});
+  }
+}
+
+calcBtn.addEventListener('click', ()=>{ buildCalcContent(); calcModal.style.display='flex'; });
+closeCalc.addEventListener('click', ()=>{ calcModal.style.display='none'; });
+formBtn.addEventListener('click', ()=>{
+  formModal.style.display='flex';
+  if(window.MathJax && MathJax.typesetPromise){
+    MathJax.typesetPromise([document.getElementById('formulasContent')]).catch(()=>{});
+  }
+});
+closeForm.addEventListener('click', ()=>{ formModal.style.display='none'; });
+
+// Quiz
+const quizQuestions = [
+  { q: "1) หลังชนแบบฝัง ความเร็วระบบทันทีหลังชน V = ?", choices: ["V = m/M u","V = m/(m+M) u","V = (m+M)/m u","V = M/(m+M) u"], answer:1, solution:"m u = (m+M)V ⇒ V = m/(m+M) u" },
+  { q: "2) ความสูง h ที่ลูกตุ้มขึ้นได้จากความเร็ว V คือ?", choices: ["h = V/(2g)","h = V^2/(2g)","h = 2g/V^2","h = V^2 g"], answer:1, solution:"จาก 1/2 (m+M) V^2 = (m+M) g h ⇒ h = V^2/(2g)" },
+  { q: "3)(รู้จักการใช้แอป)ถ้าคำนวณได้ h เกินกว่าความสูงของเพดานในแอปนี้ h จะรายงานว่า?", choices: ["ค่าจริง","0","Error","L - r"], answer:2, solution:"ชนเพดาน ⇒ ใช้นิยาม h จากพลังงานไม่ได้ ⇒ รายงาน h = Error" }
+];
+
+function renderQuiz(){
+  quizArea.innerHTML = '';
+  quizQuestions.forEach((qq, idx)=>{
+    const box = document.createElement('div'); box.style.marginBottom='12px';
+    const qh = document.createElement('div'); qh.innerHTML = `<strong>${qq.q}</strong>`; box.appendChild(qh);
+    const opts = document.createElement('div'); opts.className='exercise-choices';
+    qq.choices.forEach((choice,i)=>{
+      const c = document.createElement('div');
+      c.className='choice'; c.textContent = choice;
+      c.addEventListener('click', ()=>{
+        Array.from(opts.children).forEach(ch=> ch.classList.remove('selected'));
+        c.classList.add('selected');
+      });
+      opts.appendChild(c);
+    });
+    box.appendChild(opts); quizArea.appendChild(box);
+  });
+  quizResult.innerHTML='';
+}
+quizBtn.addEventListener('click', ()=>{ renderQuiz(); quizModal.style.display='flex'; });
+closeQuiz.addEventListener('click', ()=>{ quizModal.style.display='none'; });
+
+checkQuiz.addEventListener('click', ()=>{
+  let score=0; const details=[];
+  const boxes = quizArea.querySelectorAll('.exercise-choices');
+  quizQuestions.forEach((qq, idx)=>{
+    const opts = boxes[idx].children; let selected=-1;
+    for(let i=0;i<opts.length;i++){ if(opts[i].classList.contains('selected')){ selected=i; break; } }
+    if(selected===qq.answer) score++;
+    details.push({idx, selected, correct:qq.answer, sol:qq.solution});
+  });
+  let out = `<div class="score">ได้คะแนน ${score} / ${quizQuestions.length}</div>`;
+  details.forEach(d=>{
+    out += `<div class="solution"><strong>ข้อ ${d.idx+1}:</strong> เลือก: ${d.selected>=0?d.selected+1:'ไม่เลือก'} — คำตอบที่ถูกต้อง: ${d.correct+1}<div style="margin-top:6px">${d.sol}</div></div>`;
+  });
+  quizResult.innerHTML = out;
+});
+
+resetQuiz.addEventListener('click', ()=>{ renderQuiz(); quizResult.innerHTML=''; });
+
+// Loop
+let last=null;
+function loop(ts){
+  if(!last) last=ts;
+  const dt=Math.min(0.04,(ts-last)/1000);
+  last=ts;
+
+  if(State.phase!=='idle') step(dt);
+  drawScene();
+  updateResults();
+
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+// init
+updateResults();
+</script>
+</body>
+</html>

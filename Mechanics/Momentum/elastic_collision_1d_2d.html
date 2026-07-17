@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>การชนแบบยืดหยุ่นใน 1–2 มิติ (กำหนดมวลได้)</title>
+
+<style>
+  :root{
+    --bg:#ffffff; --ink:#0f172a; --muted:#6b7280; --ui:#f8fafc; --line:#e5e7eb;
+    --accent:#2563eb; --ok:#16a34a; --warn:#ea580c; --brown:#8b5a2b; --teal:#0ea5e9;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:system-ui,-apple-system,"Noto Sans Thai",sans-serif;
+  }
+
+  header{position:sticky;top:0;z-index:5;background:#fff;border-bottom:1px solid var(--line);padding:10px 14px}
+  header h1{margin:0;font-size:18px}
+
+  .wrap{display:grid;grid-template-columns:1fr;gap:12px;padding:12px;max-width:1200px;margin:0 auto}
+  @media(min-width:980px){ .wrap{grid-template-columns:2fr 1fr} }
+
+  /* ===== Board / Canvas ===== */
+  .board{
+    position:relative;border:1px solid var(--line);border-radius:16px;background:#fff;
+    min-height:480px;
+    display:flex;align-items:center;justify-content:center;overflow:hidden;
+  }
+  canvas{display:block;border-radius:16px; touch-action:none;}
+
+  /* จอคอม: สูงขึ้น */
+  @media (min-width:980px){
+    .board{min-height:680px;}
+  }
+  /* มือถือแนวตั้ง: จอทดลองสั้นลง 50% */
+  @media (max-width: 680px) and (orientation: portrait){
+    .board{min-height:240px;}
+  }
+
+  .panel{display:grid;gap:10px;border:1px solid var(--line);background:#fff;border-radius:16px;padding:12px}
+  .card{border:1px solid var(--line);border-radius:12px;padding:10px;background:#fff}
+  .hint{color:var(--muted);font-size:12px}
+  .stats{display:grid;gap:6px;font-size:14px}
+  .btns{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  button{appearance:none;border:1px solid var(--line);background:var(--ui);padding:8px 12px;border-radius:12px;cursor:pointer}
+  button.primary{background:var(--accent);color:#fff;border-color:transparent}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  .brand{font-size:13px;color:var(--muted)}
+  .brand a{color:var(--accent);text-decoration:none}
+  .tog{display:flex;align-items:center;gap:8px}
+
+  /* ===== form ===== */
+  .formGrid{display:grid;gap:10px}
+  .field{display:grid;grid-template-columns: 1fr;gap:6px}
+  .field .lbl{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:8px}
+
+  .dot{
+    width:12px;height:12px;border-radius:999px;display:inline-block;flex:0 0 auto;
+    border:1px solid #0f172a;
+  }
+  .dot.white{background:#fff;}
+  .dot.brown{background:var(--brown);}
+
+  .numCtl{
+    display:grid;
+    grid-template-columns: 38px 140px 38px auto;
+    gap:8px;
+    align-items:center;
+  }
+  @media (min-width:980px){
+    .numCtl{ grid-template-columns: 38px 170px 38px auto; }
+  }
+
+  .numCtl .step{
+    width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:var(--ui);
+    font-size:18px;line-height:1;cursor:pointer;
+  }
+  .numCtl input{
+    width:100%;
+    height:38px;
+    border-radius:10px;
+    border:1px solid var(--line);
+    padding:0 10px;
+    font-size:14px;
+    outline:none;
+    background:#fff;
+    color:var(--ink);
+  }
+  .numCtl .unit{font-size:13px;color:var(--muted);min-width:44px;text-align:left}
+
+  /* ซ่อนค่าด้านล่างช่อง (ลดพื้นที่) */
+  .miniOut{display:none !important;}
+
+  /* ===== Mobile layout rules ===== */
+  .mobileBlock{display:none;}
+  .hideOnMobile{display:block;}
+  @media (max-width: 680px){
+    /* (คงตามที่พี่สั่งไว้ก่อนหน้า: มือถือโตขึ้น 5px โดยรวม) */
+    body{font-size:21px;}
+    header h1{font-size:23px;}
+
+    .field .lbl{font-size:18px;}
+    .hint{font-size:17px;}
+    .stats{font-size:19px;}
+    .brand{font-size:18px;}
+    .numCtl input{font-size:19px;height:42px;}
+    .numCtl .unit{font-size:18px;}
+    .numCtl .step{height:42px;font-size:20px;}
+    button{font-size:18px;padding:10px 14px;}
+    select{font-size:18px;}
+
+    .mobileBlock{display:block;}
+    .hideOnMobile{display:none !important;}
+
+    /* มือถือ: ปรับช่องกรอกให้พอดี */
+    .numCtl{grid-template-columns: 42px 160px 42px auto;}
+
+    /* ✅ สำคัญ: ย่อกล่องตั้งค่าเหลือ ~70% แบบ "ไม่ใช้ transform" เพื่อไม่ให้เกิดพื้นที่ว่างล่าง */
+    .mobileBlock{
+      padding:0 !important;
+      margin:0 !important;
+      font-size:0.7em;         /* ย่อทุกตัวอักษร/ช่องกรอกในบล็อกนี้ ~70% */
+      height:auto !important;
+      min-height:0 !important;
+      overflow:visible;
+    }
+    .mobileBlock .card{
+      height:auto !important;  /* ตัดพื้นที่ว่างล่าง */
+      min-height:0 !important;
+      padding:10px;
+    }
+    /* ปรับขนาด input/ปุ่มในบล็อกมือถือให้สมส่วนกับ font-size ที่ย่อ */
+    .mobileBlock .numCtl{grid-template-columns: 38px 170px 38px auto;}
+    .mobileBlock .numCtl input{height:38px;font-size:16px;}
+    .mobileBlock .numCtl .step{height:38px;font-size:18px;}
+    .mobileBlock .numCtl .unit{font-size:16px;}
+    .mobileBlock .field .lbl{font-size:16px;}
+  }
+</style>
+</head>
+
+<body>
+  <header>
+    <h1>การชนแบบยืดหยุ่นใน 1–2 มิติ (กำหนดมวลได้ • ไม่คิดการหมุน)</h1>
+  </header>
+
+  <div class="wrap">
+
+    <!-- มือถือ: บล็อกตั้งค่า (ย่อ 70% เฉพาะมือถือ + ไม่มีพื้นที่ว่างล่าง) -->
+    <div class="panel mobileBlock">
+      <div class="card">
+        <div class="formGrid">
+
+          <div class="field">
+            <div class="lbl"><span class="dot white" aria-hidden="true"></span>มวลลูกขาว m₁ (kg)</div>
+            <div class="numCtl">
+              <button class="step" type="button" data-step="-1" data-target="m1">−</button>
+              <input id="m1_m" type="text" inputmode="decimal" value="1.0" autocomplete="off" />
+              <button class="step" type="button" data-step="1" data-target="m1">+</button>
+              <div class="unit">kg</div>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="lbl"><span class="dot brown" aria-hidden="true"></span>มวลลูกน้ำตาล m₂ (kg)</div>
+            <div class="numCtl">
+              <button class="step" type="button" data-step="-1" data-target="m2">−</button>
+              <input id="m2_m" type="text" inputmode="decimal" value="1.0" autocomplete="off" />
+              <button class="step" type="button" data-step="1" data-target="m2">+</button>
+              <div class="unit">kg</div>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="lbl">ความเร็วตั้งต้นลูกขาว (m/s)</div>
+            <div class="numCtl">
+              <button class="step" type="button" data-step="-1" data-target="speedNum">−</button>
+              <input id="speedNum_m" type="text" inputmode="decimal" value="2.5" autocomplete="off" />
+              <button class="step" type="button" data-step="1" data-target="speedNum">+</button>
+              <div class="unit">m/s</div>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="lbl">มุมยิง (°) — 0°=ขวา, 90°=ขึ้น</div>
+            <div class="numCtl">
+              <button class="step" type="button" data-step="-1" data-target="angleNum">−</button>
+              <input id="angleNum_m" type="text" inputmode="numeric" value="0" autocomplete="off" />
+              <button class="step" type="button" data-step="1" data-target="angleNum">+</button>
+              <div class="unit">°</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Board -->
+    <div class="board" id="board">
+      <canvas id="cv" width="900" height="560" aria-label="ตารางทดลองบิลเลียด 2 มิติ"></canvas>
+    </div>
+
+    <!-- Panel (คอม) -->
+    <div class="panel" id="ui">
+      <div class="card">
+        <div class="formGrid">
+
+          <div class="field hideOnMobile">
+            <div class="lbl">ความเร็วตั้งต้นลูกขาว (m/s)</div>
+            <div class="numCtl">
+              <button class="step" type="button" data-step="-1" data-target="speedNum">−</button>
+              <input id="speedNum" type="text" inputmode="decimal" value="2.5" autocomplete="off" />
+              <button class="step" type="button" data-step="1" data-target="speedNum">+</button>
+              <div class="unit">m/s</div>
+            </div>
+            <div class="miniOut" id="speedVal">2.5</div>
+          </div>
+
+          <div class="field hideOnMobile">
+            <div class="lbl">มุมยิง (°) — 0°=ขวา, 90°=ขึ้น</div>
+            <div class="numCtl">
+              <button class="step" type="button" data-step="-1" data-target="angleNum">−</button>
+              <input id="angleNum" type="text" inputmode="numeric" value="0" autocomplete="off" />
+              <button class="step" type="button" data-step="1" data-target="angleNum">+</button>
+              <div class="unit">°</div>
+            </div>
+            <div class="miniOut" id="angleVal">0°</div>
+          </div>
+
+          <div class="field hideOnMobile">
+            <div class="lbl"><span class="dot white" aria-hidden="true"></span>มวลลูกขาว m₁ (kg)</div>
+            <div class="numCtl">
+              <button class="step" type="button" data-step="-1" data-target="m1">−</button>
+              <input id="m1" type="text" inputmode="decimal" value="1.0" autocomplete="off" />
+              <button class="step" type="button" data-step="1" data-target="m1">+</button>
+              <div class="unit">kg</div>
+            </div>
+          </div>
+
+          <div class="field hideOnMobile">
+            <div class="lbl"><span class="dot brown" aria-hidden="true"></span>มวลลูกน้ำตาล m₂ (kg)</div>
+            <div class="numCtl">
+              <button class="step" type="button" data-step="-1" data-target="m2">−</button>
+              <input id="m2" type="text" inputmode="decimal" value="1.0" autocomplete="off" />
+              <button class="step" type="button" data-step="1" data-target="m2">+</button>
+              <div class="unit">kg</div>
+            </div>
+          </div>
+
+          <div class="tog">
+            <input id="aimLine" type="checkbox" checked>
+            <label for="aimLine">แสดงแนวเส้นปะเป็นแนวเล็ง</label>
+          </div>
+
+          <div class="hint">สเกลภาพ: <b>1 m/s ≈ 100 px/s</b> • ลาก <b>ลูกสีขาว</b> เพื่อเล็งได้ด้วยเมาส์/นิ้ว</div>
+
+          <div class="btns">
+            <button class="primary" id="fire">ยิง!</button>
+
+            <label for="speedSel">ความเร็วการเล่น:</label>
+            <select id="speedSel">
+              <option value="0.25">0.25x</option>
+              <option value="0.5">0.5x</option>
+              <option value="0.75">0.75x</option>
+              <option value="1" selected>1x</option>
+            </select>
+
+            <button id="reset">รีเซ็ต</button>
+            <button id="momBtn" title="แสดง/ซ่อนการต่อเวกเตอร์โมเมนตัม" disabled>แสดงเวกเตอร์โมเมนตัม</button>
+            <button id="vcmBtn" title="แสดง/ซ่อนการเคลื่อนที่ของจุดศูนย์กลางมวล (Vcm)">แสดง Vcm</button>
+          </div>
+
+          <div class="hint">*เลือกความเร็วการเล่นได้ตั้งแต่ก่อนยิง</div>
+        </div>
+      </div>
+
+      <div class="card stats" id="stats">
+        <div><b>ผลลัพธ์หลังชน</b></div>
+        <div id="res1">ลูกขาว v₁' = – , มุม v₁ = –</div>
+        <div id="res2">ลูกน้ำตาล v₂' = – , มุม v₂ = –</div>
+        <div id="ortho" class="hint">มุมแยก ≈ –</div>
+        <div id="central" class="hint"></div>
+        <div id="momHint" class="hint"></div>
+      </div>
+
+      <div class="brand">ศึกษาเพิ่มเติมได้ที่เพจ <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">คลายปมฟิสิกส์</a></div>
+    </div>
+  </div>
+
+<script>
+(()=>{
+  // ===== Elements =====
+  const cv = document.getElementById('cv');
+  const ctx = cv.getContext('2d');
+  const board = document.getElementById('board');
+
+  const speedEl = document.getElementById('speedNum');
+  const speedElM = document.getElementById('speedNum_m');
+
+  const angleEl = document.getElementById('angleNum');
+  const angleElM = document.getElementById('angleNum_m');
+
+  const m1El = document.getElementById('m1');
+  const m2El = document.getElementById('m2');
+  const m1ElM = document.getElementById('m1_m');
+  const m2ElM = document.getElementById('m2_m');
+
+  const speedVal = document.getElementById('speedVal');
+  const angleVal = document.getElementById('angleVal');
+
+  const aimLineEl = document.getElementById('aimLine');
+  const fireBtn = document.getElementById('fire');
+  const resetBtn = document.getElementById('reset');
+  const speedSel = document.getElementById('speedSel');
+  const momBtn = document.getElementById('momBtn');
+  const vcmBtn = document.getElementById('vcmBtn');
+
+  const res1 = document.getElementById('res1');
+  const res2 = document.getElementById('res2');
+  const ortho = document.getElementById('ortho');
+  const central = document.getElementById('central');
+  const momHint = document.getElementById('momHint');
+
+  // ===== Constants =====
+  const W = cv.width, H = cv.height;
+  const R = 33;
+  const PX_PER_MS = 100;
+  const baseDT = 1/60;
+  let DT = baseDT * parseFloat(speedSel.value || '1');
+  const ARROW_SCALE = 0.4;
+
+  // ===== State =====
+  let running=false, paused=false, collided=false, finished=false;
+  let tSinceCollision=0;
+
+  const white = { x: W*0.25, y: H*0.6, vx:0, vy:0, color:'#ffffff', stroke:'#0f172a' };
+  const brown = { x: W*0.65, y: H*0.6, vx:0, vy:0, color:getComputedStyle(document.documentElement).getPropertyValue('--brown').trim()||'#8b5a2b', stroke:'#0f172a' };
+
+  const trailWhite=[], trailBrown=[], trailCM=[]; const TRAIL_MAX=400;
+
+  let v0 = 2.5;
+  let theta = deg2rad(0);
+  let m1 = 1.0;
+  let m2 = 1.0;
+
+  let persistAim=null;
+  let collisionPoint=null;
+  let showMomentum=false; let showVcm=false;
+
+  function isMobileMode(){
+    return window.matchMedia && window.matchMedia('(max-width: 680px)').matches;
+  }
+
+  // ===== Fit canvas to board (กันยืดผิดรูป) =====
+  function fitCanvas(){
+    const bw = board.clientWidth;
+    const bh = board.clientHeight;
+    const scale = Math.min(bw / W, bh / H);
+    cv.style.width  = (W * scale) + 'px';
+    cv.style.height = (H * scale) + 'px';
+  }
+  window.addEventListener('resize', fitCanvas, {passive:true});
+  fitCanvas();
+
+  // ===== Pointer drag =====
+  let dragging=false, dragId=null, offsetX=0, offsetY=0;
+  cv.addEventListener('pointerdown', (e)=>{
+    if (running) return;
+    const p = getPointerPos(e);
+    if ((p.x-white.x)**2 + (p.y-white.y)**2 <= R*R){
+      dragging=true; dragId=e.pointerId; cv.setPointerCapture(dragId);
+      offsetX=p.x-white.x; offsetY=p.y-white.y;
+    }
+  });
+  cv.addEventListener('pointermove', (e)=>{
+    if (!dragging || e.pointerId!==dragId) return;
+    const p=getPointerPos(e);
+    white.x = clamp(p.x-offsetX, R, W-R);
+    white.y = clamp(p.y-offsetY, R, H-R);
+    draw();
+  });
+  cv.addEventListener('pointerup', (e)=>{ if (e.pointerId===dragId){ dragging=false; dragId=null; cv.releasePointerCapture(e.pointerId);} });
+  cv.addEventListener('pointercancel', ()=>{ dragging=false; dragId=null; });
+
+  function getSpeedInput(){ return (isMobileMode() && speedElM) ? speedElM : speedEl; }
+  function getAngleInput(){ return (isMobileMode() && angleElM) ? angleElM : angleEl; }
+  function getM1Input(){ return (isMobileMode() && m1ElM) ? m1ElM : m1El; }
+  function getM2Input(){ return (isMobileMode() && m2ElM) ? m2ElM : m2El; }
+
+  function setSpeedInputs(val){
+    if(speedEl) speedEl.value = val;
+    if(speedElM) speedElM.value = val;
+    if(speedVal) speedVal.textContent = val;
+  }
+  function setAngleInputs(val){
+    if(angleEl) angleEl.value = val;
+    if(angleElM) angleElM.value = val;
+    if(angleVal) angleVal.textContent = val + '°';
+  }
+  function setM1Inputs(val){
+    if(m1El) m1El.value = val;
+    if(m1ElM) m1ElM.value = val;
+  }
+  function setM2Inputs(val){
+    if(m2El) m2El.value = val;
+    if(m2ElM) m2ElM.value = val;
+  }
+
+  const CFG = {
+    speedNum: { min:0, max:5, step:0.1, fix:1,
+      commit:()=>{
+        const el = getSpeedInput();
+        v0 = clamp(safeNum(el.value, v0), 0, 5);
+        setSpeedInputs(v0.toFixed(1));
+        draw();
+      }
+    },
+    angleNum: { min:-180, max:180, step:1, fix:0,
+      commit:()=>{
+        const el = getAngleInput();
+        const a = clamp(safeNum(el.value, rad2deg(theta)), -180, 180);
+        setAngleInputs(a.toFixed(0));
+        theta = deg2rad(a);
+        draw();
+      }
+    },
+    m1: { min:0.1, max:10, step:0.1, fix:1,
+      commit:()=>{
+        const el = getM1Input();
+        m1 = clamp(safeNum(el.value, m1), 0.1, 10);
+        setM1Inputs(m1.toFixed(1));
+      }
+    },
+    m2: { min:0.1, max:10, step:0.1, fix:1,
+      commit:()=>{
+        const el = getM2Input();
+        m2 = clamp(safeNum(el.value, m2), 0.1, 10);
+        setM2Inputs(m2.toFixed(1));
+      }
+    }
+  };
+
+  // ===== Editable: allow Backspace =====
+  function bindEditable(el, commitFn, idForNudge){
+    if(!el) return;
+    el.addEventListener('input', ()=>{
+      const raw = el.value.trim();
+      const x = parseFloat(raw.replace(',', '.'));
+      if(Number.isFinite(x)){
+        if(idForNudge==='speedNum'){ v0 = clamp(x, 0, 5); setSpeedInputs(v0.toFixed(1)); draw(); }
+        if(idForNudge==='angleNum'){ theta = deg2rad(clamp(x, -180, 180)); setAngleInputs(clamp(x,-180,180).toFixed(0)); draw(); }
+        if(idForNudge==='m1'){ m1 = clamp(x, 0.1, 10); setM1Inputs(m1.toFixed(1)); }
+        if(idForNudge==='m2'){ m2 = clamp(x, 0.1, 10); setM2Inputs(m2.toFixed(1)); }
+      }
+    });
+    el.addEventListener('change', commitFn);
+    el.addEventListener('blur', commitFn);
+    el.addEventListener('keydown', (e)=>{
+      if(e.key==='Enter'){ commitFn(); el.blur(); }
+      if(e.key==='ArrowUp'){ e.preventDefault(); nudge(idForNudge, +1); }
+      if(e.key==='ArrowDown'){ e.preventDefault(); nudge(idForNudge, -1); }
+    });
+  }
+
+  function nudge(id, dir){
+    const cfg = CFG[id];
+    const el = (id==='speedNum') ? getSpeedInput() :
+               (id==='angleNum') ? getAngleInput() :
+               (id==='m1') ? getM1Input() : getM2Input();
+    const cur = safeNum(el.value, cfg.min);
+    const next = clamp(cur + dir*cfg.step, cfg.min, cfg.max);
+    el.value = next.toFixed(cfg.fix);
+    cfg.commit();
+  }
+
+  bindEditable(speedEl, CFG.speedNum.commit, 'speedNum');
+  bindEditable(speedElM, CFG.speedNum.commit, 'speedNum');
+  bindEditable(angleEl, CFG.angleNum.commit, 'angleNum');
+  bindEditable(angleElM, CFG.angleNum.commit, 'angleNum');
+  bindEditable(m1El, CFG.m1.commit, 'm1');
+  bindEditable(m1ElM, CFG.m1.commit, 'm1');
+  bindEditable(m2El, CFG.m2.commit, 'm2');
+  bindEditable(m2ElM, CFG.m2.commit, 'm2');
+
+  document.querySelectorAll('.step').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const target = btn.getAttribute('data-target');
+      const dir = parseInt(btn.getAttribute('data-step'), 10) || 0;
+      if(target==='speedNum') nudge('speedNum', dir);
+      else if(target==='angleNum') nudge('angleNum', dir);
+      else if(target==='m1') nudge('m1', dir);
+      else if(target==='m2') nudge('m2', dir);
+    });
+  });
+
+  v0 = safeNum(getSpeedInput().value, 2.5);
+  theta = deg2rad(safeNum(getAngleInput().value, 0));
+  m1 = safeNum(getM1Input().value, 1.0);
+  m2 = safeNum(getM2Input().value, 1.0);
+
+  setSpeedInputs(v0.toFixed(1));
+  setAngleInputs(rad2deg(theta).toFixed(0));
+  setM1Inputs(m1.toFixed(1));
+  setM2Inputs(m2.toFixed(1));
+
+  CFG.speedNum.commit(); CFG.angleNum.commit(); CFG.m1.commit(); CFG.m2.commit();
+
+  speedSel.addEventListener('change', ()=>{ DT = baseDT * parseFloat(speedSel.value || '1'); });
+
+  momBtn.addEventListener('click', ()=>{
+    if (!collided) return;
+    showMomentum=!showMomentum;
+    momBtn.textContent = showMomentum?'ซ่อนเวกเตอร์โมเมนตัม':'แสดงเวกเตอร์โมเมนตัม';
+    draw();
+  });
+
+  vcmBtn.addEventListener('click', ()=>{
+    showVcm=!showVcm;
+    vcmBtn.textContent = showVcm? 'ซ่อน Vcm' : 'แสดง Vcm';
+    draw();
+  });
+
+  // ===== Main button ยิง/หยุด/เล่นต่อ =====
+  fireBtn.addEventListener('click', ()=>{
+    if(!running){
+      collided=false; finished=false; tSinceCollision=0;
+      central.textContent=''; momHint.textContent='';
+      showMomentum=false; momBtn.textContent='แสดงเวกเตอร์โมเมนตัม'; momBtn.disabled=true;
+
+      trailWhite.length=0; trailBrown.length=0; trailCM.length=0;
+      collisionPoint=null;
+
+      white.vx = Math.cos(theta)*v0*PX_PER_MS;
+      white.vy = -Math.sin(theta)*v0*PX_PER_MS;
+      brown.vx=0; brown.vy=0;
+
+      persistAim = { x:white.x, y:white.y, dirx:Math.cos(theta), diry:-Math.sin(theta) };
+
+      running=true; paused=false;
+      updateMainButton();
+      loop();
+      return;
+    }
+    paused = !paused;
+    updateMainButton();
+    if(!paused) loop();
+  });
+
+  resetBtn.addEventListener('click', ()=>{
+    running=false; paused=false; collided=false; finished=false;
+    updateMainButton();
+
+    white.x=W*0.25; white.y=H*0.6; white.vx=0; white.vy=0;
+    brown.x=W*0.65; brown.y=H*0.6; brown.vx=0; brown.vy=0;
+
+    trailWhite.length=0; trailBrown.length=0; trailCM.length=0;
+    persistAim=null; collisionPoint=null;
+
+    showMomentum=false; momBtn.disabled=true; momBtn.textContent='แสดงเวกเตอร์โมเมนตัม';
+    momHint.textContent='';
+
+    res1.textContent="ลูกขาว v₁' = – , มุม v₁ = –";
+    res2.textContent="ลูกน้ำตาล v₂' = – , มุม v₂ = –";
+    ortho.textContent="มุมแยก ≈ –";
+    central.textContent='';
+
+    draw();
+  });
+
+  function updateMainButton(){
+    if(!running){
+      fireBtn.textContent = 'ยิง!';
+      fireBtn.classList.add('primary');
+      return;
+    }
+    fireBtn.textContent = paused ? 'เล่นต่อ' : 'หยุด';
+    fireBtn.classList.add('primary');
+    momBtn.disabled = !collided;
+  }
+
+  // ===== Loop =====
+  function loop(){
+    if (!running || paused) return;
+    step(DT);
+    draw();
+    if(!finished) requestAnimationFrame(loop);
+  }
+
+  // ===== Physics =====
+  function step(dt){
+    white.x += white.vx*dt; white.y += white.vy*dt;
+    brown.x += brown.vx*dt; brown.y += brown.vy*dt;
+    if (running) pushCMTrail();
+
+    if (!collided){
+      const dx=brown.x-white.x, dy=brown.y-white.y, dist=Math.hypot(dx,dy);
+      if (dist<=2*R){
+        const nx = dx/(dist||1), ny = dy/(dist||1);
+        const relvx = white.vx - brown.vx, relvy = white.vy - brown.vy;
+        const reln = relvx*nx + relvy*ny;
+        if (reln>0){
+          const overlap=2*R - dist;
+          if(overlap>0 && isFinite(overlap)){
+            white.x -= nx*overlap*0.51; white.y -= ny*overlap*0.51;
+            brown.x += nx*overlap*0.51; brown.y += ny*overlap*0.51;
+          }
+          collisionPoint = { x:(white.x+brown.x)/2, y:(white.y+brown.y)/2 };
+
+          const coef1 = (2*m2)/(m1+m2);
+          const coef2 = (2*m1)/(m1+m2);
+
+          white.vx = white.vx - coef1*reln*nx; white.vy = white.vy - coef1*reln*ny;
+          brown.vx = brown.vx + coef2*reln*nx; brown.vy = brown.vy + coef2*reln*ny;
+
+          collided=true;
+          updateMainButton();
+          reportResults();
+          momHint.textContent='กด "แสดงเวกเตอร์โมเมนตัม" เพื่อดู m₁v₁′ + m₂v₂′ = m₁v₀';
+        }
+      }
+    } else {
+      tSinceCollision+=dt;
+      pushTrail(trailWhite,white); pushTrail(trailBrown,brown); pushCMTrail();
+      if (isOutside(white) && isOutside(brown)) { finished=true; running=false; updateMainButton(); }
+      if (tSinceCollision>12){ finished=true; running=false; updateMainButton(); }
+    }
+  }
+
+  function isOutside(b){ return (b.x<-R || b.x>W+R || b.y<-R || b.y>H+R); }
+  function pushTrail(arr,b){ arr.push({x:b.x,y:b.y}); if(arr.length>TRAIL_MAX) arr.shift(); }
+
+  // ===== Results =====
+  function reportResults(){
+    const s1 = Math.hypot(white.vx,white.vy)/PX_PER_MS;
+    const s2 = Math.hypot(brown.vx,brown.vy)/PX_PER_MS;
+    const th1 = rad2deg(Math.atan2(-white.vy, white.vx));
+    const th2 = rad2deg(Math.atan2(-brown.vy, brown.vx));
+
+    res1.textContent = `ลูกขาว v₁' = ${s1.toFixed(2)} m/s , มุม v₁ = ${fmtDeg(th1)} (m₁=${m1.toFixed(1)} kg)`;
+    res2.textContent = `ลูกน้ำตาล v₂' = ${s2.toFixed(2)} m/s , มุม v₂ = ${fmtDeg(th2)} (m₂=${m2.toFixed(1)} kg)`;
+
+    const a1 = Math.atan2(white.vy,white.vx), a2 = Math.atan2(brown.vy,brown.vx);
+    let sep = Math.abs(rad2deg(normAngle(a1-a2))); if(sep>180) sep=360-sep;
+    ortho.textContent = `มุมแยก ≈ ${sep.toFixed(1)}°`;
+
+    if (s1<1e-2 && s2>0){
+      central.textContent='ชนผ่านจุดศูนย์กลาง → หลังชนลูกขาวหยุดนิ่ง และลูกน้ำตาลได้ความเร็วเท่าความเร็วตั้งต้น (เฉพาะเมื่อ m₁ = m₂)';
+      central.style.color='var(--ok)';
+    } else central.textContent='';
+  }
+
+  // ===== Draw =====
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    drawTable();
+
+    // live aim-line before fire
+    if (!running && aimLineEl.checked){ drawAimLine(white.x,white.y,Math.cos(theta),-Math.sin(theta),'#94a3b8'); }
+    // persistent aim-line after fire
+    if (persistAim && aimLineEl.checked){ drawAimLine(persistAim.x,persistAim.y,persistAim.dirx,persistAim.diry,'rgba(148,163,184,0.7)'); }
+
+    // pre-shot velocity arrow with label v
+    if (!running && v0>0){
+      drawVelocityArrowWithLabel(
+        white.x,white.y,
+        Math.cos(theta)*v0*PX_PER_MS,
+        -Math.sin(theta)*v0*PX_PER_MS,
+        '#0ea5e9'
+      );
+    }
+
+    // during approach show v of white
+    if (running && !collided && (Math.hypot(white.vx,white.vy)>1e-6)){
+      drawVelocityArrowWithLabel(white.x,white.y,white.vx,white.vy,'#0ea5e9');
+    }
+
+    // trails after collision
+    if (collided){
+      drawTrail(trailWhite,'rgba(14,165,233,0.7)');
+      drawTrail(trailBrown,'rgba(139,90,43,0.7)');
+    }
+
+    // balls
+    drawBall(brown,'น้ำตาล');
+    drawBall(white,'ขาว');
+
+    // post-collision
+    if (collided){
+      if (Math.hypot(white.vx,white.vy)>1e-6) drawVelocityArrowWithLabel(white.x,white.y,white.vx,white.vy,'#0ea5e9');
+      if (Math.hypot(brown.vx,brown.vy)>1e-6) drawVelocityArrowWithLabel(brown.x,brown.y,brown.vx,brown.vy,'#8b5a2b');
+
+      const a1=Math.atan2(white.vy,white.vx), a2=Math.atan2(brown.vy,brown.vx);
+      let sep=Math.abs(rad2deg(normAngle(a1-a2))); if(sep>180) sep=360-sep;
+      if (collisionPoint) drawSeparationArc(collisionPoint.x,collisionPoint.y,a1,a2);
+
+      ctx.save();
+      ctx.fillStyle='#111827';
+      ctx.font='13px system-ui, sans-serif';
+      ctx.fillText(`มุมแยก (สด) ≈ ${sep.toFixed(1)}°`, W-210, 22);
+      ctx.restore();
+
+      if (showMomentum){ drawMomentumChainTopRight(); }
+    }
+
+    // Center of Mass
+    if (showVcm && running){ drawCOM(); }
+
+    // axes note (พี่ขอให้มุมซ้ายโตกว่าเดิม 5px)
+    ctx.fillStyle='#64748b';
+    ctx.font='17px system-ui, sans-serif';
+    ctx.fillText('แกน +x → ขวา, +y → ลง (มุมอ้าง +x; 90° = ขึ้น)', 12, 24);
+  }
+
+  function drawTable(){
+    ctx.save();
+    const g=ctx.createLinearGradient(0,0,0,H);
+    g.addColorStop(0,'#f8fafc');
+    g.addColorStop(1,'#eef2f7');
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+    ctx.strokeStyle='#e5e7eb'; ctx.lineWidth=2; ctx.strokeRect(1,1,W-2,H-2);
+    ctx.restore();
+  }
+
+  function drawAimLine(x,y,dx,dy,color){
+    const L=Math.max(W,H)*1.2;
+    ctx.save();
+    ctx.setLineDash([10,8]);
+    ctx.strokeStyle=color;
+    ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+dx*L, y+dy*L); ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawSeparationArc(cx,cy,a1,a2){
+    let d=normAngle(a2-a1); const cw=d>0; const r=46;
+    ctx.save();
+    ctx.strokeStyle='#0f172a';
+    ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(cx,cy,r,a1,a2,!cw); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+Math.cos(a1)*r, cy+Math.sin(a1)*r); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+Math.cos(a2)*r, cy+Math.sin(a2)*r); ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawTrail(arr,color){
+    if(arr.length<2) return;
+    ctx.save();
+    ctx.strokeStyle=color; ctx.lineWidth=2; ctx.setLineDash([3,6]);
+    ctx.beginPath();
+    for(let i=0;i<arr.length;i++){ const p=arr[i]; if(i===0) ctx.moveTo(p.x,p.y); else ctx.lineTo(p.x,p.y); }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawBall(b,label){
+    ctx.save();
+    ctx.beginPath(); ctx.arc(b.x,b.y,R,0,Math.PI*2);
+    ctx.fillStyle=b.color; ctx.fill();
+    ctx.lineWidth=2; ctx.strokeStyle=b.stroke; ctx.stroke();
+    ctx.fillStyle='rgba(0,0,0,0.15)';
+    ctx.beginPath(); ctx.arc(b.x,b.y,2.5,0,Math.PI*2); ctx.fill();
+
+    ctx.fillStyle='#111827';
+    ctx.font='12px system-ui, sans-serif';
+    const tw=ctx.measureText(label).width;
+    ctx.fillText(label, b.x - tw/2, b.y - R - 8);
+    ctx.restore();
+  }
+
+  function drawArrowWithCustomLabel(x,y,vx,vy,color,prefix,units, position='right'){
+    const len=Math.hypot(vx,vy); if(len<1e-6) return;
+    const dx=vx*ARROW_SCALE, dy=vy*ARROW_SCALE;
+    const endx=x+dx, endy=y+dy;
+
+    ctx.save();
+    ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=3; ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(endx,endy); ctx.stroke();
+
+    const ang=Math.atan2(dy,dx), ah=12, aw=7;
+    ctx.beginPath();
+    ctx.moveTo(endx,endy);
+    ctx.lineTo(endx - ah*Math.cos(ang) + aw*Math.sin(ang), endy - ah*Math.sin(ang) - aw*Math.cos(ang));
+    ctx.lineTo(endx - ah*Math.cos(ang) - aw*Math.sin(ang), endy - ah*Math.sin(ang) + aw*Math.cos(ang));
+    ctx.closePath(); ctx.fill();
+
+    const mag=len/PX_PER_MS;
+    const label=`${prefix} = ${mag.toFixed(2)} ${units}`;
+
+    // ✅ เฉพาะมือถือ: ป้าย v = ... m/s โตขึ้น 5px (12 → 17)
+    const isVLabel = (prefix === 'v' && units === 'm/s');
+    const fs = (isVLabel && isMobileMode()) ? 17 : 12;
+
+    ctx.font = fs + 'px system-ui, sans-serif';
+    ctx.fillStyle=color;
+    if(position==='below') ctx.fillText(label, x, y+20);
+    else ctx.fillText(label, endx+8, endy-6);
+    ctx.restore();
+  }
+  function drawVelocityArrowWithLabel(x,y,vx,vy,color){ drawArrowWithCustomLabel(x,y,vx,vy,color,'v','m/s'); }
+
+  // ===== Momentum chain: top-right =====
+  function drawMomentumChainTopRight(){
+    const p1x=m1*white.vx, p1y=m1*white.vy;
+    const p2x=m2*brown.vx, p2y=m2*brown.vy;
+    const p0x=m1*Math.cos(theta)*v0*PX_PER_MS, p0y=m1*(-Math.sin(theta)*v0*PX_PER_MS);
+
+    const baseX = W - 330;
+    const baseY = 90;
+
+    drawArrowWithCustomLabel(baseX,baseY,p1x,p1y,'#0ea5e9','p₁′','kg·m/s');
+    const end1x=baseX+p1x*ARROW_SCALE, end1y=baseY+p1y*ARROW_SCALE;
+
+    drawArrowWithCustomLabel(end1x,end1y,p2x,p2y,'#8b5a2b','p₂′','kg·m/s');
+    const end2x=end1x+p2x*ARROW_SCALE, end2y=end1y+p2y*ARROW_SCALE;
+
+    ctx.save();
+    ctx.setLineDash([4,3]);
+    ctx.strokeStyle='#0f172a';
+    ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(baseX,baseY); ctx.lineTo(end2x,end2y); ctx.stroke();
+    ctx.restore();
+
+    drawArrowWithCustomLabel(baseX,baseY,p0x,p0y,'#10b981','p₀','kg·m/s','below');
+  }
+
+  // ===== COM =====
+  function pushCMTrail(){
+    const M=m1+m2;
+    const cxm=(m1*white.x + m2*brown.x)/M;
+    const cym=(m1*white.y + m2*brown.y)/M;
+    trailCM.push({x:cxm,y:cym});
+    if(trailCM.length>TRAIL_MAX) trailCM.shift();
+  }
+  function drawCOM(){
+    const M=m1+m2;
+    const cxm=(m1*white.x + m2*brown.x)/M;
+    const cym=(m1*white.y + m2*brown.y)/M;
+    const vxcm=(m1*white.vx + m2*brown.vx)/M;
+    const vycm=(m1*white.vy + m2*brown.vy)/M;
+
+    drawTrail(trailCM,'rgba(239,68,68,0.6)');
+    ctx.save();
+    ctx.fillStyle='#ef4444';
+    ctx.beginPath(); ctx.arc(cxm,cym,5,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+
+    drawArrowWithCustomLabel(cxm,cym,vxcm,vycm,'#ef4444','v_cm','m/s');
+  }
+
+  // ===== Utils =====
+  function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
+  function safeNum(v, fallback){
+    const s = String(v ?? '').trim();
+    if(s==='') return fallback;
+    const x = parseFloat(s.replace(',', '.'));
+    return Number.isFinite(x) ? x : fallback;
+  }
+  function deg2rad(d){ return d*Math.PI/180; }
+  function rad2deg(r){ return r*180/Math.PI; }
+  function normAngle(a){ while(a<=-Math.PI) a+=2*Math.PI; while(a>Math.PI) a-=2*Math.PI; return a; }
+  function fmtDeg(d){ let a=d; while(a<=-180) a+=360; while(a>180) a-=360; return a.toFixed(1)+'°'; }
+  function getPointerPos(e){
+    const rect=cv.getBoundingClientRect();
+    return {
+      x:(e.clientX-rect.left)*(cv.width/rect.width),
+      y:(e.clientY-rect.top)*(cv.height/rect.height)
+    };
+  }
+
+  // ===== First paint =====
+  updateMainButton();
+  draw();
+})();
+</script>
+</body>
+</html>

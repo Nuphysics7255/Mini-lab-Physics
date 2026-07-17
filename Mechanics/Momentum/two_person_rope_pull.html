@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>คนยืนบนพื้นลื่น — เคลื่อนที่เข้าหาจุดศูนย์กลางมวล (ตั้งค่าได้)</title>
+<style>
+  :root{--bg:#ffffff;--panel:#f8fafc;--ink:#0f172a;--muted:#475569;--accent:#0ea5e9;--accent2:#22c55e;--glass:#ffffffea}
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,Arial}
+  .wrap{max-width:980px;margin:0 auto;padding:18px;display:grid;grid-template-columns:340px 1fr;gap:16px}
+  @media (max-width: 720px){ .wrap{grid-template-columns:1fr} }
+  .card{background:var(--panel);border-radius:12px;box-shadow:0 10px 30px rgba(2,6,23,.06);padding:14px}
+  h1{font-size:18px;margin:0 0 8px}
+  label{display:block;font-size:13px;color:var(--muted);margin-top:8px}
+  input[type=number],input[type=range]{width:100%}
+  .row{display:grid;grid-template-columns:1fr 90px;gap:10px;align-items:center}
+  .btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+  button{padding:8px 12px;border:0;border-radius:10px;background:var(--accent);color:#fff;cursor:pointer}
+  button.secondary{background:#e2e8f0;color:#0f172a}
+  .out{font-size:13px;color:#0f172a;background:#fff;border-radius:8px;padding:8px;margin-top:10px}
+  svg{width:100%;height:auto;display:block;background:#fff;border-radius:12px}
+  .tag{font-size:12px;fill:#0f172a}
+  .muted{fill:#64748b}
+  .modal-backdrop{position:fixed;inset:0;background:rgba(2,6,23,.45);display:none;align-items:center;justify-content:center;padding:16px;z-index:50}
+  .modal{width:min(860px,100%);max-height:85vh;overflow:auto;background:var(--glass);backdrop-filter:saturate(140%) blur(6px);border-radius:14px;box-shadow:0 20px 60px rgba(2,6,23,.25);padding:18px}
+  .modal h2{margin:0 0 6px;font-size:18px}
+  .modal .sub{color:var(--muted);font-size:13px;margin-bottom:10px}
+  .modal .close{float:right;background:#e2e8f0;color:#0f172a}
+  .eq{font-size:15px}
+  .footnote{font-size:12px;color:var(--muted);margin-top:8px}
+  .footnote a{color:#2563eb;text-decoration:underline}
+</style>
+
+<!-- MathJax -->
+<script>
+  window.MathJax = { tex:{ inlineMath:[['\\(','\\)']], displayMath:[['\\[','\\]']], processEscapes:true }, svg:{fontCache:'global'} };
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h1>คนบนพื้นลื่น — พบกันที่ <em>จุดศูนย์กลางมวล</em></h1>
+
+    <label>ระยะห่างเริ่มต้น D (m)</label>
+    <div class="row">
+      <input id="D" type="number" step="0.1" min="1" value="9" />
+      <input id="Dslider" type="range" min="1" max="20" step="0.1" value="9" />
+    </div>
+
+    <label>มวลคนซ้าย m₁ (kg)</label>
+    <input id="m1" type="number" step="1" min="5" value="60" />
+
+    <label>มวลคนขวา m₂ (kg)</label>
+    <input id="m2" type="number" step="1" min="5" value="60" />
+
+    <div class="btns">
+      <button id="play">เล่น</button>
+      <button id="reset" class="secondary">รีเซ็ต</button>
+      <button id="toggleVec" class="secondary">แสดงเวกเตอร์ความเร็ว</button>
+      <button id="howto" class="secondary">วิธีคำนวณ</button>
+    </div>
+
+    <div class="out" id="readout">
+      <div>ตำแหน่งจุดศูนย์กลางมวล (จากคนซ้าย): <strong><span id="cmVal">—</span> m</strong></div>
+      <div>อัตราส่วนความเร็วเพื่อถึงพร้อมกัน: <strong>v₂ = <span id="ratio">—</span> × v₁</strong></div>
+      <p class="footnote">ศึกษาเพิ่มเติมที่<strong> <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">เพจคลายปมฟิสิกส์</a></strong></p>
+    </div>
+  </div>
+
+  <div class="card">
+    <svg id="scene" viewBox="0 0 800 300" xmlns="http://www.w3.org/2000/svg" aria-label="การทดลองพื้นลื่น">
+      <!-- พื้น/สเกล -->
+      <rect x="20" y="220" width="760" height="6" fill="#cbd5e1"/>
+      <text x="24" y="240" class="tag muted">สเกล: 20 px = 1 m</text>
+
+      <!-- เชือก: ใช้ path -->
+      <path id="rope" d="M0,0 L0,0" fill="none" stroke="#0f172a" stroke-width="3" />
+
+      <!-- คนซ้าย -->
+      <g id="left" transform="translate(60,210)">
+        <g id="leftHuman">
+          <circle cx="0" cy="-140" r="18" fill="#f2c79b" stroke="#0f172a" stroke-width="2" />
+          <!-- ตา -->
+          <circle cx="-6" cy="-145" r="2.4" fill="#0f172a" />
+          <circle cx="6"  cy="-145" r="2.4" fill="#0f172a" />
+          <!-- ปาก -->
+          <path d="M-8 -135 q8 6 16 0" fill="none" stroke="#0f172a" stroke-width="2" stroke-linecap="round" />
+          <!-- ลำตัว/แขน -->
+          <rect id="Lbody" x="-16" y="-125" width="32" height="44" rx="8" fill="#60a5fa" stroke="#0f172a" stroke-width="2" />
+          <rect id="LarmLeft" x="-28" y="-120" width="12" height="38" rx="5" fill="#60a5fa" stroke="#0f172a" stroke-width="2" />
+          <circle id="LhandSide" cx="-22" cy="-82" r="9" fill="#f2c79b" stroke="#0f172a" stroke-width="2" />
+          <rect id="Larm" x="16" y="-114" width="40" height="12" rx="6" fill="#60a5fa" stroke="#0f172a" stroke-width="2" />
+          <circle id="Lhand" cx="56" cy="-108" r="9" fill="#f2c79b" stroke="#0f172a" stroke-width="2" />
+          <!-- ขา -->
+          <rect x="-10" y="-80" width="10" height="60" rx="5" fill="#64748b" stroke="#0f172a" stroke-width="2" />
+          <rect x="5"   y="-80" width="10" height="60" rx="5" fill="#64748b" stroke="#0f172a" stroke-width="2" />
+        </g>
+        <text class="tag" x="0" y="-110" text-anchor="middle">m₁</text>
+        <text id="m1val" class="tag muted" x="0" y="-98" text-anchor="middle">60 kg</text>
+        <!-- เวกเตอร์ v1 (ไม่มีตัวเลข) -->
+        <g id="v1vec" visibility="hidden">
+          <line x1="10" y1="-170" x2="70" y2="-170" stroke="#22c55e" stroke-width="3" marker-end="url(#arrow)" />
+          <text id="v1label" x="72" y="-176" class="tag" text-anchor="start">v₁</text>
+        </g>
+      </g>
+
+      <!-- คนขวา -->
+      <g id="right" transform="translate(60,210)">
+        <g id="rightHuman">
+          <circle cx="0" cy="-140" r="18" fill="#f2c79b" stroke="#0f172a" stroke-width="2" />
+          <!-- ตา -->
+          <circle cx="-6" cy="-145" r="2.4" fill="#0f172a" />
+          <circle cx="6"  cy="-145" r="2.4" fill="#0f172a" />
+          <!-- แว่นตา -->
+          <g id="Rglasses" stroke="#0f172a" fill="none" stroke-width="2">
+            <circle cx="-6" cy="-145" r="8"/>
+            <circle cx="6"  cy="-145" r="8"/>
+            <line x1="- - -"/>
+          </g>
+          <!-- คานเชื่อมและขาแว่น -->
+          <line x1="- - -"/>
+          <!-- ปาก -->
+          <path d="M-8 -135 q8 6 16 0" fill="none" stroke="#0f172a" stroke-width="2" stroke-linecap="round" />
+          <!-- ลำตัว/แขน -->
+          <rect id="Rbody" x="-16" y="-125" width="32" height="44" rx="8" fill="#fb923c" stroke="#0f172a" stroke-width="2" />
+          <rect id="RarmRight" x="16" y="-120" width="12" height="38" rx="5" fill="#fb923c" stroke="#0f172a" stroke-width="2" />
+          <circle id="RhandSide" cx="22" cy="-82" r="9" fill="#f2c79b" stroke="#0f172a" stroke-width="2" />
+          <rect id="Rarm" x="-76" y="-114" width="40" height="12" rx="6" fill="#fb923c" stroke="#0f172a" stroke-width="2" />
+          <circle id="Rhand" cx="-76" cy="-108" r="9" fill="#f2c79b" stroke="#0f172a" stroke-width="2" />
+          <!-- ขา -->
+          <rect x="-16" y="-81" width="32" height="16" fill="#4b5563" stroke="#0f172a" stroke-width="2" />
+          <rect x="-10" y="-65" width="10" height="45" rx="5" fill="#64748b" stroke="#0f172a" stroke-width="2" />
+          <rect x="5"   y="-65" width="10" height="45" rx="5" fill="#64748b" stroke="#0f172a" stroke-width="2" />
+        </g>
+        <text class="tag" x="0" y="-110" text-anchor="middle">m₂</text>
+        <text id="m2val" class="tag muted" x="0" y="-98" text-anchor="middle">60 kg</text>
+        <!-- เวกเตอร์ v2 (ไม่มีตัวเลข) -->
+        <g id="v2vec" visibility="hidden">
+          <line x1="-10" y1="-170" x2="-70" y2="-170" stroke="#ef4444" stroke-width="3" marker-end="url(#arrow)" />
+          <text id="v2label" x="-72" y="-176" class="tag" text-anchor="end">v₂</text>
+        </g>
+      </g>
+
+      <!-- COM -->
+      <circle id="com" cx="0" cy="210" r="5" fill="#ef4444" />
+      <text id="comLabel" x="0" y="198" class="tag" text-anchor="middle">COM</text>
+
+      <defs>
+        <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="currentColor" />
+        </marker>
+      </defs>
+    </svg>
+  </div>
+</div>
+
+<!-- วิธีคำนวณ -->
+<div id="backdrop" class="modal-backdrop">
+  <div class="modal">
+    <button id="closeHowTo" class="close secondary">ปิด</button>
+    <h2>วิธีคำนวณ</h2>
+    <div class="sub">จุดศูนย์กลางมวล & อนุรักษ์โมเมนตัม (ดึงครั้งเดียวแล้วเชือกหย่อน)</div>
+    <div id="calcText" class="eq"></div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const PX_PER_M = 20;
+  const left = document.getElementById('left');
+  const right = document.getElementById('right');
+  const Lbody = document.getElementById('Lbody');
+  const Rbody = document.getElementById('Rbody');
+  const Larm = document.getElementById('Larm');
+  const Rarm = document.getElementById('Rarm');
+  const Lhand = document.getElementById('Lhand');
+  const Rhand = document.getElementById('Rhand');
+  const v1vec = document.getElementById('v1vec');
+  const v2vec = document.getElementById('v2vec');
+  const rope = document.getElementById('rope'); // <path>
+  const com = document.getElementById('com');
+  const comLabel = document.getElementById('comLabel');
+  const m1valText = document.getElementById('m1val');
+  const m2valText = document.getElementById('m2val');
+
+  const D = document.getElementById('D');
+  const Dslider = document.getElementById('Dslider');
+  const m1 = document.getElementById('m1');
+  const m2 = document.getElementById('m2');
+  const playBtn = document.getElementById('play');
+  const resetBtn = document.getElementById('reset');
+  const toggleVecBtn = document.getElementById('toggleVec');
+  const howToBtn = document.getElementById('howto');
+  const backdrop = document.getElementById('backdrop');
+  const closeHowTo = document.getElementById('closeHowTo');
+  const calcText = document.getElementById('calcText');
+
+  const cmVal = document.getElementById('cmVal');
+  const ratioOut = document.getElementById('ratio');
+
+  let showVectors = false;
+  let playing = false;
+  let t0 = 0;
+  let Tmeet = 2.5; // ใช้เพื่ออนิเมชันเท่านั้น
+
+  const ARM_LEN = 40, OVERLAP = 1;
+  const yBase = 210;
+  let xL0 = 60, xR0 = 60;
+  const state = { };
+
+  function compute(){
+    const Dm = clamp(parseFloat(D.value)||9, 1, 20);
+    const m1v = clamp(parseFloat(m1.value)||60, 5, 300);
+    const m2v = clamp(parseFloat(m2.value)||60, 5, 300);
+    D.value = Dm; Dslider.value = Dm;
+
+    m1valText.textContent = `${fmt(m1v)} kg`;
+    m2valText.textContent = `${fmt(m2v)} kg`;
+
+    const Dpx = Dm * PX_PER_M;
+    xL0 = 60; xR0 = xL0 + Dpx;
+
+    const xcm_m = (m2v * Dm) / (m1v + m2v);
+    cmVal.textContent = xcm_m.toFixed(2);
+    const xcm_px = xL0 + xcm_m * PX_PER_M;
+
+    const ratio = m1v / m2v;
+    ratioOut.textContent = ratio.toFixed(2);
+
+    // ปรับลำตัวตามมวล
+    const W1 = mapLin(m1v, 20, 200, 28, 42);
+    const W2 = mapLin(m2v, 20, 200, 28, 42);
+    Lbody.setAttribute('x', String(-W1/2)); Lbody.setAttribute('width', String(W1));
+    Rbody.setAttribute('x', String(-W2/2)); Rbody.setAttribute('width', String(W2));
+
+    // แขนคนขวาชิดลำตัว
+    const armX = (-W2/2) - ARM_LEN + OVERLAP;
+    Rarm.setAttribute('x', String(armX)); Rarm.setAttribute('width', String(ARM_LEN));
+    Rhand.setAttribute('cx', String(armX));
+
+    // จัดวางเริ่มต้น + เชือกตรง (เหมือนเดิม)
+    setGroupPos(left, xL0, yBase);
+    setGroupPos(right, xR0, yBase);
+    com.setAttribute('cx', xcm_px); com.setAttribute('cy', yBase);
+    comLabel.setAttribute('x', xcm_px);
+
+    state.Dm = Dm; state.m1 = m1v; state.m2 = m2v;
+    state.xcm_px = xcm_px; state.xL = xL0; state.xR = xR0;
+
+    // เริ่มต้น: เส้นตรง (ตึง)
+    updateRopeStraight(xL0, xR0);
+  }
+
+  function getLocalHandAnchors(useSide){
+    if (useSide){
+      // มือแนบลำตัว (ใช้ตอนจบ)
+      return { L:{x:-22, y:-82}, R:{x:22, y:-82} };
+    } else {
+      // มือปลายแขนยื่น (ตอนเคลื่อนที่)
+      return {
+        L:{x: parseFloat(document.getElementById('Lhand').getAttribute('cx')),
+           y: parseFloat(document.getElementById('Lhand').getAttribute('cy'))},
+        R:{x: parseFloat(document.getElementById('Rhand').getAttribute('cx')),
+           y: parseFloat(document.getElementById('Rhand').getAttribute('cy'))}
+      };
+    }
+  }
+
+  function updateRopeStraight(xL, xR){
+    const a = getLocalHandAnchors(false);
+    const x1 = xL + a.L.x, y1 = yBase + a.L.y;
+    const x2 = xR + a.R.x, y2 = yBase + a.R.y;
+    rope.setAttribute('d', `M ${x1},${y1} L ${x2},${y2}`);
+  }
+
+  function updateRopeCurved(xL, xR, useSide, sagPx){
+    const a = getLocalHandAnchors(!!useSide);
+    const x1 = xL + a.L.x, y1 = yBase + a.L.y;
+    const x2 = xR + a.R.x, y2 = yBase + a.R.y;
+    const mx = (x1 + x2) / 2, my = (y1 + y2) / 2 + sagPx;
+    rope.setAttribute('d', `M ${x1},${y1} Q ${mx},${my} ${x2},${y2}`);
+  }
+
+  function setGroupPos(g, x, y){ g.setAttribute('transform', `translate(${x},${y})`); }
+  function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
+  function mapLin(v,inMin,inMax,outMin,outMax){ const t = (v - inMin) / (inMax - inMin); return outMin + Math.max(0, Math.min(1, t)) * (outMax - outMin); }
+  function fmt(n){ return (Math.round(n*10)/10).toFixed(1).replace(/\.0$/,''); }
+
+  // อินพุต
+  D.addEventListener('input', compute);
+  Dslider.addEventListener('input', e=>{ D.value = e.target.value; compute(); });
+  m1.addEventListener('input', compute);
+  m2.addEventListener('input', compute);
+
+  // เล่น/หยุด
+  playBtn.addEventListener('click', () => {
+    playing = !playing; playBtn.textContent = playing ? 'หยุด' : 'เล่น';
+    if (playing){ t0 = performance.now(); requestAnimationFrame(step); }
+  });
+
+  // แสดง/ซ่อนเวกเตอร์
+  toggleVecBtn.addEventListener('click', () => {
+    showVectors = !showVectors;
+    toggleVecBtn.textContent = showVectors ? 'ซ่อนเวกเตอร์ความเร็ว' : 'แสดงเวกเตอร์ความเร็ว';
+    v1vec.setAttribute('visibility', showVectors ? 'visible' : 'hidden');
+    v2vec.setAttribute('visibility', showVectors ? 'visible' : 'hidden');
+  });
+
+  // วิธีคำนวณ — ใช้เวอร์ชันเดิม (สัญลักษณ์ + แทนค่า)
+  howToBtn.addEventListener('click', () => {
+    const {Dm, m1:Mm1, m2:Mm2} = state;
+    const xcom = (Mm2*Dm)/(Mm1+Mm2);
+    const ratio = Mm1/Mm2;
+    calcText.innerHTML = `
+      <p><strong>1) จุดศูนย์กลางมวล</strong></p>
+      \\[
+        x_{\\mathrm{COM}} = \\frac{m_2}{m_1+m_2}\\,D
+      \\]
+      <p><em>แทนค่า:</em> \\( m_1=${Mm1.toFixed(1)}\\,\\text{kg},\\; m_2=${Mm2.toFixed(1)}\\,\\text{kg},\\; D=${Dm.toFixed(2)}\\,\\text{m} \\)</p>
+      \\[
+        x_{\\mathrm{COM}} = \\frac{${Mm2.toFixed(1)}}{${(Mm1+Mm2).toFixed(1)}}\\,(${Dm.toFixed(2)}) = ${xcom.toFixed(2)}\\,\\text{m}
+      \\]
+      <p><strong>2) อนุรักษ์โมเมนตัม</strong></p>
+      \\[
+        m_1 v_1 = m_2 v_2 \\;\\Rightarrow\\; \\frac{v_2}{v_1} = \\frac{m_1}{m_2}
+      \\]
+      <p><em>แทนค่า:</em></p>
+      \\[
+        \\frac{v_2}{v_1} = \\frac{${Mm1.toFixed(1)}}{${Mm2.toFixed(1)}} = ${ratio.toFixed(2)}
+        \\quad\\Rightarrow\\quad v_2 = ${ratio.toFixed(2)}\\,v_1
+      \\]
+    `;
+    backdrop.style.display = 'flex';
+    if (window.MathJax?.typesetPromise){ MathJax.typesetPromise([calcText]); }
+  });
+  closeHowTo.addEventListener('click', ()=>{ backdrop.style.display = 'none'; });
+
+  // รีเซ็ต
+  resetBtn.addEventListener('click', () => {
+    playing = false; playBtn.textContent = 'เล่น';
+    Larm.setAttribute('visibility','visible'); Rarm.setAttribute('visibility','visible');
+    document.getElementById('Lhand').setAttribute('visibility','visible');
+    document.getElementById('Rhand').setAttribute('visibility','visible');
+    compute();
+  });
+
+  function step(now){
+    if (!playing) return;
+    const t = (now - t0)/1000;
+    const { xcm_px, xL, xR } = state;
+
+    const tau = Math.min(1, t/2.5);          // 0→1
+    const xL_t = xL + tau * (xcm_px - xL);
+    const xR_t = xR - tau * (xR - xcm_px);
+
+    setGroupPos(left, xL_t, 210);
+    setGroupPos(right, xR_t, 210);
+
+    // ระหว่างเคลื่อนที่: ให้เชือก "หย่อนลง" (เส้นโค้ง) และหย่อนมากขึ้นเมื่อเข้าใกล้กัน
+    const sagMove = 12 + 12*tau;             // เริ่มหย่อน 12px → 24px
+    updateRopeCurved(xL_t, xR_t, false, sagMove);
+
+    if (tau < 1){
+      requestAnimationFrame(step);
+    } else {
+      // ถึงพร้อมกันที่ COM: เก็บแขนแนบลำตัว และใช้จุดมือแนบเป็นจุดยึดเชือก + หย่อนสุดท้าย
+      playing = false; playBtn.textContent = 'เล่น';
+      Larm.setAttribute('visibility','hidden'); Rarm.setAttribute('visibility','hidden');
+      document.getElementById('Lhand').setAttribute('visibility','hidden');
+      document.getElementById('Rhand').setAttribute('visibility','hidden');
+      setGroupPos(left, xcm_px, 210);
+      setGroupPos(right, xcm_px, 210);
+      updateRopeCurved(xcm_px, xcm_px, true, 28);
+    }
+  }
+
+  compute();
+})();
+</script>
+
+<!-- หัวลูกศร -->
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="currentColor" />
+    </marker>
+  </defs>
+</svg>
+</body>
+</html>
