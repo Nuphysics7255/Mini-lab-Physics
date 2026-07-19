@@ -66,9 +66,36 @@ canvas{width:100%;height:100%;display:block}
 .modal h2{color:#b26300;margin:0 54px 14px 0;font-size:28px}.formulaBox{background:#fff8ef;border:1.5px solid #efc58f;border-radius:22px;padding:14px;margin:12px 0;line-height:1.75}.formulaBox h3{color:#123d70;margin:0 0 8px;font-size:20px}
 .footerLink{text-align:center;margin:18px auto;color:#2f6fd6;font-weight:900}.footerLink a{color:#2f6fd6;text-decoration:underline}
 @media(max-width:900px){
- body{overflow:auto;padding-bottom:calc(120px + env(safe-area-inset-bottom));}
- .wrap{height:auto;grid-template-columns:1fr;overflow:visible}.controls{position:relative;top:auto;max-height:none;overflow:visible}.stageGrid{display:grid;grid-template-columns:1fr}.tubeBox{height:58vh;min-height:420px}.tube{height:calc(58vh - 52px);min-height:360px;width:178px}.scale{height:calc(58vh - 52px);min-height:360px}.graphs{min-height:660px;height:auto;overflow:visible;grid-template-rows:1fr 1fr 1fr;padding-right:0}.btns{position:fixed;left:8px;right:8px;bottom:calc(8px + env(safe-area-inset-bottom));z-index:30;background:rgba(245,249,255,.76);backdrop-filter:blur(8px);padding:8px;border:1px solid #d8e3ef;border-radius:22px;grid-template-columns:1fr 1fr 1fr}
- .topControls{margin-bottom:10px;position:static;background:transparent;border-bottom:0;padding-bottom:0}.forceInline{flex:1;justify-content:space-between}.row{padding:9px}header{padding-top:14px} }
+ body{overflow:auto;padding-bottom:calc(105px + env(safe-area-inset-bottom));}
+ .wrap{height:auto;grid-template-columns:1fr;overflow:visible}
+ .controls{position:relative;top:auto;max-height:none;overflow:visible}
+ .stageGrid{display:grid;grid-template-columns:1fr}
+ .tubeBox{height:58vh;min-height:420px}
+ .tube{height:calc(58vh - 52px);min-height:360px;width:178px}
+ .scale{height:calc(58vh - 52px);min-height:360px}
+ .graphs{min-height:660px;height:auto;overflow:visible;grid-template-rows:1fr 1fr 1fr;padding-right:0}
+ .topControls{margin-bottom:10px;position:static;display:block;background:transparent;border-bottom:0;padding-bottom:0}
+ .btns{
+   position:fixed;
+   left:10px;
+   right:10px;
+   bottom:calc(10px + env(safe-area-inset-bottom));
+   z-index:9999;
+   display:grid;
+   grid-template-columns:repeat(3,1fr);
+   gap:10px;
+   padding:10px;
+   background:rgba(255,255,255,.95);
+   backdrop-filter:blur(10px);
+   border:1px solid #d8e3ef;
+   border-radius:20px;
+   box-shadow:0 -6px 20px rgba(0,0,0,.15);
+ }
+ .btns button{width:100%;min-height:48px;font-size:15px;padding:10px 6px}
+ .forceInline{width:100%;justify-content:space-between}
+ .row{padding:9px}
+ header{padding-top:14px}
+}
 </style>
 </head>
 <body>
