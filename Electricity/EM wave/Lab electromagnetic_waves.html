@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Hertz EM 3D — Burst 1.0s + Ring Y+90 + Summary (MathJax) + Quiz</title>
+<title>คลื่นแม่เหล็กไฟฟ้า — Mini Lab</title>
 <style>
   :root{
     --bg:#020617; --ink:#e2e8f0; --panel:#0b1220;
@@ -94,6 +94,47 @@
   .btn-green{background:linear-gradient(135deg, #86efac, #34d399); color:#064e3b}
   .btn-dark{background:#1f2937; color:#e5e7eb}
   a {color:#0ea5e9; text-decoration:underline}
+
+  /* ==== Mobile layout fixes ==== */
+  @media (max-width: 700px){
+    .ui{
+      top:8px; left:8px; right:8px;
+      width:auto;
+      display:grid;
+      grid-template-columns:auto 1fr auto;
+      gap:6px;
+      padding:7px 8px;
+    }
+    .ui .btn{padding:7px 10px;font-size:13px}
+    .ui .pill{font-size:11px;padding:4px 7px}
+    .ui-right{
+      top:64px; left:8px; right:8px;
+      justify-content:flex-end;
+      gap:6px;
+      flex-wrap:wrap;
+    }
+    .ui-right .btn{padding:7px 10px;font-size:12px}
+    .panel{
+      width:calc(100vw - 16px);
+      max-height:calc(100vh - 16px);
+      padding:14px 12px;
+      border-radius:14px;
+      box-sizing:border-box;
+    }
+    .panel > div:first-child{
+      align-items:flex-start !important;
+      flex-direction:column;
+    }
+    .panel > div:first-child > div{
+      width:100%;
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    .panel h2{font-size:21px;line-height:1.35;margin-right:0}
+    .panel .btn{padding:8px 11px;font-size:13px}
+  }
+
 </style>
 
 <!-- MathJax (render LaTeX with MathJax) -->
@@ -117,30 +158,8 @@
 
   <!-- Top-right UI -->
   <div class="ui-right">
-    <button class="btn ghost" id="btnHome">หน้าแรก</button>
     <button class="btn ghost" id="btnSummary">สรุปเนื้อหา</button>
     <button class="btn ghost" id="btnQuiz">แบบฝึกหัด</button>
-  </div>
-
-  <!-- Home overlay -->
-  <div class="overlay" id="homeOverlay" aria-hidden="false">
-    <div class="card">
-      <div class="title">Hertz EM Experiment 3D <span style="background:#0b7285;color:#cffafe;padding:3px 8px;border-radius:999px;font-size:12px;margin-left:8px">Burst 1.0s</span></div>
-      <p class="note">
-        ทดลองสาธิต “การกำเนิดคลื่นแม่เหล็กไฟฟ้าและการเหนี่ยวนำ” ด้วยเครื่องกำเนิดสปาร์ก-แก็ป (ซ้าย) → คลื่น EM → วงแหวนรับ (ขวา)
-        <span class="nowrap">
-          <span style="color:#fee780;font-weight:800">ศึกษาเพิ่มเติมได้ที่</span>
-          <a class="chip-link" href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">
-            เพจ คลายปมฟิสิกส์
-          </a>
-        </span>
-      </p>
-      <div class="cta">
-        <button class="btn" id="btnStart">เริ่มการทดลอง</button>
-        <button class="btn ghost" id="btnOpenSummary">สรุปเนื้อหา</button>
-        <button class="btn ghost" id="btnOpenQuiz">แบบฝึกหัด</button>
-      </div>
-    </div>
   </div>
 
   <!-- Summary modal (Pastel) -->
@@ -150,7 +169,6 @@
         <h2>สรุปเนื้อหา: คลื่นแม่เหล็กไฟฟ้า (EM Wave)</h2>
         <div>
           <button class="btn btn-green" id="btnCloseSummary">ปิด</button>
-          <button class="btn btn-dark" id="btnBackHome1">กลับสู่หน้าแรก</button>
         </div>
       </div>
 
@@ -222,7 +240,6 @@
         <h2>แบบฝึกหัดพื้นฐาน: คลื่นแม่เหล็กไฟฟ้า</h2>
         <div>
           <button class="btn btn-green" id="btnCloseQuiz">ปิด</button>
-          <button class="btn btn-dark" id="btnBackHome2">กลับสู่หน้าแรก</button>
         </div>
       </div>
 
@@ -565,38 +582,22 @@
     animate();
 
     /* ===== UI: Home / Summary / Quiz ===== */
-    const homeOverlay=document.getElementById('homeOverlay');
     const summaryModal=document.getElementById('summaryModal');
     const quizModal=document.getElementById('quizModal');
 
-    const btnStart=document.getElementById('btnStart');
-    const btnOpenSummary=document.getElementById('btnOpenSummary');
     const btnSummary=document.getElementById('btnSummary');
     const btnCloseSummary=document.getElementById('btnCloseSummary');
-    const btnBackHome1=document.getElementById('btnBackHome1');
-    const btnHome=document.getElementById('btnHome');
-
-    const btnOpenQuiz=document.getElementById('btnOpenQuiz');
     const btnQuiz=document.getElementById('btnQuiz');
     const btnCloseQuiz=document.getElementById('btnCloseQuiz');
-    const btnBackHome2=document.getElementById('btnBackHome2');
     const btnSummaryToQuiz=document.getElementById('btnSummaryToQuiz');
 
-    function showHome(on=true){ homeOverlay.style.display = on? 'flex' : 'none'; homeOverlay.setAttribute('aria-hidden', on? 'false':'true'); }
     function showSummary(on=true){ summaryModal.classList.toggle('show', on); summaryModal.setAttribute('aria-hidden', on? 'false':'true'); if(on) window.MathJax && MathJax.typesetPromise && MathJax.typesetPromise(); }
     function showQuiz(on=true){ quizModal.classList.toggle('show', on); quizModal.setAttribute('aria-hidden', on? 'false':'true'); if(on) window.MathJax && MathJax.typesetPromise && MathJax.typesetPromise(); }
 
-    btnStart?.addEventListener('click', ()=> showHome(false));
-    btnOpenSummary?.addEventListener('click', ()=> showSummary(true));
     btnSummary?.addEventListener('click', ()=> showSummary(true));
     btnCloseSummary?.addEventListener('click', ()=> showSummary(false));
-    btnBackHome1?.addEventListener('click', ()=> { showSummary(false); showHome(true); });
-    btnHome?.addEventListener('click', ()=> showHome(true));
-
-    btnOpenQuiz?.addEventListener('click', ()=> showQuiz(true));
     btnQuiz?.addEventListener('click', ()=> showQuiz(true));
     btnCloseQuiz?.addEventListener('click', ()=> showQuiz(false));
-    btnBackHome2?.addEventListener('click', ()=> { showQuiz(false); showHome(true); });
     btnSummaryToQuiz?.addEventListener('click', ()=> { showSummary(false); showQuiz(true); });
 
     /* ===== Quiz grading ===== */
