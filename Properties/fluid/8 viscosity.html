@@ -65,37 +65,16 @@ canvas{width:100%;height:100%;display:block}
 .close{position:fixed;right:14px;top:calc(14px + env(safe-area-inset-top));width:48px;height:48px;border-radius:18px;background:#e7eef6;color:#45688f;font-size:22px;z-index:60}
 .modal h2{color:#b26300;margin:0 54px 14px 0;font-size:28px}.formulaBox{background:#fff8ef;border:1.5px solid #efc58f;border-radius:22px;padding:14px;margin:12px 0;line-height:1.75}.formulaBox h3{color:#123d70;margin:0 0 8px;font-size:20px}
 .footerLink{text-align:center;margin:18px auto;color:#2f6fd6;font-weight:900}.footerLink a{color:#2f6fd6;text-decoration:underline}
+
+.mobileActionBar{display:none;}
+
 @media(max-width:900px){
- body{overflow:auto;padding-bottom:calc(105px + env(safe-area-inset-bottom));}
- .wrap{height:auto;grid-template-columns:1fr;overflow:visible}
- .controls{position:relative;top:auto;max-height:none;overflow:visible}
- .stageGrid{display:grid;grid-template-columns:1fr}
- .tubeBox{height:58vh;min-height:420px}
- .tube{height:calc(58vh - 52px);min-height:360px;width:178px}
- .scale{height:calc(58vh - 52px);min-height:360px}
- .graphs{min-height:660px;height:auto;overflow:visible;grid-template-rows:1fr 1fr 1fr;padding-right:0}
- .topControls{margin-bottom:10px;position:static;display:block;background:transparent;border-bottom:0;padding-bottom:0}
- .btns{
-   position:fixed;
-   left:10px;
-   right:10px;
-   bottom:calc(10px + env(safe-area-inset-bottom));
-   z-index:9999;
-   display:grid;
-   grid-template-columns:repeat(3,1fr);
-   gap:10px;
-   padding:10px;
-   background:rgba(255,255,255,.95);
-   backdrop-filter:blur(10px);
-   border:1px solid #d8e3ef;
-   border-radius:20px;
-   box-shadow:0 -6px 20px rgba(0,0,0,.15);
- }
- .btns button{width:100%;min-height:48px;font-size:15px;padding:10px 6px}
- .forceInline{width:100%;justify-content:space-between}
- .row{padding:9px}
- header{padding-top:14px}
-}
+
+ body{overflow:auto;padding-bottom:calc(120px + env(safe-area-inset-bottom));}
+ .wrap{height:auto;grid-template-columns:1fr;overflow:visible}.controls{position:relative;top:auto;max-height:none;overflow:visible}.stageGrid{display:grid;grid-template-columns:1fr}.tubeBox{height:58vh;min-height:420px}.tube{height:calc(58vh - 52px);min-height:360px;width:178px}.scale{height:calc(58vh - 52px);min-height:360px}.graphs{min-height:660px;height:auto;overflow:visible;grid-template-rows:1fr 1fr 1fr;padding-right:0}.btns{display:none !important}
+ .mobileActionBar{position:fixed;left:8px;right:8px;bottom:calc(8px + env(safe-area-inset-bottom));z-index:99999;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;background:rgba(255,255,255,.96);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);padding:8px;border:1px solid #d8e3ef;border-radius:22px;box-shadow:0 -8px 24px rgba(20,55,90,.18)}
+ .mobileActionBar button{width:100%;min-width:0;padding:12px 6px;font-size:14px}
+ .topControls{margin-bottom:10px;position:static;background:transparent;border-bottom:0;padding-bottom:0}.forceInline{flex:1;justify-content:space-between}.row{padding:9px}header{padding-top:14px} }
 </style>
 </head>
 <body>
@@ -140,6 +119,14 @@ canvas{width:100%;height:100%;display:block}
     </div>
   </section>
 </main>
+
+<!-- แถบปุ่มลอยสำหรับมือถือเท่านั้น -->
+<div class="mobileActionBar" aria-label="แถบควบคุมสำหรับมือถือ">
+  <button class="play" id="mobilePlayBtn">▶️ ปล่อย</button>
+  <button class="reset" id="mobileResetBtn">🔄 รีเซ็ต</button>
+  <button class="formula" id="mobileFormulaBtn">Σ สูตรสำคัญ</button>
+</div>
+
 <div class="footerLink">ศึกษาเพิ่มเติมที่ <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">เพจคลายปมฟิสิกส์</a></div>
 <section class="modal" id="formulaModal">
   <button class="close" id="closeFormula">❌</button>
@@ -180,15 +167,19 @@ function syncFromFluid(){const f=fluids[fluidSel.value]; el('eta').value=f.eta; 
 syncFromFluid();
 fluidSel.addEventListener('change',syncFromFluid); matSel.addEventListener('change',()=>reset(false));
 ['radius','eta','rhoF','height','markInterval','timeScale','showForces'].forEach(id=>el(id).addEventListener('input',()=>{updateLabels(); reset(false)}));
-el('playBtn').onclick=()=>{state.run=!state.run; el('playBtn').textContent=state.run?'⏸ หยุด':'▶️ ปล่อย'; if(state.run) state.last=performance.now()};
+el('playBtn').onclick=()=>{state.run=!state.run; el('playBtn').textContent=state.run?'⏸ หยุด':'▶️ ปล่อย'; el('mobilePlayBtn').textContent=state.run?'⏸ หยุด':'▶️ ปล่อย'; if(state.run) state.last=performance.now()};
 el('resetBtn').onclick=()=>reset(true); el('formulaBtn').onclick=()=>{el('formulaModal').classList.add('show'); MathJax.typesetPromise?.()}; el('closeFormula').onclick=()=>el('formulaModal').classList.remove('show');
+// ปุ่มลอยสำหรับมือถือเรียกการทำงานเดียวกับปุ่มเดิม
+el('mobilePlayBtn').onclick=()=>el('playBtn').click();
+el('mobileResetBtn').onclick=()=>el('resetBtn').click();
+el('mobileFormulaBtn').onclick=()=>el('formulaBtn').click();
 el('infoClose').onclick=()=>{el('info').classList.add('hidden'); el('showInfoBtn').classList.add('show')};
 el('showInfoBtn').onclick=()=>{el('info').classList.remove('hidden'); el('showInfoBtn').classList.remove('show')};
 function params(){let r=+el('radius').value/1000, eta=+el('eta').value, rhoF=+el('rhoF').value, rhoS=materials[matSel.value].rho, H=+el('height').value; let V=4/3*Math.PI*r**3, m=rhoS*V, k=6*Math.PI*eta*r; return {r,eta,rhoF,rhoS,H,V,m,k}}
 function updateLabels(){const p=params(); el('rVal').textContent=(p.r*1000).toFixed(0)+' mm'; el('etaVal').textContent=(p.eta<0.01?p.eta.toFixed(3):p.eta.toFixed(2))+' Pa·s'; el('rhoFVal').textContent=p.rhoF.toFixed(0)+' kg/m³'; el('heightVal').textContent=p.H.toFixed(0)+' m'}
-function reset(full){const p0=params(); const y0=Math.min(p0.r,p0.H); state={t:0,y:y0,v:0,a:0,run:false,last:0,data:[{t:0,y:y0,v:0,a:0}],marks:[{t:0,y:y0}],nextMark:+el('markInterval').value}; el('playBtn').textContent='▶️ ปล่อย'; updateLabels(); makeScale(); drawAll();}
+function reset(full){const p0=params(); const y0=Math.min(p0.r,p0.H); state={t:0,y:y0,v:0,a:0,run:false,last:0,data:[{t:0,y:y0,v:0,a:0}],marks:[{t:0,y:y0}],nextMark:+el('markInterval').value}; el('playBtn').textContent='▶️ ปล่อย'; el('mobilePlayBtn').textContent='▶️ ปล่อย'; updateLabels(); makeScale(); drawAll();}
 function makeScale(){const sc=el('scale');sc.innerHTML=''; const H=params().H; for(let i=0;i<=7;i++){const d=H*i/7; const tick=document.createElement('div'); tick.className='tick'; tick.style.top=(i/7*100)+'%'; tick.textContent=d.toFixed(1)+' m'; sc.appendChild(tick)}}
-function step(dt){const p=params(); const maxDt=.02; let n=Math.ceil(dt/maxDt); dt=dt/n; for(let i=0;i<n;i++){state.a=g*(1-p.rhoF/p.rhoS)-(p.k/p.m)*state.v; state.v=Math.max(0,state.v+state.a*dt); state.y+=state.v*dt; state.t+=dt; while(state.t>=state.nextMark){state.marks.push({t:state.nextMark,y:state.y}); state.nextMark += +el('markInterval').value;} if(state.y>=p.H){state.y=p.H; state.run=false; el('playBtn').textContent='▶️ ปล่อย'; break;} state.data.push({t:state.t,y:state.y,v:state.v,a:state.a}); if(state.data.length>3000) state.data.shift();}}
+function step(dt){const p=params(); const maxDt=.02; let n=Math.ceil(dt/maxDt); dt=dt/n; for(let i=0;i<n;i++){state.a=g*(1-p.rhoF/p.rhoS)-(p.k/p.m)*state.v; state.v=Math.max(0,state.v+state.a*dt); state.y+=state.v*dt; state.t+=dt; while(state.t>=state.nextMark){state.marks.push({t:state.nextMark,y:state.y}); state.nextMark += +el('markInterval').value;} if(state.y>=p.H){state.y=p.H; state.run=false; el('playBtn').textContent='▶️ ปล่อย'; el('mobilePlayBtn').textContent='▶️ ปล่อย'; break;} state.data.push({t:state.t,y:state.y,v:state.v,a:state.a}); if(state.data.length>3000) state.data.shift();}}
 function yToTubePx(y, p, displayRadius){
   const tube=el('tube');
   const rect=tube.getBoundingClientRect();
