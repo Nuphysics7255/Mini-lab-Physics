@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>เลนส์ 2 เลนส์ซ้อนกัน(เลนส์บาง)</title>
+<style>
+  :root{--bg:#000;--ink:#f8fafc;--line:#475569;--accent:#ef4444}
+  body{margin:0;font-family:system-ui,Segoe UI,Inter,'Noto Sans Thai',Arial,sans-serif;background:var(--bg);color:var(--ink)}
+  header{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap}
+  h1{margin:0;font-size:18px}
+  .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .ctrl{display:flex;flex-direction:column;font-size:12px;color:var(--ink)}
+  .ctrl input,.ctrl select{margin-top:4px;padding:4px;border-radius:6px;border:1px solid var(--line);background:transparent;color:var(--ink)}
+  .btn{padding:6px 10px;border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:8px;cursor:pointer}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .canvas{height:calc(100dvh - 220px);background:var(--bg)}
+  svg{width:100%;height:100%;touch-action:none}
+  svg text{fill:var(--ink)}
+  /* โหมดพื้นหลังสว่าง */
+  body.light{--bg:#fff;--ink:#0f172a;--line:#cbd5e1}
+</style>
+</head>
+<body>
+<header>
+  <h1>เลนส์ 2 เลนส์ซ้อนกัน(เลนส์บาง)</h1>
+  <div class="controls">
+    <div class="ctrl">ชนิดเลนส์ A<select id="typeA"><option value="convex">เลนส์นูน (f&gt;0)</option><option value="concave">เลนส์เว้า (f&lt;0)</option></select></div>
+    <div class="ctrl">โฟกัส fA (cm)<input id="fA" type="number" min="2" max="50" step="0.5" value="12"></div>
+    <div class="ctrl">ชนิดเลนส์ B<select id="typeB"><option value="convex">เลนส์นูน (f&gt;0)</option><option value="concave">เลนส์เว้า (f&lt;0)</option></select></div>
+    <div class="ctrl">โฟกัส fB (cm)<input id="fB" type="number" min="2" max="50" step="0.5" value="16"></div>
+    <div class="ctrl">สวิตช์ไฟ<label style="margin-top:4px"><input id="beamPower" type="checkbox" checked> <span style="color:#ef4444;font-weight:700">●</span></label></div>
+    <div class="ctrl">จำนวนลำแสง<input id="beamCount" type="number" min="1" max="25" value="11"></div>
+    <div class="ctrl">ช่วงกระจาย (px)<input id="beamSpan" type="number" min="20" max="260" value="160"></div>
+    <div class="ctrl">เลนส์ A<label style="margin-top:4px"><input id="lensAOn" type="checkbox" checked> เปิด</label></div>
+    <div class="ctrl">เลนส์ B<label style="margin-top:4px"><input id="lensBOn" type="checkbox" checked> เปิด</label></div>
+    <button id="swapBoxBtn" class="btn">สลับตำแหน่งกล่องไฟ (ซ้าย ↔ ขวา)</button>
+    <button id="bgBtn" class="btn">พื้นหลัง: ดำ</button>
+  </div>
+</header>
+
+<div class="canvas">
+  <svg id="svg" viewBox="-600 -300 1200 600" xmlns="http://www.w3.org/2000/svg">
+    <!-- กล่องแสง + สวิตช์แดง -->
+    <rect id="lightBox" x="-560" y="-200" width="80" height="400" fill="#0b0b0b" stroke="#374151" stroke-width="2"/>
+    <circle id="powerSwitch" cx="-520" cy="-180" r="8" fill="#ef4444" stroke="#7f1d1d" style="cursor:pointer"/>
+
+    <!-- แกนหลัก -->
+    <line x1="-560" y1="0" x2="560" y2="0" stroke="#facc15" stroke-width="2" opacity=".9"/>
+
+    <!-- ลำแสง (ทุกเส้นสีแดง) -->
+    <g id="rays-before" stroke="#ef4444" fill="none" stroke-width="2"></g>
+    <g id="rays-after"  stroke="#ef4444" fill="none" stroke-width="2"></g>
+
+    <!-- เลนส์ A และ B -->
+    <g id="lensA_g" style="cursor:ew-resize">
+      <path id="lensA" fill="url(#glassGrad)" stroke="#60a5fa" stroke-width="2.5"/>
+    </g>
+    <g id="lensB_g" style="cursor:ew-resize">
+      <path id="lensB" fill="url(#glassGrad)" stroke="#34d399" stroke-width="2.5"/>
+    </g>
+
+    <!-- Gradient แก้ว -->
+    <defs>
+      <linearGradient id="glassGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#e0f2fe"/>
+        <stop offset="50%" stop-color="#ffffff"/>
+        <stop offset="100%" stop-color="#bae6fd"/>
+      </linearGradient>
+      <!-- หัวลูกศรสำหรับเส้นปะสองหัว (แสดงระยะ D) -->
+      <marker id="arrowHead" markerWidth="8" markerHeight="8" refX="8" refY="4" orient="auto">
+        <path d="M0,0 L8,4 L0,8 Z" fill="#9ca3af" />
+      </marker>
+    </defs>
+
+    <!-- จุดและป้ายโฟกัส -->
+    <g id="focusMarks" font-size="18">
+      <circle id="FA_L" r="5" fill="#93c5fd"/>
+      <text id="FA_L_T"></text>
+      <circle id="FA_R" r="5" fill="#93c5fd"/>
+      <text id="FA_R_T"></text>
+      <circle id="FB_L" r="5" fill="#6ee7b7"/>
+      <text id="FB_L_T"></text>
+      <circle id="FB_R" r="5" fill="#6ee7b7"/>
+      <text id="FB_R_T"></text>
+    </g>
+
+    <!-- ป้ายระยะห่างระหว่างเลนส์ -->
+    <line id="D_arrow" x1="-100" y1="-238" x2="100" y2="-238" stroke="#9ca3af" stroke-width="2" stroke-dasharray="6 6" marker-start="url(#arrowHead)" marker-end="url(#arrowHead)"/>
+    <text id="D_label" x="0" y="-250" font-size="18" text-anchor="middle"></text>
+  </svg>
+</div>
+
+<footer style="padding:10px;text-align:center;color:var(--ink)">
+  ศึกษาเพิ่มเติมที่ <a href="https://www.facebook.com/resolvephysics" target="_blank" style="color:#3b82f6">เพจคลายปมฟิสิกส์</a>
+</footer>
+
+<script>
+(function(){
+  // === DOM ===
+  const svg = document.getElementById('svg');
+  const typeA = document.getElementById('typeA');
+  const typeB = document.getElementById('typeB');
+  const fA = document.getElementById('fA');
+  const fB = document.getElementById('fB');
+  const beamPower = document.getElementById('beamPower');
+  const beamCount = document.getElementById('beamCount');
+  const beamSpan = document.getElementById('beamSpan');
+  const lensAOn = document.getElementById('lensAOn');
+  const lensBOn = document.getElementById('lensBOn');
+  const bgBtn = document.getElementById('bgBtn');
+
+  const lensAPath = document.getElementById('lensA');
+  const lensBPath = document.getElementById('lensB');
+  const lensA_g = document.getElementById('lensA_g');
+  const lensB_g = document.getElementById('lensB_g');
+
+  const raysBefore = document.getElementById('rays-before');
+  const raysAfter  = document.getElementById('rays-after');
+
+  const FA_L = document.getElementById('FA_L');
+  const FA_R = document.getElementById('FA_R');
+  const FA_L_T = document.getElementById('FA_L_T');
+  const FA_R_T = document.getElementById('FA_R_T');
+  const FB_L = document.getElementById('FB_L');
+  const FB_R = document.getElementById('FB_R');
+  const FB_L_T = document.getElementById('FB_L_T');
+  const FB_R_T = document.getElementById('FB_R_T');
+
+  const powerSwitch = document.getElementById('powerSwitch');
+  const D_label = document.getElementById('D_label');
+  const lightBox = document.getElementById('lightBox');
+  const swapBoxBtn = document.getElementById('swapBoxBtn');
+  const D_arrow = document.getElementById('D_arrow');
+
+  // === State ===
+  let xA = -100; // world-x ของเลนส์ A (ลากได้)
+  let xB =  100; // world-x ของเลนส์ B (คงที่)
+  let boxSide = 'left'; // 'left' | 'right'
+  const PX_PER_CM = 5; // สเกล 1 cm = 5 px
+  const APERTURE_HALF = 216; // ขยายเกณฑ์ 1.8× (เดิม 120 px) เพื่อให้รังสีใกล้ขอบเลนส์ยังนับว่าชน
+
+  // วาดทรงเลนส์ (บางแบบโค้ง)
+  function lensPath(type){
+    const H=220, edgeW=30, wC=52, wPinch=10;
+    if(type==='convex') return `M0 ${-H} C ${wC} ${-H/2} ${wC} ${H/2} 0 ${H} C ${-wC} ${H/2} ${-wC} ${-H/2} 0 ${-H} Z`;
+    return `M ${-edgeW} ${-H} C ${-wPinch} ${-H/2} ${-wPinch} ${H/2} ${-edgeW} ${H} L ${edgeW} ${H} C ${wPinch} ${H/2} ${wPinch} ${-H/2} ${edgeW} ${-H} Z`;
+  }
+
+  // ฟิสิกส์แบบ thin-lens + เส้นทางตรง (มุมเล็ก)
+  function propagateFree(y,theta,dx){ return {y: y + dx*theta, theta}; }
+  function thinLens(y,theta,f,dir){ return {y, theta: theta - (dir||+1)*y/f}; }
+
+  // helpers
+  function setC(el,x,y){ el.setAttribute('cx',x); el.setAttribute('cy',y); }
+  function setT(el,x,y,s){ el.setAttribute('x',x); el.setAttribute('y',y); el.textContent = s; }
+  function labelF(sub, prime, f_cm){ const sign = f_cm>=0? '+':'−'; const val = (Math.round(Math.abs(f_cm)*100)/100); return prime? `F′(${sub})  f=${sign}${val} cm` : `F(${sub})  f=${sign}${val} cm`; }
+
+  // วาดชุดลำแสง
+  function drawRays(){
+    raysBefore.innerHTML=''; raysAfter.innerHTML='';
+
+    // จัดวางกล่องไฟตามด้าน
+    const boxW = parseFloat(lightBox.getAttribute('width')) || 80;
+    const boxX = (boxSide==='left') ? -560 : (560 - boxW);
+    lightBox.setAttribute('x', boxX);
+    powerSwitch.setAttribute('cx', boxX + boxW/2);
+    powerSwitch.setAttribute('cy', -180);
+
+    // ป้ายระยะห่าง + ลูกศรสองหัว
+    const Dpx = Math.abs(xB - xA);
+    const mid = (xA + xB)/2;
+    const Dcm = (Dpx / PX_PER_CM).toFixed(1);
+    D_label.textContent = `ระยะห่าง = ${Dcm} cm`; D_label.setAttribute('x', mid);
+    // วางลูกศรเส้นปะสองหัวบนแนวเดียวกัน
+    D_arrow.setAttribute('x1', Math.min(xA,xB));
+    D_arrow.setAttribute('x2', Math.max(xA,xB));
+    D_arrow.setAttribute('y1', -238); D_arrow.setAttribute('y2', -238);
+
+    // สีสวิตช์
+    powerSwitch.setAttribute('fill', beamPower.checked? '#ef4444' : '#7f1d1d');
+
+    // วาดเลนส์ + จุดโฟกัสเสมอ
+    updateLensesAndFoci();
+
+    if(!beamPower.checked) return;
+
+    // ค่าจาก UI (แปลง cm → px)
+    const sFA = (typeA.value==='convex')? +1 : -1;
+    const sFB = (typeB.value==='convex')? +1 : -1;
+    const f1_cm = Math.max(2, Math.min(50, +fA.value || 12)) * sFA;
+    const f2_cm = Math.max(2, Math.min(50, +fB.value || 16)) * sFB;
+    const f1 = f1_cm * PX_PER_CM;
+    const f2 = f2_cm * PX_PER_CM;
+
+    // เริ่ม–จบ + ทิศทาง
+    const xStart = (boxSide==='left') ? (boxX + boxW) : boxX;
+    const xEnd   = (boxSide==='left') ? 560 : -560;
+    const dir = (xEnd >= xStart) ? +1 : -1;
+
+    // ชุดระดับความสูงของลำแสง
+    const yCenter = 0; const span = Math.max(20, Math.min(260, +beamSpan.value||160));
+    const count = Math.max(1, Math.min(25, +beamCount.value||11));
+    const ys = (count===1)? [yCenter] : Array.from({length:count}, (_,i)=> yCenter - span/2 + i*(span/(count-1)));
+
+    // เลือกลำดับเลนส์ตามทิศ
+    const lenses = [
+      { name:'A', x:xA, f:f1, on:(lensAOn.checked) },
+      { name:'B', x:xB, f:f2, on:(lensBOn.checked) },
+    ].sort((L1,L2)=> dir * (L1.x - L2.x));
+
+    for(const y0 of ys){
+      let x = xStart, y = y0, th = 0; const P=[[x,y]];
+      for(const L of lenses){
+        let dx = L.x - x; ({y,theta:th} = propagateFree(y,th,dx)); x = L.x; P.push([x,y]);
+        // หักเหเฉพาะเมื่อรังสี 'ชน' เลนส์จริง (อยู่ในช่องเปิดแนวตั้งของเลนส์)
+        const hit = L.on && Math.abs(y) <= APERTURE_HALF;
+        if(hit){ ({y,theta:th} = thinLens(y,th,L.f,dir)); }
+      }
+      let dx = xEnd - x; ({y,theta:th} = propagateFree(y,th,dx)); x = xEnd; P.push([x,y]);
+      const d = P.map((pt,i)=> i? `L ${pt[0]} ${-pt[1]}` : `M ${pt[0]} ${-pt[1]}`).join(' ');
+      const path = document.createElementNS('http://www.w3.org/2000/svg','path'); path.setAttribute('d',d); path.setAttribute('opacity','0.95');
+      raysBefore.appendChild(path);
+    }
+  }
+
+  function updateLensesAndFoci(){
+    // ค่า f (cm → px) สำหรับตำแหน่ง F
+    const sFA = (typeA.value==='convex')? +1 : -1;
+    const sFB = (typeB.value==='convex')? +1 : -1;
+    const f1_cm = Math.max(2, Math.min(50, +fA.value || 12)) * sFA;
+    const f2_cm = Math.max(2, Math.min(50, +fB.value || 16)) * sFB;
+    const f1 = Math.abs(f1_cm * PX_PER_CM), f2 = Math.abs(f2_cm * PX_PER_CM);
+
+    // ป้ายโฟกัส
+    setC(FA_L, xA - f1, 0); setT(FA_L_T, xA - f1 - 14, -14, labelF('A',false, f1_cm));
+    setC(FA_R, xA + f1, 0); setT(FA_R_T, xA + f1 +  6, -14, labelF('A',true,  f1_cm));
+    setC(FB_L, xB - f2, 0); setT(FB_L_T, xB - f2 - 18,  16, labelF('B',false, f2_cm));
+    setC(FB_R, xB + f2, 0); setT(FB_R_T, xB + f2 +  6,  16, labelF('B',true,  f2_cm));
+
+    // รูปเลนส์ + โปร่งเล็กน้อยเพื่อเห็นรังสี
+    lensAPath.setAttribute('d', lensPath(typeA.value)); lensAPath.setAttribute('transform',`translate(${xA},0)`); lensAPath.setAttribute('fill-opacity','0.35');
+    lensBPath.setAttribute('d', lensPath(typeB.value)); lensBPath.setAttribute('transform',`translate(${xB},0)`); lensBPath.setAttribute('fill-opacity','0.35');
+
+    // ซ่อน/แสดงตามสวิตช์ปิด/เปิดเลนส์
+    const aOn = lensAOn.checked, bOn = lensBOn.checked;
+    lensAPath.style.opacity = aOn ? '1' : '0.12';
+    lensBPath.style.opacity = bOn ? '1' : '0.12';
+    [FA_L,FA_R,FA_L_T,FA_R_T].forEach(el=> el.setAttribute('visibility', aOn? 'visible':'hidden'));
+    [FB_L,FB_R,FB_L_T,FB_R_T].forEach(el=> el.setAttribute('visibility', bOn? 'visible':'hidden'));
+
+    // ย้ายลำแสงให้อยู่บนเลนส์ และป้ายให้อยู่บนสุด
+    svg.appendChild(raysBefore); svg.appendChild(raysAfter); svg.appendChild(document.getElementById('focusMarks')); svg.appendChild(D_arrow); svg.appendChild(D_label);
+  }
+
+  // Drag เลนส์ A
+  function toSvgPoint(e){ const pt=svg.createSVGPoint(); pt.x=e.clientX; pt.y=e.clientY; return pt.matrixTransform(svg.getScreenCTM().inverse()); }
+  let dragging=false, pid=null, grabOffsetX=0;
+  lensA_g.addEventListener('pointerdown',(e)=>{ dragging=true; pid=e.pointerId; try{svg.setPointerCapture(pid);}catch(_){} const p=toSvgPoint(e); grabOffsetX = p.x - xA; });
+  svg.addEventListener('pointermove',(e)=>{ if(!dragging) return; const p=toSvgPoint(e); xA = Math.max(-560, Math.min(560, p.x - grabOffsetX)); drawRays(); });
+  function endDrag(){ dragging=false; if(pid!=null){ try{svg.releasePointerCapture(pid);}catch(_){} } pid=null; }
+  svg.addEventListener('pointerup',endDrag); svg.addEventListener('pointercancel',endDrag); svg.addEventListener('pointerleave',endDrag);
+
+  // Drag เลนส์ B
+  let draggingB=false, pidB=null, grabOffsetXB=0;
+  lensB_g.addEventListener('pointerdown',(e)=>{ draggingB=true; pidB=e.pointerId; try{svg.setPointerCapture(pidB);}catch(_){} const p=toSvgPoint(e); grabOffsetXB = p.x - xB; });
+  svg.addEventListener('pointermove',(e)=>{ if(!draggingB) return; const p=toSvgPoint(e); xB = Math.max(-560, Math.min(560, p.x - grabOffsetXB)); drawRays(); });
+  function endDragB(){ draggingB=false; if(pidB!=null){ try{svg.releasePointerCapture(pidB);}catch(_){} } pidB=null; }
+  svg.addEventListener('pointerup',endDragB); svg.addEventListener('pointercancel',endDragB); svg.addEventListener('pointerleave',endDragB);
+
+  // Events
+  [typeA,typeB,fA,fB,beamPower,beamCount,beamSpan,lensAOn,lensBOn].forEach(el=> el.addEventListener('input', drawRays));
+  powerSwitch.addEventListener('pointerdown', ()=>{ beamPower.checked = !beamPower.checked; drawRays(); });
+  document.getElementById('swapBoxBtn').addEventListener('click', ()=>{ boxSide = (boxSide==='left')? 'right':'left'; drawRays(); });
+  bgBtn.addEventListener('click', ()=>{ const light=document.body.classList.toggle('light'); bgBtn.textContent = light? 'พื้นหลัง: ขาว' : 'พื้นหลัง: ดำ'; });
+
+  // init
+  drawRays();
+})();
+</script>
+</body>
+</html>

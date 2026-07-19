@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>การหักเหของแสง — ครึ่งวงกลม ↔ สี่เหลี่ยม</title>
+<style>
+  :root{ --ink:#0f172a; --muted:#64748b; --line:#e5e7eb;
+         --orange:#f59e0b; --blue:#2563eb; --prism:#93c5fd55; --dash:#94a3b8; }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{margin:0;font-family:system-ui,Inter,'Noto Sans Thai',sans-serif;color:var(--ink);background:#fff}
+  header{padding:10px 14px;border-bottom:1px solid var(--line);display:grid;gap:8px}
+  h1{margin:0;font-size:16px}
+  .controls{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:10px}
+  .ctrl{display:grid;grid-template-columns:1fr 92px;gap:8px;align-items:center}
+  .ctrl label{grid-column:1/-1;font-size:12px;color:var(--muted)}
+  .ctrl input[type="range"], .ctrl input[type="number"]{width:100%}
+  .bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .btn{padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:#fff;cursor:pointer}
+  .btn:active{transform:translateY(1px)}
+  .hint{font-size:12px;color:#1f2937}
+  .no-select{user-select:none}
+  svg{touch-action:none;display:block}
+  .dash{stroke-dasharray:6 6}
+  .handle{cursor:grab}
+  .handle:active{cursor:grabbing}
+  .shapeTag{font-size:12px;color:#334155;margin-left:6px}
+  a.link{color:#2563eb;text-decoration:underline}
+  /* Modal */
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.28);display:none;align-items:center;justify-content:center;padding:16px}
+  .modal.open{display:flex}
+  .card{max-width:800px;width:min(800px,95vw);background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.15);padding:18px}
+  .card h2{margin:0 0 8px;font-size:18px}
+  .card p{margin:6px 0;line-height:1.6}
+  .card .close{float:right}
+  .qa details{border:1px solid var(--line);border-radius:10px;padding:10px;margin:8px 0}
+  .kbd{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;background:#f8fafc;border:1px solid #e2e8f0;padding:.2em .4em;border-radius:6px}
+</style>
+</head>
+<body>
+<header>
+  <h1>การหักเหของแสงผ่านปริซึม</h1>
+  <div class="controls">
+    <div class="ctrl">
+      <label>ดัชนีหักเหของปริซึม (n): <span id="nVal">1.50</span></label>
+      <input id="nSlider" type="range" min="1.00" max="2.00" step="0.01" value="1.50">
+      <input id="nBox" type="number" min="1.00" max="2.00" step="0.01" value="1.50">
+    </div>
+    <div class="ctrl">
+      <label>มุมไฟฉาย (°) — −180 ถึง +180</label>
+      <input id="ang" type="range" min="-180" max="180" step="1" value="0">
+      <input id="angBox" type="number" min="-180" max="180" step="1" value="0">
+    </div>
+    <div class="ctrl">
+      <label>รัศมี/ครึ่งความสูง R (px)</label>
+      <input id="rad" type="range" min="80" max="220" step="1" value="160">
+      <input id="radBox" type="number" min="80" max="220" step="1" value="160">
+    </div>
+    <div class="ctrl">
+      <label>โหมดตัวกลาง</label>
+      <div class="bar">
+        <button id="toggleShape" class="btn">สลับครึ่งวงกลม/สี่เหลี่ยม</button>
+        <span id="shapeTag" class="shapeTag">รูปทรง: ครึ่งวงกลม</span>
+      </div>
+    </div>
+  </div>
+  <div class="bar">
+    <button id="resetBtn" class="btn">รีเซ็ต</button>
+    <button id="toggleAngles" class="btn">แสดงมุม</button>
+    <button id="btnFormulas" class="btn">สูตรสำคัญ</button>
+    <button id="btnExercises" class="btn">แบบฝึกหัด</button>
+    <span class="no-select hint">θc (แก้ว→อากาศ): <b id="critVal">≈ 41.8°</b></span>
+    <span class="no-select hint">ศึกษาเพิ่มเติมที่ <a class="link" href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">เพจคลายปมฟิสิกส์</a></span>
+    <span id="msg" class="no-select" style="font-size:12px;color:var(--muted)"></span>
+  </div>
+</header>
+
+<svg id="sv" viewBox="0 0 1200 620" width="100%" height="620" aria-label="Prism Lab">
+  <defs>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#f3f4f6" stroke-width="1"/>
+    </pattern>
+    <!-- Glow for main rays -->
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <!-- Gradients for short reflective rays (fade to transparent at tip) -->
+    <linearGradient id="reflGrad1" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.65"/>
+      <stop offset="100%" stop-color="#f59e0b" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="reflGrad2" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.65"/>
+      <stop offset="100%" stop-color="#f59e0b" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="reflGrad3" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.65"/>
+      <stop offset="100%" stop-color="#f59e0b" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="0" y="0" width="1200" height="620" fill="url(#grid)"/>
+  <g id="scene">
+    <line id="flatFace" x1="800" y1="80" x2="800" y2="540" stroke="#94a3b8" stroke-width="2"/>
+    <path id="shapePath" fill="var(--prism)" stroke="#60a5fa" stroke-width="2"/>
+
+    <line id="normal1" class="dash" stroke="var(--dash)" stroke-width="2"/>
+    <line id="normal2" class="dash" stroke="#2563eb" stroke-width="2"/>
+    <line id="normal3" class="dash" stroke="var(--dash)" stroke-width="2"/>
+
+    <!-- Main rays (thin) -->
+    <g filter="url(#glow)">
+      <line id="rayInGlow"  stroke="rgba(245,158,11,0.35)" stroke-width="12"/>
+      <line id="rayMidGlow" stroke="rgba(245,158,11,0.35)" stroke-width="12"/>
+      <line id="rayMid2Glow" stroke="rgba(245,158,11,0.35)" stroke-width="12"/>
+      <line id="rayOutGlow" stroke="rgba(245,158,11,0.35)" stroke-width="12"/>
+      <!-- Short reflective rays with gradient -->
+      <line id="refl1" stroke="url(#reflGrad1)" stroke-width="10"/>
+      <line id="refl2" stroke="url(#reflGrad2)" stroke-width="10"/>
+      <line id="refl3" stroke="url(#reflGrad3)" stroke-width="10"/>
+    </g>
+    <line id="rayIn"  stroke="#f59e0b" stroke-width="2"/>
+    <line id="rayMid" stroke="#f59e0b" stroke-width="2"/>
+    <line id="rayMid2" stroke="#f59e0b" stroke-width="2"/>
+    <line id="rayOut" stroke="#f59e0b" stroke-width="2"/>
+
+    <circle id="hit1" r="4" fill="#f59e0b"/>
+    <circle id="hit2" r="4" fill="#2563eb"/>
+    <circle id="hit3" r="4" fill="#10b981"/>
+
+    <text id="lbl_i1" font-size="12" fill="#334155">θi₁</text>
+    <text id="lbl_r1" font-size="12" fill="#334155">θr₁</text>
+    <text id="lbl_i2" font-size="12" fill="#334155">θi₂</text>
+    <text id="lbl_r2" font-size="12" fill="#334155">θr₂</text>
+
+    <g id="torch" class="handle no-select">
+      <circle id="rotHandle" cx="16" cy="0" r="12" fill="#e2e8f0" stroke="#94a3b8"/>
+      <rect id="torchBody" x="-60" y="-10" width="60" height="20" rx="6" ry="6" fill="#374151" stroke="#111827" stroke-width="1.5"/>
+      <rect id="switch" x="-20" y="-16" width="16" height="8" rx="2" ry="2" fill="#ef4444" stroke="#7f1d1d"/>
+    </g>
+  </g>
+</svg>
+
+<!-- Modal: สูตรสำคัญ -->
+<div id="mdlFormulas" class="modal" role="dialog" aria-modal="true">
+  <div class="card">
+    <button class="btn close" id="closeFormulas">ปิด</button>
+    <h2>สูตรสำคัญ & อธิบายแนวคิด</h2>
+    <p><b>กฎของสเนล</b> <span class="kbd">n₁ sinθ₁ = n₂ sinθ₂</span> (วัดมุมจาก <b>เส้นแนวฉาก</b>)</p>
+    <p><b>เส้นแนวฉาก</b>: ผิวโค้ง ⇒ เส้น C–จุดตกกระทบ; ผิวราบ ⇒ เส้นตั้งฉากกับผิว</p>
+    <p><b>มุมวิกฤติ</b> (แก้ว→อากาศ) <span class="kbd">θc = arcsin(n₂/n₁)</span></p>
+  </div>
+</div>
+
+<!-- Modal: แบบฝึกหัด -->
+<div id="mdlExercises" class="modal" role="dialog" aria-modal="true">
+  <div class="card">
+    <button class="btn close" id="closeExercises">ปิด</button>
+    <h2>แบบฝึกหัด — หักเห/สะท้อนพื้นฐาน</h2>
+    <div class="qa">
+      <details>
+        <summary>1) อากาศ (1.00) → แก้ว (1.50), θi = 30° หา θr</summary>
+        <p><b>เฉลย:</b> sinθr = (1/1.5)·sin30° = 1/3 ⇒ θr ≈ 19.47°</p>
+      </details>
+      <details>
+        <summary>2) แก้ว (1.50) → อากาศ (1.00), θi = 45° จะเกิดอะไร?</summary>
+        <p><b>เฉลย:</b> θc ≈ 41.81°; 45° &gt; θc ⇒ <b>เกิดการสะท้อนกลับหมด(TIR)</b></p>
+      </details>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const sv = document.getElementById('sv');
+  const shapePath = document.getElementById('shapePath');
+  const flatFace = document.getElementById('flatFace');
+  const nSlider = document.getElementById('nSlider');
+  const nBox = document.getElementById('nBox');
+  const nVal = document.getElementById('nVal');
+  const ang = document.getElementById('ang');
+  const angBox = document.getElementById('angBox');
+  const rad = document.getElementById('rad');
+  const radBox = document.getElementById('radBox');
+  const msg = document.getElementById('msg');
+  const critVal = document.getElementById('critVal');
+  const shapeTag = document.getElementById('shapeTag');
+  const toggleShape = document.getElementById('toggleShape');
+  const toggleAngles = document.getElementById('toggleAngles');
+
+  const btnFormulas = document.getElementById('btnFormulas');
+  const btnExercises = document.getElementById('btnExercises');
+  const mdlFormulas = document.getElementById('mdlFormulas');
+  const mdlExercises = document.getElementById('mdlExercises');
+  document.getElementById('closeFormulas').onclick = ()=> mdlFormulas.classList.remove('open');
+  document.getElementById('closeExercises').onclick = ()=> mdlExercises.classList.remove('open');
+  btnFormulas.onclick = ()=> mdlFormulas.classList.add('open');
+  btnExercises.onclick = ()=> mdlExercises.classList.add('open');
+  [mdlFormulas, mdlExercises].forEach(m => m.addEventListener('click', (e)=>{ if(e.target===m) m.classList.remove('open'); }));
+
+  const rayIn = document.getElementById('rayIn');
+  const rayMid = document.getElementById('rayMid');
+  const rayMid2 = document.getElementById('rayMid2');
+  const rayOut = document.getElementById('rayOut');
+  const rayInGlow = document.getElementById('rayInGlow');
+  const rayMidGlow = document.getElementById('rayMidGlow');
+  const rayMid2Glow = document.getElementById('rayMid2Glow');
+  const rayOutGlow = document.getElementById('rayOutGlow');
+
+  const normal1 = document.getElementById('normal1');
+  const normal2 = document.getElementById('normal2');
+  const normal3 = document.getElementById('normal3');
+
+  const hit1 = document.getElementById('hit1');
+  const hit2 = document.getElementById('hit2');
+  const hit3 = document.getElementById('hit3');
+
+  const lbl_i1 = document.getElementById('lbl_i1');
+  const lbl_i2 = document.getElementById('lbl_i2');
+  const lbl_r1 = document.getElementById('lbl_r1');
+  const lbl_r2 = document.getElementById('lbl_r2');
+
+  const refl1 = document.getElementById('refl1');
+  const refl2 = document.getElementById('refl2');
+  const refl3 = document.getElementById('refl3');
+  const grad1 = document.getElementById('reflGrad1');
+  const grad2 = document.getElementById('reflGrad2');
+  const grad3 = document.getElementById('reflGrad3');
+
+  const torch = document.getElementById('torch');
+  const switchBtn = document.getElementById('switch');
+
+  let showAngles = false; // start hidden
+  let shapeMode = 'semi'; // 'semi' | 'rect'
+  const C = {x:800, y:310};
+  let R  = +rad.value;
+  let n_mat = +nSlider.value;
+  let S = {x: 250, y: 280};
+  let thetaDeg = +ang.value;
+  let beamOn = true;
+
+  toggleAngles.addEventListener('click', ()=>{
+    showAngles = !showAngles;
+    toggleAngles.textContent = showAngles ? 'ซ่อนมุม' : 'แสดงมุม';
+    render();
+  });
+
+  toggleShape.addEventListener('click', ()=>{
+    shapeMode = (shapeMode==='semi'?'rect':'semi');
+    shapeTag.textContent = 'รูปทรง: ' + (shapeMode==='semi'?'ครึ่งวงกลม':'สี่เหลี่ยม');
+    render();
+  });
+
+  // Utils
+  function line(el,x1,y1,x2,y2){ el.setAttribute('x1',x1); el.setAttribute('y1',y1); el.setAttribute('x2',x2); el.setAttribute('y2',y2); }
+  function point(el,x,y){ el.setAttribute('cx',x); el.setAttribute('cy',y); }
+  function norm(v){ const m=Math.hypot(v.x,v.y)||1; return {x:v.x/m,y:v.y/m}; }
+  function dot(a,b){ return a.x*b.x + a.y*b.y; }
+  function rad2deg(a){ return a*180/Math.PI; }
+  function makeTangent(n){ const nh=norm(n); return {x:-nh.y, y:nh.x}; }
+  function signedAngleFromNormal(v, n){
+    let nh = norm(n);
+    if (dot(v, nh) < 0) nh = {x:-nh.x, y:-nh.y};
+    const th = makeTangent(nh); const vh = norm(v);
+    const a = Math.atan2( dot(vh, th), dot(vh, nh) );
+    return { theta: Math.abs(a), side: (a>=0? +1 : -1) };
+  }
+  function reflect(v,n){ v=norm(v); n=norm(n); const dn=dot(v,n); return norm({x:v.x - 2*dn*n.x, y:v.y - 2*dn*n.y}); }
+  function showLabel(el){ el.setAttribute('visibility', showAngles ? 'visible' : 'hidden'); }
+
+  // Robust refraction
+  function refractFixed(v, N, n1, n2){
+    v = norm(v); N = norm(N);
+    let cosi = Math.max(-1, Math.min(1, dot(v, N)));
+    let etai = n1, etat = n2;
+    let n = {x:N.x, y:N.y};
+    if (cosi > 0){ [etai, etat] = [etat, etai]; n = {x:-N.x, y:-N.y}; }
+    else { cosi = -cosi; }
+    const eta = etai/etat;
+    let k = 1 - eta*eta*(1 - cosi*cosi);
+    if (k < 0 && k > -1e-12) k = 0;
+    if (k < 0) return null;
+    const out = { x: eta*v.x + (eta*cosi - Math.sqrt(k))*n.x,
+                  y: eta*v.y + (eta*cosi - Math.sqrt(k))*n.y };
+    return norm(out);
+  }
+
+  function hitRayVertical(S,dir,x){
+    if(Math.abs(dir.x)<1e-9) return null;
+    const t=(x - S.x)/dir.x;
+    if(t<=1e-6) return null;
+    return {x:x, y:S.y + dir.y*t, t};
+  }
+  function hitRayHorizontal(S,dir,y){
+    if(Math.abs(dir.y)<1e-9) return null;
+    const t=(y - S.y)/dir.y;
+    if(t<=1e-6) return null;
+    return {x:S.x + dir.x*t, y:y, t};
+  }
+  function within(v,a,b){ return v>=Math.min(a,b)-1e-6 && v<=Math.max(a,b)+1e-6; }
+
+  function hideAll(){
+    [rayIn,rayInGlow,rayMid,rayMidGlow,rayMid2,rayMid2Glow,rayOut,rayOutGlow,
+     normal1,normal2,normal3,hit1,hit2,hit3,lbl_i1,lbl_r1,lbl_i2,lbl_r2,refl1,refl2,refl3].forEach(el=>el.setAttribute('visibility','hidden'));
+  }
+
+  function drawReflShort(el, grad, px, py, vx, vy, L=60){
+    const x2 = px + vx*L, y2 = py + vy*L;
+    line(el, px, py, x2, y2);
+    grad.setAttribute('x1', px); grad.setAttribute('y1', py);
+    grad.setAttribute('x2', x2); grad.setAttribute('y2', y2);
+    el.setAttribute('visibility','visible');
+  }
+
+  // Interaction
+  function getMouseSVG(e){ const pt=sv.createSVGPoint(); pt.x=e.clientX; pt.y=e.clientY; return pt.matrixTransform(sv.getScreenCTM().inverse()); }
+  function getTorchMatrix(){
+    if(!torch.transform.baseVal.numberOfItems){
+      const t=sv.createSVGTransform(); t.setTranslate(S.x,S.y); torch.transform.baseVal.appendItem(t);
+      const r=sv.createSVGTransform(); r.setRotate(-thetaDeg,0,0); torch.transform.baseVal.appendItem(r);
+    }
+    return torch.transform.baseVal.consolidate().matrix;
+  }
+  function toLocal(pt){ const M=getTorchMatrix(); const det=M.a*M.d - M.b*M.c || 1;
+    const inv={a:M.d/det,b:-M.b/det,c:-M.c/det,d:M.a/det,e:(M.c*M.f - M.d*M.e)/det,f:(M.b*M.e - M.a*M.f)/det};
+    return {x:inv.a*pt.x + inv.c*pt.y + inv.e, y:inv.b*pt.x + inv.d*pt.y + inv.f}; }
+  function inRectLocal(x,y){ return (x>=-60 && x<=0 && y>=-10 && y<=10); }
+  function inCircleLocal(x,y){ const dx=x-16, dy=y-0; return dx*dx+dy*dy<=144; }
+
+  let dragging=false, rotating=false; let dragId=null, rotId=null;
+  sv.addEventListener('pointerdown', (e)=>{ const pt=getMouseSVG(e), pl=toLocal(pt);
+    if(inCircleLocal(pl.x,pl.y)){ rotating=true; rotId=e.pointerId; sv.setPointerCapture(rotId); updateRotation(pt); }
+    else if(inRectLocal(pl.x,pl.y)){ dragging=true; dragId=e.pointerId; sv.setPointerCapture(dragId); }
+  });
+  sv.addEventListener('pointermove', (e)=>{ const pt=getMouseSVG(e);
+    if(rotating && e.pointerId===rotId) updateRotation(pt);
+    if(dragging && e.pointerId===dragId){ S.x=pt.x; S.y=pt.y; render(); }
+  });
+  sv.addEventListener('pointerup', (e)=>{ if(rotating&&e.pointerId===rotId){ rotating=false; sv.releasePointerCapture(rotId); }
+    if(dragging&&e.pointerId===dragId){ dragging=false; sv.releasePointerCapture(dragId); }});
+  function updateRotation(pt){
+    const dx = pt.x - S.x, dy = pt.y - S.y;
+    let degv = Math.atan2(-dy, dx) * 180 / Math.PI; // CCW=+, CW=−
+    if (degv > 180) degv -= 360; if (degv < -180) degv += 360;
+    thetaDeg = degv; ang.value = angBox.value = Math.round(thetaDeg); render();
+  }
+
+  switchBtn.addEventListener('click', (e)=>{ beamOn=!beamOn; switchBtn.setAttribute('fill', beamOn?'#ef4444':'#9ca3af'); render(); e.stopPropagation(); });
+  function link2(a,b,fmt=(x)=>x){ a.addEventListener('input',()=>{b.value=fmt(a.value); render();});
+                                   b.addEventListener('input',()=>{a.value=fmt(b.value); render();}); }
+  link2(nSlider,nBox,(v)=>(+v).toFixed(2));
+  link2(ang,angBox,(v)=>Math.max(-180,Math.min(180,Math.round(+v))));
+  link2(rad,radBox,(v)=>Math.max(80,Math.min(220,Math.round(+v))));
+
+  document.getElementById('resetBtn').addEventListener('click', ()=>{
+    nSlider.value=nBox.value="1.50"; ang.value=angBox.value="0"; rad.value=radBox.value="160";
+    R=+rad.value; thetaDeg=+ang.value; n_mat=+nSlider.value; S={x:250,y:280}; beamOn=true; shapeMode='semi'; showAngles=false;
+    toggleAngles.textContent='แสดงมุม';
+    switchBtn.setAttribute('fill','#ef4444'); render();
+  });
+
+  function updateCrit(){
+    const n = +nSlider.value;
+    const c = (n>=1.0) ? rad2deg(Math.asin(1/Math.max(1,n))) : NaN;
+    critVal.textContent = isFinite(c) ? `≈ ${c.toFixed(1)}°` : '—';
+  }
+
+  function render(){
+    R=+rad.value; n_mat=+nSlider.value; nVal.textContent=(+n_mat).toFixed(2); updateCrit();
+    hideAll();
+
+    // draw shape
+    flatFace.setAttribute('x1',800); flatFace.setAttribute('x2',800);
+    flatFace.setAttribute('y1', 310-(R+20)); flatFace.setAttribute('y2', 310+(R+20));
+
+    if (shapeMode === 'semi'){
+      shapePath.setAttribute('d', `M ${C.x},${C.y-R} A ${R} ${R} 0 0 0 ${C.x-R},${C.y} A ${R} ${R} 0 0 0 ${C.x},${C.y+R} L ${C.x},${C.y-R} Z`);
+    } else {
+      shapePath.setAttribute('d', `M ${C.x-R},${C.y-R} L ${C.x},${C.y-R} L ${C.x},${C.y+R} L ${C.x-R},${C.y+R} Z`);
+    }
+
+    torch.setAttribute('transform', `translate(${S.x},${S.y}) rotate(${-thetaDeg})`);
+    if(!beamOn){ msg.textContent='ปิดไฟฉาย'; return; }
+
+    const th=thetaDeg*Math.PI/180;
+    const dir=norm({x:Math.cos(th), y:-Math.sin(th)});
+
+    if (shapeMode==='rect') renderRect(dir);
+    else renderSemi(dir);
+  }
+
+  // ================= Rect Mode =================
+  function renderRect(dir){
+    const xL=C.x-R, xR=C.x, yT=C.y-R, yB=C.y+R;
+
+    const hitL = hitRayVertical(S, dir, xL);
+    if(!hitL || !within(hitL.y,yT,yB)){
+      line(rayIn,S.x,S.y,S.x+dir.x*1600,S.y+dir.y*1600);
+      line(rayInGlow,S.x,S.y,S.x+dir.x*1600,S.y+dir.y*1600);
+      [rayIn,rayInGlow].forEach(el=>el.setAttribute('visibility','visible')); msg.textContent=''; return;
+    }
+    line(rayIn,S.x,S.y,hitL.x,hitL.y); line(rayInGlow,S.x,S.y,hitL.x,hitL.y);
+    [rayIn,rayInGlow,hit1,normal1].forEach(el=>el.setAttribute('visibility','visible'));
+    point(hit1, hitL.x, hitL.y);
+    line(normal1, hitL.x-80, hitL.y, hitL.x+80, hitL.y);
+    const n_left = {x:-1,y:0};
+    const A_Li = signedAngleFromNormal(dir, n_left);
+    lbl_i1.textContent = `θi₁ ≈ ${rad2deg(A_Li.theta).toFixed(1)}°`;
+    lbl_i1.setAttribute('x', hitL.x - 110); lbl_i1.setAttribute('y', hitL.y - 16);
+    showLabel(lbl_i1);
+    drawReflShort(refl1, grad1, hitL.x, hitL.y, reflect(dir,n_left).x, reflect(dir,n_left).y);
+
+    let v_in = refractFixed(dir, n_left, 1.0, n_mat);
+    if(!v_in){
+      // numerical guard: for air->glass
+      const side = A_Li.side;
+      const ang = Math.max(0, A_Li.theta * (1/Math.max(1,n_mat)) );
+      const t = {x:0,y:1};
+      v_in = norm({x:Math.cos(ang)*(-n_left.x) + side*Math.sin(ang)*t.x,
+                   y:Math.cos(ang)*(-n_left.y) + side*Math.sin(ang)*t.y});
+    }
+    const A_Lr = signedAngleFromNormal(v_in, n_left);
+    lbl_r1.textContent = `θr₁ ≈ ${rad2deg(A_Lr.theta).toFixed(2)}°`;
+    lbl_r1.setAttribute('x', hitL.x + 8); lbl_r1.setAttribute('y', hitL.y - 18);
+    showLabel(lbl_r1);
+
+    // choose next intersection
+    const cands=[];
+    const hR=hitRayVertical(hitL, v_in, xR); if(hR && within(hR.y,yT,yB)) cands.push({...hR,face:'right'});
+    const hT=hitRayHorizontal(hitL, v_in, yT); if(hT && within(hT.x,xL,xR)) cands.push({...hT,face:'top'});
+    const hB=hitRayHorizontal(hitL, v_in, yB); if(hB && within(hB.x,xL,xR)) cands.push({...hB,face:'bottom'});
+    if(cands.length===0){
+      line(rayMid,hitL.x,hitL.y,hitL.x+v_in.x*1400,hitL.y+v_in.y*1400);
+      line(rayMidGlow,hitL.x,hitL.y,hitL.x+v_in.x*1400,hitL.y+v_in.y*1400);
+      [rayMid,rayMidGlow].forEach(el=>el.setAttribute('visibility','visible')); return;
+    }
+    cands.sort((a,b)=>a.t-b.t);
+    const hitN=cands[0];
+    line(rayMid,hitL.x,hitL.y,hitN.x,hitN.y); line(rayMidGlow,hitL.x,hitL.y,hitN.x,hitN.y);
+    [rayMid,rayMidGlow,hit2].forEach(el=>el.setAttribute('visibility','visible')); point(hit2, hitN.x, hitN.y);
+
+    if(hitN.face==='right'){
+      line(normal2, hitN.x-100, hitN.y, hitN.x+100, hitN.y); normal2.setAttribute('visibility','visible');
+      const n_right={x:+1,y:0}; const A_Ri=signedAngleFromNormal(v_in,n_right);
+      lbl_i2.textContent=`θi₂ ≈ ${rad2deg(A_Ri.theta).toFixed(1)}°`; lbl_i2.setAttribute('x', hitN.x - 86); lbl_i2.setAttribute('y', hitN.y);
+      showLabel(lbl_i2);
+      drawReflShort(refl2, grad2, hitN.x, hitN.y, reflect(v_in,n_right).x, reflect(v_in,n_right).y);
+      // force exit angle = left incidence
+      const t_hat={x:0,y:+1}; const side=((v_in.x*t_hat.x+v_in.y*t_hat.y)>=0?+1:-1);
+      const v_out=norm({x:Math.cos(A_Li.theta)*n_right.x + side*Math.sin(A_Li.theta)*t_hat.x,
+                        y:Math.cos(A_Li.theta)*n_right.y + side*Math.sin(A_Li.theta)*t_hat.y});
+      lbl_r2.textContent=`θr₂ = θi₁ ≈ ${rad2deg(A_Li.theta).toFixed(1)}°`; lbl_r2.setAttribute('x', hitN.x + 12); lbl_r2.setAttribute('y', hitN.y - 20);
+      showLabel(lbl_r2);
+      line(rayOut,hitN.x,hitN.y,hitN.x+v_out.x*1600,hitN.y+v_out.y*1600); line(rayOutGlow,hitN.x,hitN.y,hitN.x+v_out.x*1600,hitN.y+v_out.y*1600);
+      [rayOut,rayOutGlow].forEach(el=>el.setAttribute('visibility','visible')); return;
+    }
+
+    const n_tb=(hitN.face==='top')?{x:0,y:-1}:{x:0,y:+1}; line(normal3, hitN.x, hitN.y-80, hitN.x, hitN.y+80); normal3.setAttribute('visibility','visible');
+    const A_tb_i=signedAngleFromNormal(v_in,n_tb); lbl_i2.textContent=`θi₂ ≈ ${rad2deg(A_tb_i.theta).toFixed(1)}°`; lbl_i2.setAttribute('x', hitN.x + 10); lbl_i2.setAttribute('y', hitN.y - 8);
+    showLabel(lbl_i2);
+    const v_refTB=reflect(v_in,n_tb); drawReflShort(refl2, grad2, hitN.x, hitN.y, v_refTB.x, v_refTB.y);
+    const theta_c=Math.asin(1/Math.max(1,n_mat));
+    if(A_tb_i.theta>theta_c+1e-9){
+      const hitR2=hitRayVertical(hitN, v_refTB, xR);
+      if(hitR2 && within(hitR2.y,yT,yB)){
+        point(hit3, hitR2.x, hitR2.y); hit3.setAttribute('visibility','visible');
+        line(rayMid2,hitN.x,hitN.y,hitR2.x,hitR2.y); line(rayMid2Glow,hitN.x,hitN.y,hitR2.x,hitR2.y);
+        [rayMid2,rayMid2Glow].forEach(el=>el.setAttribute('visibility','visible'));
+        const n_right={x:+1,y:0}; drawReflShort(refl3, grad3, hitR2.x, hitR2.y, reflect(v_refTB,n_right).x, reflect(v_refTB,n_right).y);
+        const A_R2i=signedAngleFromNormal(v_refTB,n_right); const sR=(n_mat/1.0)*Math.sin(A_R2i.theta);
+        if(sR>1){
+          const v_reR=reflect(v_refTB,n_right); line(rayOut,hitR2.x,hitR2.y,hitR2.x+v_reR.x*1400,hitR2.y+v_reR.y*1400);
+          line(rayOutGlow,hitR2.x,hitR2.y,hitR2.x+v_reR.x*1400,hitR2.y+v_reR.y*1400); [rayOut,rayOutGlow].forEach(el=>el.setAttribute('visibility','visible'));
+          lbl_r2.textContent=''; return;
+        }else{
+          const t_hat={x:0,y:+1}; const side=((v_refTB.x*t_hat.x+v_refTB.y*t_hat.y)>=0?+1:-1);
+          const v_outR=norm({x:Math.cos(A_Li.theta)*n_right.x + side*Math.sin(A_Li.theta)*t_hat.x,
+                             y:Math.cos(A_Li.theta)*n_right.y + side*Math.sin(A_Li.theta)*t_hat.y});
+          lbl_r2.textContent=`θr₂ = θi₁ ≈ ${rad2deg(A_Li.theta).toFixed(1)}°`; lbl_r2.setAttribute('x', hitR2.x + 12); lbl_r2.setAttribute('y', hitR2.y - 20); showLabel(lbl_r2);
+          line(rayOut,hitR2.x,hitR2.y,hitR2.x+v_outR.x*1600,hitR2.y+v_outR.y*1600); line(rayOutGlow,hitR2.x,hitR2.y,hitR2.x+v_outR.x*1600,hitR2.y+v_outR.y*1600);
+          [rayOut,rayOutGlow].forEach(el=>el.setAttribute('visibility','visible')); return;
+        }
+      } else {
+        line(rayOut,hitN.x,hitN.y,hitN.x+v_refTB.x*1400,hitN.y+v_refTB.y*1400); line(rayOutGlow,hitN.x,hitN.y,hitN.x+v_refTB.x*1400,hitN.y+v_refTB.y*1400);
+        [rayOut,rayOutGlow].forEach(el=>el.setAttribute('visibility','visible')); return;
+      }
+    } else {
+      const v_out_tb=refractFixed(v_in,n_tb,n_mat,1.0); const A_tb_r=signedAngleFromNormal(v_out_tb,n_tb);
+      lbl_r2.textContent=`θr₂ ≈ ${rad2deg(A_tb_r.theta).toFixed(1)}°`; lbl_r2.setAttribute('x', hitN.x + 12); lbl_r2.setAttribute('y', hitN.y - 26); showLabel(lbl_r2);
+      line(rayOut,hitN.x,hitN.y,hitN.x+v_out_tb.x*1600,hitN.y+v_out_tb.y*1600); line(rayOutGlow,hitN.x,hitN.y,hitN.x+v_out_tb.x*1600,hitN.y+v_out_tb.y*1600);
+      [rayOut,rayOutGlow].forEach(el=>el.setAttribute('visibility','visible')); return;
+    }
+  }
+
+  // ================= Semi Mode =================
+  function hitRayCircle(S,dir,C,R,accept){
+    const sx=S.x-C.x, sy=S.y-C.y;
+    const b=2*(sx*dir.x + sy*dir.y);
+    const c=sx*sx + sy*sy - R*R;
+    const D=b*b - 4*c; if(D<0) return null;
+    const sD=Math.sqrt(D);
+    const cand=[(-b - sD)/2, (-b + sD)/2].filter(t=>t>1e-6).sort((a,b)=>a-b);
+    for(const t of cand){
+      const P={x:S.x+dir.x*t, y:S.y+dir.y*t};
+      if(!accept || accept(P)) return P;
+    }
+    return null;
+  }
+
+  function renderSemi(dir){
+    // hit curved entry (x <= C.x)
+    const h1=hitRayCircle(S, dir, C, R, P => P.x <= C.x + 1e-6);
+    if(!h1){
+      line(rayIn,S.x,S.y,S.x+dir.x*1600,S.y+dir.y*1600); line(rayInGlow,S.x,S.y,S.x+dir.x*1600,S.y+dir.y*1600);
+      [rayIn,rayInGlow].forEach(el=>el.setAttribute('visibility','visible')); return;
+    }
+    line(rayIn,S.x,S.y,h1.x,h1.y); line(rayInGlow,S.x,S.y,h1.x,h1.y);
+    [rayIn,rayInGlow,hit1,normal1].forEach(el=>el.setAttribute('visibility','visible')); point(hit1,h1.x,h1.y);
+    const n1 = norm({x:h1.x-C.x, y:h1.y-C.y});
+    line(normal1, C.x, C.y, h1.x+n1.x*60, h1.y+n1.y*60);
+    const A1i = signedAngleFromNormal(dir, n1);
+    lbl_i1.textContent = `θi₁ ≈ ${rad2deg(A1i.theta).toFixed(1)}°`; lbl_i1.setAttribute('x', h1.x - 100); lbl_i1.setAttribute('y', h1.y - 50);
+    showLabel(lbl_i1);
+    drawReflShort(refl1, grad1, h1.x, h1.y, reflect(dir,n1).x, reflect(dir,n1).y);
+
+    let tIn = refractFixed(dir, n1, 1.0, n_mat);
+    if(!tIn){
+      // air->glass guard
+      const side = A1i.side;
+      const ang = Math.max(0, A1i.theta * (1/Math.max(1,n_mat)) );
+      const t = makeTangent(n1);
+      tIn = norm({x:Math.cos(ang)*(-n1.x) + side*Math.sin(ang)*t.x,
+                  y:Math.cos(ang)*(-n1.y) + side*Math.sin(ang)*t.y});
+    }
+    const A1r = signedAngleFromNormal(tIn, n1);
+    lbl_r1.textContent = `θr₁ ≈ ${rad2deg(A1r.theta).toFixed(2)}°`; lbl_r1.setAttribute('x', h1.x + 12); lbl_r1.setAttribute('y', h1.y - 20); showLabel(lbl_r1);
+
+    // go to flat
+    const h2 = hitRayVertical(h1, tIn, C.x);
+    if(!h2 || !within(h2.y, C.y-R, C.y+R)){
+      line(rayMid,h1.x,h1.y,h1.x+tIn.x*1400,h1.y+tIn.y*1400); line(rayMidGlow,h1.x,h1.y,h1.x+tIn.x*1400,h1.y+tIn.y*1400);
+      [rayMid,rayMidGlow].forEach(el=>el.setAttribute('visibility','visible')); return;
+    }
+    line(rayMid,h1.x,h1.y,h2.x,h2.y); line(rayMidGlow,h1.x,h1.y,h2.x,h2.y);
+    [rayMid,rayMidGlow,hit2].forEach(el=>el.setAttribute('visibility','visible')); point(hit2,h2.x,h2.y);
+    line(normal2, h2.x-100, h2.y, h2.x+100, h2.y); normal2.setAttribute('visibility','visible');
+    const n2 = {x:+1,y:0};
+    const A2i = signedAngleFromNormal(tIn, n2);
+    lbl_i2.textContent = `θi₂ ≈ ${rad2deg(A2i.theta).toFixed(1)}°`; lbl_i2.setAttribute('x', h2.x - 86); lbl_i2.setAttribute('y', h2.y); showLabel(lbl_i2);
+    drawReflShort(refl2, grad2, h2.x, h2.y, reflect(tIn,n2).x, reflect(tIn,n2).y);
+
+    const s2 = (n_mat/1.0) * Math.sin(A2i.theta);
+    if (s2>1){
+      // TIR at flat -> reflect to curved 3
+      const vref = reflect(tIn,n2);
+      const h3 = hitRayCircle(h2, vref, C, R, P => P.x <= C.x + 1e-6);
+      if(!h3){
+        line(rayOut,h2.x,h2.y,h2.x+vref.x*1600,h2.y+vref.y*1600); line(rayOutGlow,h2.x,h2.y,h2.x+vref.x*1600,h2.y+vref.y*1600);
+        [rayOut,rayOutGlow].forEach(el=>el.setAttribute('visibility','visible')); return;
+      }
+      line(rayMid2,h2.x,h2.y,h3.x,h3.y); line(rayMid2Glow,h2.x,h2.y,h3.x,h3.y);
+      [rayMid2,rayMid2Glow,hit3].forEach(el=>el.setAttribute('visibility','visible')); point(hit3,h3.x,h3.y);
+      const n3 = norm({x:h3.x-C.x, y:h3.y-C.y}); line(normal3,C.x,C.y,h3.x+n3.x*60,h3.y+n3.y*60); normal3.setAttribute('visibility','visible');
+      drawReflShort(refl3, grad3, h3.x, h3.y, reflect(vref,n3).x, reflect(vref,n3).y);
+
+      const A3i = signedAngleFromNormal(vref, n3);
+      const s3 = (n_mat/1.0) * Math.sin(A3i.theta);
+      if (s3>1){
+        const vre2 = reflect(vref,n3);
+        line(rayOut,h3.x,h3.y,h3.x+vre2.x*1400,h3.y+vre2.y*1400); line(rayOutGlow,h3.x,h3.y,h3.x+vre2.x*1400,h3.y+vre2.y*1400);
+        [rayOut,rayOutGlow].forEach(el=>el.setAttribute('visibility','visible')); return;
+      }
+      const v_out3 = refractFixed(vref, n3, n_mat, 1.0);
+      line(rayOut,h3.x,h3.y,h3.x+v_out3.x*1600,h3.y+v_out3.y*1600); line(rayOutGlow,h3.x,h3.y,h3.x+v_out3.x*1600,h3.y+v_out3.y*1600);
+      [rayOut,rayOutGlow].forEach(el=>el.setAttribute('visibility','visible')); return;
+    } else {
+      // exit at flat
+      const v_out = refractFixed(tIn, n2, n_mat, 1.0);
+      const A2r = signedAngleFromNormal(v_out,n2);
+      lbl_r2.textContent = `θr₂ ≈ ${rad2deg(A2r.theta).toFixed(1)}°`; lbl_r2.setAttribute('x', h2.x + 12); lbl_r2.setAttribute('y', h2.y - 20);
+      showLabel(lbl_r2);
+      line(rayOut,h2.x,h2.y,h2.x+v_out.x*1600,h2.y+v_out.y*1600); line(rayOutGlow,h2.x,h2.y,h2.x+v_out.x*1600,h2.y+v_out.y*1600);
+      [rayOut,rayOutGlow].forEach(el=>el.setAttribute('visibility','visible')); return;
+    }
+  }
+
+  // init
+  render();
+  nSlider.addEventListener('input',render); nBox.addEventListener('input',render);
+  ang.addEventListener('input',()=>{thetaDeg=+ang.value; render();});
+  angBox.addEventListener('input',()=>{thetaDeg=+angBox.value; render();});
+  rad.addEventListener('input',render); radBox.addEventListener('input',render);
+})();
+</script>
+</body>
+</html>
