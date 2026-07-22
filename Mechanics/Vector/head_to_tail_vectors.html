@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>mini lab แรงลัพธ์จากแรง 2 แรง: หางต่อหาง → หางต่อหัว (มุมมองจากด้านบน และพื้นลื่น)</title>
+<style>
+  :root{--bg:#f7f9fc;--panel:#ffffff;--ink:#0f172a;--muted:#64748b;--accent:#2563eb;--blue:#2563eb;--green:#16a34a;--red:#ef4444;--soft:#f8fafc;}
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,sans-serif;color:var(--ink);background:var(--bg)}
+  .wrap{max-width:1120px;margin:20px auto;padding:14px}
+  .card{background:var(--panel);border:1px solid #e5e7eb;border-radius:18px;box-shadow:0 8px 26px rgba(2,8,23,.07);overflow:hidden}
+  header{padding:16px 20px;border-bottom:1px solid #e5e7eb}
+  h1{margin:0 0 6px;color:var(--accent);font-size:21px;line-height:1.35}
+  .small{font-size:12.5px;color:var(--muted);line-height:1.45}
+  .grid{display:grid;grid-template-columns:1.1fr .9fr;gap:0}
+  .left{padding:16px}.right{padding:16px;border-left:1px solid #e5e7eb}
+  canvas{width:100%;height:auto;aspect-ratio:720/500;background:#fff;border:1px solid #e5e7eb;border-radius:14px;touch-action:none;display:block;user-select:none}
+  .ctrl{display:grid;gap:11px}
+  .row{display:grid;grid-template-columns:112px 1fr 78px;align-items:center;gap:8px}
+  .row label{font-size:13px;color:#475569;font-weight:650}
+  input[type=range]{width:100%}
+  input[type=number]{width:78px;border:1px solid #cbd5e1;border-radius:9px;padding:8px 7px;font:600 13px system-ui;background:#fff;color:#0f172a}
+  .group{border:1px solid #e5e7eb;background:var(--soft);border-radius:14px;padding:10px;display:grid;gap:9px}
+  .group-title{font-size:13px;font-weight:800;color:#334155;display:flex;gap:8px;align-items:center}
+  .dot{width:11px;height:11px;border-radius:99px;display:inline-block}.blue{background:var(--blue)}.green{background:var(--green)}.red{background:var(--red)}
+  .checkrow{display:flex;gap:10px;align-items:center;padding:9px 10px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;font-size:13px;font-weight:650;color:#334155}
+  .btns{display:flex;flex-wrap:wrap;gap:9px}
+  button{border:0;border-radius:11px;padding:10px 13px;font-weight:800;cursor:pointer;font-family:inherit}
+  .primary{background:var(--accent);color:#fff}.ghost{background:#eef2ff;color:#1e293b}.orange{background:#fed7aa;color:#7c2d12}.danger{background:#fee2e2;color:#991b1b}
+  .stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+  .stat{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:10px;min-height:58px}
+  .stat b{display:block;font-size:12px;color:#64748b;margin-bottom:4px}.stat div{font-weight:800;color:#0f172a}
+  footer{text-align:center;padding:10px 0 2px}.tagline,.tagline a{color:var(--accent)}.tagline a{text-decoration:none;font-weight:800}
+  @media(max-width:920px){.grid{grid-template-columns:1fr}.right{border-left:0;border-top:1px solid #e5e7eb}.wrap{margin:10px auto;padding:10px}}
+  @media(max-width:560px){h1{font-size:18px}.row{grid-template-columns:82px 1fr 66px}.stats{grid-template-columns:1fr}input[type=number]{width:66px;padding:7px 5px}.left,.right{padding:10px}}
+</style>
+</head>
+<body>
+<div class="wrap"><div class="card">
+<header>
+  <h1>mini lab แรงลัพธ์จากแรง 2 แรง: หางต่อหาง → หางต่อหัว (มุมมองจากด้านบน และพื้นลื่น)</h1>
+  <div class="small">ลากปลายลูกศรเพื่อปรับขนาดและทิศทางของแรง หรือกรอกตัวเลขขนาดแรง–มุมได้โดยตรง แล้วกด “แสดงหางต่อหัว” เพื่อดูเวกเตอร์เคลื่อนมาประกอบกัน</div>
+</header>
+<div class="grid">
+  <div class="left"><canvas id="scene" width="720" height="500"></canvas></div>
+  <div class="right"><div class="ctrl">
+    <div class="group">
+      <div class="group-title"><span class="dot blue"></span> แรง F₁</div>
+      <div class="row"><label>ขนาด (N)</label><input id="f1" type="range" min="0" max="10" step="0.1" value="4"><input id="f1n" type="number" min="0" max="10" step="0.1" value="4.0"></div>
+      <div class="row"><label>มุม (°)</label><input id="a1" type="range" min="0" max="360" step="1" value="0"><input id="a1n" type="number" min="0" max="360" step="1" value="0"></div>
+    </div>
+    <div class="group">
+      <div class="group-title"><span class="dot green"></span> แรง F₂</div>
+      <div class="row"><label>ขนาด (N)</label><input id="f2" type="range" min="0" max="10" step="0.1" value="3"><input id="f2n" type="number" min="0" max="10" step="0.1" value="3.0"></div>
+      <div class="row"><label>มุม (°)</label><input id="a2" type="range" min="0" max="360" step="1" value="90"><input id="a2n" type="number" min="0" max="360" step="1" value="90"></div>
+    </div>
+    <div class="group">
+      <div class="row"><label>มวล m (kg)</label><input id="mass" type="range" min="0.5" max="20" step="0.1" value="5"><input id="mn" type="number" min="0.5" max="20" step="0.1" value="5.0"></div>
+      <label class="checkrow"><input id="showNet" type="checkbox"> แสดงแรงลัพธ์ Fₙₑₜ</label>
+      <label class="checkrow"><input id="showPara" type="checkbox"> แสดงเส้นปะประกอบแบบสี่เหลี่ยมด้านขนาน</label>
+      <label class="checkrow"><input id="showForceAngles" type="checkbox"> แสดงมุมของ F₁ และ F₂</label>
+      <div class="btns">
+        <button id="motionBtn" class="primary">▶ เล่น</button>
+        <button id="tailBtn" class="orange">▶ แสดงหางต่อหัว</button>
+        <button id="reset" class="ghost">↺ รีเซ็ต</button>
+      </div>
+    </div>
+    <div class="stats">
+      <div class="stat"><b>มุมระหว่าง F₁ กับ F₂</b><div id="between">— °</div></div>
+      <div class="stat"><b>|F<sub>net</sub>|</b><div id="Fmag">— N</div></div>
+      <div class="stat"><b>มุมของ F<sub>net</sub></b><div id="Fang">— °</div></div>
+      <div class="stat"><b>|a| = |F<sub>net</sub>| / m</b><div id="Amag">— m/s²</div></div>
+      <div class="stat"><b>ความเร็ววัตถุ</b><div id="Vmag">0.00 m/s</div></div>
+    </div>
+    <p class="small">หมายเหตุ: มุมวัดจากแกน +x ทวนเข็มนาฬิกา และมุมระหว่าง F₁ กับ F₂ แสดงเป็นมุมเล็กสุดระหว่างเวกเตอร์ทั้งสอง</p>
+    <footer><p class="tagline">ศึกษาเพิ่มเติมได้ที่ <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noreferrer">เพจคลายปมฟิสิกส์</a></p></footer>
+  </div></div>
+</div>
+</div></div>
+<script>
+(()=>{
+const cvs=document.getElementById('scene'),ctx=cvs.getContext('2d');
+const $=id=>document.getElementById(id);
+const f1=$('f1'),f1n=$('f1n'),a1=$('a1'),a1n=$('a1n'),f2=$('f2'),f2n=$('f2n'),a2=$('a2'),a2n=$('a2n'),mass=$('mass'),mn=$('mn');
+const showNet=$('showNet'),showPara=$('showPara'),showForceAngles=$('showForceAngles'),tailBtn=$('tailBtn'),motionBtn=$('motionBtn'),reset=$('reset');
+const out={between:$('between'),Fmag:$('Fmag'),Fang:$('Fang'),Amag:$('Amag'),Vmag:$('Vmag')};
+const startPos={x:cvs.width/2,y:cvs.height/2};
+const obj={x:startPos.x,y:startPos.y};
+const vel={x:0,y:0};
+const gridSize=40; // px ต่อ 1 ช่องกริด
+const scale=gridSize; // 1 ช่องกริด = 1 N
+let dragging=null, tailAnim=0, animating=false, moving=false;
+const labelOffset={f1:{dx:0,dy:0},f2:{dx:0,dy:0},net:{dx:0,dy:0},angle:{dx:0,dy:0},angleF1:{dx:0,dy:0},angleF2:{dx:0,dy:0}};
+const labelBox={f1:null,f2:null,net:null,angle:null,angleF1:null,angleF2:null};
+let lastPointer=null;
+function clamp(v,min,max){return Math.max(min,Math.min(max,v));}
+function normDeg(d){return ((d%360)+360)%360;}
+function rad(d){return d*Math.PI/180;}
+function lerp(a,b,t){return a+(b-a)*t;}
+function ease(t){return t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;}
+function syncRangeNum(range,num,dec=1){num.value=(+range.value).toFixed(dec);} 
+function setRangeNum(range,num,val,dec=1){val=clamp(+val,+range.min,+range.max); range.value=val; num.value=val.toFixed(dec);} 
+[[f1,f1n,1],[f2,f2n,1],[mass,mn,1]].forEach(([r,n,d])=>{r.addEventListener('input',()=>{syncRangeNum(r,n,d); stopAnim();}); n.addEventListener('input',()=>{setRangeNum(r,n,n.value,d); stopAnim();});});
+[[a1,a1n,0],[a2,a2n,0]].forEach(([r,n,d])=>{r.addEventListener('input',()=>{syncRangeNum(r,n,d); stopAnim();}); n.addEventListener('input',()=>{setRangeNum(r,n,n.value,d); stopAnim();});});
+function vec(mag,ang){const th=rad(ang);return {x:mag*Math.cos(th),y:mag*Math.sin(th),mag,ang:normDeg(ang)};}
+function state(){const v1=vec(+f1.value,+a1.value),v2=vec(+f2.value,+a2.value);const net={x:v1.x+v2.x,y:v1.y+v2.y};net.mag=Math.hypot(net.x,net.y);net.ang=normDeg(Math.atan2(net.y,net.x)*180/Math.PI);let d=Math.abs(normDeg(v2.ang-v1.ang)); if(d>180)d=360-d;return{v1,v2,net,between:d,m:+mass.value};}
+function tipFrom(base,v){return{x:base.x+v.x*scale,y:base.y-v.y*scale};}
+function drawGrid(){ctx.save();ctx.strokeStyle='#e5e7eb';ctx.lineWidth=1;for(let x=0;x<cvs.width;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,cvs.height);ctx.stroke();}for(let y=0;y<cvs.height;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(cvs.width,y);ctx.stroke();}ctx.restore();}
+function drawTextLabel(key,text,x,y,color){const off=labelOffset[key]||{dx:0,dy:0};const lx=x+off.dx,ly=y+off.dy;ctx.save();ctx.font='700 18px system-ui';ctx.fillStyle=color;ctx.fillText(text,lx,ly);const m=ctx.measureText(text);labelBox[key]={x:lx-8,y:ly-24,w:m.width+16,h:32};ctx.restore();}
+function drawArrow(base,v,color,label,lw=3,key=null){const tip=tipFrom(base,v);const dx=tip.x-base.x,dy=tip.y-base.y,len=Math.hypot(dx,dy)||1,ux=dx/len,uy=dy/len,head=12;ctx.save();ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=lw;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(base.x,base.y);ctx.lineTo(tip.x,tip.y);ctx.stroke();ctx.beginPath();ctx.moveTo(tip.x,tip.y);ctx.lineTo(tip.x-ux*head-uy*6,tip.y-uy*head+ux*6);ctx.lineTo(tip.x-ux*head+uy*6,tip.y-uy*head-ux*6);ctx.closePath();ctx.fill();ctx.restore(); if(label){const lx=base.x+dx*.55-uy*16,ly=base.y+dy*.55+ux*16;drawTextLabel(key||'',label,lx,ly,color);}return tip;}
+function dashed(a,b,color){ctx.save();ctx.setLineDash([8,6]);ctx.strokeStyle=color;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore();}
+function drawAngleArc(s,base){if(s.v1.mag<=0||s.v2.mag<=0){labelBox.angle=null;return;}const start=-rad(s.v1.ang),diff=((s.v2.ang-s.v1.ang+540)%360)-180,end=start-rad(diff),r=43;ctx.save();ctx.strokeStyle='#64748b';ctx.lineWidth=2;ctx.beginPath();ctx.arc(base.x,base.y,r,start,end,diff>0);ctx.stroke();const mid=(start+end)/2;ctx.restore();drawTextLabel('angle',`θ = ${s.between.toFixed(0)}°`,base.x+(r+16)*Math.cos(mid),base.y+(r+16)*Math.sin(mid),'#475569');}
+function drawForceAngle(base,v,key,label,color,r=28){if(!showForceAngles.checked||v.mag<=0){labelBox[key]=null;return;}const a=normDeg(v.ang);const end=-rad(a);ctx.save();ctx.strokeStyle=color;ctx.globalAlpha=.75;ctx.lineWidth=2;ctx.beginPath();ctx.arc(base.x,base.y,r,0,end,end<0);ctx.stroke();ctx.restore();const mid=end/2;drawTextLabel(key,`${label} = ${a.toFixed(0)}°`,base.x+(r+28)*Math.cos(mid),base.y+(r+28)*Math.sin(mid),color);}
+function drawAxes(){ctx.save();ctx.strokeStyle='#94a3b8';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(42,cvs.height-42);ctx.lineTo(105,cvs.height-42);ctx.moveTo(42,cvs.height-42);ctx.lineTo(42,cvs.height-105);ctx.stroke();ctx.fillStyle='#475569';ctx.font='700 12px system-ui';ctx.fillText('+x →',109,cvs.height-38);ctx.fillText('↑ +y',25,cvs.height-109);ctx.restore();}
+function updateOutputs(s){out.between.textContent=`${s.between.toFixed(1)}°`;out.Fmag.textContent=`${s.net.mag.toFixed(2)} N`;out.Fang.textContent=`${s.net.ang.toFixed(1)}°`;out.Amag.textContent=`${(s.net.mag/s.m).toFixed(3)} m/s²`;out.Vmag.textContent=`${Math.hypot(vel.x,vel.y).toFixed(2)} m/s`;}
+function drawTailToHead(s){const base=obj;const t=ease(tailAnim);labelBox.f1=null;labelBox.f2=null;labelBox.net=null;labelBox.angle=null;labelBox.angleF1=null;labelBox.angleF2=null;const base2={x:lerp(base.x,tipFrom(base,s.v1).x,t),y:lerp(base.y,tipFrom(base,s.v1).y,t)};ctx.save();ctx.globalAlpha=.28;if(s.v1.mag>0)drawArrow(base,s.v1,'#2563eb','');if(s.v2.mag>0)drawArrow(base,s.v2,'#16a34a','');ctx.restore();if(s.v1.mag>0)drawArrow(base,s.v1,'#2563eb',`F₁ = ${s.v1.mag.toFixed(1)} N`,3,'f1');if(s.v2.mag>0)drawArrow(base2,s.v2,'#16a34a',`F₂ = ${s.v2.mag.toFixed(1)} N`,3,'f2');if(tailAnim>.96 && showNet.checked && s.net.mag>0.001)drawArrow(base,s.net,'#ef4444',`Fₙₑₜ = ${s.net.mag.toFixed(2)} N`,3.2,'net');drawForceAngle(base,s.v1,'angleF1','θ₁','#2563eb',30);drawForceAngle(base2,s.v2,'angleF2','θ₂','#16a34a',30);ctx.save();ctx.fillStyle='#7c2d12';ctx.font='700 15px system-ui';ctx.fillText('โหมดหางต่อหัว: F₂ เคลื่อนหางไปต่อที่หัว F₁',24,30);ctx.restore();}
+function draw(){ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,cvs.width,cvs.height);ctx.restore();const s=state();const base=obj;labelBox.f1=null;labelBox.f2=null;labelBox.net=null;labelBox.angle=null;labelBox.angleF1=null;labelBox.angleF2=null;drawGrid();drawAxes();ctx.fillStyle='#111827';ctx.beginPath();ctx.arc(base.x,base.y,14,0,Math.PI*2);ctx.fill();if(animating||tailAnim>0){drawTailToHead(s);}else{const tip1=s.v1.mag>0?drawArrow(base,s.v1,'#2563eb',`F₁ = ${s.v1.mag.toFixed(1)} N`,3,'f1'):base;const tip2=s.v2.mag>0?drawArrow(base,s.v2,'#16a34a',`F₂ = ${s.v2.mag.toFixed(1)} N`,3,'f2'):base;const tipN=tipFrom(base,s.net);if(showPara.checked && s.v1.mag>0 && s.v2.mag>0){dashed(tip1,tipN,'#16a34a');dashed(tip2,tipN,'#2563eb');}if(showNet.checked && s.net.mag>0.001)drawArrow(base,s.net,'#ef4444',`Fₙₑₜ = ${s.net.mag.toFixed(2)} N`,3,'net');drawForceAngle(base,s.v1,'angleF1','θ₁','#2563eb',30);drawForceAngle(base,s.v2,'angleF2','θ₂','#16a34a',50);drawAngleArc(s,base);}updateOutputs(s);}
+function pointer(e){const r=cvs.getBoundingClientRect();return{x:(e.clientX-r.left)*cvs.width/r.width,y:(e.clientY-r.top)*cvs.height/r.height};}
+function hitTip(p,v){if(!v||v.mag<=0)return false;const tip=tipFrom(obj,v);return Math.hypot(p.x-tip.x,p.y-tip.y)<=22;}
+function hitObject(p){return Math.hypot(p.x-obj.x,p.y-obj.y)<=22;}
+function applyDrag(which,p){if(which==='obj'){obj.x=clamp(p.x,18,cvs.width-18);obj.y=clamp(p.y,18,cvs.height-18);vel.x=0;vel.y=0;moving=false;motionBtn.textContent='▶ เล่น';motionBtn.className='primary';return;}const dx=p.x-obj.x,dy=obj.y-p.y;let mag=Math.hypot(dx,dy)/scale;let angle=normDeg(Math.atan2(dy,dx)*180/Math.PI);if(which==='f1'){setRangeNum(f1,f1n,mag,1);setRangeNum(a1,a1n,Math.round(angle),0);}else{setRangeNum(f2,f2n,mag,1);setRangeNum(a2,a2n,Math.round(angle),0);}}
+function hitLabel(p){for(const k of ['angleF2','angleF1','angle','net','f2','f1']){const b=labelBox[k];if(b&&p.x>=b.x&&p.x<=b.x+b.w&&p.y>=b.y&&p.y<=b.y+b.h)return k;}return null;}
+function dragLabel(key,p){if(!lastPointer)return;labelOffset[key].dx+=p.x-lastPointer.x;labelOffset[key].dy+=p.y-lastPointer.y;lastPointer=p;}
+cvs.addEventListener('pointerdown',e=>{const p=pointer(e),s=state();const lk=hitLabel(p);if(lk){dragging='label:'+lk;}else if(hitObject(p)){stopAnim();dragging='obj';}else if(hitTip(p,s.v1)){stopAnim();dragging='f1';}else if(hitTip(p,s.v2)){stopAnim();dragging='f2';}if(dragging){cvs.setPointerCapture(e.pointerId);lastPointer=p;if(!dragging.startsWith('label:'))applyDrag(dragging,p);}});
+cvs.addEventListener('pointermove',e=>{const p=pointer(e);if(!dragging){const s=state();cvs.style.cursor=(hitLabel(p)||hitObject(p)||hitTip(p,s.v1)||hitTip(p,s.v2))?'grab':'default';return;}cvs.style.cursor='grabbing';if(dragging.startsWith('label:'))dragLabel(dragging.slice(6),p);else applyDrag(dragging,p);});
+['pointerup','pointercancel'].forEach(ev=>cvs.addEventListener(ev,()=>{dragging=null;lastPointer=null;cvs.style.cursor='default';}));
+function stopAnim(){animating=false;tailAnim=0;tailBtn.textContent='▶ แสดงหางต่อหัว';}
+motionBtn.addEventListener('click',()=>{moving=!moving;motionBtn.textContent=moving?'⏸ หยุด':'▶ เล่น';motionBtn.className=moving?'ghost':'primary';if(moving)stopAnim();});
+tailBtn.addEventListener('click',()=>{moving=false;motionBtn.textContent='▶ เล่น';motionBtn.className='primary';animating=true;tailAnim=0;tailBtn.textContent='กำลังแสดง...';});
+reset.addEventListener('click',()=>{setRangeNum(f1,f1n,4,1);setRangeNum(a1,a1n,0,0);setRangeNum(f2,f2n,3,1);setRangeNum(a2,a2n,90,0);setRangeNum(mass,mn,5,1);obj.x=startPos.x;obj.y=startPos.y;vel.x=0;vel.y=0;moving=false;motionBtn.textContent='▶ เล่น';motionBtn.className='primary';showNet.checked=false;showPara.checked=false;labelOffset.f1={dx:0,dy:0};labelOffset.f2={dx:0,dy:0};labelOffset.net={dx:0,dy:0};labelOffset.angle={dx:0,dy:0};labelOffset.angleF1={dx:0,dy:0};labelOffset.angleF2={dx:0,dy:0};showForceAngles.checked=false;stopAnim();});
+showNet.addEventListener('change',()=>{});showPara.addEventListener('change',()=>{});showForceAngles.addEventListener('change',()=>{});
+let last=performance.now();function loop(now){const dt=Math.min(.04,(now-last)/1000);last=now;const s=state();if(moving){const ax=s.net.x/s.m, ay=s.net.y/s.m;vel.x+=ax*dt;vel.y+=ay*dt;obj.x+=vel.x*dt*55;obj.y-=vel.y*dt*55;if(obj.x<18||obj.x>cvs.width-18){obj.x=clamp(obj.x,18,cvs.width-18);vel.x*=-0.45;}if(obj.y<18||obj.y>cvs.height-18){obj.y=clamp(obj.y,18,cvs.height-18);vel.y*=-0.45;}}if(animating){tailAnim+=dt/1.25;if(tailAnim>=1){tailAnim=1;animating=false;tailBtn.textContent='▶ แสดงหางต่อหัวอีกครั้ง';}}draw();requestAnimationFrame(loop);}requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

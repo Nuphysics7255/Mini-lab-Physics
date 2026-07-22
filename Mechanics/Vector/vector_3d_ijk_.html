@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Mini Lab : เวกเตอร์ 3 มิติ i j k</title>
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)'], ['$', '$']], displayMath: [['\\[','\\]']] },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<style>
+:root{
+  --blue:#2f6fd6; --deep:#204d7c; --soft:#edf3fb; --line:#d8e3ef;
+  --green:#e9f8e7; --orange:#fff3df; --orangeLine:#efc58f;
+  --red:#e64d4d; --text:#1d2b3a; --muted:#63768a;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Tahoma, sans-serif;
+  background:linear-gradient(180deg,#f7fbff,#eef5ff); color:var(--text);
+  padding: max(12px, env(safe-area-inset-top)) 12px calc(130px + env(safe-area-inset-bottom));
+}
+.app{max-width:1180px;margin:0 auto}
+.header{text-align:center;margin:8px 0 14px}
+.header h1{margin:0;color:var(--blue);font-size:clamp(24px,3.3vw,42px);font-weight:900;line-height:1.1}
+.header h2{margin:4px 0 0;color:var(--deep);font-size:clamp(20px,2.6vw,32px);font-weight:900}
+.main{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(320px,.9fr);gap:14px;align-items:start}
+.card{background:#fff;border:1px solid var(--line);border-radius:24px;box-shadow:0 12px 28px rgba(40,70,110,.10);overflow:hidden}
+.labTop{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:12px 14px;background:#f7fbff;border-bottom:1px solid var(--line)}
+.badge{display:inline-flex;align-items:center;gap:7px;background:var(--soft);color:#2e5f93;border-radius:999px;padding:8px 12px;font-weight:800;font-size:14px}
+.canvasWrap{position:relative;touch-action:none;background:radial-gradient(circle at 50% 45%,#ffffff 0,#f3f8ff 58%,#e8f2ff 100%)}
+#scene{width:100%;height:560px;display:block;cursor:grab;touch-action:none}
+.labExpanded{position:fixed!important;inset:max(8px,env(safe-area-inset-top)) 8px max(8px,env(safe-area-inset-bottom)) 8px;z-index:1200;display:flex;flex-direction:column;background:#fff;border-radius:24px;box-shadow:0 18px 70px rgba(0,0,0,.35);overflow:hidden}
+.labExpanded .canvasWrap{flex:1;min-height:0}
+.labExpanded #scene{height:100%!important}
+.labExpanded .mission{display:none}
+#scene:active{cursor:grabbing}
+.hintBox{position:absolute;left:14px;top:14px;max-width:min(390px,calc(100% - 28px));background:rgba(255,255,255,.92);backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:18px;padding:10px 12px;font-size:14px;line-height:1.45;box-shadow:0 8px 20px rgba(30,60,90,.12)}
+.hintBox button{float:right;margin:-4px -4px 4px 8px;border:0;background:#e7eef6;border-radius:10px;width:30px;height:30px;font-weight:900;color:#45688f}
+.controls{padding:14px;display:grid;gap:12px}
+.controlRow{background:#f9fbfe;border:1px solid var(--line);border-radius:18px;padding:12px}
+.rowHead{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;font-weight:900;color:var(--deep)}
+.value{font-variant-numeric:tabular-nums;background:#fff;border:1px solid var(--line);border-radius:12px;padding:5px 9px;color:#244f7e;font-weight:900;min-width:48px;text-align:center}
+
+.componentScroller{overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px}
+.componentStrip{display:flex;gap:10px;min-width:760px}
+.compBox{flex:1;background:#f9fbfe;border:1px solid var(--line);border-radius:18px;padding:12px;min-width:240px}
+.compTitle{text-align:center;font-weight:950;margin-bottom:8px;font-size:16px}
+.compTitle.red{color:#d93636}.compTitle.green{color:#0b8f2a}.compTitle.blue{color:#0d63e6}
+.numControl{display:grid;grid-template-columns:44px 1fr 44px;gap:8px;align-items:center;margin-bottom:10px}
+.numControl button{height:42px;border:1px solid var(--line);background:#fff;border-radius:12px;font-size:24px;color:#204d7c;font-weight:900;box-shadow:0 3px 0 rgba(0,0,0,.08)}
+.numControl input[type=number]{height:42px;border:1px solid var(--line);border-radius:12px;text-align:center;font-size:19px;font-weight:900;background:#fff;color:#111;min-width:0}
+#ax{accent-color:#e64d4d}#ay{accent-color:#20a647}#az{accent-color:#1266e5}
+
+.checks{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.checks label,.methodBox label{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:10px;font-weight:750;color:#33475b}
+.methodBox{display:grid;gap:8px}
+.formulaPanel{padding:14px;background:#fff}
+.formulaTitle{font-size:20px;font-weight:900;color:var(--blue);margin-bottom:8px}
+.formulaBox{background:#fff7ee;border:1.5px solid var(--orangeLine);border-radius:18px;padding:12px;margin:8px 0;line-height:1.7;overflow-x:auto}
+.readout{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.readout .mini{background:#f7fbff;border:1px solid var(--line);border-radius:16px;padding:10px;text-align:center;font-weight:800}
+.readout .num{display:block;font-size:22px;color:var(--red);font-weight:950;margin-top:2px}
+.mission{padding:14px;background:#fbfdff;border-top:1px solid var(--line)}
+.missionHead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.mission h3{margin:0;color:#1f6fe5;font-size:20px}
+.eyeBtn{border:1px solid var(--line);background:#fff;border-radius:999px;padding:8px 12px;font-weight:900;color:#2e5f93;box-shadow:0 3px 0 rgba(0,0,0,.08);display:inline-flex;align-items:center;gap:6px}
+.eyeIcon{font-size:18px;line-height:1}
+.mission.collapsed .missionBody{display:none}
+.missionText{background:#eef9ea;border:1px solid #bfe0b8;border-radius:18px;padding:12px;line-height:1.6;font-weight:750}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+button{font-family:inherit;cursor:pointer}
+.btn{border:0;border-radius:16px;padding:10px 14px;font-weight:900;box-shadow:0 4px 0 rgba(0,0,0,.12)}
+.btnBlue{background:#7bb9ef;color:#fff}.btnGray{background:#e4e9ef;color:#456}.btnOrange{background:#ffe4c4;color:#8b4d00}.btnGreen{background:#dff2da;color:#1f6f25}
+.footerLink{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(10px + env(safe-area-inset-bottom));background:rgba(255,255,255,.94);border:1px solid var(--line);border-radius:999px;padding:8px 14px;box-shadow:0 8px 24px rgba(40,70,110,.15);z-index:30;font-weight:800}
+.footerLink a{color:#1664d9;text-decoration:underline}
+.modal{position:fixed;inset:0;background:rgba(24,39,56,.45);z-index:50;display:none;align-items:flex-start;justify-content:center;padding:max(18px,env(safe-area-inset-top)) 12px calc(120px + env(safe-area-inset-bottom));overflow:auto}
+.modal.show{display:flex}.modalContent{max-width:880px;width:100%;background:#fff3df;border:2px solid #efc58f;border-radius:24px;padding:18px;box-shadow:0 18px 50px rgba(0,0,0,.25);position:relative}.close{position:fixed;right:18px;top:max(18px,env(safe-area-inset-top));width:48px;height:48px;border:0;border-radius:16px;background:#e7eef6;color:#45688f;font-size:24px;font-weight:900}.modalCloseInside{position:absolute;right:14px;top:14px;width:46px;height:46px;border:0;border-radius:16px;background:#e7eef6;color:#45688f;font-size:26px;font-weight:950;box-shadow:0 4px 0 rgba(0,0,0,.10)}.modal h2{color:#b36600;margin:0 56px 12px 0}.modal .formulaBox{background:#fff;border-color:#e9b36f}
+@media(max-width:860px){
+  body{padding-left:8px;padding-right:8px}.main{grid-template-columns:1fr}.header h1{font-size:clamp(21px,6vw,30px)}.header h2{font-size:clamp(18px,5vw,25px)}#scene{height:430px}.checks{grid-template-columns:1fr}.readout{grid-template-columns:1fr 1fr}.hintBox{font-size:13px}.labTop{flex-wrap:wrap}.footerLink{font-size:13px;width:max-content;max-width:calc(100vw - 18px);text-align:center}.componentStrip{min-width:720px}.compBox{min-width:230px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <h1>Mini Lab</h1>
+    <h2>เวกเตอร์ 3 มิติ \(\hat i\), \(\hat j\), \(\hat k\)</h2>
+  </div>
+  <div class="main">
+    <section class="card">
+      <div class="labTop">
+        <span class="badge">🧭 หมุนดูได้ด้วยนิ้ว/เมาส์</span>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end"><span class="badge" id="vecLabel">\(\vec A=3\hat i+4\hat j+4\hat k\)</span></div>
+      </div>
+      <div class="canvasWrap">
+        <canvas id="scene"></canvas>
+        <div class="hintBox" id="hintBox"><button onclick="this.parentElement.style.display='none'">×</button>
+          ลากบนจอเพื่อหมุนมุมมอง และใช้นิ้ว 2 นิ้วถ่าง/หุบเพื่อขยายหรือย่อภาพ จะเห็นเวกเตอร์ย่อย \(A_x\hat i\), \(A_y\hat j\), \(A_z\hat k\) ก่อน แล้วค่อยติ๊กเพื่อดูเวกเตอร์ลัพธ์ \(\vec A\)
+        </div>
+      </div>
+      <div class="mission" id="missionBox">
+        <div class="missionHead">
+          <h3>🎯 ภารกิจ</h3>
+          <button class="eyeBtn" id="missionToggle" type="button" onclick="toggleMission()"><span class="eyeIcon">👁️</span><span id="missionToggleText">ซ่อนภารกิจ</span></button>
+        </div>
+        <div class="missionBody">
+          <div class="missionText" id="missionText">ภารกิจที่ 1: ปรับให้ได้ \(\vec A=3\hat i+4\hat j+0\hat k\) แล้วสังเกตว่าขนาดเวกเตอร์เป็น 5</div>
+          <div class="btns">
+            <button class="btn btnGreen" onclick="nextMission()">ภารกิจถัดไป</button>
+            <button class="btn btnOrange" onclick="openFormula()">Σ สูตรสำคัญ</button>
+            <button class="btn btnGray" onclick="resetView()">🔄 รีเซ็ตมุมมอง</button>
+          </div>
+        </div>
+      </div>
+    </section>
+    <aside class="card">
+      <div class="controls">
+        <div class="componentScroller" aria-label="ปรับองค์ประกอบเวกเตอร์">
+          <div class="componentStrip">
+            <div class="compBox">
+              <div class="compTitle red">Ax \(\hat i\)</div>
+              <div class="numControl"><button type="button" data-step="ax" data-delta="-1">−</button><input id="axNum" type="number" min="-10" max="10" step="1" value="3"><button type="button" data-step="ax" data-delta="1">+</button></div>
+            </div>
+            <div class="compBox">
+              <div class="compTitle green">Ay \(\hat j\)</div>
+              <div class="numControl"><button type="button" data-step="ay" data-delta="-1">−</button><input id="ayNum" type="number" min="-10" max="10" step="1" value="4"><button type="button" data-step="ay" data-delta="1">+</button></div>
+            </div>
+            <div class="compBox">
+              <div class="compTitle blue">Az \(\hat k\)</div>
+              <div class="numControl"><button type="button" data-step="az" data-delta="-1">−</button><input id="azNum" type="number" min="-10" max="10" step="1" value="4"><button type="button" data-step="az" data-delta="1">+</button></div>
+            </div>
+          </div>
+        </div>
+        <div class="controlRow checks">
+          <label><input id="showComp" type="checkbox" checked /> แสดงเวกเตอร์ย่อย \(A_x\hat i, A_y\hat j, A_z\hat k\)</label>
+          <label><input id="showResult" type="checkbox" /> แสดงเวกเตอร์ลัพธ์ \(\vec A\)</label>
+          <label><input id="showCube" type="checkbox" checked /> ลูกบาศก์อ้างอิง</label>
+        </div>
+        <div class="controlRow">
+          <div class="rowHead"><span>วิธีหาเวกเตอร์ลัพธ์</span></div>
+          <div class="methodBox">
+            <label><input type="radio" name="method" value="box" checked /> สร้างทรงสี่เหลี่ยม: เส้นทแยงมุมคือเวกเตอร์ลัพธ์</label>
+            <label><input type="radio" name="method" value="tail" /> ต่อเวกเตอร์แบบหางต่อหัว</label>
+          </div>
+        </div>
+      </div>
+      <div class="formulaPanel">
+        <div class="formulaTitle">📌 ค่าที่ได้จากเวกเตอร์</div>
+        <div class="formulaBox">
+          ขนาดเวกเตอร์
+          \[|\vec A|=\sqrt{A_x^2+A_y^2+A_z^2}\]
+        </div>
+        <div class="readout">
+          <div class="mini">\(|\vec A|\)<span class="num" id="mag">5.39</span></div>
+          <div class="mini">วิธีที่เลือก<span class="num" id="methodReadout" style="font-size:15px;color:#204d7c">ทรงสี่เหลี่ยม</span></div>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<div class="modal" id="formulaModal">
+  <button class="close" onclick="closeFormula()">×</button>
+  <div class="modalContent">
+    <button class="modalCloseInside" onclick="closeFormula()" aria-label="ปิดหน้าสูตร">×</button>
+    <h2>Σ สูตรสำคัญ : เวกเตอร์ 3 มิติ</h2>
+    <div class="formulaBox">
+      เวกเตอร์ 3 มิติเขียนได้เป็น
+      \[\vec A=A_x\hat i+A_y\hat j+A_z\hat k\]
+      โดย \(\hat i\) คือทิศแกน x, \(\hat j\) คือทิศแกน y และ \(\hat k\) คือทิศแกน z
+    </div>
+    <div class="formulaBox">
+      ขนาดของเวกเตอร์หาได้จากพีทาโกรัสใน 3 มิติ
+      \[|\vec A|=\sqrt{A_x^2+A_y^2+A_z^2}\]
+    </div>
+    <div class="formulaBox">
+      การบวกเวกเตอร์ 3 มิติให้บวกแยกทีละแกน
+      \[\vec A+\vec B=(A_x+B_x)\hat i+(A_y+B_y)\hat j+(A_z+B_z)\hat k\]
+    </div>
+    <div class="formulaBox">
+      จุดที่ต้องระวัง: เครื่องหมายบวก/ลบของ \(A_x,A_y,A_z\) บอกทิศทางบนแกนนั้น ไม่ได้บอกว่าขนาดเป็นลบ เพราะขนาดเวกเตอร์ต้องไม่ติดลบเสมอ
+    </div>
+  </div>
+</div>
+
+<div class="footerLink">ศึกษาเพิ่มเติมที่ <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">เพจคลายปมฟิสิกส์</a></div>
+
+<script>
+const canvas=document.getElementById('scene'), ctx=canvas.getContext('2d');
+const axNum=document.getElementById('axNum'), ayNum=document.getElementById('ayNum'), azNum=document.getElementById('azNum');
+let rotX=-0.55, rotZ=0.72, zoom=1, dragging=false, lastX=0, lastY=0;
+const pointers=new Map(); let lastPinchDist=0;
+const state={Ax:3,Ay:4,Az:4};
+let labelBoxes=[];
+const HAT={i:'i\u0302',j:'j\u0302',k:'k\u0302'};
+// Draw vector arrow manually above the letter A on canvas labels to avoid missing-glyph squares on phones.
+const VEC='A';
+const missions=[
+  {t:'ภารกิจที่ 1: ปรับให้ได้ \\(\\vec A=3\\hat i+4\\hat j+0\\hat k\\) แล้วสังเกตว่าขนาดเวกเตอร์เป็น 5',v:[3,4,0]},
+  {t:'ภารกิจที่ 2: ทำให้เวกเตอร์ชี้ขึ้นด้านบนล้วน เช่น \\(\\vec A=0\\hat i+0\\hat j+5\\hat k\\)',v:[0,0,5]},
+  {t:'ภารกิจที่ 3: สร้างเวกเตอร์ \\(\\vec A=4\\hat i-3\\hat j+2\\hat k\\) แล้วดูทิศทางในอวกาศ',v:[4,-3,2]},
+  {t:'ภารกิจที่ 4: ปรับค่าเองให้ \\(|\\vec A|\\) ใกล้ 10 มากที่สุด',v:[6,8,0]},
+  {t:'ภารกิจที่ 5: ติ๊กแสดงเวกเตอร์ลัพธ์ แล้วเปรียบเทียบทิศของ \(\vec A\) กับเวกเตอร์ย่อย \(A_x\hat i, A_y\hat j, A_z\hat k\)',v:[5,4,6]}
+];
+let missionIndex=0;
+function resize(){const r=canvas.getBoundingClientRect(); const dpr=Math.min(devicePixelRatio||1,2); canvas.width=r.width*dpr; canvas.height=r.height*dpr; ctx.setTransform(dpr,0,0,dpr,0,0); draw();}
+function project(p){
+  let [x,y,z]=p; const cz=Math.cos(rotZ), sz=Math.sin(rotZ), cx=Math.cos(rotX), sx=Math.sin(rotX);
+  let x1=x*cz-y*sz, y1=x*sz+y*cz, z1=z;
+  let y2=y1*cx-z1*sx, z2=y1*sx+z1*cx;
+  const scale=Math.min(canvas.clientWidth,canvas.clientHeight)/28*zoom;
+  return {x:canvas.clientWidth/2+x1*scale, y:canvas.clientHeight/2-y2*scale, depth:z2};
+}
+function line(a,b,opt={}){const pa=project(a), pb=project(b);ctx.save();ctx.strokeStyle=opt.color||'#333';ctx.lineWidth=opt.w||2;ctx.globalAlpha=opt.alpha||1;if(opt.dash)ctx.setLineDash(opt.dash);ctx.beginPath();ctx.moveTo(pa.x,pa.y);ctx.lineTo(pb.x,pb.y);ctx.stroke();ctx.restore();}
+function overlaps(a,b){return !(a.x+a.w<b.x || b.x+b.w<a.x || a.y+a.h<b.y || b.y+b.h<a.y);}
+function drawLabelAtScreen(x,y,s,color='#24384d',size=15,dx=8,dy=-8){
+  if(!s) return;
+  ctx.save();
+  ctx.font=`900 ${size}px system-ui`;
+  const w=ctx.measureText(s).width, h=size+9;
+  let lx=x+dx, ly=y+dy-h+4;
+  const pad=6;
+  let box={x:lx-pad,y:ly-4,w:w+pad*2,h:h+4};
+  let tries=0;
+  while(labelBoxes.some(b=>overlaps(box,b)) && tries<18){
+    ly += (tries%2===0? h+6 : -(h+8));
+    if(ly<8) ly = y + 18 + tries*4;
+    if(ly+h>canvas.clientHeight-8) ly = y - h - 18 - tries*4;
+    box={x:lx-pad,y:ly-4,w:w+pad*2,h:h+4};
+    tries++;
+  }
+  lx=Math.max(6,Math.min(canvas.clientWidth-w-10,lx));
+  ly=Math.max(8,Math.min(canvas.clientHeight-h-8,ly));
+  box={x:lx-pad,y:ly-4,w:w+pad*2,h:h+4};
+  labelBoxes.push(box);
+  ctx.fillStyle='rgba(255,255,255,.90)';
+  ctx.strokeStyle='rgba(216,227,239,.95)';
+  ctx.lineWidth=1;
+  ctx.beginPath();
+  const r=8;
+  ctx.roundRect(lx-5,ly-3,w+10,h,r);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle=color;
+  ctx.fillText(s,lx,ly+size);
+  ctx.restore();
+}
+
+function drawVectorLabelAtScreen(x,y,prefix,tail,color='#24384d',size=16,dx=8,dy=-8){
+  const full = prefix + tail;
+  ctx.save();
+  ctx.font=`900 ${size}px system-ui`;
+  const w=ctx.measureText(full).width, h=size+11;
+  let lx=x+dx, ly=y+dy-h+4;
+  const pad=7;
+  let box={x:lx-pad,y:ly-5,w:w+pad*2,h:h+7};
+  let tries=0;
+  while(labelBoxes.some(b=>overlaps(box,b)) && tries<22){
+    ly += (tries%2===0? h+7 : -(h+9));
+    if(ly<10) ly = y + 20 + tries*4;
+    if(ly+h>canvas.clientHeight-10) ly = y - h - 20 - tries*4;
+    box={x:lx-pad,y:ly-5,w:w+pad*2,h:h+7};
+    tries++;
+  }
+  lx=Math.max(6,Math.min(canvas.clientWidth-w-12,lx));
+  ly=Math.max(10,Math.min(canvas.clientHeight-h-10,ly));
+  box={x:lx-pad,y:ly-5,w:w+pad*2,h:h+7};
+  labelBoxes.push(box);
+  ctx.fillStyle='rgba(255,255,255,.92)';
+  ctx.strokeStyle='rgba(216,227,239,.95)';
+  ctx.lineWidth=1;
+  ctx.beginPath();
+  ctx.roundRect(lx-6,ly-4,w+12,h+2,9);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle=color;
+  ctx.fillText(full,lx,ly+size);
+  // vector arrow above the first A only
+  const ay=ly+2, ax0=lx+2, ax1=lx+19;
+  ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=1.8; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(ax0,ay); ctx.lineTo(ax1,ay); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(ax1,ay); ctx.lineTo(ax1-5,ay-3.5); ctx.lineTo(ax1-5,ay+3.5); ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+function vectorLabel(p,prefix,tail,color='#24384d',size=16,dx=8,dy=-8){const pp=project(p);drawVectorLabelAtScreen(pp.x,pp.y,prefix,tail,color,size,dx,dy);}
+
+function text(p,s,color='#24384d',size=15,dx=8,dy=-8){const pp=project(p);drawLabelAtScreen(pp.x,pp.y,s,color,size,dx,dy);}
+function arrow(a,b,color,label,dx=8,dy=-8){
+  const pa=project(a), pb=project(b); ctx.save(); ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=4; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(pa.x,pa.y); ctx.lineTo(pb.x,pb.y); ctx.stroke();
+  const ang=Math.atan2(pb.y-pa.y,pb.x-pa.x), len=13;
+  ctx.beginPath(); ctx.moveTo(pb.x,pb.y); ctx.lineTo(pb.x-len*Math.cos(ang-.45),pb.y-len*Math.sin(ang-.45)); ctx.lineTo(pb.x-len*Math.cos(ang+.45),pb.y-len*Math.sin(ang+.45)); ctx.closePath(); ctx.fill(); ctx.restore();
+  if(label) drawLabelAtScreen(pb.x,pb.y,label,color,16,dx,dy);
+}
+
+function axisArrow(a,b,label){
+  const pa=project(a), pb=project(b); ctx.save(); ctx.strokeStyle='#111'; ctx.fillStyle='#111'; ctx.lineWidth=1.2; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(pa.x,pa.y); ctx.lineTo(pb.x,pb.y); ctx.stroke();
+  const ang=Math.atan2(pb.y-pa.y,pb.x-pa.x), len=8;
+  ctx.beginPath(); ctx.moveTo(pb.x,pb.y); ctx.lineTo(pb.x-len*Math.cos(ang-.42),pb.y-len*Math.sin(ang-.42)); ctx.lineTo(pb.x-len*Math.cos(ang+.42),pb.y-len*Math.sin(ang+.42)); ctx.closePath(); ctx.fill();
+  if(label){ctx.font='800 15px system-ui'; ctx.fillText(label,pb.x+7,pb.y-7)} ctx.restore();
+}
+
+function cube(){const s=10, pts=[[-s,-s,-s],[s,-s,-s],[s,s,-s],[-s,s,-s],[-s,-s,s],[s,-s,s],[s,s,s],[-s,s,s]], e=[[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]]; e.forEach(([i,j])=>line(pts[i],pts[j],{color:'#aec3d8',w:1,alpha:.45,dash:[5,6]}));}
+function gridPlane(z=0){for(let i=-10;i<=10;i+=2){line([-10,i,z],[10,i,z],{color:'#c8d7e8',w:1,alpha:.45});line([i,-10,z],[i,10,z],{color:'#c8d7e8',w:1,alpha:.45});}}
+
+function currentMethod(){return document.querySelector('input[name="method"]:checked')?.value || 'box';}
+function prismGuide(A){
+  const [x,y,z]=A;
+  const O=[0,0,0], X=[x,0,0], Y=[0,y,0], Z=[0,0,z], XY=[x,y,0], XZ=[x,0,z], YZ=[0,y,z], XYZ=[x,y,z];
+  const edges=[[O,X],[O,Y],[O,Z],[X,XY],[Y,XY],[X,XZ],[Z,XZ],[Y,YZ],[Z,YZ],[XY,XYZ],[XZ,XYZ],[YZ,XYZ]];
+  edges.forEach(([a,b])=>line(a,b,{color:'#7b8da3',w:1.6,alpha:.9,dash:[6,6]}));
+}
+function tailToHeadGuide(A){
+  const [x,y,z]=A; const O=[0,0,0], P1=[x,0,0], P2=[x,y,0], P3=[x,y,z];
+  arrow(O,P1,'#e64d4d','',-70,34); vectorLabel(P1,'Ax',` = ${x} ${HAT.i}`,'#e64d4d',16,-70,34);
+  arrow(P1,P2,'#2aa65a','',18,34); vectorLabel(P2,'Ay',` = ${y} ${HAT.j}`,'#2aa65a',16,18,34);
+  arrow(P2,P3,'#2f6fd6','',16,-22); vectorLabel(P3,'Az',` = ${z} ${HAT.k}`,'#2f6fd6',16,16,-22);
+  line(O,P3,{color:'#8c3fd1',w:2.2,alpha:.45,dash:[4,5]});
+}
+
+function draw(){
+  labelBoxes=[];
+  ctx.clearRect(0,0,canvas.clientWidth,canvas.clientHeight); gridPlane(0); if(document.getElementById('showCube').checked) cube();
+  axisArrow([0,0,0],[11,0,0],'x / î'); axisArrow([0,0,0],[0,11,0],'y / ĵ'); axisArrow([0,0,0],[0,0,11],'z / k̂');
+  const A=[state.Ax,state.Ay,state.Az];
+  const showResult=document.getElementById('showResult').checked;
+  const method=currentMethod();
+  if(document.getElementById('showComp').checked){
+    if(showResult && method==='tail'){
+      tailToHeadGuide(A);
+    }else{
+      arrow([0,0,0],[state.Ax,0,0],'#e64d4d','',-70,34); vectorLabel([state.Ax,0,0],'Ax',` = ${state.Ax} ${HAT.i}`,'#e64d4d',16,-70,34);
+      arrow([0,0,0],[0,state.Ay,0],'#2aa65a','',18,34); vectorLabel([0,state.Ay,0],'Ay',` = ${state.Ay} ${HAT.j}`,'#2aa65a',16,18,34);
+      arrow([0,0,0],[0,0,state.Az],'#2f6fd6','',16,-22); vectorLabel([0,0,state.Az],'Az',` = ${state.Az} ${HAT.k}`,'#2f6fd6',16,16,-22);
+    }
+  }
+  if(showResult){
+    if(method==='box') prismGuide(A);
+    arrow([0,0,0],A,'#8c3fd1','',18,-34); vectorLabel(A,'Aลัพธ์',` = ${state.Ax}${HAT.i} ${state.Ay>=0?'+':'−'} ${Math.abs(state.Ay)}${HAT.j} ${state.Az>=0?'+':'−'} ${Math.abs(state.Az)}${HAT.k}`,'#8c3fd1',16,18,-34);
+  }
+}
+function termSigned(value, unit){
+  const sign = value >= 0 ? '+' : '−';
+  return `${sign}${Math.abs(value)}\\hat ${unit}`;
+}
+function resultFormula(){
+  return `\\(\\vec A=${state.Ax}\\hat i${termSigned(state.Ay,'j')}${termSigned(state.Az,'k')}\\)`;
+}
+function clampValue(v){
+  v = Number(v);
+  if(!Number.isFinite(v)) v = 0;
+  return Math.max(-10, Math.min(10, Math.round(v)));
+}
+function syncInputs(){
+  axNum.value = state.Ax;
+  ayNum.value = state.Ay;
+  azNum.value = state.Az;
+}
+function setComponent(id,value){
+  const v = clampValue(value);
+  if(id === 'ax') state.Ax = v;
+  if(id === 'ay') state.Ay = v;
+  if(id === 'az') state.Az = v;
+  syncInputs();
+  update();
+}
+function update(){
+  state.Ax = clampValue(axNum.value);
+  state.Ay = clampValue(ayNum.value);
+  state.Az = clampValue(azNum.value);
+  syncInputs();
+  const mag=Math.hypot(state.Ax,state.Ay,state.Az);
+  document.getElementById('mag').textContent=mag.toFixed(2);
+  document.getElementById('methodReadout').textContent=currentMethod()==='box'?'ทรงสี่เหลี่ยม':'หางต่อหัว';
+  document.getElementById('vecLabel').innerHTML = resultFormula();
+  if(window.MathJax)MathJax.typesetPromise([document.getElementById('vecLabel')]);
+  draw();
+}
+function nextMission(){missionIndex=(missionIndex+1)%missions.length; const m=missions[missionIndex]; state.Ax=m.v[0]; state.Ay=m.v[1]; state.Az=m.v[2]; syncInputs(); document.getElementById('missionText').innerHTML=m.t; if(window.MathJax)MathJax.typesetPromise([document.getElementById('missionText')]); update();}
+function resetView(){rotX=-0.55;rotZ=0.72;zoom=1;draw();}
+function openFormula(){document.getElementById('formulaModal').classList.add('show'); if(window.MathJax)MathJax.typesetPromise([document.getElementById('formulaModal')]);}
+function closeFormula(){document.getElementById('formulaModal').classList.remove('show');}
+function toggleMission(){const box=document.getElementById('missionBox'); const collapsed=box.classList.toggle('collapsed'); document.querySelector('#missionToggle .eyeIcon').textContent=collapsed?'🙈':'👁️'; document.getElementById('missionToggleText').textContent=collapsed?'แสดงภารกิจ':'ซ่อนภารกิจ';}
+
+[axNum,ayNum,azNum].forEach(el=>{
+  el.addEventListener('change',()=>setComponent(el.id.replace('Num',''),el.value));
+  el.addEventListener('input',()=>setComponent(el.id.replace('Num',''),el.value));
+});
+document.querySelectorAll('[data-step]').forEach(btn=>btn.addEventListener('click',()=>{const id=btn.dataset.step; const n=document.getElementById(id+'Num'); setComponent(id, Number(n.value)+Number(btn.dataset.delta));}));
+[...document.querySelectorAll('input[type=checkbox]'),...document.querySelectorAll('input[name=method]')].forEach(el=>el.addEventListener('input',update));
+function dist2(a,b){return Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);}
+canvas.addEventListener('pointerdown',e=>{pointers.set(e.pointerId,e); canvas.setPointerCapture(e.pointerId); if(pointers.size===1){dragging=true; lastX=e.clientX; lastY=e.clientY;} if(pointers.size===2){const ps=[...pointers.values()]; lastPinchDist=dist2(ps[0],ps[1]); dragging=false;}});
+canvas.addEventListener('pointermove',e=>{if(!pointers.has(e.pointerId))return; pointers.set(e.pointerId,e); if(pointers.size===2){const ps=[...pointers.values()]; const d=dist2(ps[0],ps[1]); if(lastPinchDist>0){zoom*=d/lastPinchDist; zoom=Math.max(.55,Math.min(2.8,zoom));} lastPinchDist=d; draw(); return;} if(dragging&&pointers.size===1){const dx=e.clientX-lastX, dy=e.clientY-lastY; lastX=e.clientX; lastY=e.clientY; rotZ+=dx*0.008; rotX+=dy*0.008; rotX=Math.max(-1.45,Math.min(1.15,rotX)); draw();}});
+function endPointer(e){pointers.delete(e.pointerId); lastPinchDist=0; dragging=pointers.size===1; if(dragging){const p=[...pointers.values()][0]; lastX=p.clientX; lastY=p.clientY;}}
+canvas.addEventListener('pointerup',endPointer); canvas.addEventListener('pointercancel',endPointer);
+window.addEventListener('resize',resize); resize(); update();
+</script>
+</body>
+</html>

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Mini Lab : ความเร็วสัมพัทธ์ของฝนกับรถไฟ</title>
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(','\\)'], ['$', '$']] },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<style>
+:root{
+  --blue:#2f6fd6; --deep:#174a7a; --sky:#eaf5ff; --panel:#ffffff;
+  --orange:#ffe4c4; --green:#eaf8e6; --gray:#eef2f6; --line:#d7e1ec;
+  --text:#12324a; --red:#d23b3b; --rain:#2277cc; --train:#4d6d8f;
+}
+*{box-sizing:border-box}
+html,body{margin:0; min-height:100%; font-family:system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif; background:linear-gradient(180deg,#f4f9ff,#ffffff); color:var(--text); overflow-x:hidden;}
+body{padding:18px 14px 120px;}
+.header{max-width:1180px; margin:0 auto 12px; text-align:center;}
+.header h1{margin:0; color:var(--blue); font-size:clamp(22px,4vw,38px); font-weight:900; line-height:1.15;}
+.header p{margin:8px 0 0; color:#48657d; font-weight:700; font-size:clamp(14px,2vw,17px)}
+.app{max-width:1180px; margin:0 auto; display:grid; grid-template-columns:1fr 340px; gap:14px; align-items:start;}
+.labCard,.controlCard{background:rgba(255,255,255,.92); border:1px solid var(--line); border-radius:26px; box-shadow:0 10px 28px rgba(39,83,125,.12); overflow:hidden;}
+.labTop{display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:space-between; padding:12px 14px; background:#edf6ff; border-bottom:1px solid var(--line)}
+.modeButtons{display:flex; gap:8px; flex-wrap:wrap;}
+button{border:0; cursor:pointer; font-weight:900; border-radius:16px; padding:10px 14px; font-size:15px; box-shadow:0 4px 0 rgba(0,0,0,.12), 0 8px 14px rgba(0,0,0,.08); transition:.12s transform; color:#19364e;}
+button:active{transform:translateY(2px); box-shadow:0 2px 0 rgba(0,0,0,.12)}
+.btnBlue{background:#81bdf0; color:#fff; text-shadow:0 1px 1px rgba(0,0,0,.18)}
+.btnGray{background:#e5e9ee}.btnOrange{background:var(--orange); color:#874b00}.btnGreen{background:var(--green); color:#236c31}
+button.active{outline:3px solid #2f6fd6; outline-offset:2px;}
+.readout{font-weight:900; color:#245079; background:#fff; padding:8px 12px; border-radius:999px; border:1px solid #d2e4f5; white-space:nowrap;}
+.stageWrap{position:relative; height:min(66vh,620px); min-height:430px; background:linear-gradient(#caeaff 0%,#e8f6ff 54%,#d8f0d1 55%,#a6d38e 100%); overflow:hidden;}
+canvas{width:100%; height:100%; display:block; touch-action:none;}
+.badge{position:absolute; left:14px; top:14px; max-width:min(520px,calc(100% - 28px)); background:rgba(255,255,255,.9); border:1px solid #d6e5f1; border-radius:18px; padding:10px 12px; font-size:15px; line-height:1.45; font-weight:800; color:#234963; box-shadow:0 8px 16px rgba(0,0,0,.08);}
+.badge .close{float:right; margin-left:10px; background:#edf3fb; border-radius:50%; width:26px; height:26px; display:inline-grid; place-items:center; cursor:pointer; color:#45688f; font-weight:900;}
+.controlCard{padding:14px; position:sticky; top:12px;}
+.controlCard h2{font-size:20px; margin:0 0 12px; color:#1d5ca2}.row{background:#f6f9fc; border:1px solid #dde8f1; border-radius:18px; padding:12px; margin-bottom:12px;}
+.row label{display:flex; justify-content:space-between; gap:12px; align-items:center; font-weight:900; margin-bottom:8px; color:#274961;}
+input[type=range]{width:100%; accent-color:#2f80d1; min-height:34px;}
+.small{font-size:14px; color:#5d7283; line-height:1.45; font-weight:700;}
+.formulaBox{display:none; margin-top:12px; background:#fff7ee; border:2px solid #efc58f; border-radius:20px; padding:12px; line-height:1.6; font-weight:800;}
+.formulaBox.show{display:block;}
+.legend{display:grid; gap:8px; margin-top:10px}.leg{display:flex; align-items:center; gap:8px; font-weight:800; font-size:14px}.sw{width:28px; height:4px; border-radius:999px; background:#000}.sw.rain{background:var(--rain)}.sw.train{background:var(--train)}.sw.rel{background:var(--red)}
+.footerLink{position:fixed; left:0; right:0; bottom:0; background:rgba(255,255,255,.92); border-top:1px solid #dce8f2; padding:10px calc(14px + env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) calc(14px + env(safe-area-inset-left)); text-align:center; font-weight:900; backdrop-filter:blur(8px); z-index:20;}
+.footerLink a{color:#1f69d5; text-decoration:underline;}
+.mobileBar{display:none;}
+@media (max-width:900px){
+  body{padding:12px 10px 118px;}
+  .app{grid-template-columns:1fr;}
+  .controlCard{position:relative; top:0;}
+  .stageWrap{height:58vh; min-height:420px;}
+  .badge{font-size:13px; padding:9px 10px;}
+  .labTop{padding:10px}.readout{font-size:13px;}
+  .modeButtons button{font-size:13px; padding:9px 10px;}
+}
+@media (max-width:560px){
+  .stageWrap{height:52vh; min-height:390px;}
+  .header p{font-size:13px}.controlCard h2{font-size:18px}
+  .labTop{align-items:flex-start}.readout{width:100%; text-align:center;}
+}
+</style>
+</head>
+<body>
+<header class="header">
+  <h1>Mini Lab : ความเร็วสัมพัทธ์ของฝนกับรถไฟ</h1>
+  <p>เปรียบเทียบมุมมองนอกรถกับมุมมองคนในรถไฟ เมื่อฝนตกลงมาตรง ๆ แต่ผู้สังเกตเคลื่อนที่</p>
+</header>
+<main class="app">
+  <section class="labCard">
+    <div class="labTop">
+      <div class="modeButtons">
+        <button id="outsideBtn" class="btnBlue active">🌍 มุมมองนอกรถ</button>
+        <button id="insideBtn" class="btnBlue">🚆 มุมมองในรถไฟ</button>
+        <button id="vectorBtn" class="btnOrange">Σ แสดงเวกเตอร์ V สัมพัทธ์ </button>
+      </div>
+      <div class="readout" id="readout">รถไฟไปทางซ้าย 8.0 m/s</div>
+    </div>
+    <div class="stageWrap">
+      <canvas id="lab"></canvas>
+      <div class="badge" id="hintBox"><span class="close" onclick="this.parentElement.style.display='none'">×</span><span id="hintText">มุมมองนอกรถ: ฝนตกลงมาตรง ๆ ส่วนรถไฟวิ่งไปทางซ้าย โดยเห็นฉากหลังเลื่อนไปทางขวาเพื่อสื่อว่ารถกำลังเคลื่อนที่</span></div>
+    </div>
+  </section>
+  <aside class="controlCard">
+    <h2>แผงควบคุม</h2>
+    <div class="row">
+      <label>ความเร็วรถไฟ <span id="trainVal">8.0 m/s</span></label>
+      <input id="trainSpeed" type="range" min="0" max="24" step="0.5" value="8" />
+      <div class="small">กำหนดให้รถไฟเคลื่อนที่ไปทางซ้าย ส่วนฝนในกรอบโลกตกลงมาตรง ๆ ด้วยความเร็วคงที่</div>
+    </div>
+    <div class="row">
+      <label>ความเร็วฝนตกลง <span id="rainVal">12.0 m/s</span></label>
+      <input id="rainSpeed" type="range" min="5" max="22" step="0.5" value="12" />
+      <div class="small">ในมุมมองคนในรถไฟ แนวฝนจะเอียงตามความเร็วสัมพัทธ์ของฝนเทียบกับรถไฟ</div>
+    </div>
+    <button class="btnOrange" id="formulaBtn">📘 สูตรสำคัญ</button>
+    <button class="btnGray" id="resetBtn">🔄 รีเซ็ต</button>
+    <div class="formulaBox" id="formulaBox">
+      <b style="color:#9a5a00">หลักการ</b><br>
+      ความเร็วฝนที่คนในรถเห็น คือความเร็วของฝนเทียบกับรถไฟ<br>
+      <span>\(\vec v_{ฝน/รถ}=\vec v_{ฝน/พื้น}-\vec v_{รถ/พื้น}\)</span><br>
+    จากรูปหาขนาดของความเร็วสัมพัทธ์จากพิธากอรัส <br>
+      <span>\(|\vec v_{ฝน/รถ}|=\sqrt{v_{รถ}^{2}+v_{ฝน}^{2}}\)</span>
+    </div>
+    <div class="legend">
+      <div class="leg"><span class="sw rain"></span>เวกเตอร์ฝนเทียบพื้น</div>
+      <div class="leg"><span class="sw train"></span>เวกเตอร์รถไฟเทียบพื้น</div>
+      <div class="leg"><span class="sw rel"></span>เวกเตอร์ฝนเทียบรถไฟ</div>
+    </div>
+  </aside>
+</main>
+<div class="footerLink">ศึกษาเพิ่มเติมที่ <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">เพจคลายปมฟิสิกส์</a></div>
+<script>
+const canvas=document.getElementById('lab'),ctx=canvas.getContext('2d');
+const trainSpeed=document.getElementById('trainSpeed'),rainSpeed=document.getElementById('rainSpeed');
+const trainVal=document.getElementById('trainVal'),rainVal=document.getElementById('rainVal'),readout=document.getElementById('readout');
+const outsideBtn=document.getElementById('outsideBtn'),insideBtn=document.getElementById('insideBtn'),vectorBtn=document.getElementById('vectorBtn');
+const formulaBtn=document.getElementById('formulaBtn'),formulaBox=document.getElementById('formulaBox'),resetBtn=document.getElementById('resetBtn'),hintText=document.getElementById('hintText');
+let mode='outside',showVectors=false,t=0,drops=[],clouds=[],trees=[];
+function resize(){ const r=canvas.parentElement.getBoundingClientRect(); const dpr=Math.min(window.devicePixelRatio||1,2); canvas.width=Math.floor(r.width*dpr); canvas.height=Math.floor(r.height*dpr); ctx.setTransform(dpr,0,0,dpr,0,0); seed(); }
+function seed(){ const w=canvas.clientWidth,h=canvas.clientHeight; drops=[]; for(let i=0;i<95;i++)drops.push({x:Math.random()*w,y:Math.random()*h,len:5+Math.random()*4}); clouds=[]; for(let i=0;i<7;i++)clouds.push({x:Math.random()*w,y:35+Math.random()*95,s:.7+Math.random()*.65}); trees=[]; for(let i=0;i<12;i++)trees.push({x:Math.random()*w,h:45+Math.random()*60}); }
+function arrow(x1,y1,x2,y2,color,label,opts={}){ const ang=Math.atan2(y2-y1,x2-x1),head=12; ctx.save(); ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=opts.width||4; ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x2,y2); ctx.lineTo(x2-head*Math.cos(ang-Math.PI/6),y2-head*Math.sin(ang-Math.PI/6)); ctx.lineTo(x2-head*Math.cos(ang+Math.PI/6),y2-head*Math.sin(ang+Math.PI/6)); ctx.closePath(); ctx.fill(); if(label){ ctx.font='900 15px system-ui,Tahoma'; ctx.textAlign=opts.align||'center'; ctx.textBaseline='middle'; const tx=(opts.tx!==undefined)?opts.tx:(x2+12*Math.cos(ang)); const ty=(opts.ty!==undefined)?opts.ty:(y2+12*Math.sin(ang)); const pad=5; const m=ctx.measureText(label); ctx.fillStyle='rgba(255,255,255,.88)'; ctx.strokeStyle='rgba(210,225,238,.95)'; roundRect(tx-m.width/2-pad,ty-12,m.width+pad*2,24,8,true,true); ctx.fillStyle=color; ctx.fillText(label,tx,ty+1);} ctx.restore(); }
+function roundRect(x,y,w,h,r,fill,stroke){ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); if(fill)ctx.fill(); if(stroke)ctx.stroke();}
+function background(w,h,dt){ const vTrain=+trainSpeed.value; const bgSpeed=(mode==='outside'? vTrain*5 : vTrain*5); ctx.fillStyle='#bde8ff'; ctx.fillRect(0,0,w,h*.55); ctx.fillStyle='#d6f1cf'; ctx.fillRect(0,h*.55,w,h*.45); ctx.fillStyle='#99ca7f'; ctx.fillRect(0,h*.70,w,h*.30); const shift=(t*bgSpeed)%w; function drawCloud(x,y,s){ctx.fillStyle='rgba(255,255,255,.9)'; for(const [dx,dy,r] of [[0,8,18],[22,0,24],[50,9,20],[75,13,16]]){ctx.beginPath();ctx.arc(x+dx*s,y+dy*s,r*s,0,Math.PI*2);ctx.fill();}} clouds.forEach(c=>{let x=(c.x+shift)%(w+130)-100; drawCloud(x,c.y,c.s);}); trees.forEach(tr=>{let x=(tr.x+shift)%(w+80)-40; let base=h*.72; ctx.fillStyle='#77532e'; ctx.fillRect(x-4,base-tr.h+20,8,tr.h-18); ctx.fillStyle='#32783a'; ctx.beginPath(); ctx.moveTo(x,base-tr.h-18); ctx.lineTo(x-28,base-tr.h+38); ctx.lineTo(x+28,base-tr.h+38); ctx.closePath(); ctx.fill();}); ctx.fillStyle='#6f8491'; for(let i=-1;i<7;i++){let x=((i*220+shift*1.35)%(w+260))-130; ctx.fillRect(x,h*.82,135,12);} }
+function train(w,h){ const y=h*.68,tw=Math.min(420,w*.68),th=96,x= mode==='outside'? w*.32 : w*.5-tw/2; ctx.save(); ctx.fillStyle='#2f4f66'; ctx.fillRect(x,y-th+18,tw,th); ctx.fillStyle='#4b83b7'; ctx.fillRect(x+12,y-th+30,tw-24,th-32); ctx.fillStyle='#cfefff'; const n=4,ww=(tw-62)/n; for(let i=0;i<n;i++){ctx.fillRect(x+30+i*ww,y-th+44,ww-18,36);} ctx.fillStyle='#1f3344'; ctx.fillRect(x-20,y-8,tw+40,16); for(let i=0;i<4;i++){ctx.beginPath();ctx.arc(x+60+i*(tw-120)/3,y+10,17,0,Math.PI*2);ctx.fill();} ctx.fillStyle='#ffffff'; ctx.font='900 17px system-ui,Tahoma'; ctx.textAlign='center'; ctx.fillText('รถไฟ',x+tw/2,y-th+20); if(mode==='outside'){arrow(x+tw*.58,y+45,x+tw*.28,y+45,'#4d6d8f','รถไฟไปทางซ้าย',{ty:y+68});} ctx.restore(); }
+function drawRain(w,h,dt){ const vTrain=+trainSpeed.value, vRain=+rainSpeed.value; const lateral = mode==='inside'? vTrain*9.6 : 0; const vy=vRain*14; ctx.strokeStyle='rgba(255,255,255,0.95)'; ctx.lineWidth=2.2; ctx.lineCap='round'; for(const d of drops){ d.x+= lateral*dt; d.y+= vy*dt; if(d.y>h+30){d.y=-25; d.x=Math.random()*w;} if(d.x>w+40)d.x=-40; if(d.x<-40)d.x=w+40; const dx= mode==='inside'? d.len*(vTrain/vRain)*.9 : 0; ctx.beginPath(); ctx.moveTo(d.x,d.y); ctx.lineTo(d.x+dx,d.y+d.len); ctx.stroke(); } }
+function insideWindow(w,h,dt){ const wx=w*.12, wy=h*.18, ww=w*.76, wh=h*.56; ctx.save(); ctx.fillStyle='rgba(28,46,61,.82)'; ctx.fillRect(0,0,w,h); ctx.fillStyle='rgba(200,235,255,.96)'; roundRect(wx,wy,ww,wh,24,true,false); ctx.clip(); background(w,h,0); drawRain(w,h,dt); ctx.restore(); ctx.strokeStyle='#22394d'; ctx.lineWidth=18; roundRect(wx,wy,ww,wh,24,false,true); ctx.fillStyle='#253f53'; ctx.fillRect(w*.47,wy,14,wh); ctx.fillStyle='rgba(255,255,255,.86)'; ctx.font='900 16px system-ui,Tahoma'; ctx.textAlign='left'; ctx.fillText('มองออกไปจากหน้าต่างรถไฟ',wx+24,wy+32); }
+function vectorDiagram(w,h){ const vT=+trainSpeed.value, vR=+rainSpeed.value; const scale=Math.min(11, Math.max(7, w/90)); const baseX=Math.min(w-270,Math.max(70,w*.16)), baseY=Math.min(h-165,Math.max(250,h*.44)); const down=vR*scale, right=vT*scale; ctx.save(); ctx.globalAlpha=.97; ctx.fillStyle='rgba(255,255,255,.94)'; ctx.strokeStyle='#d4e2ee'; ctx.lineWidth=2.2; const boxW=Math.min(430,w-34), boxH=170, boxX=Math.min(w-boxW-16,baseX-28), boxY=Math.min(h-boxH-16,baseY-42); roundRect(boxX,boxY,boxW,boxH,20,true,true); ctx.fillStyle='#174a7a'; ctx.font='900 17px system-ui,Tahoma'; ctx.textAlign='left'; ctx.fillText('เขียนเวกเตอร์เพื่่อหา V สัมพัทธ์(คนในรถไฟเห็น)',boxX+16,boxY+26); const ox=boxX+70, oy=boxY+56; arrow(ox,oy,ox,oy+down,'#2277cc','vฝน/พื้น',{tx:ox-52,ty:oy+down/2,width:3}); arrow(ox,oy+down,ox+right,oy+down,'#4d6d8f','-vรถ/พื้น',{tx:ox+right/2,ty:oy+down+24,width:3}); arrow(ox,oy,ox+right,oy+down,'#d23b3b','vฝน/รถ',{tx:ox+right+62,ty:oy+down/2,width:4}); ctx.fillStyle='#4c6578'; ctx.font='800 13px system-ui,Tahoma'; ctx.fillText('',boxX+16,boxY+boxH-18); ctx.restore(); }
+function loop(ts){ const now=ts/1000, dt=Math.min(.05, now-t||.016); t=now; const w=canvas.clientWidth,h=canvas.clientHeight; ctx.clearRect(0,0,w,h); if(mode==='outside'){background(w,h,dt); drawRain(w,h,dt); train(w,h);} else {insideWindow(w,h,dt);}
+ if(showVectors) vectorDiagram(w,h); requestAnimationFrame(loop); }
+function update(){ const vt=+trainSpeed.value, vr=+rainSpeed.value; trainVal.textContent=vt.toFixed(1)+' m/s'; rainVal.textContent=vr.toFixed(1)+' m/s'; const mag=Math.hypot(vt,vr); const ang=Math.atan(vt/vr)*180/Math.PI; readout.textContent = mode==='outside'? `รถไฟไปทางซ้าย ${vt.toFixed(1)} m/s` : `คนในรถเห็นฝนเอียง ${ang.toFixed(1)}° จากแนวดิ่ง |v|=${mag.toFixed(1)} m/s`; hintText.textContent= mode==='outside'? '' : ''; }
+outsideBtn.onclick=()=>{mode='outside';outsideBtn.classList.add('active');insideBtn.classList.remove('active');update();}
+insideBtn.onclick=()=>{mode='inside';insideBtn.classList.add('active');outsideBtn.classList.remove('active');update();}
+vectorBtn.onclick=()=>{showVectors=!showVectors;vectorBtn.classList.toggle('active',showVectors);vectorBtn.textContent=showVectors?'Σ ซ่อนหา V สัมพัทธ์':'Σ หา V สัมพัทธ์';}
+formulaBtn.onclick=()=>{formulaBox.classList.toggle('show'); if(window.MathJax) MathJax.typesetPromise([formulaBox]);}
+resetBtn.onclick=()=>{trainSpeed.value=8;rainSpeed.value=12;mode='outside';showVectors=false;outsideBtn.classList.add('active');insideBtn.classList.remove('active');vectorBtn.classList.remove('active');vectorBtn.textContent='Σ แสดงเวกเตอร์หางต่อหัว';seed();update();}
+trainSpeed.oninput=rainSpeed.oninput=update; window.addEventListener('resize',resize); resize(); update(); requestAnimationFrame(loop);
+</script>
+</body>
+</html>

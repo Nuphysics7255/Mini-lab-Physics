@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>Mini Lab : ความเร็วสัมพัทธ์ของรถสองคัน</title>
+<style>
+  :root{
+    --blue:#2f6fd6; --deep:#204d7c; --soft:#edf3fb; --line:#d8e3ef;
+    --orange:#ffe4c4; --green:#e6f6df; --gray:#eef1f4; --red:#e64b4b;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; font-family:system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;
+    background:linear-gradient(#f7fbff,#eef5ff); color:#18324a;
+    min-height:100vh; padding:calc(12px + env(safe-area-inset-top)) 12px calc(95px + env(safe-area-inset-bottom));
+  }
+  .wrap{max-width:1180px;margin:0 auto}
+  .title{text-align:center;margin:6px 0 12px;font-weight:900;color:var(--blue);font-size:clamp(24px,3.4vw,40px);line-height:1.12}
+  .subtitle{text-align:center;color:#45688f;font-weight:700;margin-top:-5px;margin-bottom:12px;font-size:15px}
+  .lab{
+    display:grid; grid-template-columns:minmax(0,1fr) 330px; gap:14px; align-items:start;
+  }
+  .stageCard,.panel,.note{
+    background:white; border:1px solid var(--line); border-radius:24px; box-shadow:0 10px 28px rgba(34,74,120,.10);
+  }
+  .stageCard{padding:12px; overflow:hidden}
+  canvas{display:block;width:100%;height:auto;border-radius:18px;background:#dff3ff;border:1px solid #c7d9eb;touch-action:none}
+  .panel{padding:14px; position:sticky; top:12px}
+  .row{margin:12px 0;background:#f8fbff;border:1px solid #e2ebf5;border-radius:16px;padding:10px}
+  label{display:flex;justify-content:space-between;gap:8px;font-weight:850;color:#2c5d89;font-size:15px;margin-bottom:8px}
+  input[type=range]{width:100%;accent-color:#2f6fd6}
+  .checkRow{display:flex;align-items:center;gap:10px;margin:10px 0 0;background:#f8fbff;border:1px solid #e2ebf5;border-radius:16px;padding:10px;font-weight:850;color:#2c5d89;font-size:15px}
+  .checkRow input{width:20px;height:20px;accent-color:#2f6fd6}
+  .btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+  button{
+    border:0;border-radius:16px;padding:12px 10px;font-weight:900;cursor:pointer;font-size:15px;
+    box-shadow:0 4px 0 rgba(0,0,0,.12); transform:translateY(0);
+  }
+  button:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(0,0,0,.12)}
+  .play{background:#62a9ef;color:white}.reset{background:#d9dde3;color:#40546b}.view{background:#fff1dc;color:#8b4d00}.vector{background:#e6f6df;color:#2c6b35}
+  .full{grid-column:1/-1}
+  .pill{display:inline-block;background:var(--soft);border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-weight:850;color:#2e5f93;margin:3px 4px 3px 0}
+  .formula{font-weight:850;line-height:1.75;background:#fff7eb;border:1px solid #f0cfaa;border-radius:18px;padding:10px;margin-top:10px}
+  .hint{font-size:14px;line-height:1.65;color:#415a73}
+  .brand{text-align:center;margin-top:14px;font-weight:850}.brand a{color:#1f65d6;text-decoration:underline}
+  @media(max-width:860px){
+    body{padding:calc(8px + env(safe-area-inset-top)) 8px calc(110px + env(safe-area-inset-bottom))}
+    .lab{grid-template-columns:1fr}.panel{position:static}.stageCard{padding:8px;border-radius:18px}canvas{border-radius:14px}
+    .btns{grid-template-columns:1fr 1fr}.title{font-size:clamp(21px,6vw,30px)}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="title">Mini Lab : ความเร็วสัมพัทธ์ของรถสองคัน</div>
+  <div class="subtitle">เปรียบเทียบมุมมองคนยืนสังเกตบนถนน กับมุมมองจากผู้สังเกตในรถ A</div>
+  <div class="lab">
+    <div class="stageCard">
+      <canvas id="cv" width="980" height="590"></canvas>
+    </div>
+    <div class="panel">
+      <div>
+        <span class="pill" id="viewPill">มุมมอง: คนยืนมองบนถนน</span>
+        <span class="pill" id="relPill">vBA = 0 m/s</span>
+      </div>
+      <div class="btns">
+        <button class="play" id="playBtn">▶️ เล่น</button>
+        <button class="reset" id="resetBtn">🔄 รีเซ็ต</button>
+        <button class="view full" id="viewBtn">🚗 มองจากในรถ A</button>
+        <button class="vector full" id="vecBtn">📘 แสดงเวกเตอร์ V สัมพัทธ์</button>
+      </div>
+      <label class="checkRow"><input id="carVecChk" type="checkbox"> แสดงเวกเตอร์ความเร็ว V ของรถ</label>
+      <div class="row">
+        <label>ความเร็วรถ A <span><b id="vAVal">24</b> m/s ไปทางซ้าย</span></label>
+        <input id="vA" type="range" min="8" max="42" step="1" value="24">
+      </div>
+      <div class="row">
+        <label>ความเร็วรถ B <span><b id="vBVal">18</b> m/s ไปทางซ้าย</span></label>
+        <input id="vB" type="range" min="8" max="42" step="1" value="18">
+      </div>
+      <div class="formula">
+        <div>หลักคิด:</div>
+        <div>ให้ทิศไปทางซ้ายเป็นบวก</div>
+        <div>ความเร็วของ B เทียบกับ A คือ <span style="color:#c83333">v<sub>BA</sub> = v<sub>B</sub> - v<sub>A</sub></span></div>
+        <div class="hint" id="meaning">ถ้า vA มากกว่า vB จะเห็นรถ B ถอยไปทางขวา</div>
+      </div>
+    </div>
+  </div>
+  <div class="brand">ศึกษาเพิ่มเติมที่ <a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">เพจคลายปมฟิสิกส์</a></div>
+</div>
+<script>
+(() => {
+  const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+  const vAEl=document.getElementById('vA'), vBEl=document.getElementById('vB');
+  const vAVal=document.getElementById('vAVal'), vBVal=document.getElementById('vBVal');
+  const playBtn=document.getElementById('playBtn'), resetBtn=document.getElementById('resetBtn');
+  const viewBtn=document.getElementById('viewBtn'), vecBtn=document.getElementById('vecBtn');
+  const carVecChk=document.getElementById('carVecChk');
+  const viewPill=document.getElementById('viewPill'), relPill=document.getElementById('relPill'), meaning=document.getElementById('meaning');
+  let running=false, view='road', showVec=false, t=0, last=0;
+  let xA=850, xB=700, bgShift=0;
+  const roadY=460, carW=150, carH=72;
+  const roadTop=roadY-50; // ยกขอบถนนขึ้นเพื่อให้รถ B ที่ขยับขึ้น 50px ยังอยู่บนถนน
+  const laneA=roadY+72, laneB=roadY+16-50; // รถ B ขยับขึ้น 50px แต่จุดล้อแตะผิวถนนด้านบน
+  function reset(){ t=0; xA=840; xB=620; bgShift=0; draw(); }
+  function vals(){ return {vA:+vAEl.value, vB:+vBEl.value}; }
+  function updateText(){
+    const {vA,vB}=vals(); vAVal.textContent=vA; vBVal.textContent=vB;
+    const rel=vB-vA; relPill.textContent=`vBA = ${rel} m/s`;
+    viewPill.textContent = view==='road'?'มุมมอง: คนยืนบนถนน':'มุมมอง: รถ A สังเกตรถ B';
+    viewBtn.textContent = view==='road'?'🚗 เข้าไปมองจากในรถ A':'🧍 กลับไปยืนมองบนถนน';
+    if(rel>0) meaning.innerHTML='รถ B เร็วกว่า A: จากรถ A จะเห็นรถ B เคลื่อนไปทางซ้ายและแซงไป';
+    else if(rel<0) meaning.innerHTML='รถ A เร็วกว่า B: จากรถ A จะเห็นรถ B ถอยไปทางขวา';
+    else meaning.innerHTML='รถ A และ B เร็วเท่ากัน: จากรถ A จะเห็นรถ B อยู่นิ่ง แต่ฉากหลังเคลื่อนที่';
+  }
+  function sky(){
+    const g=ctx.createLinearGradient(0,0,0,roadY); g.addColorStop(0,'#bfe9ff'); g.addColorStop(1,'#ecf9ff'); ctx.fillStyle=g; ctx.fillRect(0,0,cv.width,cv.height);
+  }
+  function drawBuilding(x,y,w,h,c){ ctx.fillStyle=c; ctx.fillRect(x,y,w,h); ctx.fillStyle='rgba(255,255,255,.55)'; for(let yy=y+18;yy<y+h-8;yy+=28){for(let xx=x+12;xx<x+w-10;xx+=28){ctx.fillRect(xx,yy,13,13)}} }
+  function drawTree(x,y,s=1){ ctx.fillStyle='#7a4d24'; ctx.fillRect(x-6*s,y-52*s,12*s,52*s); ctx.fillStyle='#2f9b50'; ctx.beginPath(); ctx.arc(x,y-70*s,30*s,0,Math.PI*2); ctx.arc(x-22*s,y-54*s,22*s,0,Math.PI*2); ctx.arc(x+24*s,y-52*s,24*s,0,Math.PI*2); ctx.fill(); }
+  function bg(offset){
+    sky(); ctx.fillStyle='#9fd37c'; ctx.fillRect(0,330,cv.width,80);
+    const repeat=980; let base=((offset%repeat)+repeat)%repeat-repeat;
+    for(let k=0;k<3;k++){
+      const o=base+k*repeat;
+      drawBuilding(o+30,188,90,142,'#9cb7d6'); drawBuilding(o+145,220,70,110,'#b8a7d8'); drawBuilding(o+730,180,115,150,'#a8c3c7');
+      drawTree(o+260,336,1.05); drawTree(o+390,338,.9); drawTree(o+560,337,1.1); drawTree(o+900,338,.95);
+    }
+    ctx.fillStyle='#3f454d'; ctx.fillRect(0,roadTop,cv.width,roadY+130-roadTop);
+    ctx.fillStyle='#2f353b'; ctx.fillRect(0,roadY+78,cv.width,52);
+    // แถบบนถนนให้กลืนเป็นสีเดียวกับถนน ไม่เป็นแถบสีขาว/เหลืองเด่น
+    ctx.strokeStyle='#3f454d'; ctx.setLineDash([32,28]); ctx.lineWidth=6; ctx.beginPath(); ctx.moveTo(0,roadY+62); ctx.lineTo(cv.width,roadY+62); ctx.stroke(); ctx.setLineDash([]);
+  }
+  function car(x,y,color,label,flip=false){
+    ctx.save(); ctx.translate(x,y);
+    ctx.fillStyle='rgba(0,0,0,.22)'; ctx.beginPath(); ctx.ellipse(carW/2,carH+9,70,11,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle=color; ctx.beginPath(); ctx.roundRect(0,24,carW,45,14); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(34,0,76,40,14); ctx.fill();
+    ctx.fillStyle='rgba(190,235,255,.92)'; ctx.beginPath(); ctx.roundRect(47,10,24,22,5); ctx.roundRect(78,10,24,22,5); ctx.fill();
+    ctx.fillStyle='#1d2430'; ctx.beginPath(); ctx.arc(35,72,16,0,Math.PI*2); ctx.arc(116,72,16,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#f3f7fb'; ctx.beginPath(); ctx.arc(35,72,7,0,Math.PI*2); ctx.arc(116,72,7,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='white'; ctx.font='900 22px system-ui'; ctx.textAlign='center'; ctx.fillText(label,75,56);
+    ctx.restore();
+  }
+  function drawVectorLabel(label,x,y,color,align='center'){
+    // วาดตัวอักษรเวกเตอร์แบบมีตัวห้อยจริงบน canvas เช่น V_B, -V_A, V_BA
+    ctx.save();
+    ctx.fillStyle=color;
+    ctx.textBaseline='alphabetic';
+    ctx.textAlign=align;
+    ctx.font='900 18px system-ui';
+    const parts={
+      'V_B':['V','B'],
+      '-V_A':['-V','A'],
+      'V_BA':['V','BA']
+    }[label];
+    if(!parts){ ctx.fillText(label,x,y); ctx.restore(); return; }
+    const [main,sub]=parts;
+    const mainW=ctx.measureText(main).width;
+    ctx.font='800 12px system-ui';
+    const subW=ctx.measureText(sub).width;
+    const total=mainW+subW;
+    let start=x;
+    if(align==='center') start=x-total/2;
+    if(align==='right') start=x-total;
+    ctx.font='900 18px system-ui';
+    ctx.fillText(main,start,y);
+    ctx.font='800 12px system-ui';
+    ctx.fillText(sub,start+mainW+1,y+4);
+    ctx.restore();
+  }
+  function arrow(x,y,len,color,text,labelOffsetY=-14){
+    ctx.save(); ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=5; ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+len,y); ctx.stroke();
+    const s=Math.sign(len)||1; ctx.beginPath(); ctx.moveTo(x+len,y); ctx.lineTo(x+len-14*s,y-8); ctx.lineTo(x+len-14*s,y+8); ctx.closePath(); ctx.fill();
+    // วางป้ายชื่อที่ปลายหัวลูกศร และขยับออกจากหัวเล็กน้อยเพื่อไม่ให้ทับกัน
+    const labelX=x+len+(s>0?18:-18);
+    const align=s>0?'left':'right';
+    drawVectorLabel(text,labelX,y+labelOffsetY,color,align);
+    ctx.restore();
+  }
+  function drawSmallValue(txt,x,y,color,align='center'){
+    ctx.save();
+    ctx.fillStyle=color;
+    ctx.font='800 12px system-ui';
+    ctx.textAlign=align;
+    ctx.textBaseline='alphabetic';
+    ctx.fillText(txt,x,y);
+    ctx.restore();
+  }
+  function speedArrow(x,y,len,color,label,value,labelOffsetY=-18,valueOffsetY=16){
+    arrow(x,y,len,color,label,labelOffsetY);
+    const s=Math.sign(len)||1;
+    const labelX=x+len+(s>0?18:-18);
+    drawSmallValue(value,labelX,y+valueOffsetY,color,s>0?'left':'right');
+  }
+  function formulaWithSubscripts(x,y){
+    ctx.save();
+    ctx.fillStyle='#415a73';
+    ctx.textAlign='left';
+    ctx.textBaseline='alphabetic';
+    let cx=x;
+    function t(txt,font='800 15px system-ui',dy=0){ ctx.font=font; ctx.fillText(txt,cx,y+dy); cx+=ctx.measureText(txt).width; }
+    function v(main,sub){ ctx.font='900 16px system-ui'; ctx.fillText(main,cx,y); cx+=ctx.measureText(main).width; ctx.font='800 10px system-ui'; ctx.fillText(sub,cx+1,y+4); cx+=ctx.measureText(sub).width+4; }
+    v('V','B'); t(' + (-'); v('V','A'); t(') = '); v('V','BA');
+    ctx.restore();
+  }
+  function dot(x,y,color){ ctx.save(); ctx.fillStyle=color; ctx.beginPath(); ctx.arc(x,y,5,0,Math.PI*2); ctx.fill(); ctx.restore(); }
+  function vectorCompositionBox(x,y){
+    const {vA,vB}=vals();
+    const scale=4.2;
+    const lenVB=-vB*scale;       // V_B ชี้ไปทางซ้าย
+    const lenMinusVA= vA*scale;  // -V_A ชี้ไปทางขวา
+    const result=lenVB+lenMinusVA; // V_BA = V_B + (-V_A)
+    ctx.save();
+    ctx.fillStyle='rgba(255,255,255,.95)'; ctx.strokeStyle='#bfd4e8'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.roundRect(x,y,360,150,18); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='#204d7c'; ctx.font='900 18px system-ui'; ctx.textAlign='left';
+    ctx.fillText('ต่อเวกเตอร์แบบหางต่อหัว',x+18,y+28);
+    ctx.font='800 15px system-ui'; ctx.fillStyle='#415a73';
+    formulaWithSubscripts(x+18,y+52);
+    const sx=x+235, sy=y+92;
+    dot(sx,sy-10,'#2f7be8');
+    arrow(sx,sy-10,lenVB,'#2f7be8','V_B',-5);
+    const hx=sx+lenVB;
+    dot(hx,sy,'#e8504f');
+    arrow(hx,sy,lenMinusVA,'#e8504f','-V_A',-5);
+    arrow(sx,sy+42,result,'#123d70','V_BA',10);
+    ctx.restore();
+  }
+  function roadView(dt){
+    const {vA,vB}=vals();
+    if(running){ xA -= vA*dt*7; xB -= vB*dt*7; if(xA<-180) xA=1050; if(xB<-180) xB=1050; }
+    bg(0); car(xA, laneA-carH, '#e8504f','A'); car(xB, laneB-carH, '#2f7be8','B');
+    if(carVecChk.checked){
+      const scaleV=3.0;
+      speedArrow(xA+90, laneA-carH-18, -vA*scaleV, '#e8504f', 'V_A', `${vA} m/s`, -12, 18);
+      speedArrow(xB+90, laneB-carH-18, -vB*scaleV, '#2f7be8', 'V_B', `${vB} m/s`, -12, 18);
+    }
+    ctx.fillStyle='rgba(255,255,255,.92)'; ctx.beginPath(); ctx.roundRect(18,18,320,58,16); ctx.fill();
+    ctx.fillStyle='#24405c'; ctx.font='900 20px system-ui'; ctx.fillText('มุมมองคนยืนบนถนน',34,54);
+    if(showVec){ vectorCompositionBox(590,26); }
+  }
+  function carAView(dt){
+    const {vA,vB}=vals(); const rel=vB-vA;
+    if(running){ xB += (-rel)*dt*7; bgShift += vA*dt*7; if(xB<-220) xB=1100; if(xB>1120) xB=-190; }
+    bg(bgShift);
+    // red interior mask: only the window sees outside
+    ctx.fillStyle='#c93434'; ctx.fillRect(0,0,cv.width,cv.height);
+    // window clipping area
+    const wx=86, wy=72, ww=808, wh=330;
+    ctx.save(); ctx.beginPath(); ctx.roundRect(wx,wy,ww,wh,24); ctx.clip();
+    // วาดฉากนอกหน้าต่างใหม่ โดยให้ถนนอยู่ในกรอบหน้าต่างและรถ B อยู่บนถนนจริง
+    sky();
+    ctx.fillStyle='#9fd37c'; ctx.fillRect(0,238,cv.width,52);
+    const repeat=980; let base=((bgShift%repeat)+repeat)%repeat-repeat;
+    for(let k=0;k<3;k++){
+      const o=base+k*repeat;
+      drawBuilding(o+30,128,90,132,'#9cb7d6'); drawBuilding(o+145,160,70,100,'#b8a7d8'); drawBuilding(o+730,120,115,140,'#a8c3c7');
+      drawTree(o+260,284,.85); drawTree(o+390,286,.75); drawTree(o+560,285,.9); drawTree(o+900,286,.78);
+    }
+    const winRoadY=wy+wh-86;
+    ctx.fillStyle='#3f454d'; ctx.fillRect(0,winRoadY,cv.width,150);
+    ctx.fillStyle='#2f353b'; ctx.fillRect(0,winRoadY+78,cv.width,72);
+    ctx.strokeStyle='#3f454d'; ctx.setLineDash([32,28]); ctx.lineWidth=6; ctx.beginPath(); ctx.moveTo(0,winRoadY+62); ctx.lineTo(cv.width,winRoadY+62); ctx.stroke(); ctx.setLineDash([]);
+    car(xB, winRoadY+16-carH, '#2f7be8','B');
+    if(carVecChk.checked){
+      const scaleRel=3.2;
+      const lenRel=-rel*scaleRel;
+      speedArrow(xB+90, winRoadY+16-carH-18, lenRel, '#123d70', 'V_BA', `${rel} m/s`, -12, 18);
+    }
+    ctx.restore();
+    // thick red frame and interior details
+    ctx.strokeStyle='#7e1717'; ctx.lineWidth=28; ctx.beginPath(); ctx.roundRect(wx,wy,ww,wh,28); ctx.stroke();
+    ctx.strokeStyle='#5f1111'; ctx.lineWidth=10; ctx.beginPath(); ctx.moveTo(wx+ww/2,wy+8); ctx.lineTo(wx+ww/2,wy+wh-8); ctx.stroke();
+    ctx.fillStyle='rgba(255,255,255,.18)'; ctx.beginPath(); ctx.roundRect(210,426,560,72,26); ctx.fill();
+    ctx.fillStyle='white'; ctx.font='900 22px system-ui'; ctx.textAlign='left'; ctx.fillText('มองจากผู้สังเกตในรถ A',50,40);
+    if(showVec){ vectorCompositionBox(584,414); }
+  }
+  function draw(ts=0){
+    const dt=Math.min(.04,(ts-last)/1000||0); last=ts; updateText();
+    if(view==='road') roadView(dt); else carAView(dt);
+    if(running) requestAnimationFrame(draw);
+  }
+  CanvasRenderingContext2D.prototype.roundRect ??= function(x,y,w,h,r){this.moveTo(x+r,y);this.arcTo(x+w,y,x+w,y+h,r);this.arcTo(x+w,y+h,x,y+h,r);this.arcTo(x,y+h,x,y,r);this.arcTo(x,y,x+w,y,r);return this;};
+  playBtn.onclick=()=>{ running=!running; playBtn.textContent=running?'⏸ หยุด':'▶️ เล่น'; last=performance.now(); if(running) requestAnimationFrame(draw); else draw(); };
+  resetBtn.onclick=()=>{ running=false; playBtn.textContent='▶️ เล่น'; reset(); };
+  viewBtn.onclick=()=>{ view=view==='road'?'carA':'road'; reset(); };
+  vecBtn.onclick=()=>{ showVec=!showVec; vecBtn.textContent=showVec?'📘 ซ่อนเวกเตอร์ V สัมพัทธ์':'📘 แสดงเวกเตอร์ V สัมพัทธ์'; draw(); };
+  vAEl.oninput=vBEl.oninput=()=>{ reset(); };
+  carVecChk.onchange=()=>{ draw(); };
+  reset();
+})();
+</script>
+</body>
+</html>

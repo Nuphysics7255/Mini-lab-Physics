@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vector Addition Animation - การรวมเวกเตอร์</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body{
+      font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;
+      /* เปลี่ยนโทนพื้นหลังจากม่วง → เทา */
+      background:linear-gradient(135deg,#f3f4f6 0%,#d1d5db 100%);
+      min-height:100vh;
+    }
+
+    #vectorCanvas{touch-action:none; -webkit-user-select:none; user-select:none;}
+
+    .vector-canvas{
+      background:rgba(255,255,255,.95);
+      border-radius:20px;
+      box-shadow:0 20px 40px rgba(0,0,0,.1);
+    }
+
+    .control-panel{
+      background:rgba(255,255,255,.9);
+      backdrop-filter:blur(10px);
+      border-radius:15px;
+      box-shadow:0 10px 30px rgba(0,0,0,.1);
+    }
+
+    .vector-button{
+      transition:all .3s ease;
+      border-radius:12px;
+      font-weight:600;
+    }
+    .vector-button:hover{
+      transform:translateY(-2px);
+      box-shadow:0 8px 25px rgba(0,0,0,.15);
+    }
+
+    .mini-toggle{
+      border-radius:10px;
+      padding:6px 10px;
+      font-weight:700;
+      font-size:12px;
+      background:rgba(15,23,42,.08);
+      color:#0f172a;
+      border:1px solid rgba(148,163,184,.6);
+      transition:all .2s ease;
+      white-space:nowrap;
+    }
+    .mini-toggle:hover{transform:translateY(-1px); box-shadow:0 6px 18px rgba(0,0,0,.12);}
+
+    .slider-container{
+      background:rgba(255,255,255,.8);
+      border-radius:10px;
+      padding:15px;
+      margin:10px 0;
+    }
+
+    input[type="range"]{
+      width:100%;
+      height:8px;
+      border-radius:5px;
+      background:#ddd;
+      outline:none;
+      -webkit-appearance:none;
+    }
+    input[type="range"]::-webkit-slider-thumb{
+      -webkit-appearance:none;
+      appearance:none;
+      width:20px;
+      height:20px;
+      border-radius:50%;
+      background:#4f46e5;
+      cursor:pointer;
+      box-shadow:0 2px 6px rgba(0,0,0,.2);
+    }
+
+    .facebook-link{
+      background:linear-gradient(45deg,#1877f2,#42a5f5);
+      color:#fff;
+      text-decoration:none;
+      padding:12px 20px;
+      border-radius:25px;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      font-weight:600;
+      transition:all .3s ease;
+      box-shadow:0 4px 15px rgba(24,119,242,.3);
+    }
+    .facebook-link:hover{
+      transform:translateY(-2px);
+      box-shadow:0 8px 25px rgba(24,119,242,.4);
+    }
+
+    /* Modal */
+    .modal-backdrop{
+      position:fixed;
+      inset:0;
+      background:rgba(15,23,42,.55);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:16px;
+      z-index:9999;
+    }
+    .modal-backdrop.show{display:flex;}
+    .modal-card{
+      width:min(760px,100%);
+      max-height:min(80vh,720px);
+      overflow:auto;
+      background:#fff;
+      border-radius:18px;
+      box-shadow:0 30px 80px rgba(0,0,0,.35);
+      border:1px solid rgba(226,232,240,.9);
+    }
+
+    @media (max-width: 640px){
+      body{padding:10px !important;}
+      h1{font-size:1.75rem !important; margin-bottom:14px !important;}
+      .vector-canvas{padding:10px !important;}
+      .control-panel{padding:14px !important;}
+      /* ลดช่องว่างด้านบน/ล่างในมือถือ */
+      .compact-gap{margin-top:10px !important;}
+
+      /* มือถือ: ปรับขนาดตัวอักษรตามที่สั่ง */
+      #vectorControlTitle{font-size:16px !important;}            /* "ควบคุมเวกเตอร์" เล็กลง */
+      #toggleControls{font-size:11px !important; padding:8px 10px !important;} /* "แสดงแผงปรับค่า" เล็กลง */
+    }
+  </style>
+</head>
+<body class="p-4">
+  <div class="max-w-7xl mx-auto">
+    <h1 class="text-4xl font-bold text-slate-900 text-center mb-8">🧮 <span class="text-blue-600">การรวมเวกเตอร์แบบหางต่อหัว</span></h1>
+
+    <div class="grid lg:grid-cols-3 gap-6">
+      <!-- Canvas Area -->
+      <div class="lg:col-span-2">
+        <div class="vector-canvas p-6">
+          <svg id="vectorCanvas" width="100%" height="500" viewBox="0 0 800 500" preserveAspectRatio="xMidYMid meet" class="block">
+            <!-- Grid -->
+            <defs>
+              <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                <path id="gridPath" d="M 20 0 L 0 0 0 20" fill="none" stroke="#d1d5db" stroke-width="1"/>
+              </pattern>
+              <marker id="blueArrowhead" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+                <polygon points="0 0, 8 3, 0 6" fill="#3b82f6"/>
+              </marker>
+              <marker id="greenArrowhead" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+                <polygon points="0 0, 8 3, 0 6" fill="#10b981"/>
+              </marker>
+              <marker id="purpleArrowhead" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+                <polygon points="0 0, 8 3, 0 6" fill="#8b5cf6"/>
+              </marker>
+              <marker id="redArrowhead" markerWidth="8" markerHeight="5" refX="7" refY="2.5" orient="auto">
+                <polygon points="0 0, 8 2.5, 0 5" fill="#dc2626"/>
+              </marker>
+            </defs>
+
+            <rect id="gridRect" width="100%" height="100%" fill="url(#grid)"/>
+
+            <g id="fixedGroup"></g>
+            <g id="vectorGroup"></g>
+            <g id="resultantGroup"></g>
+          </svg>
+
+          <!-- Result Display -->
+          <div class="mt-4 p-4 bg-red-50 rounded-lg border-2 border-red-200 compact-gap">
+            <div class="flex items-start justify-between gap-3">
+              <h3 class="font-bold text-red-600 mb-2">🎯 เวกเตอร์ลัพธ์ (F<sub>net</sub>)</h3>
+              <button id="openExplanation" class="vector-button bg-blue-500 text-white py-2 px-3 text-sm whitespace-nowrap">📖 คำอธิบาย</button>
+            </div>
+            <div class="text-sm grid grid-cols-2 gap-4">
+              <div>ขนาด: <span id="resultMagnitude" class="font-bold">-</span> N</div>
+              <div>มุม: <span id="resultAngle" class="font-bold">-</span>°</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Control Panel -->
+      <div class="control-panel p-6">
+        <div class="flex items-center justify-between gap-3 mb-4">
+          <h2 id="vectorControlTitle" class="text-2xl font-bold text-gray-800">🎛️ ควบคุมเวกเตอร์</h2>
+          <button id="toggleControls" class="vector-button bg-slate-700 text-white py-2 px-3 text-sm">ซ่อนแผงปรับค่า</button>
+        </div>
+
+        <div id="controlsBody">
+          <!-- ซ่อน/แสดงเฉพาะส่วนปรับค่า F1 F2 F3 (ห้ามซ่อนลำดับการรวม/ปุ่มเล่น-รีเซ็ต) -->
+          <div id="forceControls">
+          <!-- Vector F1 Controls -->
+          <div class="slider-container border-l-4 border-blue-500">
+            <div class="flex items-center justify-between gap-2 mb-3">
+              <h3 class="font-bold text-blue-600">⚡ แรง F₁</h3>
+              <button id="toggleF1" class="mini-toggle">ซ่อน</button>
+            </div>
+            <div class="force-body" id="panelF1">
+              <div class="mb-3">
+                <label class="block text-sm font-medium mb-1">ขนาด: <span id="f1Mag">50</span> N</label>
+                <input type="range" id="f1Magnitude" min="0" max="100" value="50" class="w-full">
+              </div>
+              <div>
+                <label class="block text-sm font-medium mb-1">มุม: <span id="f1Ang">0</span>°</label>
+                <input type="range" id="f1Angle" min="0" max="360" value="0" class="w-full">
+              </div>
+            </div>
+          </div>
+
+          <!-- Vector F2 Controls -->
+          <div class="slider-container border-l-4 border-green-500">
+            <div class="flex items-center justify-between gap-2 mb-3">
+              <h3 class="font-bold text-green-600">⚡ แรง F₂</h3>
+              <button id="toggleF2" class="mini-toggle">ซ่อน</button>
+            </div>
+            <div class="force-body" id="panelF2">
+              <div class="mb-3">
+                <label class="block text-sm font-medium mb-1">ขนาด: <span id="f2Mag">40</span> N</label>
+                <input type="range" id="f2Magnitude" min="0" max="100" value="40" class="w-full">
+              </div>
+              <div>
+                <label class="block text-sm font-medium mb-1">มุม: <span id="f2Ang">60</span>°</label>
+                <input type="range" id="f2Angle" min="0" max="360" value="60" class="w-full">
+              </div>
+            </div>
+          </div>
+
+          <!-- Vector F3 Controls -->
+          <div class="slider-container border-l-4 border-purple-500">
+            <div class="flex items-center justify-between gap-2 mb-3">
+              <h3 class="font-bold text-purple-600">⚡ แรง F₃</h3>
+              <button id="toggleF3" class="mini-toggle">ซ่อน</button>
+            </div>
+            <div class="force-body" id="panelF3">
+              <div class="mb-3">
+                <label class="block text-sm font-medium mb-1">ขนาด: <span id="f3Mag">30</span> N</label>
+                <input type="range" id="f3Magnitude" min="0" max="100" value="30" class="w-full">
+              </div>
+              <div>
+                <label class="block text-sm font-medium mb-1">มุม: <span id="f3Ang">120</span>°</label>
+                <input type="range" id="f3Angle" min="0" max="360" value="120" class="w-full">
+              </div>
+            </div>
+          </div>
+        </div><!-- /#forceControls -->
+
+        <!-- Addition Order Selection -->
+        <div class="mt-6">
+          <h3 class="font-bold text-gray-800 mb-3">🔄 ลำดับการรวมเวกเตอร์</h3>
+          <div class="grid grid-cols-3 gap-2">
+            <button id="order123" class="vector-button bg-indigo-500 text-white py-2 px-2 text-sm">F₁+F₂+F₃</button>
+            <button id="order231" class="vector-button bg-indigo-400 text-white py-2 px-2 text-sm">F₂+F₃+F₁</button>
+            <button id="order312" class="vector-button bg-indigo-400 text-white py-2 px-2 text-sm">F₃+F₂+F₁</button>
+          </div>
+        </div>
+
+        <!-- Animation Controls (เฉพาะปุ่ม เล่น / รีเซ็ต) -->
+        <div class="mt-6">
+          <div class="grid grid-cols-2 gap-2">
+            <button id="playAnimation" class="vector-button bg-green-500 text-white py-2 px-3 text-sm">▶️ เล่น</button>
+            <button id="resetAnimation" class="vector-button bg-gray-500 text-white py-2 px-3 text-sm">🔄 รีเซ็ต</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="text-center mt-8">
+      <p class="text-slate-700 mb-4 text-lg">📚 ศึกษาเพิ่มเติมที่เพจ</p>
+      <a href="https://www.facebook.com/resolvephysics" target="_blank" class="facebook-link" rel="noopener">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+        </svg>
+        คลายปมฟิสิกส์
+      </a>
+    </div>
+  </div>
+
+  <!-- Explanation Modal -->
+  <div id="explainModal" class="modal-backdrop" aria-hidden="true">
+    <div class="modal-card">
+      <div class="sticky top-0 bg-white border-b border-slate-200 p-4 flex items-center justify-between gap-3">
+        <h3 class="text-lg font-bold text-slate-800">📖 คำอธิบาย</h3>
+        <button id="closeExplanation" class="vector-button bg-slate-200 text-slate-800 py-2 px-3 text-sm">❌ ปิด</button>
+      </div>
+      <div class="p-4">
+        <div class="p-4 bg-blue-50 rounded-lg border-2 border-blue-200">
+          <h4 class="font-bold text-blue-600 mb-2">📖 วิธีหางต่อหัว (Tail-to-Head)</h4>
+          <p class="text-sm text-gray-700 leading-relaxed">
+            คือการนำเวกเตอร์มาเรียงต่อๆกัน โดยต้องรักษาขนาดและทิศทางให้เหมือนเดิม
+            เวกเตอร์ลัพธ์จะลากจากหางของเวกเตอร์แรกไปยังหัวของเวกเตอร์สุดท้าย
+          </p>
+        </div>
+        <div class="mt-4 text-sm text-slate-700 leading-relaxed">
+          <p class="mb-2">แนวคิดสำคัญ:</p>
+          <ul class="list-disc pl-6 space-y-1">
+            <li>การสลับลำดับการต่อ (เช่น F₁+F₂+F₃ หรือ F₂+F₃+F₁) จะให้เวกเตอร์ลัพธ์เท่าเดิม</li>
+            <li>การต่อหาง-หัว ช่วยมองภาพผลรวมแบบเรขาคณิตได้ชัดเจน</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    class VectorAddition {
+      constructor(){
+        this.vectors = {
+          f1: { magnitude: 50, angle: 0, color: '#3b82f6' },
+          f2: { magnitude: 40, angle: 60, color: '#10b981' },
+          f3: { magnitude: 30, angle: 120, color: '#8b5cf6' }
+        };
+
+        this.currentOrder = [1,2,3];
+        this.scale = 2; // pixels per Newton
+
+        this.canvas = document.getElementById('vectorCanvas');
+        this.fixedGroup = document.getElementById('fixedGroup');
+        this.vectorGroup = document.getElementById('vectorGroup');
+        this.resultantGroup = document.getElementById('resultantGroup');
+
+        // responsive state
+        this.canvasW = 800;
+        this.canvasH = 500;
+        this.origin = { x: this.canvasW/2, y: this.canvasH/2 };
+
+        this.originUserMoved = false;
+        this._drag = { active:false, pointerId:null, dx:0, dy:0 };
+        this.gridSize = 20;
+        this.labelFontSize = 14;
+        this.highlightFontSize = 18;
+
+        // draggable label offsets (F1/F2/F3)
+        this.labelOffsets = {
+          f1: { x: 0, y: 0 },
+          f2: { x: 0, y: 0 },
+          f3: { x: 0, y: 0 },
+          fnet: { x: 0, y: 0 }
+        };
+        this._labelDrag = { active:false, pointerId:null, key:null, startX:0, startY:0, baseX:0, baseY:0 };
+
+        this.animationStep = 0;
+        this.isAnimating = false;
+        this.animationSpeed = 1500;
+
+        this.initializeControls();
+        this.applyResponsive();
+        this.drawVectors();
+
+        this.bindOriginDrag();
+        this.bindLabelDrag();
+
+        window.addEventListener('resize', () => {
+          const wasMobile = this._isMobile;
+          this.applyResponsive();
+          // redraw only when breakpoint changes to avoid jitter
+          if (wasMobile !== this._isMobile) this.drawVectors();
+        });
+      }
+
+      isMobile(){
+        return window.matchMedia('(max-width: 640px)').matches;
+      }
+
+      applyResponsive(){
+        this._isMobile = this.isMobile();
+
+        // Canvas height + viewBox
+        // Mobile: ลดความสูงจอทดลองลง 40% (จากเดิม 340 เหลือ 204)
+        this.canvasH = this._isMobile ? 204 : 500;
+        this.canvas.setAttribute('viewBox', `0 0 ${this.canvasW} ${this.canvasH}`);
+        this.canvas.setAttribute('height', String(this.canvasH));
+        // Mobile: ให้กริดเต็มพื้นที่ *โดยไม่ยืดผิดรูป* (ใช้ slice เติมเต็มพื้นที่และครอปเล็กน้อย)
+        this.canvas.setAttribute('preserveAspectRatio', this._isMobile ? 'xMidYMid slice' : 'xMidYMid meet');
+
+        // Grid: mobile ให้ช่องโตขึ้น 2 เท่า
+        this.gridSize = this._isMobile ? 40 : 20;
+        const gridPattern = document.getElementById('grid');
+        const gridPath = document.getElementById('gridPath');
+        gridPattern.setAttribute('width', String(this.gridSize));
+        gridPattern.setAttribute('height', String(this.gridSize));
+        gridPath.setAttribute('d', `M ${this.gridSize} 0 L 0 0 0 ${this.gridSize}`);
+
+        // เส้นกริดเข้มขึ้นนิด (มือถือเข้มขึ้นอีกหน่อย)
+        gridPath.setAttribute('stroke', this._isMobile ? '#cbd5e1' : '#d1d5db');
+
+        // Font size ของป้าย F ในมือถือ: ลดลง 7px
+        this.labelFontSize = this._isMobile ? 12 : 14;
+        this.highlightFontSize = this._isMobile ? 16 : 18;
+
+        // origin: ถ้ายังไม่เคยลาก ให้เริ่มที่กึ่งกลาง; ถ้าเคยลากแล้ว ให้คงตำแหน่งและ clamp ให้อยู่ในกรอบ
+        if (!this.originUserMoved){
+          this.origin = { x: this.canvasW/2, y: this.canvasH/2 };
+        } else {
+          this.origin = this.clampPoint(this.origin.x, this.origin.y);
+        }
+      }
+
+      initializeControls(){
+        // F1 controls
+        document.getElementById('f1Magnitude').addEventListener('input', (e) => {
+          this.vectors.f1.magnitude = parseInt(e.target.value);
+          document.getElementById('f1Mag').textContent = e.target.value;
+          this.drawVectors();
+        });
+        document.getElementById('f1Angle').addEventListener('input', (e) => {
+          this.vectors.f1.angle = parseInt(e.target.value);
+          document.getElementById('f1Ang').textContent = e.target.value;
+          this.drawVectors();
+        });
+
+        // F2 controls
+        document.getElementById('f2Magnitude').addEventListener('input', (e) => {
+          this.vectors.f2.magnitude = parseInt(e.target.value);
+          document.getElementById('f2Mag').textContent = e.target.value;
+          this.drawVectors();
+        });
+        document.getElementById('f2Angle').addEventListener('input', (e) => {
+          this.vectors.f2.angle = parseInt(e.target.value);
+          document.getElementById('f2Ang').textContent = e.target.value;
+          this.drawVectors();
+        });
+
+        // F3 controls
+        document.getElementById('f3Magnitude').addEventListener('input', (e) => {
+          this.vectors.f3.magnitude = parseInt(e.target.value);
+          document.getElementById('f3Mag').textContent = e.target.value;
+          this.drawVectors();
+        });
+        document.getElementById('f3Angle').addEventListener('input', (e) => {
+          this.vectors.f3.angle = parseInt(e.target.value);
+          document.getElementById('f3Ang').textContent = e.target.value;
+          this.drawVectors();
+        });
+
+        // Order buttons
+        document.getElementById('order123').addEventListener('click', () => this.setOrder([1,2,3]));
+        document.getElementById('order231').addEventListener('click', () => this.setOrder([2,3,1]));
+        document.getElementById('order312').addEventListener('click', () => this.setOrder([3,2,1]));
+
+        // Animation
+        document.getElementById('playAnimation').addEventListener('click', () => this.startAnimation());
+        document.getElementById('resetAnimation').addEventListener('click', () => this.resetAnimation());
+
+        // Explanation modal
+        const modal = document.getElementById('explainModal');
+        const openBtn = document.getElementById('openExplanation');
+        const closeBtn = document.getElementById('closeExplanation');
+        const close = () => { modal.classList.remove('show'); modal.setAttribute('aria-hidden','true'); };
+        const open = () => { modal.classList.add('show'); modal.setAttribute('aria-hidden','false'); };
+
+        openBtn.addEventListener('click', open);
+        closeBtn.addEventListener('click', close);
+        modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+
+        // Toggle: ซ่อน/แสดงเฉพาะส่วนปรับค่า F1 F2 F3 (ห้ามซ่อนลำดับการรวม + ปุ่มเล่น/รีเซ็ต)
+        const toggleBtn = document.getElementById('toggleControls');
+        const forceControls = document.getElementById('forceControls');
+        toggleBtn.addEventListener('click', () => {
+          const hidden = forceControls.classList.toggle('hidden');
+          toggleBtn.textContent = hidden ? 'แสดงแผงปรับค่า' : 'ซ่อนแผงปรับค่า';
+        });
+
+
+        // Toggle sub-panels F1/F2/F3 (ซ่อน/แสดงแยก)
+        const hookSubToggle = (btnId, panelId) => {
+          const btn = document.getElementById(btnId);
+          const panel = document.getElementById(panelId);
+          if (!btn || !panel) return;
+          btn.addEventListener('click', () => {
+            const hidden = panel.classList.toggle('hidden');
+            btn.textContent = hidden ? 'แสดง' : 'ซ่อน';
+          });
+        };
+        hookSubToggle('toggleF1','panelF1');
+        hookSubToggle('toggleF2','panelF2');
+        hookSubToggle('toggleF3','panelF3');
+      }
+
+      setOrder(order){
+        this.currentOrder = order;
+
+        // Update button styles (เฉพาะปุ่มลำดับ)
+        ['order123','order231','order312'].forEach(id => {
+          const btn = document.getElementById(id);
+          btn.classList.remove('bg-indigo-500');
+          btn.classList.add('bg-indigo-400');
+        });
+        const orderMap = { '1,2,3':'order123', '2,3,1':'order231', '3,2,1':'order312' };
+        const active = document.getElementById(orderMap[order.join(',')]);
+        if (active){
+          active.classList.remove('bg-indigo-400');
+          active.classList.add('bg-indigo-500');
+        }
+
+        this.drawVectors();
+      }
+
+      vectorToCartesian(magnitude, angle){
+        const radians = (angle * Math.PI) / 180;
+        return {
+          x: magnitude * Math.cos(radians),
+          y: -magnitude * Math.sin(radians) // SVG y increases downward
+        };
+      }
+
+      clampPoint(x, y){
+        const pad = this._isMobile ? 32 : 24;
+        const cx = Math.max(pad, Math.min(this.canvasW - pad, x));
+        const cy = Math.max(pad, Math.min(this.canvasH - pad, y));
+        return { x: cx, y: cy };
+      }
+
+      clientToSvg(clientX, clientY){
+        const rect = this.canvas.getBoundingClientRect();
+        const sx = this.canvasW / rect.width;
+        const sy = this.canvasH / rect.height;
+        return {
+          x: (clientX - rect.left) * sx,
+          y: (clientY - rect.top) * sy
+        };
+      }
+
+      bindOriginDrag(){
+        if (this._originDragBound) return;
+        this._originDragBound = true;
+
+        const down = (e) => {
+          const t = e.target;
+          if (!t || !t.getAttribute) return;
+          if (t.getAttribute('data-origin-handle') !== '1') return;
+
+          e.preventDefault();
+          this.originUserMoved = true;
+
+          const pt = this.clientToSvg(e.clientX, e.clientY);
+          this._drag.active = true;
+          this._drag.pointerId = e.pointerId;
+          this._drag.dx = pt.x - this.origin.x;
+          this._drag.dy = pt.y - this.origin.y;
+
+          try { this.canvas.setPointerCapture(e.pointerId); } catch(_) {}
+        };
+
+        const move = (e) => {
+          if (!this._drag.active) return;
+          if (this._drag.pointerId !== null && e.pointerId !== this._drag.pointerId) return;
+          e.preventDefault();
+
+          const pt = this.clientToSvg(e.clientX, e.clientY);
+          const nx = pt.x - this._drag.dx;
+          const ny = pt.y - this._drag.dy;
+          const cl = this.clampPoint(nx, ny);
+          this.origin.x = cl.x;
+          this.origin.y = cl.y;
+
+          this.drawVectors();
+        };
+
+        const up = (e) => {
+          if (!this._drag.active) return;
+          if (this._drag.pointerId !== null && e.pointerId !== this._drag.pointerId) return;
+
+          this._drag.active = false;
+          this._drag.pointerId = null;
+          try { this.canvas.releasePointerCapture(e.pointerId); } catch(_) {}
+        };
+
+        this.canvas.addEventListener('pointerdown', down, { passive:false });
+        this.canvas.addEventListener('pointermove', move, { passive:false });
+        this.canvas.addEventListener('pointerup', up);
+        this.canvas.addEventListener('pointercancel', up);
+        this.canvas.addEventListener('pointerleave', up);
+      }
+
+      bindLabelDrag(){
+        if (this._labelDragBound) return;
+        this._labelDragBound = true;
+
+        const down = (e) => {
+          const t = e.target;
+          if (!t || !t.getAttribute) return;
+          const key = t.getAttribute('data-label-key');
+          if (!key) return;
+
+          e.preventDefault();
+          this._labelDrag.active = true;
+          this._labelDrag.pointerId = e.pointerId;
+          this._labelDrag.key = key;
+
+          const pt = this.clientToSvg(e.clientX, e.clientY);
+          this._labelDrag.startX = pt.x;
+          this._labelDrag.startY = pt.y;
+          this._labelDrag.baseX = this.labelOffsets[key]?.x ?? 0;
+          this._labelDrag.baseY = this.labelOffsets[key]?.y ?? 0;
+
+          try { this.canvas.setPointerCapture(e.pointerId); } catch(_) {}
+        };
+
+        const move = (e) => {
+          if (!this._labelDrag.active) return;
+          if (this._labelDrag.pointerId !== null && e.pointerId !== this._labelDrag.pointerId) return;
+          e.preventDefault();
+
+          const pt = this.clientToSvg(e.clientX, e.clientY);
+          const dx = pt.x - this._labelDrag.startX;
+          const dy = pt.y - this._labelDrag.startY;
+
+          const key = this._labelDrag.key;
+          if (!key || !this.labelOffsets[key]) return;
+          this.labelOffsets[key].x = this._labelDrag.baseX + dx;
+          this.labelOffsets[key].y = this._labelDrag.baseY + dy;
+
+          this.drawVectors();
+        };
+
+        const up = (e) => {
+          if (!this._labelDrag.active) return;
+          if (this._labelDrag.pointerId !== null && e.pointerId !== this._labelDrag.pointerId) return;
+          this._labelDrag.active = false;
+          this._labelDrag.pointerId = null;
+          this._labelDrag.key = null;
+          try { this.canvas.releasePointerCapture(e.pointerId); } catch(_) {}
+        };
+
+        // pointer events bubble from <text> on svg
+        this.canvas.addEventListener('pointerdown', down, { passive:false });
+        this.canvas.addEventListener('pointermove', move, { passive:false });
+        this.canvas.addEventListener('pointerup', up);
+        this.canvas.addEventListener('pointercancel', up);
+        this.canvas.addEventListener('pointerleave', up);
+      }
+
+
+      drawOrigin(){
+        const ns = 'http://www.w3.org/2000/svg';
+        const hit = document.createElementNS(ns,'circle');
+        hit.setAttribute('cx', this.origin.x);
+        hit.setAttribute('cy', this.origin.y);
+        hit.setAttribute('r', this._isMobile ? '28' : '20');
+        hit.setAttribute('fill', 'transparent');
+        hit.setAttribute('data-origin-handle', '1');
+        hit.style.cursor = 'grab';
+
+        const circle = document.createElementNS(ns,'circle');
+        circle.setAttribute('cx', this.origin.x);
+        circle.setAttribute('cy', this.origin.y);
+        circle.setAttribute('r', '8');
+        circle.setAttribute('fill', '#1f2937');
+        circle.setAttribute('data-origin-handle', '1');
+        circle.style.cursor = 'grab';
+
+        const text = document.createElementNS(ns,'text');
+        text.setAttribute('x', this.origin.x + 10);
+        text.setAttribute('y', this.origin.y - 5);
+        text.setAttribute('font-size', String(this._isMobile ? 16 : 14));
+        text.setAttribute('fill', '#1f2937');
+        text.setAttribute('font-weight', 'bold');
+        text.textContent = 'O';
+
+        this.fixedGroup.appendChild(hit);
+        this.fixedGroup.appendChild(circle);
+        this.fixedGroup.appendChild(text);
+      }
+
+      drawVector(startX, startY, magnitude, angle, color, label, strokeWidth=3, labelKey=null){
+        if (magnitude <= 0) return null;
+
+        const ns = 'http://www.w3.org/2000/svg';
+        const end = this.vectorToCartesian(magnitude * this.scale, angle);
+        const endX = startX + end.x;
+        const endY = startY + end.y;
+
+        // marker
+        let markerEnd = 'url(#redArrowhead)';
+        if (color === '#3b82f6') markerEnd = 'url(#blueArrowhead)';
+        else if (color === '#10b981') markerEnd = 'url(#greenArrowhead)';
+        else if (color === '#8b5cf6') markerEnd = 'url(#purpleArrowhead)';
+
+        const line = document.createElementNS(ns,'line');
+        line.setAttribute('x1', startX);
+        line.setAttribute('y1', startY);
+        line.setAttribute('x2', endX);
+        line.setAttribute('y2', endY);
+        line.setAttribute('stroke', color);
+        line.setAttribute('stroke-width', String(strokeWidth));
+        line.setAttribute('marker-end', markerEnd);
+
+        // Label offset
+        const perpAngle = angle + 90;
+        const perpRadians = (perpAngle * Math.PI) / 180;
+        const offsetDistance = this._isMobile ? 18 : 15;
+
+        let labelX = startX + end.x * 0.5 + Math.cos(perpRadians) * offsetDistance;
+        let labelY = startY + end.y * 0.5 - Math.sin(perpRadians) * offsetDistance;
+
+        // draggable offsets for F1/F2/F3 labels
+        if (labelKey && this.labelOffsets[labelKey]){
+          labelX += this.labelOffsets[labelKey].x;
+          labelY += this.labelOffsets[labelKey].y;
+        }
+
+        // Optional label (ghost vectors at origin should not carry labels)
+        let text = null;
+        if (label !== null && label !== undefined && label !== ''){
+          text = document.createElementNS(ns,'text');
+          text.setAttribute('x', labelX);
+          text.setAttribute('y', labelY);
+          text.setAttribute('fill', color);
+          text.setAttribute('font-size', String(this.labelFontSize));
+          text.setAttribute('font-weight', 'bold');
+          text.setAttribute('text-anchor', 'middle');
+          if (labelKey){
+            text.setAttribute('data-label-key', labelKey);
+            text.style.cursor = 'move';
+          }
+          text.textContent = label;
+        }
+
+        return { line, text, endX, endY };
+      }
+
+      getMovedKeys(){
+        // moved = vectors that have been translated into head-to-tail position (i.e., not the first vector in the chosen order)
+        const moved = new Set();
+        if (!this.isAnimating && this.animationStep === 0) return moved;
+
+        const orderedKeys = this.currentOrder
+          .map(i => `f${i}`)
+          .filter(k => (this.vectors[k]?.magnitude ?? 0) > 0);
+
+        const maxStep = this.animationStep;
+        orderedKeys.forEach((k, idx) => {
+          if (idx === 0) return; // first vector is not moved
+          if (idx < maxStep) moved.add(k);
+        });
+        return moved;
+      }
+
+      // ---------- label helpers (used by both base vectors and head-to-tail) ----------
+      symbolFromKey(key){
+        if (key === 'f1') return 'F₁';
+        if (key === 'f2') return 'F₂';
+        if (key === 'f3') return 'F₃';
+        return String(key || '').toUpperCase();
+      }
+
+      fmtMag(m){
+        const r = Math.round(m);
+        return Math.abs(m - r) < 1e-6 ? String(r) : Number(m).toFixed(1);
+      }
+
+      labelWithValue(key, m){
+        return `${this.symbolFromKey(key)} = ${this.fmtMag(m)} N`;
+      }
+
+      drawVectors(){
+        // Clear
+        this.fixedGroup.innerHTML = '';
+        this.vectorGroup.innerHTML = '';
+        this.resultantGroup.innerHTML = '';
+
+        // Origin
+        this.drawOrigin();
+
+        const movedKeys = this.getMovedKeys();
+
+        const drawBase = (key) => {
+          const v = this.vectors[key];
+          if (!v || v.magnitude <= 0) return;
+
+          // ถ้าเวกเตอร์ตัวนี้ถูก “ย้าย” ไปต่อหาง-หัวแล้ว
+          // ให้แสดงเวกเตอร์เดิมที่จุด O เป็นเส้นปะจางๆ “โดยไม่ต้องมีป้ายชื่อ”
+          const baseLabel = movedKeys.has(key) ? '' : this.labelWithValue(key, v.magnitude);
+
+          const el = this.drawVector(
+            this.origin.x,
+            this.origin.y,
+            v.magnitude,
+            v.angle,
+            v.color,
+            baseLabel,
+            3,
+            key
+          );
+          if (!el) return;
+
+          // If this vector has been moved to head-to-tail position, show its original (at origin) as a faint dashed ghost
+          if (movedKeys.has(key)){
+            el.line.setAttribute('stroke-dasharray','6,6');
+            el.line.setAttribute('opacity','0.25');
+            el.line.setAttribute('stroke-width','2');
+          }
+
+          this.vectorGroup.appendChild(el.line);
+          if (el.text) this.vectorGroup.appendChild(el.text);
+        };
+
+        // Individual vectors from origin
+        drawBase('f1');
+        drawBase('f2');
+        drawBase('f3');
+
+        this.drawHeadToTail();
+      }
+
+      drawHeadToTail(){
+        // Only show sequence/resultant during animation or after completion
+        if (!this.isAnimating && this.animationStep === 0){
+          document.getElementById('resultMagnitude').textContent = '-';
+          document.getElementById('resultAngle').textContent = '-';
+          const cs0 = document.getElementById('currentStep'); if (cs0) cs0.textContent = '0';
+          return;
+        }
+
+        const orderedVectors = this.currentOrder.map(i => {
+          const key = `f${i}`;
+          return { ...this.vectors[key], label: this.labelWithValue(key, this.vectors[key].magnitude), originalColor:this.vectors[key].color, key };
+        }).filter(v => v.magnitude > 0);
+
+        let currentX = this.origin.x;
+        let currentY = this.origin.y;
+        let totalX = 0;
+        let totalY = 0;
+
+        const maxStep = this.animationStep;
+
+        orderedVectors.forEach((vector, idx) => {
+          if (idx >= maxStep) return;
+
+          const cart = this.vectorToCartesian(vector.magnitude * this.scale, vector.angle);
+
+          // head-to-tail vectors: show the moved (new) vectors as solid.
+          // (original vectors that were moved are shown at origin as faint dashed ghosts)
+          const key = vector.key;
+          // ป้าย F1/F2/F3 ต้อง “ย้ายตามเวกเตอร์ใหม่” และไม่ต้องมีเครื่องหมาย ' (prime)
+          const el = this.drawVector(currentX,currentY,vector.magnitude,vector.angle,vector.originalColor,vector.label,3,key);
+          if (el){
+            if (idx === this.animationStep - 1){
+              el.line.setAttribute('stroke-width','4');
+              if (el.text) el.text.setAttribute('font-size', String(this.highlightFontSize));
+            }
+            this.resultantGroup.appendChild(el.line);
+            if (el.text) this.resultantGroup.appendChild(el.text);
+          }
+
+          currentX += cart.x;
+          currentY += cart.y;
+          totalX += cart.x;
+          totalY += cart.y;
+        });
+
+        if (this.animationStep > orderedVectors.length){
+          const mag = Math.sqrt(totalX*totalX + totalY*totalY) / this.scale;
+          let ang = Math.atan2(-totalY, totalX) * 180/Math.PI;
+          if (ang < 0) ang += 360;
+
+          if (mag > 0.1){
+            const res = this.drawVector(this.origin.x,this.origin.y,mag,ang,'#dc2626',`Fₙₑₜ = ${this.fmtMag(mag)} N`,5,'fnet');
+            if (res){
+              this.resultantGroup.appendChild(res.line);
+              this.resultantGroup.appendChild(res.text);
+            }
+          }
+
+          document.getElementById('resultMagnitude').textContent = mag.toFixed(1);
+          document.getElementById('resultAngle').textContent = ang.toFixed(1);
+        } else {
+          document.getElementById('resultMagnitude').textContent = '...';
+          document.getElementById('resultAngle').textContent = '...';
+        }
+
+        const cs = document.getElementById('currentStep'); if (cs) cs.textContent = String(this.animationStep);
+      }
+
+      startAnimation(){
+        if (this.isAnimating) return;
+        this.isAnimating = true;
+        this.animationStep = 0;
+
+        const btn = document.getElementById('playAnimation');
+        btn.textContent = '⏸️ หยุดชั่วคราว';
+        btn.classList.remove('bg-green-500');
+        btn.classList.add('bg-orange-500');
+
+        this.animateNextStep();
+      }
+
+      animateNextStep(){
+        if (!this.isAnimating) return;
+
+        this.animationStep++;
+        this.drawVectors();
+
+        if (this.animationStep > 4){
+          this.stopAnimation();
+          return;
+        }
+
+        setTimeout(() => this.animateNextStep(), this.animationSpeed);
+      }
+
+      stopAnimation(){
+        this.isAnimating = false;
+        const btn = document.getElementById('playAnimation');
+        btn.textContent = '▶️ เล่น';
+        btn.classList.remove('bg-orange-500');
+        btn.classList.add('bg-green-500');
+        this.drawVectors();
+      }
+
+      resetAnimation(){
+        this.isAnimating = false;
+        this.animationStep = 0;
+        const btn = document.getElementById('playAnimation');
+        btn.textContent = '▶️ เล่น';
+        btn.classList.remove('bg-orange-500');
+        btn.classList.add('bg-green-500');
+        this.drawVectors();
+      }
+    }
+
+    const vectorApp = new VectorAddition();
+  </script>
+</body>
+</html>

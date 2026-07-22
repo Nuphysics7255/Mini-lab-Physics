@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Mini Lab : การหาเวกเตอร์ลัพธ์โดยการวาดรูปเวกเตอร์แบบหางต่อหัว</title>
+<script>window.MathJax={tex:{inlineMath:[["\\(","\\)"],["$","$"]]},svg:{fontCache:"global"}};</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<style>
+:root{--blue:#075bd8;--blue2:#2d75e8;--soft:#eef6ff;--line:#9ec5f2;--text:#16324f;--green:#098a18;--pink:#eb1685;--purple:#7225a8;--gray:#6c7682}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{margin:0;min-height:100%;font-family:system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;background:linear-gradient(#edf6ff,#fff);color:var(--text);overflow-x:hidden}body{font-size:20px}.wrap{max-width:1160px;margin:auto;padding:14px 12px 140px}.top{display:flex;justify-content:space-between;gap:10px;align-items:flex-end;margin:6px 0 12px}.title h1{margin:0;color:var(--blue);font-size:clamp(30px,4.2vw,46px);line-height:1;font-weight:950}.title p{margin:6px 0 0;font-size:18px;font-weight:800;color:#426283}.openFormula{border:0;border-radius:16px;background:linear-gradient(#ffe5bf,#ffc878);color:#8a4b00;padding:12px 18px;font-size:18px;font-weight:950;box-shadow:0 5px 0 rgba(0,70,160,.25)}.lab{display:grid;grid-template-columns:350px 1fr;gap:12px}.card{background:#fff;border:2px solid var(--line);border-radius:20px;overflow:hidden;box-shadow:0 10px 24px rgba(0,60,130,.12)}.head{background:linear-gradient(#096ee9,#0452c6);color:#fff;padding:12px 15px;font-size:21px;font-weight:950}.head small{display:block;font-size:15px;margin-top:2px}.vectors{padding:12px;display:grid;gap:10px}.vrow{display:grid;grid-template-columns:58px 1fr 1fr 32px;gap:9px;align-items:center;background:#fbfdff;border:1.5px solid #dce9f8;border-radius:15px;padding:9px}.sym{font-size:38px;font-weight:950;font-style:italic;position:relative;text-align:center;line-height:1}.sym:before{content:"→";position:absolute;left:15px;top:-19px;font-size:27px;font-style:normal}.a{color:#104dff}.b{color:var(--green)}.c{color:var(--pink)}.r{color:var(--purple)}.field label{display:block;text-align:center;font-size:16px;font-weight:850;color:#51687f;margin-bottom:3px}.field input{width:100%;font-size:20px;font-weight:850;text-align:center;border:1.5px solid #c6d5e6;border-radius:9px;padding:8px 3px}.color{width:29px;height:29px;border-radius:6px;box-shadow:inset 0 0 0 1px #0003}.mini{grid-column:2/5;display:flex;gap:14px;flex-wrap:wrap;font-size:15px;font-weight:800;color:#365777}.mini label{display:flex;gap:5px;align-items:center}.mini input,.showbar input{width:19px;height:19px;accent-color:var(--blue)}.control{padding:0 12px 12px;display:grid;gap:10px}.twobtn{display:grid;grid-template-columns:1fr 1fr;gap:10px}.btn{border:0;border-radius:14px;padding:12px;font-size:18px;font-weight:950;cursor:pointer;box-shadow:0 5px 0 #0002}.btn:active{transform:translateY(2px);box-shadow:0 2px 0 #0002}.blue{background:linear-gradient(#1678f4,#0754ca);color:#fff}.gray{background:linear-gradient(#8e99a6,#68727e);color:#fff}.soft{background:#eef6ff;color:#064fc0;border:1.5px solid var(--line)}.result{margin:0 12px 12px;border:2px solid var(--line);border-radius:18px;overflow:hidden;background:#f8fbff}.result h3{margin:0;background:linear-gradient(#096ee9,#0452c6);color:#fff;padding:10px 14px;font-size:20px}.resultGrid{display:grid;grid-template-columns:1fr 1fr;text-align:center}.resultGrid div{padding:12px 8px}.resultGrid div+div{border-left:1.5px solid #c9daf0}.num{display:block;color:var(--blue);font-size:34px;font-weight:950;line-height:1.05}.right{padding:12px}.hint{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1.5px solid var(--line);border-radius:14px;padding:10px 14px;margin-bottom:10px;background:#f8fbff;font-size:18px;font-weight:850}.canvasWrap{border:1.5px solid var(--line);border-radius:16px;overflow:hidden;background:#fff;touch-action:none}canvas{display:block;width:100%;height:min(62vh,560px);min-height:430px}.showbar{margin-top:10px;border:1.5px solid var(--line);border-radius:16px;padding:10px;background:#f8fbff;display:flex;gap:18px;flex-wrap:wrap;justify-content:center;font-weight:900}.sum{margin-top:10px;border:2px solid var(--blue2);border-radius:16px;background:#f8fbff;display:grid;grid-template-columns:repeat(4,1fr);text-align:center;font-weight:900}.sum div{padding:10px}.sum div+div{border-left:1px solid #bfd6f4}.sum b{display:block;color:var(--blue);font-size:25px}.foot{text-align:center;margin-top:18px;font-size:17px;font-weight:800}.foot a{color:var(--blue);text-decoration:underline}.modal{position:fixed;inset:0;background:#fff8;backdrop-filter:blur(4px);z-index:50;display:none;padding:calc(14px + env(safe-area-inset-top)) 12px calc(130px + env(safe-area-inset-bottom));overflow:auto}.modal.show{display:block}.modalBox{max-width:850px;margin:20px auto;background:#fff7ed;border:2px solid #eda94f;border-radius:22px;box-shadow:0 20px 50px #0002;position:relative;padding:22px}.close{position:fixed;right:18px;top:calc(18px + env(safe-area-inset-top));width:52px;height:52px;border:0;border-radius:18px;background:#e7eef6;color:#345b84;font-size:28px;font-weight:950;z-index:60}.modal h2{margin:0 0 12px;color:#bd6200;font-size:30px}.formulaCard{background:#fff;border:1.5px solid #f0bd80;border-radius:16px;padding:13px 15px;margin:10px 0;font-size:19px;line-height:1.55}.formulaCard b{color:#075bd8}.dragTag{position:absolute;pointer-events:none;background:#fff;border:1px solid #bcd4f0;border-radius:999px;padding:3px 8px;font-size:12px;color:#075bd8}.chainPick{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:center;background:#f8fbff;border:1.5px solid var(--line);border-radius:14px;padding:9px 12px;font-size:16px;font-weight:900;color:#365777}.chainPick select{width:100%;font-size:17px;font-weight:900;border:1.5px solid #c6d5e6;border-radius:10px;padding:8px;background:#fff;color:#16324f}
+@media(max-width:860px){body{font-size:18px}.wrap{padding:12px 10px 150px}.top{display:block}.openFormula{margin-top:10px;width:100%}.lab{grid-template-columns:1fr}.card{border-radius:18px}.right{order:-1}.hint{font-size:16px;align-items:flex-start}.vrow{grid-template-columns:54px 1fr 1fr 30px}.field label{font-size:14px}.field input{font-size:18px}.mini{font-size:14px;gap:10px}.btn{font-size:17px;padding:11px}.resultGrid{grid-template-columns:1fr 1fr}.canvasWrap{height:58vh;min-height:360px}canvas{height:100%;min-height:360px}.sum{grid-template-columns:1fr 1fr}.sum div:nth-child(3){border-left:0;border-top:1px solid #bfd6f4}.sum div:nth-child(4){border-top:1px solid #bfd6f4}.modalBox{margin-top:70px;padding:18px}.modal h2{font-size:25px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><div class="title"><h1>Mini Lab : การหาเวกเตอร์ลัพธ์โดยการวาดรูปเวกเตอร์แบบหางต่อหัว</h1></div><button class="openFormula" id="openFormula">📘 สูตรสำคัญ</button></div>
+  <div class="lab">
+    <section class="card left"><div class="head">แรงย่อย <small>ปรับจากช่องตัวเลข หรือแตะลากในกราฟ</small></div><div class="vectors" id="vectors"></div>
+      <div class="control"><div class="twobtn"><button class="btn blue" id="resetBtn">🔄 รีเซ็ต</button><button class="btn gray" id="clearBtn">🗑 ล้างค่า</button></div><button class="btn soft" id="toggleR">👁 แสดง/ซ่อนแรงลัพธ์ Fnet</button><button class="btn soft" id="toggleChain">🔗 แสดงการต่อแรงแบบหางต่อหัว</button><div class="chainPick"><label for="chainOrder">ลำดับการต่อ</label><select id="chainOrder"></select></div></div>
+      <div class="result"><h3>แรงลัพธ์  Fnet = F1 + F2 + F3</h3><div class="resultGrid"><div>ขนาด Fnet<span class="num" id="rmag">0.00</span>N</div><div>มุม \(\theta\)<span class="num" id="rang">0.0°</span>องศา</div></div></div>
+    </section>
+    <section class="card right"><div class="hint"><span>☝️ ลากปลายแรงเพื่อปรับค่า | ลากป้าย F1 F2 F3 Fnet เพื่อขยับตำแหน่ง | ลากจุดกำเนิดสีน้ำเงินเพื่อเลื่อนแกน</span></div>
+      <div class="canvasWrap"><canvas id="cv"></canvas></div>
+      <div class="showbar"><label><input type="checkbox" id="grid" checked> แสดงกริด</label><label><input type="checkbox" id="components" checked> แสดงเส้นองค์ประกอบ</label><label><input type="checkbox" id="showValues" checked> แสดงขนาดแรงและมุม</label></div>
+      <div class="sum"><div>ผลรวมแรงแกน X <b id="sx">0.00</b></div><div>ผลรวมแรงแกน Y <b id="sy">0.00</b></div><div>Fnet <b id="sr">0.00</b></div><div>มุม \(\theta\) <b id="st">0.0°</b></div></div>
+    </section>
+  </div>
+  <div class="foot">ศึกษาเพิ่มเติมที่ <a href="https://www.facebook.com/resolvephysics" target="_blank">เพจคลายปมฟิสิกส์</a></div>
+</div>
+<div class="modal" id="formula"><button class="close" id="closeFormula">❌</button><div class="modalBox"><h2>📘 สูตรสำคัญ</h2><div class="formulaCard"><b>แตกแรงเป็นองค์ประกอบ</b><br>ถ้าแรง \(F_1\), \(F_2\), \(F_3\) ทำมุม \(\theta_1\), \(\theta_2\), \(\theta_3\) กับแกน x บวก<br>\(F_{1x}=F_1\cos\theta_1\) และ \(F_{1y}=F_1\sin\theta_1\)<br>\(F_{2x}=F_2\cos\theta_2\) และ \(F_{2y}=F_2\sin\theta_2\)<br>\(F_{3x}=F_3\cos\theta_3\) และ \(F_{3y}=F_3\sin\theta_3\)</div><div class="formulaCard"><b>รวมองค์ประกอบของแรง</b><br>\(F_{net,x}=F_{1x}+F_{2x}+F_{3x}\)<br>\(F_{net,y}=F_{1y}+F_{2y}+F_{3y}\)</div><div class="formulaCard"><b>หาขนาดและทิศของแรงลัพธ์</b><br>\(|F_{net}|=\sqrt{F_{net,x}^{2}+F_{net,y}^{2}}\)<br>\(\theta=\tan^{-1}\left(\dfrac{F_{net,y}}{F_{net,x}}\right)\)</div><div class="formulaCard"><b>จุดที่ต้องระวัง</b><br>มุมต้องคิดเครื่องหมายตามควอดแรนต์จริง และการหาแรงลัพธ์ต้องรวมองค์ประกอบตามแกน x และแกน y ก่อนเสมอ</div></div></div>
+<script>
+const cvs=document.getElementById('cv'),ctx=cvs.getContext('2d');
+const colors={A:'#104dff',B:'#098a18',C:'#eb1685',R:'#7225a8'};
+const names={A:'F1',B:'F2',C:'F3',R:'Fnet'};
+function nameOf(k){return names[k]||k}
+let V={A:{mag:3,ang:90,show:true,showMag:true,showAng:true},B:{mag:4,ang:0,show:true,showMag:true,showAng:true},C:{mag:3,ang:60,show:false,showMag:true,showAng:true}};
+let origin={x:0,y:0}, scale=44, showR=true, chainMode=false, chainOrder=['A','B'], drag=null;
+let labelOffsets={A:{x:0,y:0},B:{x:0,y:0},C:{x:0,y:0},R:{x:0,y:0}}, labelBoxes=[];
+function vecChar(k){return `<span class="sym ${k.toLowerCase()}">${nameOf(k)}</span>`}
+function permutations(arr){
+  if(arr.length<=1) return [arr.slice()];
+  const out=[];
+  arr.forEach((v,i)=>{
+    const rest=arr.slice(0,i).concat(arr.slice(i+1));
+    permutations(rest).forEach(p=>out.push([v,...p]));
+  });
+  return out;
+}
+function updateChainOptions(){
+  const sel=document.getElementById('chainOrder');
+  const active=['A','B','C'].filter(k=>V[k].show);
+  const orders=permutations(active);
+  const old=chainOrder.join(',');
+  sel.innerHTML='';
+  if(orders.length===0){
+    const opt=document.createElement('option'); opt.value=''; opt.textContent='ไม่มีแรงที่เลือก'; sel.appendChild(opt); chainOrder=[]; return;
+  }
+  let chosen=orders.some(o=>o.join(',')===old)?old:orders[0].join(',');
+  orders.forEach(o=>{
+    const val=o.join(',');
+    const opt=document.createElement('option');
+    opt.value=val; opt.textContent=o.map(nameOf).join(' + ');
+    if(val===chosen) opt.selected=true;
+    sel.appendChild(opt);
+  });
+  chainOrder=chosen?chosen.split(','):[];
+}
+function buildPanel(){let html=''; for(const k of ['A','B','C']){html+=`<div class="vrow"><label><input class="showVec" data-k="${k}" type="checkbox" ${V[k].show?'checked':''}>${vecChar(k)}</label><div class="field"><label>ขนาด (N)</label><input class="mag" data-k="${k}" type="number" step="0.1" value="${V[k].mag.toFixed(2)}"></div><div class="field"><label>มุม θ</label><input class="ang" data-k="${k}" type="number" step="1" value="${V[k].ang.toFixed(1)}"></div><div class="color" style="background:${colors[k]}"></div><div class="mini"><label><input class="showMag" data-k="${k}" type="checkbox" checked> แสดงขนาด</label><label><input class="showAng" data-k="${k}" type="checkbox" checked> แสดงมุม</label></div></div>`} document.getElementById('vectors').innerHTML=html;
+ document.querySelectorAll('.mag').forEach(e=>e.oninput=()=>{V[e.dataset.k].mag=Math.max(0,Number(e.value)||0);draw()});
+ document.querySelectorAll('.ang').forEach(e=>e.oninput=()=>{V[e.dataset.k].ang=Number(e.value)||0;draw()});
+ document.querySelectorAll('.showVec').forEach(e=>e.onchange=()=>{V[e.dataset.k].show=e.checked;updateChainOptions();draw()});
+ document.querySelectorAll('.showMag').forEach(e=>e.onchange=()=>{V[e.dataset.k].showMag=e.checked;draw()});
+ document.querySelectorAll('.showAng').forEach(e=>e.onchange=()=>{V[e.dataset.k].showAng=e.checked;draw()});}
+function resize(){const r=cvs.getBoundingClientRect(),d=window.devicePixelRatio||1;cvs.width=Math.round(r.width*d);cvs.height=Math.round(r.height*d);ctx.setTransform(d,0,0,d,0,0);draw()}
+function W(){return cvs.getBoundingClientRect().width} function H(){return cvs.getBoundingClientRect().height}
+function toScreen(x,y){return {x:W()/2+origin.x+x*scale,y:H()/2+origin.y-y*scale}} function toWorld(px,py){return {x:(px-W()/2-origin.x)/scale,y:-(py-H()/2-origin.y)/scale}}
+function comp(o){let a=o.ang*Math.PI/180;return{x:o.mag*Math.cos(a),y:o.mag*Math.sin(a)}}
+function sum(){let x=0,y=0;for(const k of ['A','B','C']) if(V[k].show){let c=comp(V[k]);x+=c.x;y+=c.y} return{x,y,mag:Math.hypot(x,y),ang:Math.atan2(y,x)*180/Math.PI}}
+function arrow(x1,y1,x2,y2,col,w=5,dash=false){ctx.save();ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=w;ctx.lineCap='round';if(dash)ctx.setLineDash([10,7]);ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();ctx.setLineDash([]);let a=Math.atan2(y2-y1,x2-x1),h=18;ctx.beginPath();ctx.moveTo(x2,y2);ctx.lineTo(x2-h*Math.cos(a-.45),y2-h*Math.sin(a-.45));ctx.lineTo(x2-h*Math.cos(a+.45),y2-h*Math.sin(a+.45));ctx.closePath();ctx.fill();ctx.restore()}
+function drawVectorMark(x,y,w,col){
+  // วาดหัวเวกเตอร์เองบน canvas แทนการใช้ unicode combining mark เพื่อไม่ให้กลายเป็นสี่เหลี่ยม
+  const yTop=y-15;
+  const x1=x+1, x2=x+Math.max(18,Math.min(26,w*.42));
+  ctx.save();
+  ctx.strokeStyle=col; ctx.fillStyle=col; ctx.lineWidth=2.4; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(x1,yTop); ctx.lineTo(x2,yTop); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x2,yTop); ctx.lineTo(x2-6,yTop-4); ctx.lineTo(x2-6,yTop+4); ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+function vLabel(k,p1,p2,col,o=null){
+  let ang=Math.atan2(p2.y-p1.y,p2.x-p1.x);
+  // ตำแหน่งอัตโนมัติอยู่ใกล้ปลายลูกศร และผู้ใช้ลากป้ายหลบได้
+  let autoX=p2.x+18*Math.cos(ang), autoY=p2.y+18*Math.sin(ang)-6;
+  let off=labelOffsets[k]||{x:0,y:0};
+  let x=autoX+off.x, y=autoY+off.y;
+  let showVal=document.getElementById('showValues').checked;
+  let txt=nameOf(k);
+  if(o && showVal) txt=`${nameOf(k)} (${o.mag.toFixed(2)} N , ${o.ang.toFixed(1)}°)`;
+  ctx.save();
+  ctx.fillStyle=col;
+  ctx.font='italic 900 13px system-ui';
+  ctx.textAlign='left';
+  ctx.textBaseline='middle';
+  const metrics=ctx.measureText(txt);
+  const kw=ctx.measureText(nameOf(k)).width;
+  const box={k,x:x-8,y:y-18,w:metrics.width+18,h:34};
+  labelBoxes.push(box);
+  ctx.lineWidth=4;
+  ctx.strokeStyle='rgba(255,255,255,.94)';
+  ctx.strokeText(txt,x,y);
+  ctx.fillText(txt,x,y);
+  drawVectorMark(x,y,kw,col);
+  ctx.restore();
+}
+function dashedBox(p0,p,c,col){ctx.save();ctx.strokeStyle=col;ctx.lineWidth=2;ctx.setLineDash([7,7]);ctx.beginPath();ctx.moveTo(p0.x,p0.y);ctx.lineTo(p.x,p0.y);ctx.lineTo(p.x,p.y);ctx.stroke();ctx.restore()}
+function valueText(o,p0,p,col){if(!document.getElementById('showValues').checked)return;ctx.save();ctx.fillStyle=col;ctx.font='900 18px system-ui';ctx.textAlign='center';let midx=(p0.x+p.x)/2, basey=p0.y+(p.y>p0.y?24:-14);if(o.showMag)ctx.fillText(o.mag.toFixed(2),midx,basey); if(o.showAng)ctx.fillText(o.ang.toFixed(1)+'°',p.x+34,p0.y+(p.y>p0.y?18:-12));ctx.restore()}
+function drawGrid(){ctx.clearRect(0,0,W(),H());ctx.fillStyle='#fff';ctx.fillRect(0,0,W(),H());if(document.getElementById('grid').checked){ctx.strokeStyle='#e5f4fb';ctx.lineWidth=1;for(let x=-40;x<=40;x+=.5){let p=toScreen(x,0);ctx.beginPath();ctx.moveTo(p.x,0);ctx.lineTo(p.x,H());ctx.stroke()}for(let y=-40;y<=40;y+=.5){let p=toScreen(0,y);ctx.beginPath();ctx.moveTo(0,p.y);ctx.lineTo(W(),p.y);ctx.stroke()}ctx.strokeStyle='#9dddeb';ctx.lineWidth=1.3;for(let x=-40;x<=40;x++){let p=toScreen(x,0);ctx.beginPath();ctx.moveTo(p.x,0);ctx.lineTo(p.x,H());ctx.stroke()}for(let y=-40;y<=40;y++){let p=toScreen(0,y);ctx.beginPath();ctx.moveTo(0,p.y);ctx.lineTo(W(),p.y);ctx.stroke()}}
+ let o=toScreen(0,0);ctx.strokeStyle='#111';ctx.lineWidth=1.4;arrow(0,o.y,W(),o.y,'#111',1.4);arrow(o.x,H(),o.x,0,'#111',1.4);ctx.fillStyle='#075bd8';ctx.font='bold 15px system-ui';ctx.textAlign='center';for(let x=-20;x<=20;x+=2){if(x){let p=toScreen(x,0);if(p.x>10&&p.x<W()-10)ctx.fillText(x,p.x,o.y+22)}}for(let y=-20;y<=20;y+=2){if(y){let p=toScreen(0,y);if(p.y>12&&p.y<H()-10)ctx.fillText(y,o.x-24,p.y+5)}}ctx.beginPath();ctx.arc(o.x,o.y,10,0,Math.PI*2);ctx.fillStyle='#0d6bec';ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=3;ctx.stroke();ctx.fillStyle='#075bd8';ctx.font='800 14px system-ui';ctx.fillText('ลากจุดนี้เพื่อเลื่อนจุดกำเนิด',o.x,o.y+34)}
+function draw(){
+  labelBoxes=[];
+  drawGrid();
+  let p0=toScreen(0,0);
+  if(chainMode){
+    let cur={x:0,y:0};
+    for(const k of chainOrder){
+      if(!V[k].show) continue;
+      let c=comp(V[k]);
+      let start=toScreen(cur.x,cur.y);
+      let end=toScreen(cur.x+c.x,cur.y+c.y);
+      if(document.getElementById('components').checked)dashedBox(start,end,colors[k]);
+      arrow(start.x,start.y,end.x,end.y,colors[k],5);
+      vLabel(k,start,end,colors[k],V[k]);
+      cur.x+=c.x; cur.y+=c.y;
+    }
+    let s=sum();
+    if(showR){let rp=toScreen(s.x,s.y);arrow(p0.x,p0.y,rp.x,rp.y,colors.R,4,true);vLabel('R',p0,rp,colors.R,{mag:s.mag,ang:s.ang});}
+    updateNums(s);
+    return;
+  }
+  for(const k of ['A','B','C']){
+    if(!V[k].show)continue;
+    let c=comp(V[k]),p=toScreen(c.x,c.y);
+    if(document.getElementById('components').checked)dashedBox(p0,p,colors[k]);
+    arrow(p0.x,p0.y,p.x,p.y,colors[k],5);
+    vLabel(k,p0,p,colors[k],V[k]);
+  }
+  let s=sum();
+  if(showR){let p=toScreen(s.x,s.y);arrow(p0.x,p0.y,p.x,p.y,colors.R,4,true);vLabel('R',p0,p,colors.R,{mag:s.mag,ang:s.ang})}
+  updateNums(s)
+}
+function updateNums(s){let ids={rmag:s.mag.toFixed(2),rang:s.ang.toFixed(1)+'°',sx:s.x.toFixed(2)+' N',sy:s.y.toFixed(2)+' N',sr:s.mag.toFixed(2)+' N',st:s.ang.toFixed(1)+'°'};for(let id in ids)document.getElementById(id).textContent=ids[id]}
+function pointer(e){let r=cvs.getBoundingClientRect(),t=e.touches?e.touches[0]:e;return{x:t.clientX-r.left,y:t.clientY-r.top}}
+function near(px,py,q,d=28){return Math.hypot(px-q.x,py-q.y)<d}
+function hitLabel(p){
+  for(let i=labelBoxes.length-1;i>=0;i--){
+    const b=labelBoxes[i];
+    if(p.x>=b.x&&p.x<=b.x+b.w&&p.y>=b.y&&p.y<=b.y+b.h)return b.k;
+  }
+  return null;
+}
+cvs.addEventListener('pointerdown',e=>{
+  cvs.setPointerCapture(e.pointerId);
+  let p=pointer(e),o=toScreen(0,0);
+  const lk=hitLabel(p);
+  if(lk){const off=labelOffsets[lk];drag={type:'label',k:lk,sx:p.x,sy:p.y,ox:off.x,oy:off.y};return}
+  if(near(p.x,p.y,o,32)){drag={type:'origin',sx:p.x,sy:p.y,ox:origin.x,oy:origin.y};return}
+  for(const k of ['A','B','C']){let c=comp(V[k]),q=toScreen(c.x,c.y);if(near(p.x,p.y,q,34)){drag={type:'vec',k};return}}
+});
+cvs.addEventListener('pointermove',e=>{
+  if(!drag)return;
+  let p=pointer(e);
+  if(drag.type==='origin'){
+    origin.x=drag.ox+p.x-drag.sx;origin.y=drag.oy+p.y-drag.sy;
+  }else if(drag.type==='label'){
+    labelOffsets[drag.k].x=drag.ox+p.x-drag.sx;
+    labelOffsets[drag.k].y=drag.oy+p.y-drag.sy;
+  }else{
+    let w=toWorld(p.x,p.y);
+    V[drag.k].mag=Math.hypot(w.x,w.y);
+    V[drag.k].ang=Math.atan2(w.y,w.x)*180/Math.PI;
+    document.querySelector(`.mag[data-k="${drag.k}"]`).value=V[drag.k].mag.toFixed(2);
+    document.querySelector(`.ang[data-k="${drag.k}"]`).value=V[drag.k].ang.toFixed(1);
+  }
+  draw();
+});
+['pointerup','pointercancel','pointerleave'].forEach(ev=>cvs.addEventListener(ev,()=>drag=null));
+document.getElementById('resetBtn').onclick=()=>{V.A={mag:3,ang:90,show:true,showMag:true,showAng:true};V.B={mag:4,ang:0,show:true,showMag:true,showAng:true};V.C={mag:3,ang:60,show:false,showMag:true,showAng:true};origin={x:0,y:0};labelOffsets={A:{x:0,y:0},B:{x:0,y:0},C:{x:0,y:0},R:{x:0,y:0}};showR=true;chainMode=false;chainOrder=['A','B'];buildPanel();updateChainOptions();draw()};
+document.getElementById('clearBtn').onclick=()=>{for(const k of ['A','B','C']){V[k].mag=0;V[k].ang=0}buildPanel();draw()};
+document.getElementById('toggleR').onclick=()=>{showR=!showR;draw()};document.getElementById('toggleChain').onclick=()=>{chainMode=!chainMode;draw()};document.getElementById('chainOrder').onchange=e=>{chainOrder=e.target.value?e.target.value.split(','):[];draw()};['grid','components','showValues'].forEach(id=>document.getElementById(id).onchange=draw);
+document.getElementById('openFormula').onclick=()=>{document.getElementById('formula').classList.add('show');setTimeout(()=>MathJax.typesetPromise?.(),50)};document.getElementById('closeFormula').onclick=()=>document.getElementById('formula').classList.remove('show');document.getElementById('formula').addEventListener('click',e=>{if(e.target.id==='formula')e.currentTarget.classList.remove('show')});
+window.addEventListener('resize',resize);buildPanel();updateChainOptions();setTimeout(resize,50);
+</script>
+</body></html>
