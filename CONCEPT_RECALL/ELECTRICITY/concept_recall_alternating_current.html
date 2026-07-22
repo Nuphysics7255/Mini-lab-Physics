@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Concept Recall - ไฟฟ้ากระแสสลับ (AC)</title>
+<style>
+:root{
+  --title-main:#2f6fd6; --title-sub:#204d7c; --soft-blue:#edf3fb; --soft-blue-text:#2e5f93;
+  --nav-right:rgba(114,167,219,.82); --nav-left:rgba(138,188,232,.52); --nav-center:rgba(211,219,229,.72);
+  --nav-border:#89b6e1; --nav-wrap-border:#d8e3ef; --result-green-1:#eef9ea; --result-green-2:#dff2da;
+  --result-green-border:#9dcc92; --result-blue:#1f6fe5; --task-bg:#fff7eb; --task-border:#f0cfaa; --task-text:#9a6500;
+  --principle-bg:#fff7ee; --principle-border:#efc58f; --formula-bg:#eef7ea; --formula-border:#bfdcaf; --box-title:#123d70;
+  --choice-border:#cfdced; --danger:#d93a2f; --danger-bg:#f9eeee; --danger-bd:#ee9a9a;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Sarabun","Noto Sans Thai",system-ui,sans-serif;background:linear-gradient(180deg,#edf4fb 0%, #e7f0f9 100%);color:#173a66}
+.page{max-width:1180px;margin:0 auto;padding:28px 18px 140px}
+.hero,.quiz-card,.summary-card{background:rgba(255,255,255,.68);border:1px solid #d6e2ef;border-radius:30px;backdrop-filter:blur(8px);box-shadow:0 12px 34px rgba(74,115,160,.08)}
+.hero{padding:28px 28px 20px;margin-bottom:22px}
+.hero-row{display:flex;align-items:center;justify-content:center;gap:18px;margin-bottom:18px}
+.hero-icon{font-size:58px;line-height:1}
+.hero-title{line-height:1.04;text-align:center}
+.hero-title .top{font-size:clamp(24px,3.5vw,43px);font-weight:900;color:var(--title-main)}
+.hero-title .bottom{font-size:clamp(21px,3vw,36px);font-weight:900;color:var(--title-sub)}
+.progress{height:16px;border-radius:999px;background:#dbe6f1;overflow:hidden}
+.progress>div{width:0;height:100%;background:linear-gradient(90deg,#7db3f1,#2f6fd6);transition:width .25s ease}
+.meta-row{display:flex;justify-content:space-between;gap:14px;align-items:center;flex-wrap:wrap;margin:12px 0 0}
+.pill{display:inline-flex;align-items:center;justify-content:center;background:var(--soft-blue);color:var(--soft-blue-text);border-radius:999px;border:1px solid #d4e0ec;padding:10px 18px;font-weight:800;font-size:18px}
+.quiz-card{padding:24px;margin-bottom:20px}
+.topic-row{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.topic-title{display:inline-flex;align-items:center;background:var(--soft-blue);color:var(--soft-blue-text);border-radius:999px;border:1px solid #d4e0ec;padding:10px 18px;font-weight:800;font-size:18px}
+.question{font-size:clamp(16px,1.9vw,23px);font-weight:800;line-height:1.6;margin:14px 0 16px;color:#234f84}
+.question p{margin:.4em 0}
+.figure-wrap{margin:10px 0 16px}
+.figure-wrap img{display:block;max-width:300px;width:100%;margin:0 auto;border-radius:18px;background:white}
+.choices{display:grid;gap:12px}
+.choice{display:flex;align-items:flex-start;gap:12px;background:#fff;border:1.5px solid var(--choice-border);border-radius:20px;padding:13px 15px;font-size:16px;line-height:1.65;cursor:pointer;transition:.18s ease}
+.choice:hover{transform:translateY(-1px);box-shadow:0 8px 22px rgba(66,111,171,.08);border-color:#9fc0e4}
+.choice-key{min-width:28px;font-weight:900;color:#2f6fd6}
+.choice-text{min-width:0;overflow-wrap:anywhere;word-break:break-word}
+.choice.disabled{cursor:default}
+.choice.selected-wrong{background:#f1f3f5;border-color:#cfd5dc}
+.choice.correct{background:#eaf7e7;border-color:#8dc989}
+.choice.correct .choice-key{color:#2f7a2f}
+.feedback{margin-top:16px;padding:16px 18px;border-radius:20px;background:#fff;border:1px solid #d9e4ef;display:none}
+.feedback.show{display:block}
+.feedback.correct-box{background:#eef9ea;border-color:#9dcc92}
+.feedback.wrong-box{background:#f7fbff;border-color:#cfe1f2}
+.feedback-title{font-size:18px;font-weight:900;margin-bottom:8px}
+.feedback.correct-box .feedback-title{color:#1f7a1f}
+.feedback.wrong-box .feedback-title{color:#204d7c}
+.feedback-line{font-size:16px;line-height:1.75;margin:4px 0}
+.mini-btn{display:inline-flex;align-items:center;gap:8px;background:#ffe4c4;color:#8b4d00;border:1px solid #efc99d;border-radius:18px;padding:10px 14px;font-size:14px;font-weight:800;cursor:pointer}
+.lab-card{margin-top:16px;padding:16px;border-radius:22px;background:#fffaf3;border:1px solid #f0cfaa;display:none}
+.lab-card.show{display:block}
+.task-pill{display:inline-flex;align-items:center;background:var(--task-bg);border:1px solid var(--task-border);color:var(--task-text);border-radius:20px;padding:8px 12px;font-size:13px;font-weight:800;margin-bottom:12px}
+.lab-grid{display:grid;grid-template-columns:340px 1fr;gap:16px;align-items:start}
+.control-box,.graph-box{background:white;border:1px solid #ead8b8;border-radius:18px;padding:14px}
+.control-box h4,.graph-box h4{margin:0 0 12px;font-size:18px;color:#8b4d00}
+.control-group{margin:0 0 14px}
+.control-group label{display:block;font-size:15px;font-weight:700;color:#6c4d1f;margin-bottom:6px}
+input[type=range]{width:100%}
+.phase-value{font-size:14px;font-weight:800;color:#6c4d1f;margin-top:4px}
+.readout{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
+.read-item{background:#fff;border:1px solid #d9e4ef;border-radius:14px;padding:10px 12px;font-size:14px;line-height:1.6}
+.read-item b{display:block;color:#204d7c}
+canvas{width:100%;height:300px;background:white;border-radius:14px}
+.summary-card{padding:24px;margin-top:20px;display:none}
+.summary-card.show{display:block}
+.summary-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.score-big{font-size:22px;font-weight:900;color:#204d7c}
+.result-btn{display:inline-flex;align-items:center;gap:10px;background:linear-gradient(180deg,var(--result-green-1),var(--result-green-2));border:1px solid var(--result-green-border);border-radius:18px;padding:14px 18px;color:var(--result-blue);font-size:18px;font-weight:900}
+.summary-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.summary-box{border-radius:24px;padding:18px}
+.principle{background:var(--principle-bg);border:1px solid var(--principle-border)}
+.formula{background:var(--formula-bg);border:1px solid var(--formula-border)}
+.summary-box h4{margin:0 0 10px;font-size:20px;font-weight:900;color:var(--box-title)}
+.summary-box ul{margin:0;padding-left:20px;font-size:16px;line-height:1.7}
+.error-map-wrap{margin-top:18px;background:#edf3fb;border:1.5px solid #bdd0e8;border-radius:30px;padding:26px 28px}
+.error-map-head{display:flex;align-items:flex-start;gap:16px;margin-bottom:10px}
+.error-map-icon{width:42px;height:42px;flex:0 0 auto;display:block}
+.error-map-title{font-size:22px;line-height:1.2;font-weight:900;color:#204d7c;margin:0 0 8px}
+.error-map-summary{font-size:16px;line-height:1.7;color:#4f6782;margin:0}
+.error-map-list{display:grid;gap:16px;margin-top:18px}
+.error-map-card{background:rgba(255,255,255,.72);border:1px solid #d6e2ef;border-radius:24px;padding:18px 18px 16px}
+.error-map-card-title{font-size:20px;line-height:1.35;font-weight:900;color:#234f84;margin:0 0 10px}
+.error-map-line{font-size:16px;line-height:1.7;color:#36597f;margin:2px 0}
+.error-map-line b{color:#204d7c;font-weight:900}
+.caution-card{margin-top:18px;background:var(--danger-bg);border:2px solid var(--danger-bd);border-radius:28px;padding:20px 22px}
+.caution-head{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.caution-title{font-size:22px;font-weight:900;color:var(--danger)}
+.caution-list{margin:0;padding-left:32px;color:#c73a2d;font-size:16px;line-height:1.85}
+.warn-icon{width:38px;height:38px;flex:0 0 auto;display:block}
+.restart-btn{display:inline-flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#4facfe,#007bff);color:#ffffff;font-size:14px;font-weight:900;padding:10px 24px;border-radius:20px;border:none;cursor:pointer;box-shadow:0 8px 18px rgba(0,123,255,.35)}
+.footer-link{margin-top:18px;text-align:center;font-size:16px;font-weight:800}
+.footer-link a{color:#2f6fd6;text-decoration:underline}
+.bottom-nav{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom) + 12px);z-index:9998;width:min(980px,calc(100vw - 20px));padding:8px;border:1px solid var(--nav-wrap-border);border-radius:24px;background:rgba(235,241,247,.58);backdrop-filter:blur(8px);display:grid;grid-template-columns:1fr 1.15fr 1fr;gap:10px}
+.nav-btn{min-height:55px;border-radius:18px;border:1.5px solid var(--nav-border);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:white;cursor:pointer;user-select:none;gap:10px}
+.nav-left{background:var(--nav-left)}
+.nav-center{background:var(--nav-center);color:var(--soft-blue-text);font-size:22px}
+.nav-right{background:var(--nav-right)}
+.nav-summary{background:linear-gradient(180deg,#dfead8,#d8e7d0);border-color:#96bf8c;color:#2f6fd6}
+.summary-bars{display:inline-flex;align-items:flex-end;gap:4px;height:22px}
+.summary-bars span{display:block;width:6px;border-radius:3px}
+.summary-bars span:nth-child(1){height:10px;background:#9dc7f4}
+.summary-bars span:nth-child(2){height:18px;background:#7d8cf1}
+.summary-bars span:nth-child(3){height:15px;background:#a7d59c}
+.nav-btn:disabled{opacity:.45;cursor:not-allowed}
+.hidden{display:none !important}
+.select-modal{position:fixed; inset:0; background:rgba(31,47,70,.18);display:none; align-items:flex-end; justify-content:center; z-index:10010; padding:18px}
+.select-modal.show{display:flex}
+.modal-panel{width:min(980px, calc(100vw - 20px));max-height:min(78vh, 760px);overflow:auto;background:rgba(255,255,255,.93);border:1px solid #d6e2ef;border-radius:28px;box-shadow:0 18px 40px rgba(60,96,140,.20);padding:20px}
+.modal-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}
+.modal-title{font-size:20px;font-weight:900;color:#2d5f90}
+.close-btn{width:52px;height:52px;border-radius:18px;background:#e7eef6;color:#45688f;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;border:1px solid #d5e0ec;cursor:pointer}
+.modal-list{display:grid;gap:12px}
+.modal-item{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;padding:14px 16px;border-radius:20px;border:1px solid #d8e3ef;background:#fff;cursor:pointer; transition:.16s ease}
+.modal-item:hover{box-shadow:0 8px 22px rgba(66,111,171,.08);border-color:#9fc0e4}
+.modal-item.current{border:2px solid #2f6fd6}
+.modal-item.done{background:#f2f4f7}
+.modal-num{font-size:18px;font-weight:900;color:#2e5f93}
+.modal-topic{font-size:16px;font-weight:700;color:#36597f}
+.modal-circle{width:22px;height:22px;border-radius:999px;border:2px solid #c7d7e8}
+@media (max-width: 860px){ .summary-grid,.lab-grid{grid-template-columns:1fr} }
+@media (max-width: 640px){
+  .page{padding:14px 10px 150px} .hero{padding:18px 14px 14px;border-radius:24px}
+  .hero-icon{font-size:46px} .hero-title .top{font-size:clamp(20px,6vw,30px)} .hero-title .bottom{font-size:clamp(18px,5.4vw,26px)}
+  .quiz-card,.summary-card{padding:16px;border-radius:22px} .topic-title,.pill{font-size:15px} .question{font-size:15px}
+  .choice{font-size:15px} .task-pill{font-size:12px} .bottom-nav{padding:7px;border-radius:20px;gap:8px}
+  .nav-btn{min-height:46px;border-radius:16px;font-size:16px} .nav-center{font-size:18px} canvas{height:260px} .figure-wrap img{max-width:260px}
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <section class="hero">
+    <div class="hero-row">
+      <div class="hero-icon">⚡</div>
+      <div class="hero-title">
+        <div class="top">Concept Recall</div>
+        <div class="bottom">ไฟฟ้ากระแสสลับ (AC)</div>
+      </div>
+    </div>
+    <div class="progress"><div id="progressBar"></div></div>
+    <div class="meta-row">
+      <div class="pill" id="scorePill">คะแนน 0 / 10</div>
+      <div class="pill" id="donePill">ทำแล้ว 0 / 10</div>
+    </div>
+  </section>
+
+  <section class="quiz-card" id="quizCard">
+    <div class="topic-row">
+      <div class="topic-title" id="qPill">🧠 ข้อ 1</div>
+      <div class="topic-title" id="topicPill">ความหมายของ AC</div>
+    </div>
+    <div class="question" id="questionBox"></div>
+    <div class="figure-wrap hidden" id="figureWrap">
+      <img src="data:image/png;base64,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" alt="วงจร AC">
+    </div>
+    <button class="mini-btn hidden" id="labToggleBtn">🔬 Mini Lab</button>
+    <div class="lab-card" id="labCard">
+      <div class="task-pill">ภารกิจที่ 1: ลองปรับค่า εmax และมุมเฟส แล้วสังเกตกราฟ ε(t), I(t), V_R1(t) และ V_R2(t) ว่าเป็นคลื่นไซน์เฟสเดียวกัน แต่มีขนาดต่างกัน</div>
+      <div class="lab-grid">
+        <div class="control-box">
+          <h4>ตั้งค่าการทดลอง</h4>
+          <div class="control-group">
+            <label for="emaxRange">ปรับ εmax (V)</label>
+            <input id="emaxRange" type="range" min="2" max="20" step="1" value="10">
+            <div class="phase-value" id="emaxValue">εmax = 10 V</div>
+          </div>
+          <div class="control-group">
+            <label for="phaseRange">ปรับเฟสเริ่มต้น φ (rad)</label>
+            <input id="phaseRange" type="range" min="-3.14" max="3.14" step="0.01" value="1.57">
+            <div class="phase-value" id="phaseValue">มุมเฟส = 1.57 rad</div>
+          </div>
+          <div class="readout">
+            <div class="read-item"><b>R<sub>1</sub></b><span>3 Ω</span></div>
+            <div class="read-item"><b>R<sub>2</sub></b><span>2 Ω</span></div>
+            <div class="read-item"><b>R<sub>รวม</sub></b><span id="rtxt">5 Ω</span></div>
+            <div class="read-item"><b>I<sub>max</sub></b><span id="itxt">2 A</span></div>
+            <div class="read-item"><b>V<sub>R1,max</sub></b><span id="v1txt">6 V</span></div>
+            <div class="read-item"><b>V<sub>R2,max</sub></b><span id="v2txt">4 V</span></div>
+          </div>
+        </div>
+        <div class="graph-box">
+          <h4>กราฟการเปลี่ยนแปลงตามเวลา</h4>
+          <canvas id="labCanvas" width="800" height="360"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="choices" id="choicesBox"></div>
+    <div class="feedback" id="feedbackBox"></div>
+  </section>
+
+  <section class="summary-card" id="summaryCard">
+    <div class="summary-head">
+      <div class="score-big" id="finalScore">ได้ 0 / 10 คะแนน</div>
+      <div class="result-btn">📈 สรุปผลการทำแบบฝึก</div>
+    </div>
+    <div class="summary-grid">
+      <div class="summary-box principle">
+        <h4>หลักการสำคัญ</h4>
+        <ul>
+          <li>ไฟฟ้ากระแสสลับมีทิศและขนาดเปลี่ยนตามเวลา</li>
+          <li>ค่า RMS คือค่าที่ให้กำลังไฟฟ้าเฉลี่ยเทียบเท่ากับไฟฟ้ากระแสตรง</li>
+          <li>วงจรตัวต้านทานล้วนทำให้กระแสกับความต่างศักย์อยู่เฟสเดียวกัน</li>
+          <li>ในวงจรอนุกรม ต้องรวมความต้านทานก่อนหา I<sub>max</sub></li>
+        </ul>
+      </div>
+      <div class="summary-box formula">
+        <h4>สรุปสูตร (ไฟฟ้ากระแสสลับ)</h4>
+        <ul>
+          <li>ε(t) = ε<sub>max</sub> sin(ωt + φ)</li>
+          <li>I(t) = I<sub>max</sub> sin(ωt + φ)</li>
+          <li>ค่า max คือ “ค่าสูงสุดของคลื่น” เช่น ε<sub>max</sub>, I<sub>max</sub></li>
+          <li>ค่า RMS คือค่าที่ให้กำลังไฟฟ้าเทียบเท่ากับไฟฟ้ากระแสตรง</li>
+          <li>I<sub>rms</sub> = I<sub>max</sub> / √2</li>
+          <li>ε<sub>rms</sub> = ε<sub>max</sub> / √2</li>
+		   <li>V<sub>rms</sub> = V<sub>max</sub> / √2</li>
+          <li>P<sub>เฉลี่ย</sub> = I<sub>rms</sub><sup>2</sup>R</li>
+          <li>หรือ P<sub>เฉลี่ย</sub> = V<sub>rms</sub>I<sub>rms</sub></li>
+        </ul>
+      </div>
+    </div>
+    <div class="error-map-wrap">
+      <div class="error-map-head">
+        <svg class="error-map-icon" viewBox="0 0 48 48" aria-hidden="true"><rect x="4" y="4" width="40" height="40" rx="12" fill="none" stroke="#6b92cf" stroke-width="2.8"/><circle cx="17" cy="19" r="2.2" fill="#6b92cf"/><circle cx="17" cy="29" r="2.2" fill="#6b92cf"/><path d="M23 18.8h10.5" fill="none" stroke="#6b92cf" stroke-width="2.8" stroke-linecap="round"/><path d="M23 28.8h14" fill="none" stroke="#6b92cf" stroke-width="2.8" stroke-linecap="round"/><path d="M12 35.2h24" fill="none" stroke="#6b92cf" stroke-width="2.8" stroke-linecap="round"/></svg>
+        <div>
+          <div class="error-map-title">วิเคราะห์ข้อที่ควรทบทวน</div>
+          <p class="error-map-summary" id="errorSummary">ถ้าตอบผิด ระบบจะสรุปรายการที่ควรทบทวนให้ด้านล่าง</p>
+        </div>
+      </div>
+      <div class="error-map-list" id="errorList"></div>
+    </div>
+    <div class="caution-card">
+      <div class="caution-head">
+        <svg class="warn-icon" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="22" fill="none" stroke="#e35b4f" stroke-width="2.8"/><rect x="22.2" y="10.5" width="3.6" height="18.5" rx="1.8" fill="#e35b4f"/><circle cx="24" cy="34.8" r="2.5" fill="#e35b4f"/></svg>
+        <div class="caution-title">ข้อควรระวัง</div>
+      </div>
+      <ul class="caution-list">
+        <li>ค่า RMS ไม่ใช่ค่าเฉลี่ยเลขคณิตของคลื่นไซน์</li>
+        <li>ข้อนี้เป็นวงจรตัวต้านทานล้วน จึงไม่มีเฟสต่างกันระหว่างกระแสกับความต่างศักย์</li>
+        <li>หาค่าที่คร่อม R<sub>1</sub> ต้องใช้ R<sub>1</sub> = 3 Ω ไม่ใช่ R<sub>รวม</sub></li>
+        <li>กำลังเฉลี่ยต้องใช้ค่า RMS ไม่ใช่ค่าสูงสุด</li>
+      </ul>
+    </div>
+    <div style="margin-top:20px;text-align:center"><button class="restart-btn" id="restartBtn">🔄 เริ่มทำใหม่</button></div>
+    <div class="footer-link"><a href="https://www.facebook.com/resolvephysics" target="_blank" rel="noopener">ศึกษาเพิ่มเติมที่เพจคลายปมฟิสิกส์</a></div>
+  </section>
+</div>
+
+<div class="bottom-nav" id="bottomNav">
+  <button class="nav-btn nav-left" id="prevBtn" aria-label="ข้อก่อนหน้า">◀</button>
+  <button class="nav-btn nav-center" id="indexBtn">ข้อ 1</button>
+  <button class="nav-btn nav-right" id="nextBtn" aria-label="ข้อต่อไป">▶</button>
+</div>
+
+<div class="select-modal" id="selectModal">
+  <div class="modal-panel">
+    <div class="modal-head">
+      <div class="modal-title">เลือกข้อ</div>
+      <button class="close-btn" id="closeModalBtn">✕</button>
+    </div>
+    <div class="modal-list" id="modalList"></div>
+  </div>
+</div>
+
+<script>
+const questions = [{"title": "ความหมายของ AC", "prompt": "ไฟฟ้ากระแสสลับ (AC) คืออะไร", "choices": ["กระแสไฟฟ้าที่มีค่าคงที่ตลอดเวลา", "กระแสไฟฟ้าที่มีทิศและขนาดเปลี่ยนแปลงตามเวลา", "กระแสไฟฟ้าที่ไหลได้เฉพาะในตัวนำโลหะ"], "answer": 1, "explain": ["ไฟฟ้ากระแสสลับมีทั้งขนาดและทิศเปลี่ยนไปตามเวลา", "จึงไม่ใช่กระแสคงที่แบบไฟฟ้ากระแสตรง"], "review": "ทบทวนความแตกต่างระหว่าง AC และ DC", "error": "สับสนว่า AC มีค่าคงที่เหมือน DC"}, {"title": "ความหมายของค่า RMS", "prompt": "ค่า RMS (Root Mean Square) หมายถึงอะไร", "choices": ["ค่ามากที่สุดของกระแสหรือความต่างศักย์", "ค่าที่ให้กำลังไฟฟ้าเท่ากับไฟฟ้ากระแสตรง", "ค่าเฉลี่ยของกระแสไฟฟ้าตลอดเวลา"], "answer": 1, "explain": ["ค่า RMS คือค่าที่ใช้เทียบผลทางกำลังไฟฟ้ากับไฟฟ้ากระแสตรง", "จึงไม่ใช่ค่าสูงสุด และไม่ใช่ค่าเฉลี่ยเลขคณิตธรรมดา"], "review": "ทบทวนความหมายเชิงกำลังของค่า RMS", "error": "มักเข้าใจว่า RMS คือค่าเฉลี่ยตรง ๆ ของคลื่น"}, {"title": "ความสัมพันธ์ RMS กับค่าสูงสุด", "prompt": "ความสัมพันธ์ของค่า RMS กับค่าสูงสุดคือข้อใด", "choices": ["V<sub>rms</sub> = ε<sub>max</sub> / √2", "V<sub>rms</sub> = ε<sub>max</sub>", "V<sub>rms</sub> = 2ε<sub>max</sub>"], "answer": 0, "explain": ["สำหรับคลื่นไซน์ ค่าความต่างศักย์ RMS เท่ากับค่าสูงสุดหารด้วย √2", "ข้อนี้ใช้ ε<sub>max</sub> แทน V<sub>0</sub>"], "review": "ทบทวนความสัมพันธ์ rms = max / √2 ของคลื่นไซน์", "error": "จำสูตร RMS ผิดหรือสลับกับค่าสูงสุด"}, {"title": "หาค่ากระแสสูงสุด", "prompt": "ใช้รูปประกอบเดียวกันสำหรับข้อ 4–10<br>R<sub>1</sub> = 3 Ω, R<sub>2</sub> = 2 Ω และ ε(t) = 10 sin(100πt + π/2)<br>ค่ากระแสสูงสุด I<sub>max</sub> ของวงจรมีค่าเท่าใด", "choices": ["1 A", "2 A", "5 A"], "answer": 1, "figure": true, "lab": true, "explain": ["หาความต้านทานรวมก่อน", "R<sub>รวม</sub> = R<sub>1</sub> + R<sub>2</sub> = 3 + 2 = 5 Ω", "ดังนั้น I<sub>max</sub> = ε<sub>max</sub> / R<sub>รวม</sub> = 10 / 5 = 2 A"], "review": "ทบทวนการรวมความต้านทานและการหา I<sub>max</sub>", "error": "ลืมรวมความต้านทานก่อนหากระแสสูงสุด"}, {"title": "หาค่ากระแส RMS", "prompt": "จากวงจรเดียวกับข้อ 4 ค่ากระแส RMS ของวงจรมีค่าเท่าใด", "choices": ["√2 A", "2 A", "1/√2 A"], "answer": 0, "figure": true, "explain": ["จากข้อก่อนหน้าได้ I<sub>max</sub> = 2 A", "สำหรับคลื่นไซน์ I<sub>rms</sub> = I<sub>max</sub> / √2 = 2 / √2 = √2 A"], "review": "ทบทวนการเปลี่ยนจากค่าสูงสุดเป็นค่า RMS", "error": "ยังสับสนระหว่าง I<sub>max</sub> กับ I<sub>rms</sub>"}, {"title": "สมการกระแส", "prompt": "จากวงจรเดียวกับข้อ 4 สมการกระแสไฟฟ้าในวงจร ณ เวลา t คือข้อใด", "choices": ["I(t) = 2 sin(100πt + π/2) A", "I(t) = 10 sin(100πt + π/2) A", "I(t) = 5 sin(100πt + π/2) A"], "answer": 0, "figure": true, "explain": ["วงจรเป็นตัวต้านทานล้วน จึงมีกระแสอยู่เฟสเดียวกับความต่างศักย์", "และจากข้อ 4 ได้ I<sub>max</sub> = 2 A", "ดังนั้น I(t) = 2 sin(100πt + π/2) A"], "review": "ทบทวนรูปสมการไซน์และการแทน I<sub>max</sub> ให้ถูก", "error": "แทนแอมพลิจูดของกระแสผิดจากแอมพลิจูดของแหล่งกำเนิด"}, {"title": "ความต่างศักย์สูงสุดที่ R₁", "prompt": "จากวงจรเดียวกับข้อ 4 ความต่างศักย์สูงสุดที่คร่อมตัวต้านทาน R<sub>1</sub> มีค่าเท่าใด", "choices": ["3 V", "5 V", "6 V"], "answer": 2, "figure": true, "explain": ["จากข้อก่อนหน้าได้ I<sub>max</sub> = 2 A", "ใช้ความสัมพันธ์ V<sub>R1,max</sub> = I<sub>max</sub>R<sub>1</sub>", "แทนค่าได้ V<sub>R1,max</sub> = 2 × 3 = 6 V"], "review": "ทบทวนการหาค่าที่คร่อมตัวต้านทานรายตัว", "error": "เอา R<sub>รวม</sub> ไปใช้แทน R<sub>1</sub>"}, {"title": "ความต่างศักย์ RMS ที่ R₁", "prompt": "จากวงจรเดียวกับข้อ 4 ค่าความต่างศักย์ RMS ที่คร่อม R<sub>1</sub> มีค่าเท่าใด", "choices": ["3√2 V", "6√2 V", "√2 V"], "answer": 0, "figure": true, "explain": ["จากข้อก่อนหน้าได้ V<sub>R1,max</sub> = 6 V", "ดังนั้น V<sub>R1,rms</sub> = V<sub>R1,max</sub> / √2 = 6 / √2 = 3√2 V"], "review": "ทบทวนการเปลี่ยนค่าความต่างศักย์สูงสุดเป็นค่า RMS", "error": "จำสูตร RMS ผิด หรือคำนวณ 6/√2 ไม่ถูก"}, {"title": "สมการความต่างศักย์ที่ R₁", "prompt": "จากวงจรเดียวกับข้อ 4 สมการความต่างศักย์ที่คร่อม R<sub>1</sub> ณ เวลา t คือข้อใด", "choices": ["V<sub>R1</sub>(t) = 6 sin(100πt + π/2) V", "V<sub>R1</sub>(t) = 3 sin(100πt + π/2) V", "V<sub>R1</sub>(t) = 10 sin(100πt + π/2) V"], "answer": 0, "figure": true, "explain": ["ความต่างศักย์ที่คร่อม R<sub>1</sub> อยู่เฟสเดียวกับกระแสไฟฟ้า และมีค่าสูงสุด 6 V", "ดังนั้น V<sub>R1</sub>(t) = 6 sin(100πt + π/2) V"], "review": "ทบทวนรูปสมการไซน์ของความต่างศักย์คร่อมตัวต้านทาน", "error": "ใช้แอมพลิจูดผิด หรือสลับกับค่าของแหล่งกำเนิด"}, {"title": "กำลังไฟฟ้าเฉลี่ยที่ R₁", "prompt": "จากวงจรเดียวกับข้อ 4 กำลังไฟฟ้าเฉลี่ยที่เกิดขึ้นในตัวต้านทาน R<sub>1</sub> มีค่าเท่าใด", "choices": ["3 W", "6 W", "12 W"], "answer": 1, "figure": true, "explain": ["ใช้สูตรกำลังเฉลี่ยของตัวต้านทาน P<sub>เฉลี่ย</sub> = I<sub>rms</sub><sup>2</sup>R<sub>1</sub>", "โดยจากข้อ 5 ได้ I<sub>rms</sub> = √2 A", "แทนค่าได้ P<sub>เฉลี่ย</sub> = (√2)<sup>2</sup>(3) = 2(3) = 6 W"], "review": "ทบทวนการใช้ค่า RMS ในการหากำลังเฉลี่ย", "error": "เผลอใช้ค่าสูงสุดแทนค่า RMS ในสูตรกำลัง"}];
+const state = {
+  current: 0,
+  answers: Array(questions.length).fill(null),
+  done: Array(questions.length).fill(false)
+};
+
+const qPill = document.getElementById('qPill');
+const topicPill = document.getElementById('topicPill');
+const questionBox = document.getElementById('questionBox');
+const choicesBox = document.getElementById('choicesBox');
+const feedbackBox = document.getElementById('feedbackBox');
+const figureWrap = document.getElementById('figureWrap');
+const scorePill = document.getElementById('scorePill');
+const donePill = document.getElementById('donePill');
+const progressBar = document.getElementById('progressBar');
+const prevBtn = document.getElementById('prevBtn');
+const nextBtn = document.getElementById('nextBtn');
+const indexBtn = document.getElementById('indexBtn');
+const quizCard = document.getElementById('quizCard');
+const summaryCard = document.getElementById('summaryCard');
+const finalScore = document.getElementById('finalScore');
+const errorList = document.getElementById('errorList');
+const errorSummary = document.getElementById('errorSummary');
+const restartBtn = document.getElementById('restartBtn');
+const labToggleBtn = document.getElementById('labToggleBtn');
+const labCard = document.getElementById('labCard');
+const selectModal = document.getElementById('selectModal');
+const modalList = document.getElementById('modalList');
+const closeModalBtn = document.getElementById('closeModalBtn');
+const phaseValue = document.getElementById('phaseValue');
+const emaxValue = document.getElementById('emaxValue');
+const canvas = document.getElementById('labCanvas');
+const ctx = canvas.getContext('2d');
+const emaxRange = document.getElementById('emaxRange');
+const phaseRange = document.getElementById('phaseRange');
+const rtxt = document.getElementById('rtxt');
+const itxt = document.getElementById('itxt');
+const v1txt = document.getElementById('v1txt');
+const v2txt = document.getElementById('v2txt');
+
+function countCorrect(){ return state.answers.filter((a, i) => a === questions[i].answer).length; }
+function countDone(){ return state.done.filter(Boolean).length; }
+function fmt(n){ return Number(n.toFixed(2)).toString(); }
+
+function renderModalList(){
+  modalList.innerHTML = questions.map((q, i) => {
+    const done = state.done[i] ? ' done' : '';
+    const current = state.current === i ? ' current' : '';
+    return `<button class="modal-item${done}${current}" data-index="${i}">
+      <div class="modal-num">ข้อ ${i+1}</div>
+      <div class="modal-topic">${q.title}</div>
+      <div class="modal-circle"></div>
+    </button>`;
+  }).join('');
+  modalList.querySelectorAll('.modal-item').forEach(btn => {
+    btn.onclick = () => {
+      state.current = Number(btn.dataset.index);
+      selectModal.classList.remove('show');
+      renderQuestion();
+      window.scrollTo({top:0, behavior:'smooth'});
+    };
+  });
+}
+
+function updateMeta(){
+  const correct = countCorrect();
+  const done = countDone();
+  scorePill.textContent = `คะแนน ${correct} / ${questions.length}`;
+  donePill.textContent = `ทำแล้ว ${done} / ${questions.length}`;
+  progressBar.style.width = `${(done / questions.length) * 100}%`;
+}
+
+function showFeedback(){
+  const q = questions[state.current];
+  const chosen = state.answers[state.current];
+  const isCorrect = chosen === q.answer;
+  const answerLetter = String.fromCharCode(65 + q.answer);
+  const chosenLetter = chosen !== null ? String.fromCharCode(65 + chosen) : '-';
+  feedbackBox.className = 'feedback show ' + (isCorrect ? 'correct-box' : 'wrong-box');
+  feedbackBox.innerHTML = `
+    <div class="feedback-title">${isCorrect ? 'ตอบถูกต้อง' : 'ยังไม่ถูก'}</div>
+    <div class="feedback-line"><b>เฉลย:</b> <span style="color:#d93a2f;font-weight:900">${answerLetter}</span></div>
+    ${!isCorrect ? `<div class="feedback-line"><b>ตอบผิด:</b> เลือก ${chosenLetter} แต่คำตอบที่ถูกคือ ${answerLetter}</div>` : ''}
+    ${q.explain.map(line => `<div class="feedback-line">${line}</div>`).join('')}
+    ${!isCorrect ? `<div class="feedback-line" style="margin-top:8px;color:#486789">ทุกครั้งที่กดผิดคือข้อมูลที่ทำให้เราเก่งขึ้น ลองทดลองเพิ่มใน Lab แล้วกลับมาลองตอบใหม่ เรากำลังพัฒนาได้ดีมาก</div>` : ''}
+  `;
+}
+
+function renderQuestion(){
+  const q = questions[state.current];
+  qPill.textContent = `🧠 ข้อ ${state.current + 1}`;
+  topicPill.textContent = q.title;
+  questionBox.innerHTML = q.prompt;
+  figureWrap.classList.toggle('hidden', !q.figure);
+  labToggleBtn.classList.toggle('hidden', !q.lab);
+  if(!q.lab) labCard.classList.remove('show');
+  choicesBox.innerHTML = '';
+  feedbackBox.className = 'feedback';
+  feedbackBox.innerHTML = '';
+  indexBtn.textContent = `ข้อ ${state.current + 1}`;
+
+  q.choices.forEach((choice, idx) => {
+    const btn = document.createElement('button');
+    btn.className = 'choice' + (state.done[state.current] ? ' disabled' : '');
+    btn.innerHTML = `<div class="choice-key">${String.fromCharCode(65+idx)}.</div><div class="choice-text">${choice}</div>`;
+    btn.onclick = () => selectChoice(idx);
+    if(state.done[state.current]) {
+      if(idx === q.answer) btn.classList.add('correct');
+      if(idx === state.answers[state.current] && idx !== q.answer) btn.classList.add('selected-wrong');
+      btn.disabled = true;
+    }
+    choicesBox.appendChild(btn);
+  });
+
+  if(state.done[state.current]) showFeedback();
+  prevBtn.disabled = state.current === 0;
+  updateNextButton();
+  renderModalList();
+  updateMeta();
+}
+
+function updateNextButton(){
+  const allDone = countDone() === questions.length;
+  const atLast = state.current === questions.length - 1;
+  nextBtn.classList.remove('nav-summary');
+  nextBtn.setAttribute('aria-label', atLast && allDone ? 'สรุปผล' : 'ข้อต่อไป');
+  if(atLast && allDone){
+    nextBtn.innerHTML = '<span class="summary-bars" aria-hidden="true"><span></span><span></span><span></span></span><span>สรุปผล</span>';
+    nextBtn.classList.add('nav-summary');
+  } else {
+    nextBtn.textContent = '▶';
+  }
+}
+
+function selectChoice(idx){
+  if(state.done[state.current]) return;
+  state.answers[state.current] = idx;
+  state.done[state.current] = true;
+  const q = questions[state.current];
+  [...choicesBox.children].forEach((el, i) => {
+    el.classList.add('disabled');
+    el.disabled = true;
+    if(i === q.answer) el.classList.add('correct');
+    if(i === idx && idx !== q.answer) el.classList.add('selected-wrong');
+  });
+  showFeedback();
+  updateNextButton();
+  updateMeta();
+}
+
+function openModal(){ renderModalList(); selectModal.classList.add('show'); }
+function goPrev(){ if(state.current > 0){ state.current--; renderQuestion(); window.scrollTo({top:0, behavior:'smooth'}); } }
+function goNext(){
+  const allDone = countDone() === questions.length;
+  if(state.current < questions.length - 1){
+    state.current++;
+    renderQuestion();
+    window.scrollTo({top:0, behavior:'smooth'});
+  } else if(allDone) {
+    showSummary();
+  }
+}
+
+function showSummary(){
+  quizCard.classList.add('hidden');
+  document.getElementById('bottomNav').classList.add('hidden');
+  summaryCard.classList.add('show');
+  const correct = countCorrect();
+  finalScore.textContent = `ได้ ${correct} / ${questions.length} คะแนน`;
+  const wrongItems = questions.map((q, i) => ({q, i})).filter(item => state.answers[item.i] !== item.q.answer);
+
+  if(wrongItems.length === 0) {
+    errorSummary.textContent = 'ยอดมาก รอบนี้ตอบถูกครบทุกข้อแล้ว';
+    errorList.innerHTML = `<div class="error-map-card">
+      <div class="error-map-card-title">ทำได้ครบทุกเรื่อง</div>
+      <div class="error-map-line"><b>ผลลัพธ์:</b> ตอบถูกทุกข้อ</div>
+      <div class="error-map-line"><b>จุดเด่น:</b> เข้าใจทั้งความหมายของ AC, ค่า RMS, การหาค่าในวงจรอนุกรม และกำลังไฟฟ้าเฉลี่ย</div>
+      <div class="error-map-line"><b>แนะนำ:</b> ลองกลับไปเปิด 🔬 Mini Lab เพื่อสังเกตกราฟอีกครั้ง จะช่วยให้เห็นภาพยิ่งขึ้น</div>
+    </div>`;
+  } else {
+    errorSummary.textContent = `ครั้งนี้ตอบผิด ${wrongItems.length} ข้อ ลองย้อนทบทวนตามรายการนี้ก่อน แล้วค่อยกลับไปทำใหม่เพื่อดูว่าจุดพลาดลดลงไหม`;
+    errorList.innerHTML = wrongItems.map(item => {
+      return `<div class="error-map-card">
+        <div class="error-map-card-title">ข้อ ${item.i+1} — ${item.q.title}</div>
+        <div class="error-map-line"><b>ควรทบทวน:</b> ${item.q.review}</div>
+        <div class="error-map-line"><b>จุดที่พลาด:</b> ${item.q.error}</div>
+      </div>`;
+    }).join('');
+  }
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function restartQuiz(){
+  state.current = 0;
+  state.answers = Array(questions.length).fill(null);
+  state.done = Array(questions.length).fill(false);
+  summaryCard.classList.remove('show');
+  quizCard.classList.remove('hidden');
+  document.getElementById('bottomNav').classList.remove('hidden');
+  labCard.classList.remove('show');
+  renderQuestion();
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function drawAxes(x, y, w, h, title, color){
+  ctx.save();
+  ctx.strokeStyle = '#c7d7e8';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x, y, w, h);
+  ctx.beginPath();
+  ctx.moveTo(x, y + h/2);
+  ctx.lineTo(x + w, y + h/2);
+  ctx.stroke();
+  ctx.fillStyle = '#36597f';
+  ctx.font = 'bold 14px Sarabun, sans-serif';
+  ctx.fillText(title, x + 10, y + 18);
+  ctx.fillStyle = color;
+  ctx.fillRect(x + w - 14, y + 10, 10, 10);
+  ctx.restore();
+}
+
+function plotWave(x, y, w, h, amp, phi, color){
+  ctx.save();
+  ctx.beginPath();
+  const samples = 260;
+  for(let i=0;i<=samples;i++) {
+    const t = i / samples * 5 * Math.PI;
+    const val = amp * Math.sin(t + phi);
+    const px = x + (i / samples) * w;
+    const py = y + h/2 - val * (h*0.42);
+    if(i===0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+  }
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2.4;
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawLab(){
+  if(!labCard.classList.contains('show')) return;
+  const dpr = Math.max(window.devicePixelRatio || 1, 1);
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,rect.width,rect.height);
+
+  const emax = parseFloat(emaxRange.value);
+  const phi = parseFloat(phaseRange.value);
+  emaxValue.textContent = `εmax = ${fmt(emax)} V`;
+  phaseValue.textContent = `มุมเฟส = ${fmt(phi)} rad`;
+
+  const R1 = 3, R2 = 2, Rt = R1 + R2;
+  const Imax = emax / Rt;
+  const V1max = Imax * R1;
+  const V2max = Imax * R2;
+
+  rtxt.textContent = `${Rt} Ω`;
+  itxt.textContent = `${fmt(Imax)} A`;
+  v1txt.textContent = `${fmt(V1max)} V`;
+  v2txt.textContent = `${fmt(V2max)} V`;
+
+  const W = rect.width, H = rect.height;
+  const pad = 14;
+  const boxW = W - pad*2;
+  const boxH = (H - pad*5)/4;
+
+  const rows = [
+    {title:'ε(t)', color:'#d24d57', amp:1},
+    {title:'I(t)', color:'#2f6fd6', amp:Imax/emax},
+    {title:'V_R1(t)', color:'#22a06b', amp:V1max/emax},
+    {title:'V_R2(t)', color:'#ff8a00', amp:V2max/emax}
+  ];
+
+  rows.forEach((row, idx) => {
+    const x = pad;
+    const y = pad + idx*(boxH+pad);
+    drawAxes(x, y, boxW, boxH, row.title, row.color);
+    plotWave(x, y, boxW, boxH, row.amp, phi, row.color);
+  });
+
+  ctx.fillStyle = '#45688f';
+  ctx.font = 'bold 13px Sarabun, sans-serif';
+  ctx.fillText('เวลา →', W - 72, H - 6);
+}
+
+prevBtn.onclick = goPrev;
+nextBtn.onclick = goNext;
+indexBtn.onclick = openModal;
+closeModalBtn.onclick = () => selectModal.classList.remove('show');
+selectModal.onclick = (e) => { if(e.target === selectModal) selectModal.classList.remove('show'); };
+restartBtn.onclick = restartQuiz;
+labToggleBtn.onclick = () => { labCard.classList.toggle('show'); drawLab(); };
+emaxRange.addEventListener('input', drawLab);
+phaseRange.addEventListener('input', drawLab);
+window.addEventListener('resize', drawLab);
+
+renderQuestion();
+setTimeout(drawLab, 80);
+</script>
+</body>
+</html>
