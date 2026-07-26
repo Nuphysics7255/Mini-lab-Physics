@@ -1219,15 +1219,4 @@ document.addEventListener('DOMContentLoaded', ()=>{
     const kSpan = document.getElementById('kineticFrictionDisplay');
     if(slot && kSpan){
       // move the whole block that contains the μk label + display box
-      const block = kSpan.closest('div.mb-6') || kSpan.closest('div');
-      if(block && block.parentElement !== slot){
-        block.classList.add('mb-1'); // keep spacing consistent with other mobile rows
-        slot.appendChild(block);
-      }
-    }
-  }
-});
-</script>
-
-</body>
-</html>
+      const block = kSpan.closest('div.mb-6') || kSpan.closest('di
