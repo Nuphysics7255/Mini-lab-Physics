@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Korea Trip Interactive Assistant V2</title>
+<style>
+  :root {
+    --bg: #f5f7fb;
+    --card: #ffffff;
+    --text: #172033;
+    --muted: #5d6b82;
+    --accent: #1d63ff;
+    --accent-2: #0f9d58;
+    --warn: #c62828;
+    --soft: #e9f0ff;
+    --border: #dbe3f0;
+    --shadow: 0 10px 28px rgba(14, 31, 53, 0.08);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans Thai", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+  .wrap {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 18px 14px 80px;
+  }
+  .hero {
+    background: linear-gradient(135deg, #0b59db, #3d85ff);
+    color: #fff;
+    border-radius: 22px;
+    padding: 22px 18px;
+    box-shadow: var(--shadow);
+    margin-bottom: 16px;
+  }
+  .hero h1 {
+    margin: 0 0 8px;
+    font-size: 1.55rem;
+    line-height: 1.25;
+  }
+  .hero p {
+    margin: 6px 0;
+    opacity: 0.96;
+  }
+  .quickbar {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+    margin: 16px 0;
+  }
+  .card {
+    background: var(--card);
+    border-radius: 18px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+  }
+  .card h2, .card h3 {
+    margin-top: 0;
+  }
+  .tiny {
+    color: var(--muted);
+    font-size: 0.92rem;
+  }
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .chip {
+    background: #edf3ff;
+    color: #0b46b5;
+    border-radius: 999px;
+    padding: 8px 12px;
+    font-size: 0.9rem;
+    border: 1px solid #d6e2ff;
+  }
+  .top-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 14px;
+  }
+  button, .btn {
+    border: none;
+    cursor: pointer;
+    border-radius: 12px;
+    padding: 10px 12px;
+    font-size: 0.95rem;
+    background: var(--accent);
+    color: white;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .btn.secondary, button.secondary {
+    background: #eef3ff;
+    color: #19439b;
+  }
+  .btn.green, button.green {
+    background: var(--accent-2);
+  }
+  .btn.red, button.red {
+    background: #c53929;
+  }
+  .btn.outline, button.outline {
+    background: white;
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .days-nav {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+    gap: 10px;
+    margin: 18px 0;
+  }
+  .day-tab {
+    background: white;
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 12px 10px;
+    border-radius: 14px;
+    text-align: left;
+    box-shadow: var(--shadow);
+  }
+  .day-tab.active {
+    background: #0b59db;
+    color: white;
+    border-color: #0b59db;
+  }
+  .day-section {
+    display: none;
+  }
+  .day-section.active {
+    display: block;
+  }
+  .section-head {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: start;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+  .badge {
+    display: inline-block;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: #e8fff1;
+    color: #137333;
+    font-size: 0.86rem;
+    font-weight: 700;
+  }
+  .badge.warn {
+    background: #fff1f0;
+    color: var(--warn);
+  }
+  .timeline {
+    display: grid;
+    gap: 12px;
+  }
+  .stop {
+    background: #fbfcff;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 14px;
+  }
+  .stop h4 {
+    margin: 0 0 6px;
+    font-size: 1.05rem;
+  }
+  .meta {
+    font-size: 0.94rem;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+  .stop-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    font-size: 0.94rem;
+  }
+  .checkbox input {
+    width: 18px;
+    height: 18px;
+  }
+  .two-col {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 14px;
+  }
+  .modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(12, 18, 30, 0.62);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 18px;
+    z-index: 1000;
+  }
+  .modal.show {
+    display: flex;
+  }
+  .modal-box {
+    width: min(720px, 100%);
+    background: white;
+    border-radius: 18px;
+    padding: 18px;
+    box-shadow: 0 20px 55px rgba(0,0,0,0.24);
+  }
+  .phrase {
+    background: #f5f8ff;
+    border-radius: 12px;
+    padding: 14px;
+    white-space: pre-wrap;
+    font-size: 1.02rem;
+    line-height: 1.65;
+    border: 1px solid var(--border);
+  }
+  .footer-note {
+    margin-top: 24px;
+    color: var(--muted);
+    font-size: 0.9rem;
+    line-height: 1.6;
+  }
+  .searchbox {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  input[type="search"] {
+    width: 100%;
+    padding: 11px 12px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    font-size: 1rem;
+  }
+  .toast {
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 18px;
+    background: #1f2937;
+    color: #fff;
+    padding: 10px 14px;
+    border-radius: 12px;
+    display: none;
+    z-index: 1100;
+  }
+  .toast.show { display: block; }
+
+  .map-group {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .map-group .btn, .map-group button {
+    width: 100%;
+    min-height: 46px;
+    font-weight: 700;
+    padding: 10px 8px;
+  }
+  .route-group {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .route-group .btn, .route-group button {
+    width: 100%;
+    min-height: 44px;
+  }
+  .big-home {
+    position: sticky;
+    bottom: 10px;
+    z-index: 30;
+    margin-top: 14px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .big-home button {
+    min-height: 52px;
+    font-size: 1rem;
+    font-weight: 800;
+    box-shadow: 0 8px 24px rgba(14,31,53,.18);
+  }
+  .travel-tip {
+    background: #fff8e1;
+    border: 1px solid #f2d27b;
+    border-radius: 14px;
+    padding: 12px 14px;
+    line-height: 1.55;
+    margin-top: 12px;
+  }
+  @media (max-width: 620px) {
+    .wrap { padding: 10px 8px 90px; }
+    .hero { border-radius: 16px; padding: 18px 14px; }
+    .hero h1 { font-size: 1.35rem; }
+    .card { border-radius: 14px; padding: 12px; }
+    .days-nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .map-group { grid-template-columns: 1fr 1fr 1fr; }
+    .stop-actions { display: grid; grid-template-columns: 1fr 1fr; }
+    .stop-actions .btn, .stop-actions button { width: 100%; min-height: 44px; }
+    .modal-box { padding: 14px; }
+    .phrase { font-size: 1.12rem; }
+  }
+
+</style>
+</head>
+<body>
+<div class="wrap">
+  <section class="hero">
+    <h1>Korea Trip Interactive Assistant V2</h1>
+    <p>Ms. Chonlawan Throngjit and Mr. Wissanu Yungfuang • 7 Days 6 Nights</p>
+    <p>V2 • ปรับสำหรับมือถือ • Google Maps + Naver Map + Kakao Map • ประโยคเกาหลี • ปุ่มกลับโรงแรม</p>
+    <div class="chips">
+      <span class="chip">🗺 แผนที่</span>
+      <span class="chip">🚕 Taxi phrase</span>
+      <span class="chip">🚆 Direction link</span>
+      <span class="chip">🏨 ปุ่มกลับโรงแรม</span>
+      <span class="chip">✅ เช็กลิสต์จำสถานะ</span>
+    </div>
+    <div class="top-actions">
+      <button class="secondary" onclick="showQuickPhrase('hotel')">🏨 โชว์ชื่อโรงแรม</button>
+      <button class="secondary" onclick="showQuickPhrase('help')">🆘 ประโยคฉุกเฉิน</button>
+      <button class="secondary" onclick="openHotel('Busan')">📍 เปิดโรงแรมปูซาน</button>
+      <button class="secondary" onclick="openHotel('Seoul')">📍 เปิดโรงแรมโซล</button>
+    </div>
+  </section>
+
+  <section class="quickbar">
+    <div class="card">
+      <h3>ข้อมูลที่พัก</h3>
+      <div class="tiny">แตะเพื่อคัดลอกเบอร์หรือเปิดแผนที่</div>
+      <div id="hotelList"></div>
+    </div>
+    <div class="card">
+      <h3>รายการที่ต้องจำ</h3>
+      <div class="tiny">สิ่งที่มีการจอง / เวลาสำคัญ</div>
+      <ul>
+        <li>10 Aug • Haeundae Sky Capsule 17:20 • Reserved</li>
+        <li>11 Aug • BEXCO IFLA 09:00–12:00 • Reserved</li>
+        <li>13 Aug • KTX Busan 09:49 → Seoul 12:33 • Reserved</li>
+        <li>14 Aug • DMZ Tour pickup 07:25 • Myeongdong Exit 9 • Reserved</li>
+        <li>16 Aug • Korean Air KE-659 • 19:45 • Incheon</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="card">
+    <h3>🧭 วิธีใช้แผนที่ในเกาหลี</h3>
+    <div class="travel-tip">
+      <strong>Google</strong> ใช้เปิดตำแหน่งและดูภาพรวมได้เร็ว<br>
+      <strong>Naver Map</strong> และ <strong>Kakao Map</strong> มีปุ่มแยกให้ทุกสถานที่ เพื่อใช้ค้นหาชื่อจุดหมายในเกาหลีได้สะดวกขึ้น<br>
+      ถ้ากำลังขึ้น Taxi ให้กด <strong>🇰🇷 Korean</strong> แล้วโชว์หน้าจอให้คนขับดูได้ทันที
+    </div>
+  </section>
+
+  <section class="card">
+    <h3>ค้นหาสถานที่เร็ว ๆ</h3>
+    <div class="tiny">พิมพ์ชื่อสถานที่ แล้วกดเปิดใน Google Maps</div>
+    <div class="searchbox">
+      <input type="search" id="quickSearch" placeholder="เช่น BEXCO หรือ Gyeongbokgung Palace" />
+      <button onclick="searchPlace()">🔎 Google Maps</button>
+    </div>
+  </section>
+
+  <section class="days-nav" id="daysNav"></section>
+  <section id="daysContainer"></section>
+
+  <section class="footer-note">
+    <strong>วิธีใช้:</strong> เปิดไฟล์นี้บนมือถือ แล้วกดวันที่ → กด “Map” เพื่อเปิดสถานที่,
+    กด “Route” เพื่อดูเส้นทางจากจุดก่อนหน้าไปจุดถัดไป,
+    กด “Korean” เพื่อโชว์ข้อความเกาหลีให้คนขับหรือเจ้าหน้าที่ดู,
+    และกด checkbox เพื่อจำว่าสถานที่ไหนไปแล้วบ้าง (บันทึกไว้ในเครื่องอัตโนมัติ)
+  </section>
+</div>
+
+<div class="modal" id="phraseModal">
+  <div class="modal-box">
+    <div style="display:flex; justify-content:space-between; gap:12px; align-items:center; margin-bottom:12px;">
+      <h3 id="modalTitle" style="margin:0;">Phrase</h3>
+      <button class="outline" onclick="hidePhrase()">ปิด</button>
+    </div>
+    <div class="phrase" id="modalPhrase"></div>
+    <div class="top-actions">
+      <button onclick="copyText(document.getElementById('modalPhrase').innerText)">คัดลอกข้อความ</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">คัดลอกแล้ว</div>
+
+<script>
+const tripData = {"title": "Korea Trip Interactive Assistant V2", "subtitle": "Ms. Chonlawan Throngjit and Mr. Wissanu Yungfuang • 7 Days 6 Nights", "days": [{"date": "09/08/2026", "dow": "Sun", "city": "Bangkok", "theme": "Departure", "flight": "Jin Air • 23:40 • Bangkok Suvarnabhumi (BKK) • LJ-22", "hotel": "In flight", "notes": "คืนนี้เดินทางจากกรุงเทพฯ ไปปูซาน", "stops": [{"title": "Suvarnabhumi Airport", "ko": "สนามบินสุวรรณภูมิ", "address": "Suvarnabhumi Airport, Bangkok, Thailand", "time": "23:40", "note": "Check-in สำหรับเที่ยวบิน Jin Air", "phrase": "Please take me to Suvarnabhumi Airport.\nกรุณาพาฉันไปสนามบินสุวรรณภูมิ", "reservation": false}]}, {"date": "10/08/2026", "dow": "Mon", "city": "Busan", "theme": "Arrival + East Busan", "flight": "Arrive Busan (PUS) • 10:00", "hotel": "MS Hotel Haeundae", "notes": "มีจอง [East Busan] Sky Capsule & Bay 101 Night View Tour", "stops": [{"title": "Gimhae International Airport", "ko": "김해국제공항", "address": "Gimhae International Airport, Busan, South Korea", "time": "10:00 arrival", "note": "ถึงปูซาน", "phrase": "Please take me to Gimhae International Airport.\n김해국제공항으로 가주세요.", "reservation": false}, {"title": "MS Hotel Haeundae", "ko": "해운대 MS호텔", "address": "MS Hotel Haeundae, 271 Haeundaehaebyeon-ro, Haeundae-gu, Busan, South Korea", "time": "~1 hr from airport", "note": "ฝากกระเป๋า / check-in", "phrase": "Please take me to MS Hotel Haeundae.\n해운대 MS호텔로 가주세요.", "reservation": false}, {"title": "Haedong Yonggungsa Temple", "ko": "해동용궁사", "address": "Haedong Yonggungsa Temple, 86 Yonggung-gil, Gijang-gun, Busan, South Korea", "time": "daytime", "note": "เที่ยววัดริมทะเล", "phrase": "Please take me to Haedong Yonggungsa.\n해동용궁사로 가주세요.", "reservation": false}, {"title": "Orangdae Park", "ko": "오랑대공원", "address": "Orangdae Park, Yonggung-gil, Gijang-gun, Busan, South Korea", "time": "2 hrs • closes at 20:00", "note": "สวนและวิวทะเล", "phrase": "Please take me to Orangdae Park.\n오랑대공원으로 가주세요.", "reservation": false}, {"title": "Haeundae Sky Capsule", "ko": "해운대 블루라인파크 스카이캡슐", "address": "Haeundae Blueline Park Mipo Station, 13 Dalmaji-gil 62beon-gil, Haeundae-gu, Busan, South Korea", "time": "17:20", "note": "Sunset / night view tour", "phrase": "Please take me to Haeundae Sky Capsule.\n해운대 스카이캡슐 타는 곳으로 가주세요.", "reservation": true}, {"title": "The Bay 101", "ko": "더베이101", "address": "52 Dongbaek-ro, Haeundae-gu, Busan, South Korea", "time": "night", "note": "Night view", "phrase": "Please take me to The Bay 101.\n더베이101으로 가주세요.", "reservation": true}, {"title": "Back to MS Hotel Haeundae", "ko": "해운대 MS호텔", "address": "MS Hotel Haeundae, 271 Haeundaehaebyeon-ro, Haeundae-gu, Busan, South Korea", "time": "night", "note": "กลับโรงแรม", "phrase": "Please take me back to MS Hotel Haeundae.\n해운대 MS호텔로 가주세요.", "reservation": false}]}, {"date": "11/08/2026", "dow": "Tue", "city": "Busan", "theme": "IFLA + Beach Evening", "flight": "IFLA WLIC 2026", "hotel": "MS Hotel Haeundae", "notes": "BEXCO 09:00–12:00 • Reserved", "stops": [{"title": "Bandi & Luni’s Bookstore (Centum City)", "ko": "반디앤루니스 센텀시티", "address": "Centum City, Busan, South Korea", "time": "optional", "note": "ร้านหนังสือ (optional)", "phrase": "Please take me to Bandi & Luni’s in Centum City.\n센텀시티 반디앤루니스로 가주세요.", "reservation": false}, {"title": "Busan Metropolitan Library", "ko": "부산도서관", "address": "Busan Metropolitan Library, Busan, South Korea", "time": "optional", "note": "ห้องสมุด (optional)", "phrase": "Please take me to Busan Metropolitan Library.\n부산도서관으로 가주세요.", "reservation": false}, {"title": "BEXCO – IFLA Exhibition", "ko": "벡스코", "address": "BEXCO, 55 APEC-ro, Haeundae-gu, Busan, South Korea", "time": "09:00–12:00", "note": "Reserved", "phrase": "Please take me to BEXCO.\n벡스코로 가주세요.", "reservation": true}, {"title": "Busan National Science Museum", "ko": "국립부산과학관", "address": "Busan National Science Museum, 59 Dongbusangwangwang 6-ro, Gijang-gun, Busan, South Korea", "time": "~2 hrs • optional", "note": "optional", "phrase": "Please take me to Busan National Science Museum.\n국립부산과학관으로 가주세요.", "reservation": false}, {"title": "Gwangalli Beach", "ko": "광안리해수욕장", "address": "Gwangalli Beach, Busan, South Korea", "time": "evening", "note": "เดินเล่นริมทะเล", "phrase": "Please take me to Gwangalli Beach.\n광안리해수욕장으로 가주세요.", "reservation": false}, {"title": "Millak Waterside Park", "ko": "민락수변공원", "address": "Millak Waterside Park, 361 Millaksubyeon-ro, Suyeong-gu, Busan, South Korea", "time": "evening", "note": "เดินต่อ / ชมวิว", "phrase": "Please take me to Millak Waterside Park.\n민락수변공원으로 가주세요.", "reservation": false}, {"title": "Jogae View Gwangan Main Branch", "ko": "조개뷰 광안 본점", "address": "35-1 Millaksubyeon-ro, Suyeong-gu, Busan, South Korea", "time": "dinner", "note": "ร้านอาหารเย็น", "phrase": "Please take me to Jogae View Gwangan Main Branch.\n조개뷰 광안 본점으로 가주세요.", "reservation": false}, {"title": "Back to MS Hotel Haeundae", "ko": "해운대 MS호텔", "address": "MS Hotel Haeundae, 271 Haeundaehaebyeon-ro, Haeundae-gu, Busan, South Korea", "time": "night", "note": "กลับโรงแรม", "phrase": "Please take me back to MS Hotel Haeundae.\n해운대 MS호텔로 가주세요.", "reservation": false}]}, {"date": "12/08/2026", "dow": "Wed", "city": "Busan", "theme": "West Busan Day", "flight": "—", "hotel": "MS Hotel Haeundae", "notes": "เที่ยวหลายจุดในฝั่งตะวันตกของปูซาน", "stops": [{"title": "Gamcheon Culture Village", "ko": "감천문화마을", "address": "Gamcheon Culture Village, 203 Gamnae 2-ro, Saha-gu, Busan, South Korea", "time": "morning", "note": "หมู่บ้านสีสันสวยงาม", "phrase": "Please take me to Gamcheon Culture Village.\n감천문화마을로 가주세요.", "reservation": false}, {"title": "Jagalchi Market", "ko": "자갈치시장", "address": "Jagalchi Market, 52 Jagalchihaean-ro, Jung-gu, Busan, South Korea", "time": "midday", "note": "ตลาดอาหารทะเล", "phrase": "Please take me to Jagalchi Market.\n자갈치시장으로 가주세요.", "reservation": false}, {"title": "Huinnyeoul Culture Village", "ko": "흰여울문화마을", "address": "Huinnyeoul Culture Village, Yeongseon-dong 4-ga, Yeongdo-gu, Busan, South Korea", "time": "afternoon", "note": "หมู่บ้านวิวทะเล", "phrase": "Please take me to Huinnyeoul Culture Village.\n흰여울문화마을로 가주세요.", "reservation": false}, {"title": "Songdo Skywalk", "ko": "송도구름산책로", "address": "Songdo Skywalk, 129-4 Amnam-dong, Seo-gu, Busan, South Korea", "time": "afternoon", "note": "Skywalk ริมทะเล", "phrase": "Please take me to Songdo Skywalk.\n송도구름산책로로 가주세요.", "reservation": false}, {"title": "Back to MS Hotel Haeundae", "ko": "해운대 MS호텔", "address": "MS Hotel Haeundae, 271 Haeundaehaebyeon-ro, Haeundae-gu, Busan, South Korea", "time": "night", "note": "กลับโรงแรม", "phrase": "Please take me back to MS Hotel Haeundae.\n해운대 MS호텔로 가주세요.", "reservation": false}]}, {"date": "13/08/2026", "dow": "Thu", "city": "Seoul", "theme": "Busan → Seoul", "flight": "KTX Reserved • Busan 09:49 → Seoul 12:33", "hotel": "Royal Hotel Seoul", "notes": "ย้ายเมืองจากปูซานไปโซล", "stops": [{"title": "MS Hotel Haeundae", "ko": "해운대 MS호텔", "address": "MS Hotel Haeundae, 271 Haeundaehaebyeon-ro, Haeundae-gu, Busan, South Korea", "time": "morning", "note": "ออกจากโรงแรม", "phrase": "Please take me to Busan Station.\n부산역으로 가주세요.", "reservation": false}, {"title": "Dongbaekseom Island Entrance", "ko": "동백섬 입구", "address": "Dongbaekseom Island Entrance, Busan, South Korea", "time": "en route", "note": "จุดอ้างอิงก่อนเดินทางต่อไปสถานี", "phrase": "Please take me to Dongbaekseom Island Entrance.\n동백섬 입구로 가주세요.", "reservation": false}, {"title": "Busan Station", "ko": "부산역", "address": "Busan Station, 206 Jungang-daero, Dong-gu, Busan, South Korea", "time": "09:49 departure", "note": "ขึ้น KTX ไป Seoul Station", "phrase": "Please take me to Busan Station.\n부산역으로 가주세요.", "reservation": true}, {"title": "Seoul Station", "ko": "서울역", "address": "Seoul Station, 405 Hangang-daero, Yongsan-gu, Seoul, South Korea", "time": "12:33 arrival", "note": "ถึงโซล", "phrase": "Please take me to Seoul Station.\n서울역으로 가주세요.", "reservation": true}, {"title": "Myeongdong", "ko": "명동", "address": "Myeong-dong, Jung District, Seoul, South Korea", "time": "afternoon", "note": "เดินเที่ยว", "phrase": "Please take me to Myeongdong.\n명동으로 가주세요.", "reservation": false}, {"title": "Starfield Library (COEX)", "ko": "별마당도서관", "address": "Starfield Library, 513 Yeongdong-daero, Gangnam-gu, Seoul, South Korea", "time": "afternoon", "note": "ใกล้ National Library of Korea", "phrase": "Please take me to Starfield Library at COEX.\n코엑스 별마당도서관으로 가주세요.", "reservation": false}, {"title": "National Library of Korea", "ko": "국립중앙도서관", "address": "National Library of Korea, 201 Banpo-daero, Seocho-gu, Seoul, South Korea", "time": "afternoon", "note": "สถานที่ใกล้เคียง", "phrase": "Please take me to the National Library of Korea.\n국립중앙도서관으로 가주세요.", "reservation": false}, {"title": "Royal Hotel Seoul", "ko": "로얄호텔서울", "address": "Royal Hotel Seoul, 61 Myeongdong-gil, Jung District, Seoul, South Korea", "time": "night", "note": "เข้าที่พัก", "phrase": "Please take me to Royal Hotel Seoul.\n로얄호텔서울로 가주세요.", "reservation": false}]}, {"date": "14/08/2026", "dow": "Fri", "city": "Seoul", "theme": "DMZ Day", "flight": "DMZ Tour Reserved", "hotel": "Royal Hotel Seoul", "notes": "Pickup 07:25 at Myeongdong Subway Station Exit 9", "stops": [{"title": "Myeongdong Subway Station Exit 9", "ko": "명동역 9번 출구", "address": "Myeongdong Station Exit 9, Seoul, South Korea", "time": "07:25", "note": "DMZ Tour pickup • Reserved", "phrase": "Please take me to Myeongdong Station Exit 9.\n명동역 9번 출구로 가주세요.", "reservation": true}, {"title": "DMZ Tour", "ko": "DMZ 투어", "address": "https://www.klook.com/en-SG/activity/216-dmz-tour-gyeonggi-do/", "time": "morning–afternoon", "note": "Klook booking", "phrase": "I have a reservation for the DMZ Tour.\nDMZ 투어 예약했습니다.", "reservation": true, "external_url": "https://www.klook.com/en-SG/activity/216-dmz-tour-gyeonggi-do/"}, {"title": "Drop-off: City Hall area / Hongik Univ. Subway Station Exit 3", "ko": "시청 / 홍대입구역 3번 출구", "address": "Hongik Univ. Station Exit 3, Seoul, South Korea", "time": "14:00", "note": "จุดลงรถตามทัวร์", "phrase": "Please take me to Hongik University Station Exit 3.\n홍대입구역 3번 출구로 가주세요.", "reservation": false}, {"title": "National Museum of Korea", "ko": "국립중앙박물관", "address": "National Museum of Korea, 137 Seobinggo-ro, Yongsan-gu, Seoul, South Korea", "time": "afternoon", "note": "พิพิธภัณฑ์", "phrase": "Please take me to the National Museum of Korea.\n국립중앙박물관으로 가주세요.", "reservation": false}, {"title": "COW&PIG Myeongdong", "ko": "COW&PIG 명동", "address": "COW&PIG Myeongdong, Seoul, South Korea", "time": "dinner", "note": "มื้อเย็น", "phrase": "Please take me to COW&PIG Myeongdong.\n카우앤피그 명동으로 가주세요.", "reservation": false}, {"title": "Royal Hotel Seoul", "ko": "로얄호텔서울", "address": "Royal Hotel Seoul, 61 Myeongdong-gil, Jung District, Seoul, South Korea", "time": "night", "note": "กลับโรงแรม", "phrase": "Please take me back to Royal Hotel Seoul.\n로얄호텔서울로 가주세요.", "reservation": false}]}, {"date": "15/08/2026", "dow": "Sat", "city": "Seoul", "theme": "Old Town + Shopping", "flight": "—", "hotel": "Royal Hotel Seoul", "notes": "Seoul Old Town + Shopping Day", "stops": [{"title": "Gyeongbokgung Palace", "ko": "경복궁", "address": "Gyeongbokgung Palace, 161 Sajik-ro, Jongno-gu, Seoul, South Korea", "time": "08:30 • ~2 hrs", "note": "พระราชวัง", "phrase": "Please take me to Gyeongbokgung Palace.\n경복궁으로 가주세요.", "reservation": false}, {"title": "Bukchon Hanok Village", "ko": "북촌한옥마을", "address": "Bukchon Hanok Village, Gyedong-gil, Jongno-gu, Seoul, South Korea", "time": "10:45", "note": "หมู่บ้านฮันอก", "phrase": "Please take me to Bukchon Hanok Village.\n북촌한옥마을로 가주세요.", "reservation": false}, {"title": "Cafe options near Ikseon-dong", "ko": "익선동 카페", "address": "Ikseon-dong, Jongno-gu, Seoul, South Korea", "time": "12:00", "note": "Seoul Coffee Ikseon Main / Ikseondong Cafe & Bar STKMIL Coffee / Hanok Langsom / Maison de Paris / Ikseon Yorok Restaurant", "phrase": "Please take me to Ikseon-dong.\n익선동으로 가주세요.", "reservation": false}, {"title": "Ikseon-dong Hanok Village", "ko": "익선동 한옥거리", "address": "Ikseon-dong Hanok Village, Jongno-gu, Seoul, South Korea", "time": "midday", "note": "เดินเที่ยว", "phrase": "Please take me to Ikseon-dong Hanok Village.\n익선동 한옥거리로 가주세요.", "reservation": false}, {"title": "Myeongdong Shopping Street", "ko": "명동 쇼핑거리", "address": "Myeongdong Shopping Street, Myeongdong-gil, Jung-gu, Seoul, South Korea", "time": "16:00", "note": "ช้อปปิ้ง / ร้าน BBQ เช่น Mongvely, Daol", "phrase": "Please take me to Myeongdong Shopping Street.\n명동 쇼핑거리로 가주세요.", "reservation": false}, {"title": "Royal Hotel Seoul", "ko": "로얄호텔서울", "address": "Royal Hotel Seoul, 61 Myeongdong-gil, Jung District, Seoul, South Korea", "time": "night", "note": "กลับโรงแรม", "phrase": "Please take me back to Royal Hotel Seoul.\n로얄호텔서울로 가주세요.", "reservation": false}]}, {"date": "16/08/2026", "dow": "Sun", "city": "Bangkok", "theme": "Return Flight", "flight": "Korean Air • 19:45 • Incheon International Airport • KE-659", "hotel": "—", "notes": "ออกจากโรงแรมประมาณ 06:00 • Seoul Station → AREX", "stops": [{"title": "Royal Hotel Seoul", "ko": "로얄호텔서울", "address": "Royal Hotel Seoul, 61 Myeongdong-gil, Jung District, Seoul, South Korea", "time": "~06:00", "note": "ออกจากโรงแรมไป Seoul Station", "phrase": "Please take me to Seoul Station.\n서울역으로 가주세요.", "reservation": false}, {"title": "Seoul Station", "ko": "서울역", "address": "Seoul Station, 405 Hangang-daero, Yongsan-gu, Seoul, South Korea", "time": "morning", "note": "ขึ้น AREX", "phrase": "Please take me to Seoul Station.\n서울역으로 가주세요.", "reservation": false}, {"title": "AREX Airport Railroad Express", "ko": "공항철도 직통열차", "address": "AREX, Seoul Station to Incheon International Airport, South Korea", "time": "40–43 mins • 9,500 won • first 06:10", "note": "Terminal 1 at 06:53 (ตามข้อมูลในเอกสาร)", "phrase": "I want to take the AREX to the airport.\n공항철도로 공항에 가고 싶어요.", "reservation": false}, {"title": "Incheon International Airport", "ko": "인천국제공항", "address": "Incheon International Airport Terminal 2, 272 Gonghang-ro, Jung-gu, Incheon, South Korea", "time": "19:45 flight", "note": "Korean Air KE-659 กลับกรุงเทพฯ", "phrase": "Please take me to Incheon International Airport Terminal 2.\n인천국제공항 제2터미널로 가주세요.", "reservation": false}]}], "hotels": [{"name": "MS Hotel Haeundae", "ko": "해운대 MS호텔", "address": "271 Haeundaehaebyeon-ro, Haeundae-gu, Busan 48094, Korea", "phone": "+82 51 741 3838", "city": "Busan", "map": "MS Hotel Haeundae, Busan, South Korea"}, {"name": "Royal Hotel Seoul", "ko": "로얄호텔서울", "address": "61 Myeongdong-gil, Jung District, Seoul, South Korea", "phone": "+82 2-756-1112", "city": "Seoul", "map": "Royal Hotel Seoul, 61 Myeongdong-gil, Jung District, Seoul, South Korea"}]};
+
+
+function naverMapUrl(q) {
+  return "https://map.naver.com/p/search/" + encodeURIComponent(q);
+}
+function kakaoMapUrl(q) {
+  return "https://map.kakao.com/?q=" + encodeURIComponent(q);
+}
+function openNaver(q) {
+  window.open(naverMapUrl(q), "_blank");
+}
+function openKakao(q) {
+  window.open(kakaoMapUrl(q), "_blank");
+}
+function openGoogle(q) {
+  window.open(mapsSearchUrl(q), "_blank");
+}
+function openGoogleDriving(origin, destination) {
+  const url = "https://www.google.com/maps/dir/?api=1&origin=" + encodeURIComponent(origin) +
+              "&destination=" + encodeURIComponent(destination) + "&travelmode=driving";
+  window.open(url, "_blank");
+}
+function openGoogleWalking(origin, destination) {
+  const url = "https://www.google.com/maps/dir/?api=1&origin=" + encodeURIComponent(origin) +
+              "&destination=" + encodeURIComponent(destination) + "&travelmode=walking";
+  window.open(url, "_blank");
+}
+
+function mapsSearchUrl(q) {
+  return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(q);
+}
+function mapsDirectionsUrl(origin, destination) {
+  return "https://www.google.com/maps/dir/?api=1&origin=" + encodeURIComponent(origin) +
+         "&destination=" + encodeURIComponent(destination) + "&travelmode=transit";
+}
+function showToast(msg="เรียบร้อย") {
+  const t = document.getElementById('toast');
+  t.innerText = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 1800);
+}
+function copyText(text) {
+  navigator.clipboard.writeText(text).then(() => showToast("คัดลอกแล้ว"));
+}
+function openMap(q) {
+  window.open(mapsSearchUrl(q), "_blank");
+}
+function openRoute(origin, dest) {
+  window.open(mapsDirectionsUrl(origin, dest), "_blank");
+}
+function hidePhrase() {
+  document.getElementById('phraseModal').classList.remove('show');
+}
+function showPhrase(title, phrase) {
+  document.getElementById('modalTitle').innerText = title;
+  document.getElementById('modalPhrase').innerText = phrase;
+  document.getElementById('phraseModal').classList.add('show');
+}
+function showQuickPhrase(kind) {
+  if (kind === 'hotel') {
+    const text = "Busan Hotel: MS Hotel Haeundae / 해운대 MS호텔\n" +
+      "Address: 271 Haeundaehaebyeon-ro, Haeundae-gu, Busan\n\n" +
+      "Seoul Hotel: Royal Hotel Seoul / 로얄호텔서울\n" +
+      "Address: 61 Myeongdong-gil, Jung District, Seoul";
+    showPhrase("ชื่อโรงแรม / Hotel Info", text);
+  } else {
+    const text = "I have a reservation. / 예약했습니다.\n" +
+      "Please take me to this place. / 이곳으로 가주세요.\n" +
+      "Please take me back to my hotel. / 호텔로 돌아가 주세요.\n" +
+      "Where is the subway station? / 지하철역이 어디예요?\n" +
+      "Can you help me? / 도와주실 수 있나요?\n" +
+      "Thank you. / 감사합니다.";
+    showPhrase("ประโยคฉุกเฉิน / Useful Phrases", text);
+  }
+}
+function searchPlace() {
+  const v = document.getElementById('quickSearch').value.trim();
+  if (v) openMap(v);
+}
+function hotelHTML(h) {
+  return `
+    <div class="stop" style="margin-top:10px;">
+      <h4>${h.name}</h4>
+      <div class="meta">${h.ko}<br>${h.address}<br>☎ ${h.phone}</div>
+      <div class="map-group">
+        <button onclick="openGoogle('${jsEscape(h.map)}')">Google</button>
+        <button class="green" onclick="openNaver('${jsEscape(h.name)} ${jsEscape(h.ko)}')">Naver</button>
+        <button class="red" onclick="openKakao('${jsEscape(h.name)} ${jsEscape(h.ko)}')">Kakao</button>
+      </div>
+      <div class="stop-actions">
+        <button class="secondary" onclick="copyText('${jsEscape(h.address)}')">📋 Copy address</button>
+        <button class="secondary" onclick="copyText('${jsEscape(h.phone)}')">☎ Copy phone</button>
+      </div>
+    </div>
+  `;
+}
+function jsEscape(str) {
+  return String(str).replace(/'/g, "\\'");
+}
+function renderHotels() {
+  const el = document.getElementById('hotelList');
+  el.innerHTML = tripData.hotels.map(hotelHTML).join('');
+}
+function openHotel(city) {
+  const h = tripData.hotels.find(x => x.city === city);
+  if (h) openMap(h.map);
+}
+function storageKey(dayIdx, stopIdx) {
+  return `tripcheck_${dayIdx}_${stopIdx}`;
+}
+function buildDayTab(day, idx) {
+  return `
+    <button class="day-tab ${idx===0 ? 'active' : ''}" onclick="selectDay(${idx})" id="tab-${idx}">
+      <div><strong>Day ${idx+1}</strong></div>
+      <div>${day.dow}</div>
+      <div class="tiny">${day.date}</div>
+      <div class="tiny">${day.city}</div>
+    </button>
+  `;
+}
+function buildStop(stop, idx, prevStop, dayIdx) {
+  const checked = localStorage.getItem(storageKey(dayIdx, idx)) === '1' ? 'checked' : '';
+  const routeBtn = prevStop
+    ? `<button class="secondary" onclick="openRoute('${jsEscape(prevStop.address)}','${jsEscape(stop.address)}')">Route</button>`
+    : '';
+  const externalBtn = stop.external_url
+    ? `<a class="btn green" href="${stop.external_url}" target="_blank">Open link</a>`
+    : '';
+  const badge = stop.reservation ? `<span class="badge warn">Reserved</span>` : '';
+  return `
+    <div class="stop">
+      <div style="display:flex; justify-content:space-between; gap:12px; align-items:start;">
+        <div>
+          <h4>${idx+1}) ${stop.title}</h4>
+          <div class="meta"><strong>${stop.ko || ''}</strong><br>
+            ⏰ ${stop.time || '-'}<br>
+            ${stop.note || ''}<br>
+            📍 ${stop.address}
+          </div>
+        </div>
+        <div>${badge}</div>
+      </div>
+      <div class="map-group">
+        <button onclick="openGoogle('${jsEscape(stop.address)}')">Google</button>
+        <button class="green" onclick="openNaver('${jsEscape(stop.title)} ${jsEscape(stop.ko || '')}')">Naver</button>
+        <button class="red" onclick="openKakao('${jsEscape(stop.title)} ${jsEscape(stop.ko || '')}')">Kakao</button>
+      </div>
+      <div class="route-group">
+        ${prevStop ? `<button class="secondary" onclick="openRoute('${jsEscape(prevStop.address)}','${jsEscape(stop.address)}')">🚆 Transit</button>` : ''}
+        ${prevStop ? `<button class="secondary" onclick="openGoogleDriving('${jsEscape(prevStop.address)}','${jsEscape(stop.address)}')">🚕 Driving</button>` : ''}
+      </div>
+      <div class="stop-actions">
+        <button class="secondary" onclick="showPhrase('${jsEscape(stop.title)}', `${stop.phrase}`)">🇰🇷 Korean</button>
+        <button class="secondary" onclick="copyText('${jsEscape(stop.address)}')">📋 Copy address</button>
+        ${externalBtn}
+      </div>
+      <label class="checkbox">
+        <input type="checkbox" ${checked} onchange="saveCheck(${dayIdx}, ${idx}, this.checked)">
+        ไปแล้ว / done
+      </label>
+    </div>
+  `;
+}
+function buildDaySection(day, idx) {
+  let stops = '';
+  for (let i = 0; i < day.stops.length; i++) {
+    const prev = i > 0 ? day.stops[i-1] : null;
+    stops += buildStop(day.stops[i], i, prev, idx);
+  }
+  return `
+    <section class="day-section ${idx===0 ? 'active' : ''}" id="day-${idx}">
+      <div class="card">
+        <div class="section-head">
+          <div>
+            <h2 style="margin-bottom:6px;">Day ${idx+1} • ${day.date} (${day.dow})</h2>
+            <div class="tiny">${day.city} • ${day.theme}</div>
+          </div>
+          <div class="badge">${day.hotel}</div>
+        </div>
+        <div class="two-col">
+          <div class="stop">
+            <h4>การเดินทาง / Booking</h4>
+            <div class="meta">✈️/🚆 ${day.flight}<br>📝 ${day.notes || ''}</div>
+          </div>
+          <div class="stop">
+            <h4>ปุ่มลัดวันนี้</h4>
+            <div class="stop-actions">
+              <button onclick="scrollToFirstMap(${idx})">เปิดการ์ดแรก</button>
+              <button class="secondary" onclick="copyDayPlan(${idx})">คัดลอกแพลนวันนี้</button>
+              <button class="secondary" onclick="resetDayChecks(${idx})">ล้างเช็กวันนี้</button>
+            </div>
+          </div>
+        </div>
+        <div class="timeline" style="margin-top:14px;">${stops}</div>
+        <div class="big-home">
+          <button onclick="openHotel(day.city === 'Busan' ? 'Busan' : 'Seoul')">🏨 กลับโรงแรม</button>
+          <button class="secondary" onclick="showQuickPhrase('help')">🆘 ช่วยเหลือ / Korean</button>
+        </div>
+      </div>
+    </section>
+  `;
+}
+function renderDays() {
+  const nav = document.getElementById('daysNav');
+  const container = document.getElementById('daysContainer');
+  nav.innerHTML = tripData.days.map(buildDayTab).join('');
+  container.innerHTML = tripData.days.map(buildDaySection).join('');
+}
+function selectDay(idx) {
+  document.querySelectorAll('.day-tab').forEach((el, i) => el.classList.toggle('active', i===idx));
+  document.querySelectorAll('.day-section').forEach((el, i) => el.classList.toggle('active', i===idx));
+  window.scrollTo({top: document.getElementById('daysNav').offsetTop - 10, behavior:'smooth'});
+}
+function saveCheck(dayIdx, stopIdx, val) {
+  localStorage.setItem(storageKey(dayIdx, stopIdx), val ? '1' : '0');
+}
+function resetDayChecks(dayIdx) {
+  const day = tripData.days[dayIdx];
+  for (let i = 0; i < day.stops.length; i++) {
+    localStorage.removeItem(storageKey(dayIdx, i));
+  }
+  renderDays();
+  showToast("ล้างเช็กของวันนี้แล้ว");
+}
+function copyDayPlan(dayIdx) {
+  const day = tripData.days[dayIdx];
+  let text = `Day ${dayIdx+1} • ${day.date} • ${day.city}\n${day.theme}\n`;
+  if (day.flight) text += `Booking/Travel: ${day.flight}\n`;
+  if (day.notes) text += `Notes: ${day.notes}\n`;
+  text += "\n";
+  day.stops.forEach((s, i) => {
+    text += `${i+1}) ${s.title}`;
+    if (s.ko) text += ` / ${s.ko}`;
+    if (s.time) text += ` • ${s.time}`;
+    text += `\nAddress: ${s.address}\n`;
+    if (s.note) text += `Note: ${s.note}\n`;
+    text += "\n";
+  });
+  copyText(text);
+}
+function scrollToFirstMap(dayIdx) {
+  const section = document.getElementById('day-' + dayIdx);
+  if (section) section.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+renderHotels();
+renderDays();
+</script>
+</body>
+</html>
